@@ -8,7 +8,7 @@ import { lowerCppType } from "./emitter-types"
 import { Assert } from "std/assert"
 import { EmitContext } from "./emitter-context"
 import { emitContextType, emitType, usesVariantRepresentation } from "./emitter-types"
-import { ClassType, InterfaceType, NoneType, PrimitiveType, ResultResolvedType, Symbol, UnionResolvedType } from "./semantic"
+import { ClassType, FailureResolvedType, InterfaceType, NoneType, PrimitiveType, ResultResolvedType, SuccessResolvedType, Symbol, UnionResolvedType } from "./semantic"
 
 export function testCarrierModelSeparatesResultStorageFromUnionDispatch(): none {
   integer := PrimitiveType { name: "int" }
@@ -164,4 +164,11 @@ export function testReadonlyEmissionCacheMissesCannotAliasOrMutateTypes(): none 
   Assert.equal(emitContextType(prepared, context), "int32_t")
   Assert.equal(session.values.size, 1)
   Assert.equal(prepared.emissionIdentity, saved)
+}
+
+export function testResultArmsLowerToTheirRuntimeStructs(): none {
+  integer := PrimitiveType { name: "int" }
+  Assert.equal(emitType(SuccessResolvedType { valueType: integer }), "doof::Success<int32_t>")
+  Assert.equal(emitType(FailureResolvedType { errorType: NoneType {} }), "doof::Failure<void>")
+  Assert.isFalse(usesVariantRepresentation(SuccessResolvedType { valueType: integer }))
 }

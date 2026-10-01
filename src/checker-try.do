@@ -2,12 +2,12 @@
 
 import { Binding, ResolvedType, ResultResolvedType, Scope } from "./semantic"
 import {
-  ConstDeclaration, DestructuringStatement, Expression, ExpressionStatement,
+  AssignmentExpression, ConstDeclaration, DestructuringStatement, Expression, ExpressionStatement,
   ImmutableBinding, LetDeclaration, ReadonlyDeclaration, SourceSpan, TryStatement,
   TypeAnnotation,
 } from "./ast"
 import { CheckerState } from "./checker-state"
-import { checkExpression } from "./checker-expressions"
+import { checkAssignment, checkExpression } from "./checker-expressions"
 import { checkDestructuring, declareUserBinding } from "./checker-statements"
 import { applyDeepReadonly, typeName } from "./checker-types"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
@@ -30,6 +30,10 @@ export function checkTry(state: CheckerState, statement: TryStatement, scope: Sc
     destructuring: DestructuringStatement -> { value = destructuring.value }
   }
   if value == none { return true }
+  case value! {
+    assignment: AssignmentExpression -> { return checkTryAssignment(state, statement, assignment, scope) }
+    _ -> { }
+  }
   resultValue := checkExpression(state, value!, scope, none)
   case resultValue {
     result: ResultResolvedType -> {
@@ -74,6 +78,20 @@ export function checkTry(state: CheckerState, statement: TryStatement, scope: Sc
     _ -> { typeError(state, "try requires a Result expression", value!.span) }
   }
   return resultValue.kind != "never"
+}
+
+// `try target = expr` assigns the success value to an existing target.
+function checkTryAssignment(state: CheckerState, statement: TryStatement, assignment: AssignmentExpression, scope: Scope): bool {
+  if assignment.operator != "=" {
+    typeError(state, "'try' assignment requires '='; '" + assignment.operator + "' cannot apply to a Result", assignment.span)
+    return true
+  }
+  assigned := checkAssignment(state, assignment, scope, true)
+  if assignment.resolvedTriedResult == none { return true }
+  result := assignment.resolvedTriedResult!
+  validatePropagation(state, scope, result.errorType, statement.span)
+  if result.valueType.kind == "none" { typeError(state, "Cannot bind a none success value; use bare 'try expr'", statement.span) }
+  return assigned.kind != "never"
 }
 
 // The first enclosing handler or function owns propagation. A catch or native

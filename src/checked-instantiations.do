@@ -18,7 +18,7 @@ import { AnalysisResult } from "./analyzer"
 import { sameType, substituteTypeParams, typeName } from "./checker-types"
 import { classSatisfiesConcreteInterface } from "./checker-interfaces"
 import {
-  ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, SetResolvedType,
+  ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType,
   StreamResolvedType, TupleResolvedType, TypeParameterType, TypeSubstitution, UnionResolvedType, WeakResolvedType,
 } from "./semantic"
 
@@ -439,6 +439,8 @@ function collectType(type_: ResolvedType, analysis: AnalysisResult, plan: Checke
     set_: SetResolvedType -> { collectType(set_.elementType, analysis, plan) }
     stream: StreamResolvedType -> { collectType(stream.elementType, analysis, plan); addInterface(plan, "", "Stream", [stream.elementType]) }
     result: ResultResolvedType -> { collectType(result.valueType, analysis, plan); collectType(result.errorType, analysis, plan) }
+    success: SuccessResolvedType -> { collectType(success.valueType, analysis, plan) }
+    failure: FailureResolvedType -> { collectType(failure.errorType, analysis, plan) }
     actor: ActorType -> { collectType(actor.innerClass, analysis, plan) }
     promise: PromiseType -> { collectType(promise.valueType, analysis, plan) }
     tuple: TupleResolvedType -> { for element of tuple.elements { collectType(element, analysis, plan) } }
@@ -647,6 +649,8 @@ function containsTypeParameter(type_: ResolvedType): bool {
     set_: SetResolvedType -> { return containsTypeParameter(set_.elementType) }
     stream: StreamResolvedType -> { return containsTypeParameter(stream.elementType) }
     result: ResultResolvedType -> { return containsTypeParameter(result.valueType) || containsTypeParameter(result.errorType) }
+    success: SuccessResolvedType -> { return containsTypeParameter(success.valueType) }
+    failure: FailureResolvedType -> { return containsTypeParameter(failure.errorType) }
     actor: ActorType -> { return containsTypeParameter(actor.innerClass) }
     promise: PromiseType -> { return containsTypeParameter(promise.valueType) }
     tuple: TupleResolvedType -> { return containsTypeParameters(tuple.elements) }
@@ -677,6 +681,8 @@ function canonicalTypeKey(type_: ResolvedType): string {
     set_: SetResolvedType -> { return (if set_.readonly_ then "readonly-set:" else "set:") + canonicalTypeKey(set_.elementType) }
     stream: StreamResolvedType -> { return "stream:" + canonicalTypeKey(stream.elementType) }
     result: ResultResolvedType -> { return "result:" + canonicalTypeKey(result.valueType) + ":" + canonicalTypeKey(result.errorType) }
+    success: SuccessResolvedType -> { return "success:" + canonicalTypeKey(success.valueType) }
+    failure: FailureResolvedType -> { return "failure:" + canonicalTypeKey(failure.errorType) }
     actor: ActorType -> { return "actor:" + canonicalTypeKey(actor.innerClass) }
     promise: PromiseType -> { return "promise:" + canonicalTypeKey(promise.valueType) }
     tuple: TupleResolvedType -> { return "tuple:" + concreteTypeListKey(tuple.elements) }

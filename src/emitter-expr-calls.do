@@ -5,7 +5,7 @@ import { emitClassCall } from "./emitter-construction"
 import { emitCallArguments, emitDispatchCallArguments } from "./emitter-call-arguments"
 import { weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
 import { CallExpression, Expression, Identifier, MemberExpression } from "./ast"
-import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, NoneType, ResultResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, NoneType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { substituteTypeParams } from "./checker-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
@@ -60,22 +60,29 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   case expression.callee {
     identifier: Identifier -> {
       if (identifier.name == "Success" || identifier.name == "Failure") && isBuiltinIdentifier(identifier, identifier.name) {
-        let resultType: ResolvedType | none = none
-        if expected != none { resultType = expected! }
-        else if expression.resolvedType != none { resultType = expression.resolvedType! }
-        if resultType == none { panic(identifier.name + " has no expected Result type") }
+        // An expected Result fixes the payload; otherwise the checked Result or
+        // standalone arm type does.
+        let resultType: ResolvedType | none = expression.resolvedType
+        if expected != none {
+          case expected! { _: ResultResolvedType -> { resultType = expected! } _ -> { } }
+        }
+        if resultType == none { panic(identifier.name + " has no checked Result or arm type") }
+        let payload: ResolvedType | none = none
         case resultType! {
-          result: ResultResolvedType -> {
-            if expression.args.length == 0 { return "doof::" + identifier.name + "<" + emitContextReturnType(if identifier.name == "Success" then result.valueType else result.errorType, context) + ">{}" }
-            valueType := if identifier.name == "Success" then result.valueType else result.errorType
-            value := emitExpression(expression.args[0].value, context, valueType)
-            payloadType := emitContextReturnType(valueType, context)
-            if payloadType == "void" {
-              return "(static_cast<void>(" + value + "), doof::" + identifier.name + "<void>{})"
-            }
-            return "doof::" + identifier.name + "<" + payloadType + ">{ " + value + " }"
-          }
+          result: ResultResolvedType -> { payload = if identifier.name == "Success" then result.valueType else result.errorType }
+          success: SuccessResolvedType -> { payload = success.valueType }
+          failure: FailureResolvedType -> { payload = failure.errorType }
           _ -> { }
+        }
+        if payload != none {
+          valueType := payload!
+          if expression.args.length == 0 { return "doof::" + identifier.name + "<" + emitContextReturnType(valueType, context) + ">{}" }
+          value := emitExpression(expression.args[0].value, context, valueType)
+          payloadType := emitContextReturnType(valueType, context)
+          if payloadType == "void" {
+            return "(static_cast<void>(" + value + "), doof::" + identifier.name + "<void>{})"
+          }
+          return "doof::" + identifier.name + "<" + payloadType + ">{ " + value + " }"
         }
       }
     }

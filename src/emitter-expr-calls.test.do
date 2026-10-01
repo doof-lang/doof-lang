@@ -226,3 +226,17 @@ export function testSerializableTypeParameterDecodeSuppliesLenient(): none {
   Assert.stringNotContains(source, "::element_type::fromSerialValue")
   Assert.stringNotContains(source, "fromSerialValue(json, false, false)")
 }
+
+export function testStandaloneResultArmsEmitTheirOwnStructs(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function arm(): Success<long> => Success(1)\nfunction main(): none { inferred := Success(\"a\")\nempty := Failure()\nr: Result<int, string> := Success(2) }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  output := result.emission!.modules[0].header + result.emission!.modules[0].source
+  Assert.stringContains(output, "doof::Success<int64_t> arm()")
+  Assert.stringContains(output, "return doof::Success<int64_t>{ 1 };")
+  Assert.stringContains(output, "doof::Success<std::string>{ std::string(\"a\") }")
+  Assert.stringContains(output, "doof::Failure<void>{}")
+  Assert.stringContains(output, "doof::Success<int32_t>{ 2 }")
+}

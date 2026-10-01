@@ -150,3 +150,23 @@ export function testSerializableStructCalleeUsesValueType(): none {
   Assert.stringContains(source, "Color_fromSerialValue(json, false)")
   Assert.stringNotContains(source, "element_type")
 }
+
+function emittedSource(source: string): string {
+  result := compile([SourceFile { path: "/main.do", source }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  return result.emission!.modules[0].source
+}
+
+export function testForceAccessOnAResultUnwrapsTheReceiverOnce(): none {
+  source := emittedSource("class User { email: string }\nfunction load(): Result<User, string> => Success(User { email: \"a\" })\nfunction email(): string => load()!.email")
+  Assert.stringContains(source, "auto _assert_value = load(); if (doof::is_failure(_assert_value)) doof::panic(")
+  Assert.stringContains(source, "return std::move(doof::success_value(_assert_value)); }()->email")
+}
+
+export function testEqualityConvertsTheNarrowerOperandToTheUnion(): none {
+  source := emittedSource("function ok(): Result<int, string> => Success(1)\nfunction f(u: int | string): bool => u == 1 && ok() == Success(1) && Success(1) == Success(2)")
+  Assert.stringContains(source, "(u == doof::variant_promote<std::variant<int32_t, std::string>>(1))")
+  Assert.stringContains(source, "(ok() == [&]() -> doof::Result<int32_t, std::string> { const auto& _result_arm = doof::Success<int32_t>{ 1 };")
+  Assert.stringContains(source, "(doof::Success<int32_t>{ 1 } == doof::Success<int32_t>{ 2 })")
+}

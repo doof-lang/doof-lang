@@ -8,7 +8,7 @@ import { AnalysisResult, ModuleInfo } from "./analyzer"
 import {
   ActorType, ArrayResolvedType, ClassType, Diagnostic, EnumType, FunctionType, InterfaceType,
   SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType,
-  ResolvedType, ResultResolvedType, SemanticLocation, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType,
+  ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SemanticLocation, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType,
   TypeParameterType, UnionResolvedType, UnknownType, WeakResolvedType,
 } from "./semantic"
 import { ClassDeclaration, ExportDeclaration, InterfaceDeclaration, SourceSpan, Statement } from "./ast"
@@ -92,6 +92,8 @@ function findViolation(result: AnalysisResult, type_: ResolvedType, seen: string
       if valueViolation != none { return valueViolation }
       return findViolation(result, result_.errorType, seen)
     }
+    success: SuccessResolvedType -> { return findViolation(result, success.valueType, seen) }
+    failure: FailureResolvedType -> { return findViolation(result, failure.errorType, seen) }
     tuple: TupleResolvedType -> {
       for element of tuple.elements {
         violation := findViolation(result, element, seen)

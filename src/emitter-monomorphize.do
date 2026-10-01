@@ -1,6 +1,6 @@
 import { AnalysisResult } from "./analyzer"
 import { ClassDeclaration, FunctionDeclaration } from "./ast"
-import { ResolvedType, TypeSubstitution, ClassType, InterfaceType, ArrayResolvedType, MapResolvedType, SetResolvedType, StreamResolvedType, ResultResolvedType, ActorType, PromiseType, TupleResolvedType, UnionResolvedType, WeakResolvedType, FunctionType } from "./semantic"
+import { ResolvedType, TypeSubstitution, ClassType, InterfaceType, ArrayResolvedType, MapResolvedType, SetResolvedType, StreamResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, ActorType, PromiseType, TupleResolvedType, UnionResolvedType, WeakResolvedType, FunctionType } from "./semantic"
 import { ModuleNames, moduleNamespace } from "./emitter-names"
 import { typeName } from "./checker-types"
 import { CheckedInstantiations, DiscoveredFunction, DiscoveredClass, DiscoveredInterface, DiscoveredMethod, discoverInstantiations, collectJsonDemand } from "./checked-instantiations"
@@ -147,6 +147,8 @@ function mangleType(type_: ResolvedType, moduleNames: ModuleNames): string {
     set_: SetResolvedType -> { return (if set_.readonly_ then "readonly_set_" else "set_") + mangleType(set_.elementType, moduleNames) }
     stream: StreamResolvedType -> { return "stream_" + mangleType(stream.elementType, moduleNames) }
     result: ResultResolvedType -> { return "result_" + mangleType(result.valueType, moduleNames) + "_" + mangleType(result.errorType, moduleNames) }
+    success: SuccessResolvedType -> { return "success_" + mangleType(success.valueType, moduleNames) }
+    failure: FailureResolvedType -> { return "failure_" + mangleType(failure.errorType, moduleNames) }
     actor: ActorType -> { return "actor_" + mangleType(actor.innerClass, moduleNames) }
     promise: PromiseType -> { return "promise_" + mangleType(promise.valueType, moduleNames) }
     tuple: TupleResolvedType -> { return "tuple_" + concreteTypeListMangle(tuple.elements, moduleNames) }

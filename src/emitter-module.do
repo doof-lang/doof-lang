@@ -36,7 +36,7 @@ import { JsonEligibilityCache } from "./json-semantics"
 import { StringBuilder } from "./string-builder"
 import {
   ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, ImportBinding, InterfaceType, MapResolvedType,
-  PromiseType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, WeakResolvedType,
+  PromiseType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, WeakResolvedType,
 } from "./semantic"
 
 export class ModulePlan {
@@ -800,6 +800,8 @@ function addConcreteTypeForwardDeclarations(plan: HeaderPlanBuilder, context: Em
     set_: SetResolvedType -> { addConcreteTypeForwardDeclarations(plan, context, set_.elementType) }
     stream: StreamResolvedType -> { addConcreteTypeForwardDeclarations(plan, context, stream.elementType) }
     result_: ResultResolvedType -> { addConcreteTypeForwardDeclarations(plan, context, result_.valueType); addConcreteTypeForwardDeclarations(plan, context, result_.errorType) }
+    success: SuccessResolvedType -> { addConcreteTypeForwardDeclarations(plan, context, success.valueType) }
+    failure: FailureResolvedType -> { addConcreteTypeForwardDeclarations(plan, context, failure.errorType) }
     actor: ActorType -> { addConcreteTypeForwardDeclarations(plan, context, actor.innerClass) }
     promise: PromiseType -> { addConcreteTypeForwardDeclarations(plan, context, promise.valueType) }
     tuple: TupleResolvedType -> { for element of tuple.elements { addConcreteTypeForwardDeclarations(plan, context, element) } }

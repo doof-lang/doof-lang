@@ -1,7 +1,7 @@
 // Async-block capture decoration and cross-thread result validation.
 
 import { AnalysisResult } from "./analyzer"
-import { ActorType, ArrayResolvedType, ClassType, Diagnostic, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, SemanticLocation, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ActorType, ArrayResolvedType, ClassType, Diagnostic, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SemanticLocation, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { AsyncExpression, Block, ClassDeclaration, Expression, Identifier, InterfaceDeclaration, SourceSpan, ThisExpression } from "./ast"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { collectBlockExpressions, collectExpressionTree } from "./ast-walk"
@@ -101,6 +101,8 @@ function findAsyncViolation(result: AnalysisResult, type_: ResolvedType, seen: s
       if violation != none { return violation }
       return findAsyncViolation(result, result_.errorType, seen, safe, resultMode)
     }
+    success: SuccessResolvedType -> { return findAsyncViolation(result, success.valueType, seen, safe, resultMode) }
+    failure: FailureResolvedType -> { return findAsyncViolation(result, failure.errorType, seen, safe, resultMode) }
     tuple: TupleResolvedType -> {
       for element of tuple.elements {
         violation := findAsyncViolation(result, element, seen, safe, resultMode)

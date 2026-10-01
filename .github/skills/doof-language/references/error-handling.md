@@ -25,8 +25,14 @@ with the same contextual assignability requirements as explicit properties.
 
 `Success()` / `Success {}` construct `Success<none>`. `Failure()` /
 `Failure {}` construct `Failure<none>`. Payloadless arms omit their payload
-member; failure capture and `.err()` are unavailable for `Failure<none>`, and
-callbacks consuming a payloadless channel take no arguments.
+member, and failure capture is unavailable for `Failure<none>`.
+
+Arms are intrinsic structs. Without a Result context, `Success(42)` has type
+`Success<int>`; it converts to any compatible Result. `==` compares the payload
+(`Success(5) == Success(5)`), Results compare arm and payload, and a Result
+compares with an arm directly (`parse(text) == Success(3)`). The bare pattern
+`s: Success` takes its payload type from the subject wherever the arm appears,
+including `Success<int> | none`.
 
 ### Returning Results
 

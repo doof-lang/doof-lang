@@ -9,7 +9,7 @@ import { checkExpression } from "./checker-expressions"
 import { memberType, resolveType, validateTypeArgumentConstraints } from "./checker-resolution"
 import { classModuleFor, findClassField, isAssignableWithInterfaces } from "./checker-interfaces"
 import { containsString, declarationFor, hasObjectProperty, methodSignature, optionalResolvedType, valueSymbolFor, valueUseDiagnostic } from "./checker-symbols"
-import { classType, resultType, substituteTypeParams, typeName, unknownType } from "./checker-types"
+import { classType, noneType, resultArmExpectation, resultArmType, resultType, substituteTypeParams, typeName, unknownType } from "./checker-types"
 import { finish, typeError } from "./checker-common"
 import { checkPropertyValue, checkAssignableProperty, sameFixedFieldValue } from "./checker-properties"
 
@@ -69,24 +69,18 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
       expression.resolvedSpreadType = optionalResolvedType(checkExpression(state, expression.spread!, scope, none))
       typeError(state, expression.type_ + " construction does not support field spread", expression.spread!.span)
     }
-    let expectedResult: ResultResolvedType | none = none
-    if expected != none {
-      case expected! {
-        result: ResultResolvedType -> { expectedResult = result }
-        _ -> { }
-      }
-    }
-    let valueType: ResolvedType = unknownType()
+    // A surrounding Result or matching arm types the payload; otherwise the
+    // payload determines a standalone arm type.
+    expectation := resultArmExpectation(expression.type_, expected)
+    let valueType: ResolvedType = expectation.payload ?? noneType()
     for property of expression.args {
-      let propertyExpected: ResolvedType | none = none
-      if expectedResult != none {
-        propertyExpected = if expression.type_ == "Success" then expectedResult!.valueType else expectedResult!.errorType
-      }
-      valueType = checkAssignableProperty(state, property, scope, propertyExpected)
+      valueType = checkAssignableProperty(state, property, scope, expectation.payload)
+      if expectation.payload != none { valueType = expectation.payload! }
     }
-    if expectedResult != none { return finish(state, expression, expectedResult!) }
-    if expression.type_ == "Success" { return finish(state, expression, resultType(valueType, unknownType())) }
-    return finish(state, expression, resultType(unknownType(), valueType))
+    if expression.args.length == 0 && valueType.kind != "none" && valueType.kind != "unknown" {
+      typeError(state, expression.type_ + " {} needs a value for " + typeName(expectation.result ?? resultArmType(expression.type_, valueType)), expression.span)
+    }
+    return finish(state, expression, expectation.result ?? resultArmType(expression.type_, valueType))
   }
   symbol := valueSymbolFor(state.info!, expression.type_)
   if symbol == none {

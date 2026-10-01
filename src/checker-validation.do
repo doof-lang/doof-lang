@@ -1,6 +1,6 @@
 // Graph-wide decorated-AST validation before emission.
 
-import { ActorType, ArrayResolvedType, ClassType, Diagnostic, FunctionType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, SemanticLocation, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType } from "./semantic"
+import { ActorType, ArrayResolvedType, ClassType, Diagnostic, FunctionType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SemanticLocation, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType } from "./semantic"
 import { AnalysisResult } from "./analyzer"
 import { CheckedConstruction, ArrayLiteral, ArrayType, AsExpression, AssignmentExpression, BinaryExpression, Block, CallExpression, ClassDeclaration, ConstructExpression, ConstDeclaration, DestructuringStatement, EnumDeclaration, ExportDeclaration, Expression, ExpressionStatement, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType, IfExpression, IfStatement, ImmutableBinding, Identifier, IndexExpression, InterfaceDeclaration, LetDeclaration, LambdaExpression, MemberExpression, NamedType, ObjectLiteral, ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral, TupleLiteral, TypeAliasDeclaration, TypeAnnotation, UnaryExpression, UnionType, WhileStatement, WithStatement, YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression, CaseExpression, CasePattern, CaseStatement, RangePattern, TypePattern, ValuePattern, WildcardPattern, TryStatement, AsyncExpression, RetireExpression, ActorCreationExpression, WeakType, TypeParameterConstraint } from "./ast"
 
@@ -342,6 +342,8 @@ export function validateResolved(resolvedType: ResolvedType | none, span: Source
     set_: SetResolvedType -> { validateResolved(set_.elementType, span, module, owner + " element", diagnostics) }
     stream: StreamResolvedType -> { validateResolved(stream.elementType, span, module, owner + " element", diagnostics) }
     result: ResultResolvedType -> { validateResolved(result.valueType, span, module, owner + " success", diagnostics); validateResolved(result.errorType, span, module, owner + " error", diagnostics) }
+    success: SuccessResolvedType -> { validateResolved(success.valueType, span, module, owner + " success", diagnostics) }
+    failure: FailureResolvedType -> { validateResolved(failure.errorType, span, module, owner + " error", diagnostics) }
     actor: ActorType -> { validateResolved(optionalResolvedType(actor.innerClass), span, module, owner + " actor state", diagnostics) }
     promise: PromiseType -> { validateResolved(promise.valueType, span, module, owner + " promise value", diagnostics) }
     weak_: WeakResolvedType -> { validateResolved(weak_.inner, span, module, owner + " weak target", diagnostics) }

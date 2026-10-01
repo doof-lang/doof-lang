@@ -185,3 +185,31 @@ export function testResultWrappersCheckPayloadAgainstContext(): none {
   for diagnostic of valid.diagnostics { println(diagnostic.message) }
   Assert.equal(valid.diagnostics.length, 0)
 }
+
+export function testStandaloneResultArmsHaveTheirOwnTypes(): none {
+  valid := checked(
+    "function arm(): Success<int> => Success(5)\nfunction bad(): Failure<string> => Failure(\"no\")\n" +
+    "function widened(): Result<long, string> { s: Success<int> := Success(2)\nreturn s }\n" +
+    "function optional(): Result<int, string> | none => Success(3)\n" +
+    "function main(): none {\ninferred := Success(1)\nlet a: int = inferred.value\nwide: Success<long> := Success(9)\n" +
+    "empty := Success()\nnoError := Failure()\nlet e: string = bad().error\nr: Result<int, string> := arm()\n" +
+    "items: Result<int, string>[] := [arm(), bad(), Success(7)] }")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+}
+
+export function testResultArmConstructionDiagnostics(): none {
+  for pair of [
+    ["function f(): Result<int, string> => Success()", "Success() needs a value for Result<int, string>"],
+    ["function f(): Success<int> => Success(\"x\")", "Cannot use string as the success value of Success<int>"],
+    ["function f(): Result<int, string> => Failure(1)", "Cannot use int as the failure value of Result<int, string>"],
+    ["function f(): Success<int> => Failure(\"x\")", "Cannot return Failure<string> from function returning Success<int>"],
+    ["function f(): none { s: Success<int> := Success(1)\n_ := s.error }", "Type \"Success<int>\" has no member \"error\""],
+    ["function f(): none { e := Failure()\n_ := e.error }", "Type \"Failure<none>\" has no member \"error\""],
+  ] {
+    result := checked(pair[0])
+    for diagnostic of result.diagnostics { println(diagnostic.message) }
+    Assert.equal(result.diagnostics.length, 1)
+    Assert.equal(result.diagnostics[0].message, pair[1])
+  }
+}

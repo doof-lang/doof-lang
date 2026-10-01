@@ -1145,10 +1145,30 @@ ordered_set(std::initializer_list<T>) -> ordered_set<T>;
 // Intrinsic Result arms and their ordinary variant alias
 // ============================================================================
 
-template <typename T> struct Success { T value; };
-template <> struct Success<void> {};
-template <typename E> struct Failure { E error; };
-template <> struct Failure<void> {};
+// The arms are intrinsic structs: equality compares the payload field, as
+// generated struct equality does, and stays dependent until it is used.
+template <typename T> struct Success {
+    T value;
+    template <typename _DoofOther = Success>
+    bool operator==(const _DoofOther& other) const { return value == other.value; }
+    template <typename _DoofOther = Success>
+    bool operator!=(const _DoofOther& other) const { return !(*this == other); }
+};
+template <> struct Success<void> {
+    bool operator==(const Success&) const { return true; }
+    bool operator!=(const Success&) const { return false; }
+};
+template <typename E> struct Failure {
+    E error;
+    template <typename _DoofOther = Failure>
+    bool operator==(const _DoofOther& other) const { return error == other.error; }
+    template <typename _DoofOther = Failure>
+    bool operator!=(const _DoofOther& other) const { return !(*this == other); }
+};
+template <> struct Failure<void> {
+    bool operator==(const Failure&) const { return true; }
+    bool operator!=(const Failure&) const { return false; }
+};
 
 template <typename T, typename E>
 using Result = std::variant<Success<T>, Failure<E>>;

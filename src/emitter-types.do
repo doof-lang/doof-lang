@@ -9,7 +9,7 @@ import { TypeLoweringGraph } from "./emitter-type-cache"
 import { CppType, CppTypeRegistry, renderCppType } from "./cpp-type"
 import { carrierOf, flattenCarrierMembers, naturalCarrierMember } from "./emitter-carriers"
 import {
-  ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionParamType, FunctionType, InterfaceType, SerialValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol,
+  ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionParamType, FunctionType, InterfaceType, SerialValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType, Symbol,
   NeverType, NoneType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"
 import { moduleNamespace } from "./emitter-names"
@@ -136,6 +136,8 @@ function lowerRegisteredTypeUncached(type_: ResolvedType, context: EmitContext):
       return StreamResolvedType { elementType: lowerRegisteredTypes(stream.elementType, context) }
     }
     result_: ResultResolvedType -> { return ResultResolvedType { valueType: lowerRegisteredTypes(result_.valueType, context), errorType: lowerRegisteredTypes(result_.errorType, context) } }
+    success: SuccessResolvedType -> { return SuccessResolvedType { valueType: lowerRegisteredTypes(success.valueType, context) } }
+    failure: FailureResolvedType -> { return FailureResolvedType { errorType: lowerRegisteredTypes(failure.errorType, context) } }
     weak_: WeakResolvedType -> { return WeakResolvedType { inner: lowerRegisteredTypes(weak_.inner, context) } }
     actor: ActorType -> {
       lowered := lowerRegisteredTypes(actor.innerClass, context)
@@ -215,6 +217,8 @@ function lowerCppTypeUncached(type_: ResolvedType, registry: CppTypeRegistry, ca
     _: RangeResolvedType -> { return registry.atom("doof::Range") }
     _: SerialValueResolvedType -> { return registry.atom("doof::SerialValue") }
     result: ResultResolvedType -> { return registry.templateType("doof::Result", [lowerCppPayload(result.valueType, registry, cache), lowerCppPayload(result.errorType, registry, cache)]) }
+    success: SuccessResolvedType -> { return registry.templateType("doof::Success", [lowerCppPayload(success.valueType, registry, cache)]) }
+    failure: FailureResolvedType -> { return registry.templateType("doof::Failure", [lowerCppPayload(failure.errorType, registry, cache)]) }
     actor: ActorType -> { return registry.templateType("std::shared_ptr", [registry.templateType("doof::Actor", [lowerCppClassInnerType(actor.innerClass, registry, cache)])]) }
     promise: PromiseType -> { return registry.templateType("doof::Promise", [lowerCppPayload(promise.valueType, registry, cache)]) }
     tuple: TupleResolvedType -> {
@@ -312,6 +316,8 @@ export function canBorrowParameter(resolvedType: ResolvedType): bool {
     result: ResultResolvedType -> {
       return !requiresParameterValueSemantics(result.valueType) && !requiresParameterValueSemantics(result.errorType)
     }
+    success: SuccessResolvedType -> { return !requiresParameterValueSemantics(success.valueType) }
+    failure: FailureResolvedType -> { return !requiresParameterValueSemantics(failure.errorType) }
     tuple: TupleResolvedType -> {
       for element of tuple.elements { if requiresParameterValueSemantics(element) { return false } }
       return true
@@ -338,6 +344,8 @@ function requiresParameterValueSemantics(resolvedType: ResolvedType): bool {
     result: ResultResolvedType -> {
       return requiresParameterValueSemantics(result.valueType) || requiresParameterValueSemantics(result.errorType)
     }
+    success: SuccessResolvedType -> { return requiresParameterValueSemantics(success.valueType) }
+    failure: FailureResolvedType -> { return requiresParameterValueSemantics(failure.errorType) }
     tuple: TupleResolvedType -> {
       for element of tuple.elements { if requiresParameterValueSemantics(element) { return true } }
       return false

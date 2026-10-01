@@ -4,13 +4,13 @@ import { weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
 
 import { emitCarrierAbsence } from "./emitter-carrier-values"
 import { EmitContext } from "./emitter-context"
-import { NamedType, TypePattern, ValuePattern } from "./ast"
+import { TypePattern, ValuePattern } from "./ast"
 import {
   ArrayResolvedType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType,
   ResolvedType, ResultResolvedType, WeakResolvedType,
 } from "./semantic"
-import { emitContextReturnType, emitContextType, emitResultPayloadType, emitType, usesNullableSingleValueRepresentation, usesVariantRepresentation } from "./emitter-types"
-import { isSerialBytesType } from "./checker-types"
+import { emitContextType, emitType, usesNullableSingleValueRepresentation, usesVariantRepresentation } from "./emitter-types"
+import { isSerialBytesType, sameType } from "./checker-types"
 
 export class CaseTypePatternEmission {
   condition: string
@@ -47,10 +47,6 @@ export function emitCaseTypePattern(
 ): CaseTypePatternEmission {
   if pattern.resolvedType == none { panic("Case pattern has no resolved type") }
   patternType := pattern.resolvedType!
-  case subjectType {
-    result: ResultResolvedType -> { return emitResultPattern(pattern, result, subject, bindingName, currentModulePath, names, context) }
-    _ -> { }
-  }
   return emitCaseTypeTest(patternType, subjectType, subject, bindingName, currentModulePath, names, context)
 }
 
@@ -67,7 +63,8 @@ export function emitCaseValuePattern(pattern: ValuePattern, subjectType: Resolve
   return subject + " == " + value
 }
 
-// Tests a non-Result pattern type against the subject's concrete C++ carrier.
+// Tests a checked pattern type against the subject's concrete C++ carrier. A
+// Result is the variant of its Success and Failure arms.
 function emitCaseTypeTest(
   patternType: ResolvedType,
   subjectType: ResolvedType,
@@ -81,7 +78,11 @@ function emitCaseTypeTest(
     _: SerialValueResolvedType -> { return emitJsonValuePattern(patternType, subject, bindingName) }
     _ -> { }
   }
-  if usesVariantRepresentation(subjectType) {
+  // A pattern naming the subject's own type always matches.
+  if sameType(patternType, subjectType) {
+    return CaseTypePatternEmission { condition: "true", binding: if bindingName == "" then "" else "const auto " + bindingName + " = " + subject + ";\n" }
+  }
+  if usesVariantRepresentation(subjectType) || subjectType.kind == "result" {
     patternCpp := if context == none then emitType(patternType, currentModulePath, names) else emitContextType(patternType, context!)
     if usesVariantRepresentation(patternType) {
       return CaseTypePatternEmission {
@@ -105,30 +106,6 @@ function emitCaseTypeTest(
   return CaseTypePatternEmission {
     condition: if nullable then "!doof::is_null(" + subject + ")" else "true",
     binding: if bindingName == "" then "" else "const auto " + bindingName + " = " + value + ";\n",
-  }
-}
-
-function emitResultPattern(
-  pattern: TypePattern,
-  result: ResultResolvedType,
-  subject: string,
-  bindingName: string,
-  currentModulePath: string,
-  names: ModuleNames = ModuleNames {},
-  context: EmitContext | none = none,
-): CaseTypePatternEmission {
-  let armType = ""
-  case pattern.type_ {
-    named: NamedType -> {
-      if named.name == "Success" { armType = "doof::Success<" + (if context == none then emitResultPayloadType(result.valueType, currentModulePath, names) else emitContextReturnType(result.valueType, context!)) + ">" }
-      if named.name == "Failure" { armType = "doof::Failure<" + (if context == none then emitResultPayloadType(result.errorType, currentModulePath, names) else emitContextReturnType(result.errorType, context!)) + ">" }
-    }
-    _ -> { }
-  }
-  if armType == "" { panic("Result case pattern must be Success or Failure") }
-  return CaseTypePatternEmission {
-    condition: "std::holds_alternative<" + armType + ">(" + subject + ")",
-    binding: if bindingName == "" then "" else "const auto& " + bindingName + " = std::get<" + armType + ">(" + subject + ");\n",
   }
 }
 

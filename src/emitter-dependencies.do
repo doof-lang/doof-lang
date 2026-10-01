@@ -11,7 +11,7 @@ import { interfaceInstantiationKey } from "./emitter-monomorphize"
 import { collectBlockExpressions, collectNestedExpressions } from "./ast-walk"
 import {
   ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, PromiseType,
-  ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType, UnionResolvedType, WeakResolvedType,
+  ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType, UnionResolvedType, WeakResolvedType,
 } from "./semantic"
 
 
@@ -160,6 +160,8 @@ export function collectDependencyType(
       collectDependencyType(result_.valueType, index)
       collectDependencyType(result_.errorType, index)
     }
+    success: SuccessResolvedType -> { collectDependencyType(success.valueType, index) }
+    failure: FailureResolvedType -> { collectDependencyType(failure.errorType, index) }
     tuple: TupleResolvedType -> { for element of tuple.elements { collectDependencyType(element, index) } }
     union_: UnionResolvedType -> { for member of union_.types { collectDependencyType(member, index) } }
     weak_: WeakResolvedType -> { collectDependencyType(weak_.inner, index) }
@@ -205,6 +207,8 @@ export function collectCompleteDependencyType(type_: ResolvedType, index: Depend
       collectCompleteDependencyType(result_.valueType, index)
       collectCompleteDependencyType(result_.errorType, index)
     }
+    success: SuccessResolvedType -> { collectCompleteDependencyType(success.valueType, index) }
+    failure: FailureResolvedType -> { collectCompleteDependencyType(failure.errorType, index) }
     tuple: TupleResolvedType -> { for element of tuple.elements { collectCompleteDependencyType(element, index) } }
     union_: UnionResolvedType -> { for member of union_.types { collectCompleteDependencyType(member, index) } }
     weak_: WeakResolvedType -> { collectCompleteDependencyType(weak_.inner, index) }

@@ -437,3 +437,11 @@ export function testNamespaceImportsPointAtNamedImports(): none {
   Assert.equal(result.diagnostics.length, 1)
   Assert.stringContains(result.diagnostics[0].message, "Namespace imports are not supported; import names with 'import { name } from ...'")
 }
+
+export function testResultArmsAreBuiltinTypeNames(): none {
+  result := createAnalyzer([SourceFile {
+    path: "/main.do", source: "function ok(): Success<int> => Success(1)\nfunction bad(value: Failure<string>): Failure<string> => value",
+  }]).analyze("/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}

@@ -124,13 +124,21 @@ p1 == p3   // true  — same reference
 | `!=` on function values | Different callback identities |
 | `==` on structs | Equality of every instance field, in declaration order |
 | `!=` on structs | Negation of field equality |
+| `==` between a union and a member type | The member converts to the union; equal when both hold the same member with equal values |
 
 Struct equality compares corresponding fields using their own `==` semantics.
 Nested structs compare recursively; class and mutable collection fields retain
 reference identity. Static fields do not participate, and two values of the same
 empty struct compare equal. Equality short-circuits at the first unequal field.
 This also applies when structs are passed to generic functions such as
-`Assert.equal`. Distinct nominal struct types cannot be compared.
+`Assert.equal`. Distinct nominal struct types cannot be compared. The intrinsic
+`Success<T>` and `Failure<E>` arms are structs and compare their payload field.
+
+A union compares with a value of one of its member types, as in
+`u: int | string; u == 1`. The member value converts to the union first, so the
+comparison is true only when the union holds that member and the values are
+equal under the member's own rules. Results and interfaces compare the same
+way with their arms and implementing classes.
 
 Creating a function value creates a callback identity. Assigning or passing it
 preserves that identity and its captured state; separately created callbacks

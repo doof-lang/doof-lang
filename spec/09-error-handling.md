@@ -37,6 +37,18 @@ An arm is assignable to a compatible Result union. Explicitly spelling
 `Success<T> | Failure<E>` has exactly the same behavior as `Result<T, E>`, and
 the two arms may appear in either order.
 
+The arms are intrinsic structs with a single field, `value` or `error`. They
+follow the struct rules: an arm is a value of its own type, it can be
+destructured (`{ value } := ok`), and `==` compares the payload field.
+`Success(5) == Success(5)` is true, and any two `Failure<none>` values are
+equal. Two Results are equal when they hold the same arm with equal payloads,
+and a Result compares with an arm like any union with one of its members:
+
+```doof
+parseCount("3") == Success(3)    // true
+parseCount("") != Success(3)     // true
+```
+
 `T` is the success payload type. `E` is the failure payload type. Either can be
 a class, enum, primitive, collection, nullable type, or union:
 
@@ -222,7 +234,7 @@ try value := expr          // immutable binding
 try value: Type := expr    // typed immutable binding
 try readonly value = expr  // readonly declaration
 try let value = expr       // mutable declaration
-try target = expr          // assignment to an existing variable
+try target = expr          // assignment to an existing variable, field, or element
 try (a, b) := expr         // positional destructuring
 try [a, _, c] := expr      // array destructuring
 try { name, age } := expr  // named destructuring
@@ -230,6 +242,10 @@ try { name, age } := expr  // named destructuring
 
 `Result<none, E>` can be used only with the bare `try expr` form. Binding a
 none success value is rejected.
+
+The assignment form stores the success value with ordinary assignment rules:
+the target must be mutable and accept the success type. Only `=` is allowed;
+compound operators such as `+=` cannot apply to a Result.
 
 For array destructuring, the success type must be an array. The generated code
 panics at runtime if the success array is shorter than the pattern.
@@ -436,39 +452,39 @@ profile := try? findUser(id)?.profile()  // Profile | none
 
 ## Result Helper Methods
 
-`Result<T, E>` provides helper methods for common transformations:
+`Result<T, E>` provides a small set of helper methods:
 
 ```doof
-function describe(input: Result<int, string>): Result<string, string> {
-    return input.map((value: int): string => "count=" + string(value))
-}
-
-function recover(input: Result<int, string>): int {
-    return input.unwrapOrElse((error: string): int => error.length)
-}
-
-function next(input: Result<int, string>): Result<string, string | bool> {
-    return input.andThen((value: int): Result<string, bool> => Success("next=" + string(value)))
+function countOrZero(input: Result<int, string>): int {
+    return input.unwrapOr(0)
 }
 ```
 
 | Method | Result |
 | --- | --- |
-| `.map(fn)` | Transform the success payload from `T` to `U` and keep failures unchanged |
-| `.mapError(fn)` | Transform the error payload from `E` to `F` and keep successes unchanged |
-| `.andThen(fn)` | Chain a fallible operation after success: `Result<U, E | F>` |
-| `.orElse(fn)` | Recover from failure with another `Result`: `Result<T | U, F>` |
 | `.unwrapOr(value)` | Return the success value or a fallback value |
-| `.unwrapOrElse(fn)` | Return the success value or compute a fallback from the error |
-| `.ok()` | Convert success to `T | none`, discarding failures |
-| `.err()` | Convert failure to `E | none`, discarding successes |
 | `.isSuccess()` | Return `true` when the Result is in the success state |
 | `.isFailure()` | Return `true` when the Result is in the failure state |
 
-`map` is not available on `Result<none, E>` because there is no success payload
-to transform. `andThen` receives a zero-argument callback for `Success<none>`.
-For `Failure<none>`, `.err()` is absent and `mapError`, `orElse`, and
-`unwrapOrElse` receive zero-argument callbacks.
+`unwrapOr` is not available on `Result<none, E>`, which has no success value
+to return.
+
+Doof has no callback-based combinators such as `map` or `andThen`. Transform
+or chain Results with statement-level `try` in a Result-returning function,
+convert to a nullable with `try?`, and branch on the error with `case` or a
+declaration `else`:
+
+```doof
+function describe(input: Result<int, string>): Result<string, string> {
+    try value := input
+    return Success("count=" + string(value))
+}
+
+function recover(input: Result<int, string>): int {
+    value := input else error { return error.length }
+    return value
+}
+```
 
 ---
 
@@ -666,7 +682,7 @@ Prometheus labels. Increments and snapshots are thread-safe.
 | `Result` + `case` | Detailed branching by success or failure |
 | statement-level `try` | Sequential propagation in a `Result`-returning function |
 | `try!` or `!` | Required success where failure is unrecoverable |
-| `try?` or `.ok()` | Converting failure to nullable when details do not matter |
+| `try?` | Converting failure to nullable when details do not matter |
 | `??` | Supplying a fallback value |
 | declaration-`else` | Guard-style unwrap-or-bail control flow |
 | statement-`else` | Handling a side-effecting `Result` without a success binding |
@@ -706,9 +722,5 @@ fallibleSideEffect() else error { println(error) }
 err := catch { try a(); try b() }
 
 // Helpers
-mapped := result.map((value: T): U => transform(value))
-chained := result.andThen((value: T): Result<U, F> => next(value))
 value := result.unwrapOr(fallback)
-maybeValue := result.ok()
-maybeError := result.err()
 ```

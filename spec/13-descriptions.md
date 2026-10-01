@@ -248,14 +248,7 @@ The `Result<SerialValue, SerialValue>` returned by `.invoke` supports:
 | `.error` | `SerialValue` | The failure payload (only valid when `isFailure()` is true) |
 | `.isSuccess()` | `bool` | Whether the invocation succeeded |
 | `.isFailure()` | `bool` | Whether the invocation failed |
-| `.map(fn)` | `Result<U, SerialValue>` | Transform the success payload |
-| `.mapError(fn)` | `Result<SerialValue, U>` | Transform the failure payload |
-| `.andThen(fn)` | `Result<U, SerialValue>` | Chain another Result-returning operation from success |
-| `.orElse(fn)` | `Result<SerialValue \| U, U2>` | Recover from a failure with another Result-returning operation |
 | `.unwrapOr(value)` | `SerialValue` | Return the success payload or a fallback |
-| `.unwrapOrElse(fn)` | `SerialValue` | Return the success payload or compute a fallback from the error |
-| `.ok()` | `SerialValue \| none` | Convert success to a nullable value |
-| `.err()` | `SerialValue \| none` | Convert failure to a nullable value |
 
 ### Restrictions
 

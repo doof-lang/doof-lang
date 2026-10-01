@@ -40,6 +40,10 @@ export function testInterfacesWithoutImplementationsNative(): none {
   runNativeFixture("interface-no-implementations")
 }
 
+export function testResultUnwrappingNative(): none {
+  runNativeFixture("result-unwrapping")
+}
+
 function runNativeFixture(fixture: string): none {
   root := join([tempDirectory(), "doof-native-" + fixture])
   clearNativeMatrix(root)

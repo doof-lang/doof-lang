@@ -78,19 +78,23 @@ drops both names. The parser no longer rewrites `readonly Array<T>`, and
 `Array<…>` and `ReadonlyArray<…>` now report "Unknown type 'Array'; write
 arrays as T[]" (or the `readonly T[]` equivalent).
 
-### A5. Result helper methods — **Implement**
+### A5. Result helper methods — **Removed from the spec**
 
-Only `isSuccess`, `isFailure` and `unwrapOr` exist. These are missing:
+Only `isSuccess`, `isFailure` and `unwrapOr` existed, while ch. 9 and ch. 13
+also documented `map`, `mapError`, `andThen`, `orElse`, `unwrapOrElse`, `ok`
+and `err`. Each duplicates an existing form: `try` in a Result-returning
+function chains and transforms, `try?` converts to a nullable, and `case` or a
+declaration `else` recovers from the error. The callback combinators also
+needed special rules for payloadless arms. They are removed from the spec, and
+ch. 9 shows the `try` and `else` equivalents.
 
-- `map`, `mapError`, `andThen`, `orElse`
-- `unwrapOrElse`, `ok`, `err`
+### A6. `!.` doesn't unwrap Results — **Fixed**
 
-Ch. 9 and ch. 13 document all of them. If they're deferred, mark them as planned in the spec.
-
-### A6. `!.` doesn't unwrap Results — **Implement**
-
-`loadUser()!.email` fails with `Result<User, string> has no member "email"`.
-Ch. 5 and ch. 9 specify it, and postfix `!` already unwraps Results.
+`loadUser()!.email` failed with `Result<User, string> has no member "email"`.
+The checker now treats `r!.m` as `(r!).m`, so the receiver is evaluated once
+and lowered through postfix `!`, panicking on Failure. A nullable success value
+keeps `!.`, so `Result<User | none, E>!.email` also panics on none. On
+`Result<none, E>` there is no success value, and member access reports that.
 
 ### A7. Array callback conventions — **Fixed**
 
@@ -113,15 +117,37 @@ Ch. 5 and ch. 9 specify it, and postfix `!` already unwraps Results.
 - Ch. 4's no-initial-value `reduce(=> acc + it)` example was changed to pass
   an initial value. Ch. 3's `reduce(0.0, (a, b) => …)` now binds by position.
 
-### A8. `try target = expr` doesn't unwrap — **Implement**
+### A8. `try target = expr` doesn't unwrap — **Fixed**
 
-It reports `Cannot assign Result<string, string> to string`. Ch. 9 lists it
-among the supported `try` forms.
+It reported `Cannot assign Result<string, string> to string`. The tried value
+is now checked as a Result and its success value is assigned with ordinary
+assignment rules, so variables, fields, and elements all work, and union
+targets receive the converted value. Compound operators such as `try n += …`,
+non-Result values, and `Result<none, E>` report direct diagnostics. Ch. 9
+documents the targets and the `=`-only rule.
 
-### A9. Standalone Result arm types — **Implement**
+### A9. Standalone Result arm types — **Fixed**
 
-`ok: Success<int> := Success(42)` becomes `Result<int, unknown>`, then fails
+`ok: Success<int> := Success(42)` became `Result<int, unknown>`, then failed
 with "has no member value" or internal "Unknown resolved type" errors (ch. 9).
+`Success<T>` and `Failure<E>` are now intrinsic structs. Annotations, including
+function signatures, resolve to the arm types, and both construction forms
+produce an arm without a Result context. Arms lower to `doof::Success<T>` and
+`doof::Failure<E>` and convert to any compatible Result. `Success<T> |
+Failure<E>` is canonicalized to `Result<T, E>`. `Success()` for a Result with a
+present success type is now rejected, as ch. 9 requires.
+
+Treating the arms as structs exposed two general gaps, fixed with it:
+
+- Equality between a union and one of its members (`u == 1` for
+  `int | string`, `ok() == Success(1)`, an interface with an implementing
+  class) emitted invalid C++. The checker now records the wider comparison
+  type and the narrower operand converts to it. Arms compare their payload as
+  struct equality does, so Result equality works too.
+- A bare generic type pattern (`s: Success`, `b: Box`) took its arguments from
+  the subject only when the subject was a Result. It now takes them from the
+  one matching subject member of any union, and Result exhaustiveness uses the
+  ordinary union rule. A pattern naming the whole Result type now matches.
 
 ### A10. Static member access through `::` — **Decided: class name only**
 
@@ -237,7 +263,7 @@ the form; ch. 11's `1e-10` example now compiles.
 
 ### A25. Minor contextual typing gaps — **Implement**
 
-- `Success(3)` fails when the expected type is `Result<int, string> | none`: "Success requires an expected Result type".
+- ~~`Success(3)` fails when the expected type is `Result<int, string> | none`~~. Fixed with A9: a union with one Result member provides the payload context.
 - Double range patterns (`case score { 90.0.. -> … }`) report "Case range bound of type double cannot match subject type double". Either support them or give a clear "integer subjects only" diagnostic.
 
 ### A26. Interfaces with no class implementers — **Fixed**
@@ -313,5 +339,5 @@ to qualify.
 
 1. **The remaining checker test helpers** (section C), now that A1, A2, A27 and A28 are done.
 2. **Chapter B doc fixes.** Cheap, and they remove misleading examples.
-3. **Common gaps: A5, A6, A8, A9, A10, A12, A13, A29.**
+3. **Common gaps: A10, A12, A13, A29.**
 4. **Needs a decision first: A14, A16.**

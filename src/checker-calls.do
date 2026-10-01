@@ -6,7 +6,7 @@ import { insideConstructorFactory, resolveConstructor, validateConstructorVisibi
 import { ActorType, Binding, ClassType, EnumType, FunctionParamType, FunctionType, PrimitiveType, ResolvedType, ResultResolvedType, Scope, UnionResolvedType, UnknownType, WeakResolvedType } from "./semantic"
 
 import { CallExpression, ClassDeclaration, DotShorthand, Expression, FunctionDeclaration, Identifier, LambdaExpression, MemberExpression, SourceSpan, TypeParameterConstraint } from "./ast"
-import { classType, functionType, resultType, neverType, noneType, primitive, typeName, unionType, substituteTypeParams, unknownType, weakReferenceErrorType } from "./checker-types"
+import { classType, functionType, resultArmExpectation, resultArmType, resultType, neverType, noneType, primitive, typeName, unionType, substituteTypeParams, unknownType, weakReferenceErrorType } from "./checker-types"
 
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 
@@ -45,32 +45,26 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         return finish(state, expression, primitive("string"))
       }
       if (identifier.name == "Success" || identifier.name == "Failure") && lookup(scope, identifier.name) == none {
-        let expectedResult: ResultResolvedType | none = none
-        if expected != none {
-          case expected! {
-            result: ResultResolvedType -> { expectedResult = result }
-            _ -> { }
-          }
-        }
-        let valueType: ResolvedType = unknownType()
+        // A surrounding Result or matching arm types the payload; otherwise the
+        // payload determines a standalone arm type.
+        expectation := resultArmExpectation(identifier.name, expected)
+        let valueType: ResolvedType = expectation.payload ?? noneType()
         if expression.args.length > 0 {
-          let expectedValue: ResolvedType | none = none
-          if expectedResult != none { expectedValue = if identifier.name == "Success" then expectedResult!.valueType else expectedResult!.errorType }
-          valueType = checkExpression(state, expression.args[0].value, scope, expectedValue)
-          if expectedValue != none && !isAssignableWithInterfaces(state.result, valueType, expectedValue!) {
+          valueType = checkExpression(state, expression.args[0].value, scope, expectation.payload)
+          if expectation.payload != none && !isAssignableWithInterfaces(state.result, valueType, expectation.payload!) {
             channel := if identifier.name == "Success" then "success" else "failure"
-            typeError(state, "Cannot use " + typeName(valueType) + " as the " + channel + " value of " + typeName(expectedResult!), expression.args[0].span)
+            owner := expectation.result ?? resultArmType(identifier.name, expectation.payload!)
+            typeError(state, "Cannot use " + typeName(valueType) + " as the " + channel + " value of " + typeName(owner), expression.args[0].span)
           }
+          if expectation.payload != none { valueType = expectation.payload! }
+        } else if valueType.kind != "none" && valueType.kind != "unknown" {
+          typeError(state, identifier.name + "() needs a value for " + typeName(expectation.result ?? resultArmType(identifier.name, valueType)), expression.span)
         }
-        if expectedResult != none {
-          valueType = if expression.args.length == 0 then (if identifier.name == "Success" then expectedResult!.valueType else expectedResult!.errorType) else valueType
-          identifier.resolvedType = optionalResolvedType(functionType([FunctionParamType { name: "value", type_: valueType, hasDefault: false }], expectedResult!))
-          identifier.resolvedBinding = Binding { name: identifier.name, kind: "builtin", type_: functionType([FunctionParamType { name: "value", type_: valueType, hasDefault: false }], expectedResult!), mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
-          return finish(state, expression, expectedResult!)
-        }
-        typeError(state, identifier.name + " requires an expected Result type", identifier.span)
-        if identifier.name == "Success" { return finish(state, expression, resultType(valueType, unknownType())) }
-        return finish(state, expression, resultType(unknownType(), valueType))
+        produced: ResolvedType := expectation.result ?? resultArmType(identifier.name, valueType)
+        callee := functionType([FunctionParamType { name: "value", type_: valueType, hasDefault: false }], produced)
+        identifier.resolvedType = optionalResolvedType(callee)
+        identifier.resolvedBinding = Binding { name: identifier.name, kind: "builtin", type_: callee, mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
+        return finish(state, expression, produced)
       }
     }
     _ -> { }

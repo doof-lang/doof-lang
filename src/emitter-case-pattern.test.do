@@ -226,3 +226,17 @@ export function testSerialIntegralPatternsRequireExactFit(): none {
   Assert.stringContains(source, "doof::serial_fits_long(_case_subject)")
   Assert.stringContains(source, "doof::serial_is_number(_case_subject)")
 }
+
+export function testResultArmPatternsUseTheCheckedArmTypes(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function a(r: Result<int, string>): int => case r { s: Success -> s.value, f: Failure<string> -> f.error.length }\n" +
+    "function b(x: Success<int> | none): int => case x { s: Success -> s.value, _ -> 0 }\n" +
+    "function c(r: Result<int, string>): int => case r { all: Result<int, string> -> all.unwrapOr(0) }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "std::holds_alternative<doof::Success<int32_t>>(")
+  Assert.stringContains(source, "std::holds_alternative<doof::Failure<std::string>>(")
+  Assert.stringNotContains(source, "holds_alternative<doof::Result")
+}

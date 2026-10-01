@@ -239,3 +239,16 @@ export function testLoopsWithoutThenKeepPlainBreaks(): none {
   Assert.stringContains(source, "break;")
   Assert.stringNotContains(source, "_doof_break_")
 }
+
+export function testTryAssignmentStoresTheConvertedSuccessValue(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Box { let value: int = 0 }\nfunction name(): Result<string, string> => Success(\"a\")\nfunction count(): Result<int, string> => Success(1)\n" +
+    "function run(box: Box): Result<int, string> { let wide: long | string = 0L\ntry wide = name()\ntry box.value = count()\nreturn Success(box.value) }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "= name();")
+  Assert.stringContains(source, "wide = doof::variant_promote<std::variant<int64_t, std::string>>(std::move(doof::success_value(_try_value_")
+  Assert.stringContains(source, "box->value = std::move(doof::success_value(_try_value_")
+}

@@ -3,7 +3,7 @@
 import {
   ActorType, ArrayResolvedType, Binding, CheckResult, ClassType, EnumType, InterfaceType,
   Diagnostic, FunctionParamType, FunctionType,
-  SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
+  SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
   StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
@@ -113,6 +113,8 @@ export function concreteTypes(types: ResolvedType[]): bool {
       set_: SetResolvedType -> { if !concreteTypes([set_.elementType]) { return false } }
       stream: StreamResolvedType -> { if !concreteTypes([stream.elementType]) { return false } }
       result_: ResultResolvedType -> { if !concreteTypes([result_.valueType, result_.errorType]) { return false } }
+      success: SuccessResolvedType -> { if !concreteTypes([success.valueType]) { return false } }
+      failure: FailureResolvedType -> { if !concreteTypes([failure.errorType]) { return false } }
       tuple: TupleResolvedType -> { if !concreteTypes(tuple.elements) { return false } }
       union_: UnionResolvedType -> { if !concreteTypes(union_.types) { return false } }
       weak_: WeakResolvedType -> { if !concreteTypes([weak_.inner]) { return false } }

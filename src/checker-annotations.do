@@ -4,7 +4,7 @@ import { memberType } from "./checker-resolution"
 import { ClassType, FunctionParamType, ResolvedType, Scope, Symbol, TypeParameterType, ResolvedTypeConstraint } from "./semantic"
 import { AnalysisResult, ModuleInfo, unknownTypeMessage } from "./analyzer"
 import { ArrayType, ClassDeclaration, AstFunctionType, InterfaceDeclaration, NamedType, SourceSpan, TypeAliasDeclaration, TypeAnnotation, UnionType, WeakType, TypeParameterConstraint } from "./ast"
-import { actorType, arrayType, classType, enumType, functionType, interfaceType, isSupportedHashCollectionType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType, neverType, noneType, primitive, promiseType, rangeType, tupleType, typeName, unionMutabilityConflict, unionType, isWeakReferenceTarget, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType } from "./checker-types"
+import { actorType, arrayType, classType, enumType, failureType, functionType, successType, interfaceType, isSupportedHashCollectionType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType, neverType, noneType, primitive, promiseType, rangeType, tupleType, typeName, unionMutabilityConflict, unionType, isWeakReferenceTarget, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType } from "./checker-types"
 
 import { CheckerState } from "./checker-state"
 import { isNumericConstraint, satisfiesNumericConstraint } from "./checker-numeric"
@@ -125,8 +125,7 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
       if named.name == "Success" || named.name == "Failure" {
         if named.typeArgs.length != 1 { typeError(state, named.name + " requires one type argument", named.span); return finishAnnotation(resolution, annotation, unknownType()) }
         payload := resolveAnnotationType(resolution, named.typeArgs[0], module, scope, validateConstraints)
-        if named.name == "Success" { return finishAnnotation(resolution, annotation, resultType(payload, unknownType())) }
-        return finishAnnotation(resolution, annotation, resultType(unknownType(), payload))
+        return finishAnnotation(resolution, annotation, if named.name == "Success" then successType(payload) else failureType(payload))
       }
       if named.name == "byte" || named.name == "int" || named.name == "long" || named.name == "float" || named.name == "double" || named.name == "string" || named.name == "char" || named.name == "bool" {
         if rejectUnexpectedTypeArguments(resolution, named, module, scope, validateConstraints) { return finishAnnotation(resolution, annotation, unknownType()) }

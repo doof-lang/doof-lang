@@ -1,6 +1,6 @@
 // Generic type-argument inference from checked argument types.
 
-import { ArrayResolvedType, ClassType, InterfaceType, FunctionType, MapResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, WeakResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassType, InterfaceType, FunctionType, MapResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, WeakResolvedType } from "./semantic"
 
 export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, name: string): ResolvedType | none {
   case pattern {
@@ -81,6 +81,18 @@ export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, n
           if value != none { return value }
           return inferTypeArgument(result_.errorType, concrete.errorType, name)
         }
+        _ -> { }
+      }
+    }
+    success: SuccessResolvedType -> {
+      case actual {
+        concrete: SuccessResolvedType -> { return inferTypeArgument(success.valueType, concrete.valueType, name) }
+        _ -> { }
+      }
+    }
+    failure: FailureResolvedType -> {
+      case actual {
+        concrete: FailureResolvedType -> { return inferTypeArgument(failure.errorType, concrete.errorType, name) }
         _ -> { }
       }
     }

@@ -1,5 +1,5 @@
 // Compilation-local object identities. These do not canonicalize semantic types.
-import { ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, FunctionType, InterfaceType, MapResolvedType, MethodReflectionResolvedType, PromiseType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType, ResolvedType, SemanticTypeIdentity, SemanticTypeIdentityOwner } from "./semantic"
+import { ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, FunctionType, InterfaceType, MapResolvedType, MethodReflectionResolvedType, PromiseType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType, ResolvedType, SemanticTypeIdentity, SemanticTypeIdentityOwner } from "./semantic"
 
 // Read-only lookup has no miss insertion path. Unknown/scratch types use -1 and
 // must bypass all ID-keyed memo tables rather than alias one another.
@@ -51,6 +51,8 @@ export class SemanticTypeIdentities {
       set_: SetResolvedType -> { prepare(set_.elementType) }
       stream: StreamResolvedType -> { prepare(stream.elementType) }
       result_: ResultResolvedType -> { prepare(result_.valueType); prepare(result_.errorType) }
+      success: SuccessResolvedType -> { prepare(success.valueType) }
+      failure: FailureResolvedType -> { prepare(failure.errorType) }
       tuple: TupleResolvedType -> { for element of tuple.elements { prepare(element) } }
       union_: UnionResolvedType -> { for member of union_.types { prepare(member) } }
       weak_: WeakResolvedType -> { prepare(weak_.inner) }

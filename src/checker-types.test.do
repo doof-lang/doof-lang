@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import { FunctionParamType, Symbol } from "./semantic"
-import { applyDeepReadonly, interfaceBoundReceiver, arrayType, classType, displayTypeName, failureType, functionType, isAssignable, mapType, noneType, primitive, promiseType, resultType, sameType, streamType, substituteTypeParams, successType, typeParameter, unionMutabilityConflict, unionType, weakType } from "./checker-types"
+import { applyDeepReadonly, interfaceBoundReceiver, arrayType, classType, displayTypeName, failureType, functionType, isAssignable, mapType, noneType, primitive, promiseType, resultArmExpectation, resultType, sameType, streamType, substituteTypeParams, successType, typeParameter, unionMutabilityConflict, unionType, weakType } from "./checker-types"
 
 export function testResultArmAssignabilityUsesOnlyItsPayloadChannel(): none {
   success := successType(primitive("int"))
@@ -192,4 +192,30 @@ export function testDisplayTypeNameSpellsCallableSignatures(): none {
   outer := functionType([FunctionParamType { name: "mapper", type_: callback, hasDefault: false }], arrayType(primitive("string")))
   Assert.equal(displayTypeName(outer), "(mapper: (it: int, index: int): U): string[]")
   Assert.equal(displayTypeName(unionType([primitive("int"), noneType()])), "int | none")
+}
+
+export function testResultArmUnionsAreCanonicalResults(): none {
+  canonical := resultType(primitive("int"), primitive("string"))
+  Assert.isTrue(sameType(unionType([successType(primitive("int")), failureType(primitive("string"))]), canonical))
+  Assert.isTrue(sameType(unionType([failureType(primitive("string")), successType(primitive("int"))]), canonical))
+  Assert.isTrue(sameType(unionType([successType(primitive("int")), noneType(), failureType(primitive("string"))]), unionType([canonical, noneType()])))
+  lone := unionType([successType(primitive("int")), noneType()])
+  Assert.equal(displayTypeName(lone), "Success<int> | none")
+  Assert.isTrue(isAssignable(successType(primitive("int")), resultType(primitive("long"), primitive("string"))))
+  Assert.isFalse(isAssignable(successType(primitive("int")), successType(primitive("long"))))
+}
+
+export function testResultArmExpectationsComeFromResultsAndMatchingArms(): none {
+  result := resultType(primitive("int"), primitive("string"))
+  fromResult := resultArmExpectation("Failure", result)
+  Assert.isTrue(fromResult.result != none)
+  Assert.isTrue(sameType(fromResult.payload!, primitive("string")))
+  fromArm := resultArmExpectation("Success", successType(primitive("long")))
+  Assert.equal(fromArm.result, none)
+  Assert.isTrue(sameType(fromArm.payload!, primitive("long")))
+  Assert.equal(resultArmExpectation("Failure", successType(primitive("long"))).payload, none)
+  nullable := resultArmExpectation("Success", unionType([result, noneType()]))
+  Assert.isTrue(sameType(nullable.payload!, primitive("int")))
+  ambiguous := resultArmExpectation("Success", unionType([result, resultType(primitive("bool"), primitive("string"))]))
+  Assert.equal(ambiguous.payload, none)
 }

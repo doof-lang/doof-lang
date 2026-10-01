@@ -118,3 +118,20 @@ export function testStructsSatisfyInterfaceBoundsButNotInterfaceValues(): none {
   Assert.equal(diagnostics.length, 1)
   Assert.stringContains(diagnostics[0].message, "Cannot assign Total to Reader")
 }
+
+export function testResultArmAnnotationsResolveToArmTypes(): none {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "function f(a: Success<int>, b: Failure<none>, c: Success<int> | Failure<string>): none {}" }]).analyze("/main.do")
+  result := createChecker(analysis, "/main.do").check("/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  case analysis.modules[0].program.statements[0] {
+    fn: FunctionDeclaration -> {
+      Assert.equal(typeName(fn.params[0].resolvedType!), "Success<int>")
+      Assert.equal(typeName(fn.params[1].resolvedType!), "Failure<none>")
+      Assert.equal(typeName(fn.params[2].resolvedType!), "Result<int, string>")
+    }
+    _ -> { panic("expected function") }
+  }
+  arity := createChecker(createAnalyzer([SourceFile { path: "/main.do", source: "function f(a: Success<int, string>): none {}" }]).analyze("/main.do"), "/main.do").check("/main.do")
+  Assert.equal(arity.diagnostics.length, 1)
+  Assert.equal(arity.diagnostics[0].message, "Success requires one type argument")
+}

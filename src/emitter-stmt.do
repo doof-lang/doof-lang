@@ -12,8 +12,9 @@ import {
   WhileStatement, CaseStatement, RangePattern, TypePattern, ValuePattern, WildcardPattern,
   Identifier, BreakStatement, ContinueStatement, DestructuringStatement, ForOfStatement, ForStatement, BinaryExpression,
   TryStatement, WithStatement, YieldStatement, YieldBlockAssignmentStatement,
-  MockImportDirective, ClassDeclaration, ExportDeclaration,
+  MockImportDirective, ClassDeclaration, ExportDeclaration, AssignmentExpression,
 } from "./ast"
+import { emitTriedAssignment } from "./emitter-expr-ops"
 import type { TypeAnnotation } from "./ast"
 import { ArrayResolvedType, ClassType, InterfaceType, PrimitiveType, RangeResolvedType, ResolvedType, ResultResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable, recordCoverageLine, sourceLineDirective } from "./emitter-context"
@@ -286,6 +287,14 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
     expression: ExpressionStatement -> { value = expression.expression }
     destructuring: DestructuringStatement -> { value = destructuring.value }
   }
+  // `try target = expr` tries the assigned value, then stores its success value.
+  let triedAssignment: AssignmentExpression | none = none
+  case value {
+    assignment: AssignmentExpression -> {
+      if assignment.resolvedTriedResult != none { triedAssignment = assignment; value = assignment.value }
+    }
+    _ -> { }
+  }
   if context.catchVarName != "" {
       let output = ind + "auto " + temporaryName + " = " + emitExpression(value, context) + ";\n"
       output = output + ind + "if (doof::is_failure(" + temporaryName + ")) { "
@@ -310,7 +319,7 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
         declaration: ReadonlyDeclaration -> { output = output + emitTryLocal(ind, declaration.name, declaration.type_, declaration.resolvedType!, context, "doof::success_value(" + temporaryName + ")", true) }
         binding: ImmutableBinding -> { output = output + emitTryLocal(ind, binding.name, binding.type_, binding.resolvedType!, context, "doof::success_value(" + temporaryName + ")", true, true) }
         declaration: LetDeclaration -> { output = output + emitTryLocal(ind, declaration.name, declaration.type_, declaration.resolvedType!, context, "doof::success_value(" + temporaryName + ")", false) }
-        _: ExpressionStatement -> { }
+        _: ExpressionStatement -> { output = output + emitTryAssignment(triedAssignment, temporaryName, ind, context) }
         destructuring: DestructuringStatement -> { output = output + emitTryDestructuring(destructuring, temporaryName, level, context) }
       }
       return finishTryEmission(output, value, ind, context)
@@ -332,7 +341,7 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
         declaration: LetDeclaration -> {
           output = output + emitTryLocal(ind, declaration.name, declaration.type_, declaration.resolvedType!, context, "doof::success_value(" + temporaryName + ")", false)
         }
-        _: ExpressionStatement -> { }
+        _: ExpressionStatement -> { output = output + emitTryAssignment(triedAssignment, temporaryName, ind, context) }
         destructuring: DestructuringStatement -> { output = output + emitTryDestructuring(destructuring, temporaryName, level, context) }
       }
       return finishTryEmission(output, value, ind, context)
@@ -353,7 +362,7 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
         declaration: ReadonlyDeclaration -> { output = output + emitTryLocal(ind, declaration.name, declaration.type_, declaration.resolvedType!, context, "doof::success_value(" + temporaryName + ")", true) }
         binding: ImmutableBinding -> { output = output + emitTryLocal(ind, binding.name, binding.type_, binding.resolvedType!, context, "doof::success_value(" + temporaryName + ")", true, true) }
         declaration: LetDeclaration -> { output = output + emitTryLocal(ind, declaration.name, declaration.type_, declaration.resolvedType!, context, "doof::success_value(" + temporaryName + ")", false) }
-        _: ExpressionStatement -> { }
+        _: ExpressionStatement -> { output = output + emitTryAssignment(triedAssignment, temporaryName, ind, context) }
         destructuring: DestructuringStatement -> { output = output + emitTryDestructuring(destructuring, temporaryName, level, context) }
       }
       return finishTryEmission(output, value, ind, context)
@@ -662,4 +671,9 @@ export function emitCondition(expression: Expression, context: EmitContext): str
     return value.substring(1, value.length - 1)
   }
   return value
+}
+
+function emitTryAssignment(assignment: AssignmentExpression | none, temporaryName: string, ind: string, context: EmitContext): string {
+  if assignment == none { return "" }
+  return ind + emitTriedAssignment(assignment!, "std::move(doof::success_value(" + temporaryName + "))", context) + ";\n"
 }

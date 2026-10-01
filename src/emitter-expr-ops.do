@@ -182,6 +182,13 @@ export function emitAssignment(expression: AssignmentExpression, context: EmitCo
   return "(" + emitAssignmentTarget(expression.target, context) + " " + operator + " " + value + ")"
 }
 
+/** Lowers the store of `try target = expr` once its Result has succeeded. */
+export function emitTriedAssignment(expression: AssignmentExpression, successValue: string, context: EmitContext): string {
+  result := expression.resolvedTriedResult!
+  targetType := requireExpressionType(expression.target, "try assignment target")
+  return emitAssignmentTarget(expression.target, context) + " = " + emitCarrierConversion(successValue, result.valueType, targetType, context)
+}
+
 /**
  * Lowers `target ??= value`: the value is evaluated and stored only when the
  * target is none or a Failure. A plain value assigned to a Result target is
@@ -422,6 +429,12 @@ export function emitBinary(expression: BinaryExpression, context: EmitContext): 
   if (expression.operator == "==" || expression.operator == "!=") && expression.left.kind == "none-literal" {
     let test = "doof::is_null(" + emitExpression(expression.right, context) + ")"
     return if expression.operator == "==" then test else "(!" + test + ")"
+  }
+  if (expression.operator == "==" || expression.operator == "!=") && expression.resolvedComparisonType != none {
+    target := expression.resolvedComparisonType!
+    left := emitCarrierConversion(emitExpression(expression.left, context), requireExpressionType(expression.left, "equality operand"), target, context)
+    right := emitCarrierConversion(emitExpression(expression.right, context), requireExpressionType(expression.right, "equality operand"), target, context)
+    return "(" + left + " " + expression.operator + " " + right + ")"
   }
   if expression.operator == ">>>" {
     resultType := emitContextType(requireExpressionType(expression, "unsigned shift"), context)

@@ -16,7 +16,7 @@ import { emitInterfaceJsonDeclaration, emitUnionAliasJsonDeclaration } from "./e
 import { emitContextType, emitType } from "./emitter-types"
 import {
   ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType,
-  MapResolvedType, PrimitiveType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType,
+  MapResolvedType, PrimitiveType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType,
   PromiseType, Symbol, TupleResolvedType, UnionResolvedType, WeakResolvedType,
 } from "./semantic"
 import { moduleNamespace, moduleNativeHeaderPath } from "./emitter-names"
@@ -203,6 +203,8 @@ function typeNeedsCompleteNominalDefinition(type_: ResolvedType): bool {
     result: ResultResolvedType -> {
       return typeNeedsCompleteNominalDefinition(result.valueType) || typeNeedsCompleteNominalDefinition(result.errorType)
     }
+    success: SuccessResolvedType -> { return typeNeedsCompleteNominalDefinition(success.valueType) }
+    failure: FailureResolvedType -> { return typeNeedsCompleteNominalDefinition(failure.errorType) }
     tuple: TupleResolvedType -> {
       for element of tuple.elements { if typeNeedsCompleteNominalDefinition(element) { return true } }
       return false
@@ -246,6 +248,8 @@ function collectNativeTypeAliases(type_: ResolvedType, namespace: string, plan: 
       collectNativeTypeAliases(result.valueType, namespace, plan, context)
       collectNativeTypeAliases(result.errorType, namespace, plan, context)
     }
+    success: SuccessResolvedType -> { collectNativeTypeAliases(success.valueType, namespace, plan, context) }
+    failure: FailureResolvedType -> { collectNativeTypeAliases(failure.errorType, namespace, plan, context) }
     tuple: TupleResolvedType -> { for element of tuple.elements { collectNativeTypeAliases(element, namespace, plan, context) } }
     union_: UnionResolvedType -> { for member of union_.types { collectNativeTypeAliases(member, namespace, plan, context) } }
     weak_: WeakResolvedType -> { collectNativeTypeAliases(weak_.inner, namespace, plan, context) }
@@ -310,6 +314,8 @@ function moduleValueDeclarationNeedsIncludes(type_: ResolvedType): bool {
     result: ResultResolvedType -> {
       return moduleValueDeclarationNeedsIncludes(result.valueType) || moduleValueDeclarationNeedsIncludes(result.errorType)
     }
+    success: SuccessResolvedType -> { return moduleValueDeclarationNeedsIncludes(success.valueType) }
+    failure: FailureResolvedType -> { return moduleValueDeclarationNeedsIncludes(failure.errorType) }
     tuple: TupleResolvedType -> {
       for element of tuple.elements { if moduleValueDeclarationNeedsIncludes(element) { return true } }
       return false

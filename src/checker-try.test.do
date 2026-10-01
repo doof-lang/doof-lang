@@ -85,3 +85,26 @@ export function testNeverReviewTryCompletion(): none {
   rejects(load + "function bad(): int { try load() }", "requires a Result-returning function")
   rejects("function load(): Result<int, string> => Failure { error: \"bad\" }\nfunction bad(): Result<int, string> { try load() }", "may complete")
 }
+
+export function testTryAssignmentStoresTheSuccessValue(): none {
+  load := "class Box { let value: int = 0 }\nfunction load(): Result<int, string> => Success(1)\nfunction name(): Result<string, string> => Success(\"a\")\n"
+  valid := checked(load + "function run(): Result<int, string> {\nbox := Box {}\nlet items = [0]\nlet n = 0\nlet wide: long | string = 0L\n" +
+    "try n = load()\ntry box.value = load()\ntry items[0] = load()\ntry wide = name()\nreturn Success(n) }")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+  caught := checked(load + "function run(): none { let n = 0\nerror := catch { try n = load() } }")
+  Assert.equal(caught.diagnostics.length, 0)
+}
+
+export function testTryAssignmentDiagnostics(): none {
+  load := "function load(): Result<int, string> => Success(1)\nfunction save(): Result<none, string> => Success()\n"
+  rejects(load + "function run(): Result<int, string> { let s = \"\"\ntry s = load()\nreturn Success(1) }", "Cannot assign int to string")
+  rejects(load + "function run(): Result<int, string> { let n = 0\ntry n += load()\nreturn Success(n) }", "'try' assignment requires '='; '+=' cannot apply to a Result")
+  rejects(load + "function run(): Result<int, string> { let n = 0\ntry n = 3\nreturn Success(n) }", "try requires a Result expression")
+  rejects(load + "function run(): Result<int, bool> { let n = 0\ntry n = load()\nreturn Success(n) }", "Cannot propagate error string")
+  rejects(load + "function run(): int { let n = 0\ntry n = load()\nreturn n }", "requires a Result-returning function")
+  rejects(load + "function run(): Result<int, string> { n := 0\ntry n = load()\nreturn Success(n) }", "Cannot assign to immutable binding 'n'")
+  none_ := checked(load + "function run(): Result<int, string> { let n = 0\ntry n = save()\nreturn Success(n) }")
+  Assert.equal(none_.diagnostics.length, 1)
+  Assert.equal(none_.diagnostics[0].message, "Cannot bind a none success value; use bare 'try expr'")
+}

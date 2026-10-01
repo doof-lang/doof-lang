@@ -32,13 +32,13 @@ export function testQuarkWeakCaseExpressionChecking(): none {
   Assert.stringContains(missing.diagnostics[0].message, "exhaustive")
   wrong := checked(prefix + "function read(item: weak Item): int => case item { _: Success<int> -> 1\n_: Failure -> -1 }")
   Assert.isTrue(wrong.diagnostics.length > 0)
-  Assert.stringContains(wrong.diagnostics[0].message, "payload must be Item")
+  Assert.stringContains(wrong.diagnostics[0].message, "must be \"Success<Item>\"")
   wrongFailure := checked(prefix + "function read(item: weak Item): int => case item { _: Success -> 1\n_: Failure<string> -> -1 }")
   Assert.isTrue(wrongFailure.diagnostics.length > 0)
-  Assert.stringContains(wrongFailure.diagnostics[0].message, "payload must be WeakReferenceError")
+  Assert.stringContains(wrongFailure.diagnostics[0].message, "must be \"Failure<WeakReferenceError>\"")
   extra := checked(prefix + "function read(item: weak Item): int => case item { _: Success<Item, Item> -> 1\n_: Failure -> -1 }")
   Assert.isTrue(extra.diagnostics.length > 0)
-  Assert.stringContains(extra.diagnostics[0].message, "one payload type argument")
+  Assert.stringContains(extra.diagnostics[0].message, "Success requires one type argument")
 }
 
 export function testQuarkJsonEqualityRequiresNarrowing(): none {
@@ -361,4 +361,53 @@ export function testStaticShorthandMustProduceTheExpectedClass(): none {
     Assert.equal(found.length, 1)
     Assert.equal(found[0], pair[1])
   }
+}
+
+export function testForceAccessUnwrapsResultReceivers(): none {
+  prelude := "enum Color { Red }\nclass User { email: string\nemailOf(): string => email }\n" +
+    "function load(): Result<User, string> => Success(User { email: \"a\" })\n" +
+    "function maybe(): Result<User | none, string> => Success(none)\n" +
+    "function color(): Result<Color, string> => Success(.Red)\n"
+  typed := checked(prelude + "function f(): none {\nlet a: string = load()!.email\nlet b: string = load()!.emailOf()\nlet c: string = maybe()!.email\nlet d: string = color()!.name }")
+  for diagnostic of typed.diagnostics { println(diagnostic.message) }
+  Assert.equal(typed.diagnostics.length, 0)
+  empty := checked("function save(): Result<none, string> => Success()\nfunction f(): none { _ := save()!.size }")
+  Assert.equal(empty.diagnostics.length, 1)
+  Assert.equal(empty.diagnostics[0].message, "Cannot access member \"size\" on Result<none, string>: the Result has no success value")
+  helper := checked(prelude + "function f(): none { _ := load()!.isSuccess() }")
+  Assert.equal(helper.diagnostics.length, 1)
+  Assert.stringContains(helper.diagnostics[0].message, "has no member \"isSuccess\"")
+}
+
+export function testEqualityComparesUnionsWithTheirMembers(): none {
+  prelude := "struct P { x: int }\nfunction ok(): Result<int, string> => Success(1)\n"
+  valid := checked(prelude + "function f(u: int | string, v: P | string): bool => u == 1 && v != P { x: 1 } && ok() == Success(1) && Failure(\"x\") != ok() && Success(1) == Success(1) && Failure() == Failure()")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+  for comparison of ["Success(1) == Success(\"a\")", "Success(1) == Failure(1)", "ok() == Success(\"a\")"] {
+    rejected := checked(prelude + "function f(): bool => " + comparison)
+    Assert.equal(rejected.diagnostics.length, 1)
+    Assert.stringContains(rejected.diagnostics[0].message, "Operator '==' is not defined for")
+  }
+}
+
+export function testBareGenericPatternsTakeTheSubjectMembersArguments(): none {
+  prelude := "class Box<T> { value: T }\n"
+  valid := checked(prelude +
+    "function a(x: Success<int> | none): int => case x { s: Success -> s.value, _ -> 0 }\n" +
+    "function b(x: Box<int> | string): int => case x { box: Box -> box.value, s: string -> s.length }\n" +
+    "function c(r: Result<int, string>): int => case r { s: Success -> s.value, f: Failure -> f.error.length }\n" +
+    "function d(r: Result<int, string>): int => case r { s: Success<int> -> s.value, f: Failure<string> -> 0 }\n" +
+    "function e(r: Result<int, string>): int => case r { all: Result<int, string> -> all.unwrapOr(0) }")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+  mismatch := checked("function f(r: Result<int, string>): int => case r { s: Success<long> -> 1, _ -> 0 }")
+  Assert.equal(mismatch.diagnostics.length, 1)
+  Assert.equal(mismatch.diagnostics[0].message, "Case type pattern \"Success<long>\" must be \"Success<int>\" to match subject type \"Result<int, string>\"")
+  partial := checked("function f(r: Result<int, string>): int => case r { s: Success -> 1 }")
+  Assert.equal(partial.diagnostics.length, 1)
+  Assert.equal(partial.diagnostics[0].message, "Case expression must be exhaustive")
+  ambiguous := checked(prelude + "function f(x: Box<int> | Box<string>): int => case x { b: Box -> 1, _ -> 0 }")
+  Assert.isTrue(ambiguous.diagnostics.length > 0)
+  Assert.stringContains(ambiguous.diagnostics[0].message, "Box requires 1 type argument")
 }

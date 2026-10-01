@@ -142,6 +142,9 @@ export class BinaryExpression {
   left: Expression
   right: Expression
   let resolvedType: ResolvedType | none = none
+  // `==`/`!=` between a union (or Result or interface) and a narrower operand:
+  // the wider type both operands are compared at.
+  let resolvedComparisonType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -159,6 +162,8 @@ export class AssignmentExpression {
   operator: string
   target: Expression
   value: Expression
+  // `try target = expr`: the tried Result; the target receives its success value.
+  let resolvedTriedResult: ResultResolvedType | none = none
   let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
@@ -178,10 +183,12 @@ export class CheckedMember {
 export class MemberExpression {
   completionPoint: bool = false
   kind: string
-  object: Expression
+  // The checker replaces a forced Result receiver (`r!.m`) with its postfix
+  // unwrap `(r!)`, and keeps `force` only when the unwrapped value is nullable.
+  let object: Expression
   property: string
   optional: bool
-  force: bool
+  let force: bool
   let resolvedStaticOwner: ClassDeclaration | none = none
   // `Alias.fromSerialValue` on a class-union alias; lowered to the alias decoder.
   let resolvedJsonAlias: TypeAliasDeclaration | none = none

@@ -71,6 +71,46 @@ export function resultType(value: ResolvedType, error: ResolvedType): ResolvedTy
 export function successType(value: ResolvedType): ResolvedType { return SuccessResolvedType { valueType: value } }
 export function failureType(error: ResolvedType): ResolvedType { return FailureResolvedType { errorType: error } }
 
+/** What a `Success`/`Failure` construction expects from its context. */
+export class ResultArmExpectation {
+  // A surrounding Result (or the single Result member of a union) that the
+  // construction produces directly.
+  result: ResultResolvedType | none = none
+  // The payload type the context expects, from the Result or a matching arm.
+  payload: ResolvedType | none = none
+}
+
+export function resultArmExpectation(arm: string, expected: ResolvedType | none): ResultArmExpectation {
+  if expected == none { return ResultArmExpectation {} }
+  case expected! {
+    result: ResultResolvedType -> {
+      return ResultArmExpectation { result, payload: if arm == "Success" then result.valueType else result.errorType }
+    }
+    success: SuccessResolvedType -> { if arm == "Success" { return ResultArmExpectation { payload: success.valueType } } }
+    failure: FailureResolvedType -> { if arm == "Failure" { return ResultArmExpectation { payload: failure.errorType } } }
+    union_: UnionResolvedType -> {
+      let found: ResultResolvedType | none = none
+      for member of union_.types {
+        case member {
+          result: ResultResolvedType -> {
+            if found != none { return ResultArmExpectation {} }
+            found = result
+          }
+          _ -> { }
+        }
+      }
+      if found != none { return resultArmExpectation(arm, found) }
+    }
+    _ -> { }
+  }
+  return ResultArmExpectation {}
+}
+
+/** The standalone arm type a construction produces without a Result context. */
+export function resultArmType(arm: string, payload: ResolvedType): ResolvedType {
+  return if arm == "Success" then successType(payload) else failureType(payload)
+}
+
 export function actorType(innerClass: ClassType): ResolvedType { return ActorType { innerClass } }
 
 export function promiseType(valueType: ResolvedType): ResolvedType { return PromiseType { valueType } }
@@ -97,9 +137,39 @@ export function unionType(types: ResolvedType[]): ResolvedType {
       _ -> { pushUniqueType(members, memberType) }
     }
   }
+  members = canonicalResultArms(members)
   if members.length == 0 { return neverType() }
   if members.length == 1 { return members[0] }
   return UnionResolvedType { types: members }
+}
+
+// `Success<T> | Failure<E>` is exactly `Result<T, E>`, in either order.
+function canonicalResultArms(members: ResolvedType[]): ResolvedType[] {
+  let successIndex = -1
+  let failureIndex = -1
+  for i of 0..<members.length {
+    case members[i] {
+      _: SuccessResolvedType -> { if successIndex >= 0 { return members } successIndex = i }
+      _: FailureResolvedType -> { if failureIndex >= 0 { return members } failureIndex = i }
+      _ -> { }
+    }
+  }
+  if successIndex < 0 || failureIndex < 0 { return members }
+  let canonical: ResolvedType[] = []
+  for i of 0..<members.length {
+    if i == failureIndex { continue }
+    if i != successIndex { canonical.push(members[i]); continue }
+    case members[successIndex] {
+      success: SuccessResolvedType -> {
+        case members[failureIndex] {
+          failure: FailureResolvedType -> { canonical.push(resultType(success.valueType, failure.errorType)) }
+          _ -> { }
+        }
+      }
+      _ -> { }
+    }
+  }
+  return canonical
 }
 
 function pushUniqueType(types: ResolvedType[], candidate: ResolvedType): none {

@@ -72,7 +72,7 @@ export function casePatternsExhaustive(state: CheckerState, subjectType: Resolve
     for pattern of patterns {
       case pattern {
         _: WildcardPattern -> { return true }
-        type_: TypePattern -> { if subjectType.kind != "result" && type_.resolvedType != none && sameType(subjectType, type_.resolvedType!) { return true } }
+        type_: TypePattern -> { if type_.resolvedType != none && sameType(subjectType, type_.resolvedType!) { return true } }
         _ -> { }
       }
     }
@@ -100,27 +100,7 @@ export function casePatternsExhaustive(state: CheckerState, subjectType: Resolve
       }
       return hasTrue && hasFalse
     }
-    _: ResultResolvedType -> {
-      let hasSuccess = false
-      let hasFailure = false
-      for patterns of arms {
-        for pattern of patterns {
-          case pattern {
-            type_: TypePattern -> {
-              case type_.type_ {
-                named: NamedType -> {
-                  if named.name == "Success" { hasSuccess = true }
-                  if named.name == "Failure" { hasFailure = true }
-                }
-                _ -> { }
-              }
-            }
-            _ -> { }
-          }
-        }
-      }
-      return hasSuccess && hasFailure
-    }
+    result: ResultResolvedType -> { return unionPatternsExhaustive(UnionResolvedType { types: patternSubjectMembers(result) }, arms) }
     enum_: EnumType -> { return enumPatternsExhaustive(state, enum_, arms) }
     union_: UnionResolvedType -> { return unionPatternsExhaustive(union_, arms) }
     _ -> { }
@@ -240,34 +220,75 @@ function unionPatternsExhaustive(union_: UnionResolvedType, arms: CasePattern[][
   return true
 }
 
+// The subject members a type pattern selects among. A Result is the union of
+// its two arms.
+function patternSubjectMembers(subjectType: ResolvedType): ResolvedType[] {
+  case subjectType {
+    union_: UnionResolvedType -> { return union_.types }
+    result: ResultResolvedType -> { return [successType(result.valueType), failureType(result.errorType)] }
+    _ -> { return [subjectType] }
+  }
+}
+
+// The generic type a member instantiates, for matching bare patterns.
+function sameGenericHead(member: ResolvedType, name: string, symbol: Symbol | none): bool {
+  case member {
+    _: SuccessResolvedType -> { return name == "Success" }
+    _: FailureResolvedType -> { return name == "Failure" }
+    class_: ClassType -> {
+      if class_.typeArgs.length == 0 { return false }
+      return if symbol != none then class_.symbol == symbol! else class_.symbol.name == name
+    }
+    _ -> { return false }
+  }
+}
+
+/** A bare generic pattern (`Success`, `Box`) takes its type arguments from the one subject member of that type. */
+function inferredGenericPattern(named: NamedType, subjectType: ResolvedType): ResolvedType | none {
+  if named.typeArgs.length > 0 { return none }
+  let found: ResolvedType | none = none
+  for member of patternSubjectMembers(subjectType) {
+    if !sameGenericHead(member, named.name, named.resolvedSymbol) { continue }
+    if found != none { return none }
+    found = member
+  }
+  return found
+}
+
+/** The subject member instantiating the same generic type as an explicit pattern. */
+function genericPatternMember(pattern: ResolvedType, subjectType: ResolvedType): ResolvedType | none {
+  let name = ""
+  let symbol: Symbol | none = none
+  case pattern {
+    _: SuccessResolvedType -> { name = "Success" }
+    _: FailureResolvedType -> { name = "Failure" }
+    class_: ClassType -> { if class_.typeArgs.length == 0 { return none } name = class_.symbol.name; symbol = class_.symbol }
+    _ -> { return none }
+  }
+  for member of patternSubjectMembers(subjectType) { if sameGenericHead(member, name, symbol) { return member } }
+  return none
+}
+
 export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], subjectType: ResolvedType, scope: Scope): none {
   for pattern of patterns {
     case pattern {
       type_: TypePattern -> {
         let resolved: ResolvedType = unknownType()
-        let contextualResultArm = false
-        case subjectType {
-          result: ResultResolvedType -> {
-            case type_.type_ {
-              named: NamedType -> {
-                if named.name == "Success" || named.name == "Failure" {
-                  contextualResultArm = true
-                  resolved = if named.name == "Success" then successType(result.valueType) else failureType(result.errorType)
-                  // Explicit payload arguments still need full decoration.
-                  if named.typeArgs.length > 1 { typeError(state, named.name + " case pattern accepts one payload type argument", type_.span) }
-                  for argument of named.typeArgs {
-                    payload := resolveType(state, argument, state.info!, scope)
-                    expectedPayload := if named.name == "Success" then result.valueType else result.errorType
-                    if !sameType(payload, expectedPayload) { typeError(state, named.name + " case pattern payload must be " + typeName(expectedPayload), argument.span) }
-                  }
-                }
-              }
-              _ -> { }
-            }
-          }
+        let inferred: ResolvedType | none = none
+        case type_.type_ {
+          named: NamedType -> { inferred = inferredGenericPattern(named, subjectType) }
           _ -> { }
         }
-        if !contextualResultArm { resolved = resolveType(state, type_.type_, state.info!, scope) }
+        if inferred != none { resolved = inferred! }
+        else {
+          resolved = resolveType(state, type_.type_, state.info!, scope)
+          // An explicit generic pattern must name the subject member exactly;
+          // a different instantiation is never stored in the subject.
+          member := genericPatternMember(resolved, subjectType)
+          if member != none && !sameType(member!, resolved) {
+            typeError(state, "Case type pattern \"" + typeName(resolved) + "\" must be \"" + typeName(member!) + "\" to match subject type \"" + typeName(subjectType) + "\"", type_.span)
+          }
+        }
         case type_.type_ {
           named: NamedType -> { named.resolvedType = optionalResolvedType(resolved) }
           _ -> { }
@@ -451,6 +472,18 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
             resultReceiver = result_
             objectType = weakAccessTarget(result_.valueType)
             member.resolvedOptionalReceiver = optionalResolvedType(objectType)
+          } else if member.force {
+            // 'r!.m' is '(r!).m': the receiver becomes a postfix unwrap, so
+            // lowering reuses its panic. A nullable success value keeps '!.'.
+            if result_.valueType.kind == "none" {
+              typeError(state, "Cannot access member \"" + member.property + "\" on " + typeName(objectType) + ": the Result has no success value", member.span)
+              return finish(state, expression, unknownType())
+            }
+            unwrapped := UnaryExpression { kind: "non-null-assertion", operator: "!", operand: member.object, prefix: false, span: member.object.span }
+            finish(state, unwrapped, result_.valueType)
+            member.object = unwrapped
+            member.force = isNullableType(result_.valueType)
+            objectType = result_.valueType
           }
         }
         _ -> { }
@@ -990,6 +1023,8 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
     }
     if left.kind != "none" && right.kind != "none" && !typesOverlap(state, left, right) {
       typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), expression.span)
+    } else if left.kind != "none" && right.kind != "none" {
+      expression.resolvedComparisonType = comparisonType(state, left, right)
     }
     return finish(state, expression, primitive("bool"))
   }
@@ -1168,7 +1203,9 @@ export function hasNoneMember(state: CheckerState, value: UnionResolvedType): bo
   return false
 }
 
-export function checkAssignment(state: CheckerState, expression: AssignmentExpression, scope: Scope): ResolvedType {
+// `tried` checks `try target = expr`: the value must be a Result, and the target
+// is checked against its success type.
+export function checkAssignment(state: CheckerState, expression: AssignmentExpression, scope: Scope, tried: bool = false): ResolvedType {
   case expression.target {
     member: MemberExpression -> {
       if member.optional { typeError(state, "Optional chaining '?.' cannot be used as an assignment target", expression.target.span) }
@@ -1192,7 +1229,20 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
     }
     _ -> { }
   }
-  value := checkExpression(state, expression.value, scope, optionalResolvedType(targetType))
+  let value = checkExpression(state, expression.value, scope, if tried then none else optionalResolvedType(targetType))
+  if tried {
+    case value {
+      result: ResultResolvedType -> {
+        expression.resolvedTriedResult = result
+        // A none success value is reported once by the try statement.
+        value = if result.valueType.kind == "none" then unknownType() else result.valueType
+      }
+      _ -> {
+        if value.kind != "unknown" { typeError(state, "try requires a Result expression", expression.value.span) }
+        value = unknownType()
+      }
+    }
+  }
   validateAssignmentOperator(state, expression.operator, targetType, value, expression.span)
   case expression.target {
     identifier: Identifier -> {
@@ -1322,6 +1372,24 @@ function orderedTypes(state: CheckerState, left: ResolvedType, right: ResolvedTy
     }
   }
   return false
+}
+
+// A union, Result, or interface compares with one of its members at the wider
+// type, so the narrower operand is converted to it like any assignment.
+function comparisonType(state: CheckerState, left: ResolvedType, right: ResolvedType): ResolvedType | none {
+  if sameType(left, right) { return none }
+  if isComparisonCarrier(right) && isAssignableWithInterfaces(state.result, left, right) { return right }
+  if isComparisonCarrier(left) && isAssignableWithInterfaces(state.result, right, left) { return left }
+  return none
+}
+
+function isComparisonCarrier(type_: ResolvedType): bool {
+  case type_ {
+    _: UnionResolvedType -> { return true }
+    _: ResultResolvedType -> { return true }
+    _: InterfaceType -> { return true }
+    _ -> { return false }
+  }
 }
 
 function typesOverlap(state: CheckerState, left: ResolvedType, right: ResolvedType): bool {

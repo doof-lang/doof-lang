@@ -194,6 +194,28 @@ the shorthand `s: Success` / `f: Failure` specializes from the subject type.
 Payloadless `Success<none>` may be discarded but not captured for `.value`;
 payloadless `Failure<none>` may not be captured because it has no `.error`.
 
+The shorthand is the general rule for generic types. A type pattern that names
+a generic type without type arguments takes them from the one subject member
+of that type. This applies wherever the arm appears, and to generic classes:
+
+```doof
+function value(x: Success<int> | none): int => case x {
+    s: Success -> s.value,      // Success<int>
+    _ -> 0
+}
+
+function size(x: Box<int> | string): int => case x {
+    b: Box -> b.value,          // Box<int>
+    s: string -> s.length
+}
+```
+
+When the subject has several members of that generic type, the pattern must
+spell its type arguments. A pattern that does spell them must name the subject
+member exactly: `Success<long>` cannot match a `Result<int, string>` subject.
+A pattern naming the whole subject type, such as `r: Result<int, string>`,
+always matches.
+
 ### Nested Access with Capture
 
 Capture patterns solve the path-tracking problem for nested fields:

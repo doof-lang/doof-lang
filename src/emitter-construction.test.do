@@ -109,3 +109,12 @@ export function testPositionalLiteralLowersToConstruction(): none {
   Assert.stringContains(source, "Vec{3, 4}")
   Assert.stringContains(source, "std::make_tuple(1, 2)")
 }
+
+export function testNamedResultArmConstructionWithoutAResultContext(): none {
+  result := compile([SourceFile { path: "/main.do", source: "function main(): none { ok := Success { value: 3 }\nfailed: Failure<string> := Failure { error: \"x\" } }" }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::Success<int32_t>{ 3 }")
+  Assert.stringContains(source, "doof::Failure<std::string>{ std::string(\"x\") }")
+}

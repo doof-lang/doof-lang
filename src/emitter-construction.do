@@ -3,7 +3,7 @@
 // owns stored-field order, defaults, specialization, and factory arguments.
 import { ActorCreationExpression, CheckedConstruction, CallArgument, CallExpression, ConstructExpression, Expression, ObjectLiteral, ObjectProperty, SourceSpan, ThisExpression, TupleLiteral } from "./ast"
 import { emitNoImplementationsAccess, implementationlessInterface, interfaceFieldType } from "./emitter-no-implementations"
-import { ClassType, InterfaceType, ResolvedType, ResultResolvedType, TypeSubstitution } from "./semantic"
+import { ClassType, FailureResolvedType, InterfaceType, ResolvedType, ResultResolvedType, SuccessResolvedType, TypeSubstitution } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitPropertyValue, emittedSymbolName, exprModuleNamespaceFor, findProperty } from "./emitter-expr-utils"
@@ -92,20 +92,24 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
   if expression.type_ == "Success" || expression.type_ == "Failure" {
     resultType := expression.resolvedType
     if resultType == none { panic(expression.type_ + " has no resolved Result type") }
+    let payload: ResolvedType | none = none
     case resultType! {
-      result: ResultResolvedType -> {
-        valueType := if expression.type_ == "Success" then result.valueType else result.errorType
-        propertyName := if expression.type_ == "Success" then "value" else "error"
-        property := findProperty(expression.args, propertyName)
-        payloadType := emitContextReturnType(valueType, context)
-        if property == none { return "doof::" + expression.type_ + "<" + payloadType + ">{ }" }
-        value := emitPropertyValue(property!, context, valueType)
-        if payloadType == "void" {
-          return "(static_cast<void>(" + value + "), doof::" + expression.type_ + "<void>{})"
-        }
-        return "doof::" + expression.type_ + "<" + payloadType + ">{ " + value + " }"
-      }
+      result: ResultResolvedType -> { payload = if expression.type_ == "Success" then result.valueType else result.errorType }
+      success: SuccessResolvedType -> { payload = success.valueType }
+      failure: FailureResolvedType -> { payload = failure.errorType }
       _ -> { }
+    }
+    if payload != none {
+      valueType := payload!
+      propertyName := if expression.type_ == "Success" then "value" else "error"
+      property := findProperty(expression.args, propertyName)
+      payloadType := emitContextReturnType(valueType, context)
+      if property == none { return "doof::" + expression.type_ + "<" + payloadType + ">{ }" }
+      value := emitPropertyValue(property!, context, valueType)
+      if payloadType == "void" {
+        return "(static_cast<void>(" + value + "), doof::" + expression.type_ + "<void>{})"
+      }
+      return "doof::" + expression.type_ + "<" + payloadType + ">{ " + value + " }"
     }
     panic(expression.type_ + " does not construct a Result")
   }

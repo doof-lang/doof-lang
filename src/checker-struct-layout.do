@@ -6,7 +6,7 @@
 // callbacks, and weak references are indirections and end it.
 
 import { ClassDeclaration, ClassField } from "./ast"
-import { ClassType, ResolvedType, ResultResolvedType, Symbol, TupleResolvedType, UnionResolvedType } from "./semantic"
+import { ClassType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, Symbol, TupleResolvedType, UnionResolvedType } from "./semantic"
 import { CheckerState } from "./checker-state"
 import { typeError } from "./checker-common"
 import { declarationFor } from "./checker-symbols"
@@ -35,6 +35,8 @@ function embedsStruct(state: CheckerState, type_: ResolvedType, target: Symbol, 
     result: ResultResolvedType -> {
       return embedsStruct(state, result.valueType, target, visited) || embedsStruct(state, result.errorType, target, visited)
     }
+    success: SuccessResolvedType -> { return embedsStruct(state, success.valueType, target, visited) }
+    failure: FailureResolvedType -> { return embedsStruct(state, failure.errorType, target, visited) }
     class_: ClassType -> {
       if class_.symbol.module == target.module && class_.symbol.name == target.name { return true }
       key := class_.symbol.module + ":" + class_.symbol.name

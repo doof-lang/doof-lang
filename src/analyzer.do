@@ -81,7 +81,7 @@ function parseModuleSource(source: SourceFile, path: string, mockRootPath: strin
   }
 }
 
-export readonly BUILTIN_TYPES = ["byte", "int", "long", "float", "double", "string", "char", "bool", "none", "never", "void", "null", "SerialValue", "SerialObject", "SourceLocation", "WeakReferenceError", "Map", "ReadonlyMap", "Set", "ReadonlySet", "Result", "Stream", "Range", "Tuple", "Actor", "Promise"]
+export readonly BUILTIN_TYPES = ["byte", "int", "long", "float", "double", "string", "char", "bool", "none", "never", "void", "null", "SerialValue", "SerialObject", "SourceLocation", "WeakReferenceError", "Map", "ReadonlyMap", "Set", "ReadonlySet", "Result", "Success", "Failure", "Stream", "Range", "Tuple", "Actor", "Promise"]
 
 export class ModuleAnalyzer {
   resolver: ModuleResolver
