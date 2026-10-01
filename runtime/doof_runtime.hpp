@@ -182,6 +182,19 @@ public:
 #endif
 }
 
+// The sole alternative of an interface with no implementing classes. No value
+// of such an interface can exist, so code that reaches into one is unreachable;
+// the placeholder only gives parameters, fields, and locals a C++ type.
+struct NoImplementations {
+    bool operator==(const NoImplementations&) const { return true; }
+    bool operator!=(const NoImplementations&) const { return false; }
+};
+
+template <typename R>
+[[noreturn]] R no_implementations(const char* interfaceName) {
+    panic(std::string("interface ") + interfaceName + " has no implementing classes");
+}
+
 inline void assert_(bool condition, const std::string& message) {
     if (!condition) {
         panic("Assertion failed: " + message);

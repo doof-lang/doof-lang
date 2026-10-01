@@ -834,19 +834,6 @@ function validateEnumLiteralField(state: CheckerState, field: ClassField, fieldT
   }
 }
 
-export function validateInterfaces(state: CheckerState, module: ModuleInfo): none {
-  for symbol of module.symbols {
-    if symbol.kind != "interface" || symbol.implementations.length > 0 { continue }
-    declaration := declarationFor(state.result, symbol)
-    if declaration != none {
-      case declaration! {
-        interface_: InterfaceDeclaration -> { if interface_.typeParams.length == 0 { typeError(state, "Cannot emit interface \"" + symbol.name + "\" without implementing classes", symbolSpan(module, symbol.name)) } }
-        _ -> { }
-      }
-    }
-  }
-}
-
 export function checkReturn(state: CheckerState, statement: ReturnStatement, scope: Scope): bool {
   if valueYieldScope(scope) != none {
     typeError(state, "'return' cannot be used inside a value-producing block; use 'yield' to produce the block value", statement.span)

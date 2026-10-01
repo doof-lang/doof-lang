@@ -254,6 +254,9 @@ result := Shape.fromSerialValue({ kind: "circle", radius: 5.0 })
 - All implementing classes must share a literal-valued field with the same name, such as `kind`.
 - Each implementing class must use a distinct string discriminator value.
 - If these requirements are not met, using `.fromSerialValue()` on the interface is a compile-time error.
+- An interface with no implementing classes always fails to decode, returning
+  `Failure("Interface Animal has no implementing classes")` rather than a
+  compile-time error, so library helpers still check on their own.
 
 ```doof
 interface Animal {}

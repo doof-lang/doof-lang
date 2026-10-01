@@ -6,7 +6,7 @@
 import { AnalysisResult } from "./analyzer"
 import { Binding, CheckResult, Diagnostic, Scope } from "./semantic"
 import { CheckerState } from "./checker-state"
-import { checkStatement, validateInterfaces } from "./checker-statements"
+import { checkStatement } from "./checker-statements"
 import { checkExpression } from "./checker-expressions"
 import { resolveType } from "./checker-resolution"
 import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-actor-lifecycle"
@@ -92,7 +92,6 @@ function checkModule(state: CheckerState, entry: string): CheckResult {
     reportRetiredActorUses(statement, retiredActors, state.info!.path, state.diagnostics)
     collectRetiredActorBindings(statement, retiredActors)
   }
-  validateInterfaces(state, state.info!)
   return CheckResult { diagnostics: state.diagnostics }
 }
 

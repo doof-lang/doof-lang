@@ -838,6 +838,32 @@ An inferred class field is considered only once its type has been resolved.
 If its type cannot be resolved, it cannot establish structural conformance and
 the compiler reports the resulting type mismatch rather than assuming a type.
 
+### Interfaces Without Implementations
+
+An interface need not have an implementing class. A library may export an
+interface for its consumers to implement, along with helpers declared against
+it, and both check and compile on their own:
+
+```doof
+export interface Plugin {
+    name: string
+    run(input: string): string
+}
+
+export function runAll(plugins: Plugin[], input: string): string {
+    let value = input
+    for plugin of plugins { value = plugin.run(value) }
+    return value
+}
+```
+
+The same applies when the only implementers are generic classes that are
+never instantiated. In a program with no implementations, no value of the
+interface can exist: collections of it are always empty and `Plugin | none`
+is always `none`. Code that would read a member of such a value can never run.
+Decoding the interface with `.fromSerialValue()` always fails. When a program
+adds an implementing class, the same helpers dispatch to it as usual.
+
 ### Interfaces as Generic Bounds
 
 Use `T: Interface` to require structural conformance while retaining the concrete

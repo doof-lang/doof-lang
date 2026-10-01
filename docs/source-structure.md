@@ -151,6 +151,7 @@ emitter or individual expression branch.
 | `emitter-expr-ops.do` | Assignment, identifiers, operators, members, indexing, and `as`; equality uses checked none types and unit unwraps produce stored unit values |
 | `emitter-expr-calls.do` | Call target selection, runtime member dispatch, and positional Result payload construction |
 | `emitter-array-methods.do` | Built-in array member lowering onto runtime helpers, with callbacks emitted against the checked signature and `find` converted into the `T \| none` carrier |
+| `emitter-no-implementations.do` | Identifies interfaces without implementing classes (lowered to `doof::NoImplementations`) and emits unreachable member access for them |
 | `emitter-optional-chain.do` | `?.` and `?[]` over nullable receivers and `?.` over Result receivers: single evaluation, none and Failure short-circuits, Result flattening for calls, and access through the checked unwrapped receiver |
 | `emitter-call-arguments.do` | Shared named/positional argument ordering, checked contextual argument types, and call-site default emission for direct and dispatched calls |
 | `emitter-construction.do` | Positional, named, contextual, and actor construction from checked plans; shared argument/default lowering, owner specialization, and spread handling |

@@ -12,6 +12,7 @@ import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, has
 import { emitClassInnerType, emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { cppIdentifier as emittedCppIdentifier, moduleDiagnosticPath } from "./emitter-names"
 import { isNumeric, isSerialBytesType, sameType } from "./checker-types"
+import { emitNoImplementationsAccess, implementationlessInterface } from "./emitter-no-implementations"
 
 /** Lowers checked `as` conversion to a Result without evaluating its source twice. */
 export function emitAs(expression: AsExpression, context: EmitContext): string {
@@ -222,6 +223,11 @@ function emitAssignmentTarget(target: Expression, context: EmitContext): string 
       if objectType != none { objectType = specializeEmitType(objectType!, context) }
       if objectType != none && isVariantCarrier(objectType!) {
         object := emitExpression(member.object, context)
+        empty := implementationlessInterface(objectType, context)
+        if empty != none && member.resolvedType != none {
+          // An assignment target needs an lvalue of the field's type.
+          return "(static_cast<void>(" + object + "), doof::no_implementations<" + emitContextType(member.resolvedType!, context) + "&>(" + quote(empty!.name) + "))"
+        }
         return "std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->" + cppIdentifier(member.property) + "); }, " + variantVisitValue(object, objectType!) + ")"
       }
     }
@@ -535,6 +541,8 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
       _ -> { }
     }
   }
+  empty := implementationlessInterface(staticObjectType, context)
+  if empty != none { return emitNoImplementationsAccess(object, empty!, expression.resolvedType, context) }
   if !callableMember && staticObjectType != none && usesVariantRepresentation(staticObjectType!) {
     return "std::visit([](auto&& _obj) { return _obj->" + cppIdentifier(expression.property) + "; }, " + variantVisitValue(object, staticObjectType!) + ")"
   }

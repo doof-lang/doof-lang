@@ -23,6 +23,10 @@ export function emitInterfaceJsonDeclaration(owner: InterfaceDeclaration): strin
 
 export function emitInterfaceJsonDefinition(owner: InterfaceDeclaration, context: EmitContext): string {
   if !owner.needsJson { return "" }
+  if owner.resolvedSymbol != none && owner.resolvedSymbol!.implementations.length == 0 {
+    return "\ndoof::Result<" + owner.name + ", std::string> " + owner.name + "_fromSerialValue(const doof::SerialValue&, bool) {\n" +
+      "    return doof::Failure<std::string>{\"Interface " + owner.name + " has no implementing classes\"};\n}\n"
+  }
   discriminator := interfaceJsonDiscriminator(owner, context.allPrograms, context.jsonEligibility)
   if discriminator == none { return "" }
   return emitDiscriminatedJsonDefinition(owner.name, discriminator!, context)

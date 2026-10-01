@@ -15,6 +15,7 @@ import { classInstantiationKey, functionInstantiationKey, methodInstantiationKey
 import { emitSyncActorCall } from "./emitter-expr-actor"
 import { emitOptionalCall } from "./emitter-optional-chain"
 import { emitArrayMethodCall } from "./emitter-array-methods"
+import { emitNoImplementationsAccess, implementationlessInterface } from "./emitter-no-implementations"
 
 export function emitCall(expression: CallExpression, context: EmitContext, expected: ResolvedType | none = none): string {
   case expression.callee {
@@ -444,6 +445,8 @@ function emitBuiltinCall(name: string, object: Expression, expression: CallExpre
 
 function emitInterfaceCall(member: MemberExpression, call: CallExpression, context: EmitContext): string {
   object := emitExpression(member.object, context)
+  empty := implementationlessInterface(decoratedExpressionType(member.object), context)
+  if empty != none { return emitNoImplementationsAccess(object, empty!, call.resolvedType, context) }
   let args = ""
   for i of 0..<call.args.length {
     if i > 0 { args = args + ", " }
@@ -457,6 +460,8 @@ function emitVariantMemberCall(member: MemberExpression, call: CallExpression, c
   objectType := decoratedExpressionType(member.object)
   if objectType == none { panic("Variant member call has no resolved object type") }
   if call.resolvedType == none { panic("Variant member call has no resolved return type") }
+  empty := implementationlessInterface(objectType, context)
+  if empty != none { return emitNoImplementationsAccess(object, empty!, call.resolvedType, context) }
   args := emitDispatchCallArguments(call, context)
   invocation := if member.resolvedCallableField then ".call(" else "("
   return "std::visit([&](auto&& _obj) -> " + emitContextReturnType(call.resolvedType!, context) + " { return _obj->" + cppIdentifier(member.property) + invocation + args + "); }, " + variantVisitValue(object, objectType!) + ")"

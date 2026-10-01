@@ -64,6 +64,11 @@ export class EmitContext {
   concreteMethodKeys: string[] = []
   concreteInterfaceNames: string[] = []
   concreteInterfaceKeys: string[] = []
+  // Owners ("module::Name") of generic classes with at least one instantiation,
+  // and generic interface instantiations without implementations. Together
+  // they identify interfaces lowered to doof::NoImplementations.
+  instantiatedClassOwners: string[] = []
+  implementationlessInterfaceKeys: string[] = []
   jsonSerializationKeys: string[] = []
   jsonDeserializationKeys: string[] = []
   // Mutable locals captured by any lambda in the current callable. Their

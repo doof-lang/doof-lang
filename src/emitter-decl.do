@@ -379,7 +379,6 @@ export function emitInterfaceAlias(decl: InterfaceDeclaration, context: EmitCont
 export function planInterfaceAlias(decl: InterfaceDeclaration, context: EmitContext, classes: ClassInstantiation[] = []): CppDeclaration {
   if decl.resolvedSymbol == none { panic("Interface " + decl.name + " was not analyzed") }
   implementations := decl.resolvedSymbol!.implementations
-  if implementations.length == 0 { panic("Interface " + decl.name + " has no implementing classes") }
   let alternatives: CppType[] = []
   for symbol of implementations {
     if symbol.typeParams.length > 0 && !symbol.native_ {
@@ -393,7 +392,8 @@ export function planInterfaceAlias(decl: InterfaceDeclaration, context: EmitCont
       alternatives.push(context.cppTypes.templateType("std::shared_ptr", [context.cppTypes.atom(name, if symbol.native_ then "" else typeNamespace(symbol.module, context.names))]))
     }
   }
-  if alternatives.length == 0 { alternatives.push(context.cppTypes.atom("std::monostate")) }
+  // Without implementations no value exists; see doof::NoImplementations.
+  if alternatives.length == 0 { alternatives.push(context.cppTypes.atom("doof::NoImplementations")) }
   result := CppDeclarationBuilder {}
   result.text(emitDescriptionComment(decl.description, "") + "using " + decl.name + " = ")
   result.type_(context.cppTypes.templateType("std::variant", alternatives))

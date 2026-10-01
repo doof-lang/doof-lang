@@ -36,6 +36,10 @@ export function testExponentLiteralsNative(): none {
   runNativeFixture("exponent-literals")
 }
 
+export function testInterfacesWithoutImplementationsNative(): none {
+  runNativeFixture("interface-no-implementations")
+}
+
 function runNativeFixture(fixture: string): none {
   root := join([tempDirectory(), "doof-native-" + fixture])
   clearNativeMatrix(root)

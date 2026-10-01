@@ -216,6 +216,10 @@ Rules:
 - `implements` is optional and mainly useful for documentation and early validation.
 - Interfaces declare instance members only; class statics do not take part in structural matching. Static interface members and `T.member` access through type parameters are reserved.
 - Interface members cannot be `private`.
+- An interface may have no implementing class (for example a library interface
+  that consumers implement). Helpers declared against it still check and
+  compile; with no implementations no value exists, member access cannot run,
+  and `.fromSerialValue()` always fails.
 
 ## Memory Management
 

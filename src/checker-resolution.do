@@ -422,12 +422,10 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
               typeError(state, "Automatic JSON deserialization is not available on generic interface \"" + interface_.name + "\"", span)
               return unknownType()
             }
-            if interfaceType_.symbol.implementations.length == 0 {
-              typeError(state, "Cannot deserialize interface \"" + interface_.name + "\": no implementing classes found", span)
-              return unknownType()
-            }
+            // Without implementations no value can be decoded; the generated decoder
+            // always fails, so library helpers still check on their own.
             discriminator := interfaceJsonDiscriminator(interface_, jsonPrograms(state.result))
-            if discriminator == none {
+            if discriminator == none && interfaceType_.symbol.implementations.length > 0 {
               typeError(state, "Cannot deserialize interface \"" + interface_.name + "\": all implementing classes must share a literal-valued string field with distinct values (e.g. kind: \"variant\")", span)
               return unknownType()
             }

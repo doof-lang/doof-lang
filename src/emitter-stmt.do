@@ -5,6 +5,7 @@
 // place signatures in headers and bodies in sources.
 
 import { carrierOf } from "./emitter-carriers"
+import { emitNoImplementationsAccess, implementationlessInterface, interfaceFieldType } from "./emitter-no-implementations"
 import {
   Block, Expression, ExpressionStatement, IfStatement, LetDeclaration, ImmutableBinding,
   ReadonlyDeclaration, ConstDeclaration, ReturnStatement, Statement,
@@ -192,7 +193,11 @@ function emitDestructuredField(source: string, field: string, sourceType: Resolv
       accessor := if class_.symbol.kind == "struct" then "." else "->"
       return source + accessor + cppIdentifier(field)
     }
-    _: InterfaceType -> { return "std::visit([](auto&& _obj) { return _obj->" + cppIdentifier(field) + "; }, " + source + ")" }
+    interface_: InterfaceType -> {
+      empty := implementationlessInterface(interface_, context)
+      if empty != none { return emitNoImplementationsAccess(source, empty!, interfaceFieldType(empty!, field, context), context) }
+      return "std::visit([](auto&& _obj) { return _obj->" + cppIdentifier(field) + "; }, " + source + ")"
+    }
     _ -> { }
   } }
   return source + "." + cppIdentifier(field)

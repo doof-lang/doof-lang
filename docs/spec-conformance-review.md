@@ -240,15 +240,17 @@ the form; ch. 11's `1e-10` example now compiles.
 - `Success(3)` fails when the expected type is `Result<int, string> | none`: "Success requires an expected Result type".
 - Double range patterns (`case score { 90.0.. -> … }`) report "Case range bound of type double cannot match subject type double". Either support them or give a clear "integer subjects only" diagnostic.
 
-### A26. Interfaces with no class implementers — **Decide**
+### A26. Interfaces with no class implementers — **Fixed**
 
-`interface I { … }` with no implementing class is a hard error at `check`:
-"Cannot emit interface I without implementing classes". This also happens when
-a struct satisfies the interface only as a generic bound. A library that
-exports an interface for consumers to implement can't be checked on its own.
-
-**Recommendation**: emit nothing (or a warning) when no value of the
-interface type is reachable, and document the rule in ch. 7.
+Interfaces may have no implementing classes, so a library that exports an
+interface and helpers declared against it now checks and compiles alone. Such
+an interface, including one implemented only by never-instantiated generic
+classes, lowers to `std::variant<doof::NoImplementations>`. No value can exist,
+so member reads, calls, assignments, destructuring, and spreads on it lower to
+an unreachable panic of the checked result type, and `.fromSerialValue()`
+always returns a Failure. This also fixes the never-instantiated generic case,
+which previously passed `check` and then failed in C++ with a
+`std::monostate` variant. Documented in ch. 7 and ch. 12.
 
 ### A27. Named union alias deserialization — **Fixed**
 
@@ -312,4 +314,4 @@ to qualify.
 1. **The remaining checker test helpers** (section C), now that A1, A2, A27 and A28 are done.
 2. **Chapter B doc fixes.** Cheap, and they remove misleading examples.
 3. **Common gaps: A5, A6, A8, A9, A10, A12, A13, A29.**
-4. **Needs a decision first: A14, A16, A26.**
+4. **Needs a decision first: A14, A16.**

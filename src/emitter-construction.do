@@ -2,6 +2,7 @@
 // Checked owner/constructor decorations select the target; shared value lowering
 // owns stored-field order, defaults, specialization, and factory arguments.
 import { ActorCreationExpression, CheckedConstruction, CallArgument, CallExpression, ConstructExpression, Expression, ObjectLiteral, ObjectProperty, SourceSpan, ThisExpression, TupleLiteral } from "./ast"
+import { emitNoImplementationsAccess, implementationlessInterface, interfaceFieldType } from "./emitter-no-implementations"
 import { ClassType, InterfaceType, ResolvedType, ResultResolvedType, TypeSubstitution } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
@@ -135,7 +136,11 @@ function emitConstructionSpreadField(expression: ConstructExpression, temporary:
       accessor := if class_.symbol.kind == "struct" then "." else "->"
       return temporary + accessor + cppIdentifier(name)
     }
-    _: InterfaceType -> { return "std::visit([](auto&& _obj) { return _obj->" + cppIdentifier(name) + "; }, " + temporary + ")" }
+    interface_: InterfaceType -> {
+      empty := implementationlessInterface(interface_, context)
+      if empty != none { return emitNoImplementationsAccess(temporary, empty!, interfaceFieldType(empty!, name, context), context) }
+      return "std::visit([](auto&& _obj) { return _obj->" + cppIdentifier(name) + "; }, " + temporary + ")"
+    }
     _ -> { panic("Construction spread has unsupported resolved type") }
   }
 }

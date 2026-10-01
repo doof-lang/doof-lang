@@ -743,7 +743,7 @@ export function testReportsUnknownMembersAcrossResolvedTypes(): none {
   Assert.equal(classResult.diagnostics[0].message, "Type \"Widget\" has no member \"missing\"")
 
   interfaceResult := checked("interface Drawable { render(): int }\nfunction bad(value: Drawable): int => value.missing()")
-  Assert.equal(interfaceResult.diagnostics.length, 2)
+  Assert.equal(interfaceResult.diagnostics.length, 1)
   Assert.equal(interfaceResult.diagnostics[0].message, "Type \"Drawable\" has no member \"missing\"")
 
   builtinCallableResult := checked("function bad(): int => int.missing(1)")
@@ -2104,10 +2104,17 @@ export function testRejectsClassesThatDoNotSatisfyInterfaces(): none {
   Assert.equal(result.diagnostics[0].message, "Class \"Point\" does not satisfy interface \"Drawable\"")
 }
 
-export function testRejectsInterfacesWithoutImplementations(): none {
-  result := checked("interface Empty { value: int }")
-  Assert.equal(result.diagnostics.length > 0, true)
-  Assert.equal(result.diagnostics[0].message, "Cannot emit interface \"Empty\" without implementing classes")
+export function testAcceptsInterfacesWithoutImplementations(): none {
+  // Helpers check against the declared members; no implementer is needed.
+  result := checked("export interface Empty { value: int\nread(): int }\nexport function total(items: Empty[]): int { let sum = 0\nfor item of items { sum += item.read() + item.value }\nreturn sum }")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testDecodingInterfacesWithoutImplementationsChecks(): none {
+  result := checked("interface Shape { kind: string }\nfunction decode(value: SerialValue): Result<Shape, string> => Shape.fromSerialValue(value)")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
 }
 
 export function testChecksIntrinsicJsonValueLiterals(): none {

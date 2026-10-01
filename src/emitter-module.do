@@ -690,6 +690,7 @@ function configureInstantiationRegistry(context: EmitContext, plan: Instantiatio
   for instantiation of plan.classes {
     context.concreteClassKeys.push(instantiation.key)
     context.concreteClassNames.push(instantiation.emittedName)
+    context.instantiatedClassOwners.push(instantiation.modulePath + "::" + instantiation.declaration.name)
   }
   for instantiation of plan.methods {
     context.concreteMethodKeys.push(instantiation.key)
@@ -698,6 +699,7 @@ function configureInstantiationRegistry(context: EmitContext, plan: Instantiatio
   for instantiation of plan.interfaces {
     context.concreteInterfaceKeys.push(instantiation.key)
     context.concreteInterfaceNames.push(instantiation.emittedName)
+    if instantiation.implementations.length == 0 { context.implementationlessInterfaceKeys.push(instantiation.key) }
   }
   for key of plan.jsonSerializationKeys { context.jsonSerializationKeys.push(key) }
   for key of plan.jsonDeserializationKeys { context.jsonDeserializationKeys.push(key) }
@@ -727,7 +729,7 @@ function addConcreteHeaderDeclarations(
       }
       alternatives.push(context.cppTypes.templateType("std::shared_ptr", [context.cppTypes.atom(implementation.typeName, typeNamespace(implementation.modulePath, context.names))]))
     }
-    if alternatives.length == 0 { alternatives.push(context.cppTypes.atom("std::monostate")) }
+    if alternatives.length == 0 { alternatives.push(context.cppTypes.atom("doof::NoImplementations")) }
     reserveHeaderNamespaceName(plan, interface_.emittedName)
     alias := CppDeclarationBuilder {}
     alias.text("using " + interface_.emittedName + " = ")
