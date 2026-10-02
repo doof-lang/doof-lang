@@ -6,7 +6,7 @@ import { PkgConfigCommandResult, applyPkgConfigResult } from "./pkg-config"
 export function testConvertsPkgConfigFlagsIntoNativeBuildInputs(): none {
   native := NativeBuildPlan { includePaths: ["/existing/include"], linkLibraries: ["SDL3"] }
 
-  try! applyPkgConfigResult(
+  applyPkgConfigResult(
     native,
     "sdl3",
     "cflags",
@@ -14,8 +14,8 @@ export function testConvertsPkgConfigFlagsIntoNativeBuildInputs(): none {
       exitCode: 0,
       output: "-I/opt/include/SDL3\t-I /existing/include -DTEST_FLAG=1 -D SPLIT_FLAG -Winvalid-pch\n",
     },
-  )
-  try! applyPkgConfigResult(
+  )!
+  applyPkgConfigResult(
     native,
     "sdl3",
     "libs",
@@ -23,7 +23,7 @@ export function testConvertsPkgConfigFlagsIntoNativeBuildInputs(): none {
       exitCode: 0,
       output: "-L/opt/lib -L /second/lib -lSDL3 -framework Cocoa -Wl,-rpath,/opt/lib",
     },
-  )
+  )!
 
   Assert.equal(native.includePaths.length, 2)
   Assert.equal(native.includePaths[1], "/opt/include/SDL3")

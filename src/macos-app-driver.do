@@ -42,27 +42,27 @@ function ensureDirectory(path: string): none {
   if path == "" || exists(path) { return }
   parent := parentPath(path)
   if parent != path { ensureDirectory(parent) }
-  try! mkdir(path)
+  mkdir(path)!
 }
 
 function copyPath(sourcePath: string, destinationPath: string): none {
   if isDirectory(sourcePath) {
     ensureDirectory(destinationPath)
-    for entry of try! readDir(sourcePath) {
+    for entry of readDir(sourcePath)! {
       copyPath(outputPath(sourcePath, entry.name), outputPath(destinationPath, entry.name))
     }
     return
   }
   ensureDirectory(parentPath(destinationPath))
-  try! writeBlob(destinationPath, try! readBlob(sourcePath))
+  writeBlob(destinationPath, readBlob(sourcePath)!)!
 }
 
 function removeTree(path: string): none {
   if !exists(path) { return }
   if isDirectory(path) {
-    for entry of try! readDir(path) { removeTree(outputPath(path, entry.name)) }
+    for entry of readDir(path)! { removeTree(outputPath(path, entry.name)) }
   }
-  try! remove(path)
+  remove(path)!
 }
 
 function globBaseDirectory(pattern: string): string {
@@ -93,7 +93,7 @@ function globMatches(pattern: string, value: string, patternIndex: int = 0, valu
 
 function collectResourceFiles(path: string, baseDirectory: string, pattern: string, results: string[]): none {
   if isDirectory(path) {
-    for entry of try! readDir(path) { collectResourceFiles(outputPath(path, entry.name), baseDirectory, pattern, results) }
+    for entry of readDir(path)! { collectResourceFiles(outputPath(path, entry.name), baseDirectory, pattern, results) }
     return
   }
   prefix := if baseDirectory.endsWith("/") then baseDirectory else baseDirectory + "/"
@@ -346,7 +346,7 @@ function embedMacOSLibraries(
 function collectNestedMacOSCode(path: string, results: string[]): none {
   if !exists(path) { return }
   if isDirectory(path) {
-    for entry of try! readDir(path) { collectNestedMacOSCode(outputPath(path, entry.name), results) }
+    for entry of readDir(path)! { collectNestedMacOSCode(outputPath(path, entry.name), results) }
     if path.endsWith(".framework") || path.endsWith(".appex") || path.endsWith(".xpc") { results.push(path) }
     return
   }
@@ -371,8 +371,8 @@ export function assembleMacOSApp(
   bundleExecutable := outputPath(macosDirectory, config.executableName)
   copyPath(executablePath, bundleExecutable)
   try runRequiredCommand("chmod", ["+x", bundleExecutable], "marking bundled executable")
-  try! writeText(outputPath(contentsDirectory, "Info.plist"), renderMacOSInfoPlist(config))
-  try! writeText(outputPath(contentsDirectory, "PkgInfo"), "APPL????")
+  writeText(outputPath(contentsDirectory, "Info.plist"), renderMacOSInfoPlist(config))!
+  writeText(outputPath(contentsDirectory, "PkgInfo"), "APPL????")!
   if config.iconPath != "" {
     try generateMacOSIcon(config.iconPath, outputPath(resourcesDirectory, config.executableName + ".icns"), buildDirectory)
   }
@@ -426,7 +426,7 @@ function effectiveEntitlements(config: MacOSPackageConfig, buildDirectory: strin
       try runRequiredCommand("plutil", ["-insert", "com.apple.security.app-sandbox", "-bool", "YES", destinationPath], "enabling App Sandbox")
     }
   } else {
-    try! writeText(destinationPath, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\"><dict><key>com.apple.security.app-sandbox</key><true/></dict></plist>\n")
+    writeText(destinationPath, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\"><dict><key>com.apple.security.app-sandbox</key><true/></dict></plist>\n")!
   }
   return Success(destinationPath)
 }
@@ -452,7 +452,7 @@ export function signAndArchiveMacOSApp(
   try runRequiredCommand("codesign", macOSCodesignArguments(appPath, identity, config.signing, entitlementsPath), "signing macOS app")
   try runRequiredCommand("codesign", ["--verify", "--deep", "--strict", "--verbose=2", appPath], "verifying macOS app signature")
   ensureDirectory(parentPath(archivePath))
-  if exists(archivePath) { try! remove(archivePath) }
+  if exists(archivePath) { remove(archivePath)! }
   try runRequiredCommand("ditto", ["-c", "-k", "--sequesterRsrc", "--keepParent", appPath, archivePath], "archiving macOS app")
   return Success()
 }

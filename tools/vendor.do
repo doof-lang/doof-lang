@@ -100,7 +100,7 @@ function metadata(dependency: VendorDependency): Map<string, SerialValue> {
 function checkMetadata(dependency: VendorDependency, destination: string): Result<none, string> {
   metadataPath := path(destination, ".doof-external.json")
   try require(exists(metadataPath), dependency.name + ": missing " + metadataPath)
-  object := parseJsonObject(try! fileText(metadataPath)) else error { return Failure(dependency.name + ": invalid metadata: " + error) }
+  object := parseJsonObject(fileText(metadataPath)!) else error { return Failure(dependency.name + ": invalid metadata: " + error) }
   expected := if dependency.kind == "git" then dependency.commit else dependency.sha256
   key := if dependency.kind == "git" then "commit" else "sha256"
   actual := object.get(key) as string else { return Failure(dependency.name + ": metadata is missing " + key) }
@@ -181,7 +181,7 @@ function materialize(root: string, dependency: VendorDependency, mode: string): 
     try makeDirectory(temporary)
     archive := path(temporary, "source")
     try command("curl", ["-fsSL", dependency.url, "-o", archive])
-    actual := sha256Hex(try! fileBlob(archive))
+    actual := sha256Hex(fileBlob(archive)!)
     try require(actual == dependency.sha256, dependency.name + ": downloaded " + actual + ", expected " + dependency.sha256)
     try makeDirectory(destination)
     try command("tar", ["-xf", archive, "-C", destination, "--strip-components=" + string(dependency.stripComponents)])
@@ -199,7 +199,7 @@ function materialize(root: string, dependency: VendorDependency, mode: string): 
 function manifest(root: string): Result<VendorManifest, string> {
   file := path(root, "doof-vendor.json")
   try require(exists(file), "missing " + file)
-  try value := parseJsonValue(try! fileText(file))
+  try value := parseJsonValue(fileText(file)!)
   return VendorManifest.fromSerialValue(value)
 }
 

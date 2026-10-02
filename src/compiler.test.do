@@ -12,7 +12,7 @@ import { Diagnostic, SourceFile } from "./semantic"
 
 function compileSample(path: string): Compilation {
   return compile([
-    SourceFile { path: "/sample.do", source: try! readText(path) },
+    SourceFile { path: "/sample.do", source: readText(path)! },
   ], "/sample.do")
 }
 

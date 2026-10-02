@@ -6,7 +6,7 @@ import { ModuleNames } from "./emitter-names"
 
 import { carrierOf } from "./emitter-carriers"
 import { Expression, Identifier, ObjectProperty } from "./ast"
-import { ResolvedType, Symbol, UnionResolvedType } from "./semantic"
+import { ResolvedType, Symbol } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { moduleNamespace } from "./emitter-names"
@@ -52,12 +52,6 @@ export function decoratedExpressionType(expression: Expression): ResolvedType | 
 
 export function optionalExpectedType(value: ResolvedType): ResolvedType | none { return value }
 
-export function isNullableVariantType(type_: ResolvedType | none): bool {
-  if type_ == none { return false }
-  carrier := carrierOf(type_!)
-  return carrier.kind == .Variant && carrier.hasNone && !carrier.naturalNullable
-}
-
 export function hasNoneMember(type_: ResolvedType | none): bool {
   return type_ != none && carrierOf(type_!).hasNone
 }
@@ -77,16 +71,6 @@ export function requireExpressionType(expression: Expression, description: strin
     panic("Missing resolved type for " + description + " at line " + string(expression.span.start.line) + ":" + string(expression.span.start.column))
   }
   return expression.resolvedType!
-}
-
-export function hasSinglePrimitiveMember(union_: UnionResolvedType): bool {
-  let count = 0
-  for member of union_.types {
-    if member.kind == "none" { continue }
-    if member.kind != "primitive" { return false }
-    count = count + 1
-  }
-  return count == 1
 }
 
 export function findProperty(properties: ObjectProperty[], name: string): ObjectProperty | none {

@@ -10,11 +10,11 @@ export function testObserveTargetValidationKeepsNativeTargetsSeparate(): none {
 
 export function testObserveLaunchEnvironmentIsExplicitAndForwardableToMacOSOpen(): none {
   environment := observeEnvironment(4317, true, 250, "/tmp/observer-ui", "/tmp/observer.url")
-  Assert.equal(try! environment.get("DOOF_OBSERVE_PORT"), "4317")
-  Assert.equal(try! environment.get("DOOF_OBSERVE_NO_OPEN"), "1")
-  Assert.equal(try! environment.get("DOOF_OBSERVE_RETAIN_EVENTS"), "250")
-  Assert.equal(try! environment.get("DOOF_OBSERVE_UI_ROOT"), "/tmp/observer-ui")
-  Assert.equal(try! environment.get("DOOF_OBSERVE_URL_FILE"), "/tmp/observer.url")
+  Assert.equal(environment.get("DOOF_OBSERVE_PORT")!, "4317")
+  Assert.equal(environment.get("DOOF_OBSERVE_NO_OPEN")!, "1")
+  Assert.equal(environment.get("DOOF_OBSERVE_RETAIN_EVENTS")!, "250")
+  Assert.equal(environment.get("DOOF_OBSERVE_UI_ROOT")!, "/tmp/observer-ui")
+  Assert.equal(environment.get("DOOF_OBSERVE_URL_FILE")!, "/tmp/observer.url")
   arguments := observeOpenEnvironmentArguments(environment)
   Assert.equal(arguments.length, 10)
   Assert.equal(arguments[0], "--env")

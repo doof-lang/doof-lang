@@ -96,7 +96,7 @@ function checkModuleDependencies(
   for reExport of module!.reExports {
     checkModuleDependencies(reExport, analysis, checker, checkedPaths, visitingPaths, diagnostics)
   }
-  let ignored = try! visitingPaths.pop()
+  let ignored = visitingPaths.pop()!
   checked := checker.check(path)
   for diagnostic of checked.diagnostics { diagnostics.push(diagnostic) }
   checkedPaths.push(path)

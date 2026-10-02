@@ -551,13 +551,13 @@ returns a normalized absolute path.
 ```doof
 import { absolute, homeDirectory, join, basename, extension, stem } from "std/path"
 
-root := try! homeDirectory()
+root := homeDirectory()!
 configDir := join([root, ".config", "myapp"])
 logFile   := join([configDir, "../logs", "app.log"])    // "/home/ada/.config/logs/app.log"
 base      := basename(logFile)   // "app.log"
 name      := stem(logFile)       // "app"
 ext       := extension(logFile)  // ".log"
-source    := try! absolute("src/main.do")
+source    := absolute("src/main.do")!
 ```
 
 ---

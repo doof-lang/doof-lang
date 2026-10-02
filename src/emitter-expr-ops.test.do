@@ -32,19 +32,19 @@ export function testGenericNoneLiteralNarrowingUsesSpecializedCarrier(): none {
   Assert.stringNotContains(source, "doof::variant_narrow<")
 }
 
-export function testGenericNoneLiteralTryUsesSpecializedCarrier(): none {
+export function testGenericNoneLiteralPostfixQuestionUsesSpecializedCarrier(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "class Item {}\n" +
     "function optional<T>(value: T): T | none {\n" +
-    "result: Result<T, string> := Success { value: value }\nreturn try? result }\n" +
+    "result: Result<T, string> := Success { value: value }\nreturn result? }\n" +
     "function main(): none { optional(7)\noptional(Item {}) }",
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   Assert.isTrue(result.emission != none)
   let source = ""
   for module of result.emission!.modules { source = source + module.source }
-  Assert.stringContains(source, "if (doof::is_failure(_try_value)) return std::nullopt;")
-  Assert.stringContains(source, "if (doof::is_failure(_try_value)) return nullptr;")
+  Assert.stringContains(source, "if (doof::is_failure(_optional_value)) return std::nullopt;")
+  Assert.stringContains(source, "if (doof::is_failure(_optional_value)) return nullptr;")
   Assert.stringNotContains(source, "std::variant<std::monostate, T>")
 }
 
@@ -75,7 +75,7 @@ export function testCheckerReviewNumericSpecializedLowering(): none {
 export function testWiderNoneNamedEqualityAndUnitUnwrap(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "function effect(): Result<none, string> => Success {}\nfunction take(value: none): none {}\n" +
-    "function main(): none { absent := none\nlet value: int | none = none\nprintln(value == absent)\nprintln(absent != value)\ntake(try! effect())\ntake(effect()!) }",
+    "function main(): none { absent := none\nlet value: int | none = none\nprintln(value == absent)\nprintln(absent != value)\ntake(effect()!) }",
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   Assert.isTrue(result.emission != none)
@@ -128,7 +128,7 @@ export function testCoalescingAssignmentLowersLazily(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "function load(): Result<int, string> => Failure(\"x\")\n" +
     "function main(): none { let cache: string | none = none\ncache ??= \"disk\"\n" +
-    "let data: Result<int, string> = load()\ndata ??= 4\ndata ??= load() }",
+    "let data: Result<int, string> = load()\ndata ??= 4\ndata ??= load() \nlet nested: Result<int | none, string> = Success(none)\nnested ??= Success(5) }",
   }], "/main.do")
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
@@ -137,6 +137,8 @@ export function testCoalescingAssignmentLowersLazily(): none {
   Assert.stringContains(source, "if (doof::is_null(_assignment_target)) { _assignment_target = ")
   Assert.stringContains(source, "if (doof::is_failure(_assignment_target)) { _assignment_target = doof::Success<int32_t>{4}; }")
   Assert.stringContains(source, "if (doof::is_failure(_assignment_target)) { _assignment_target = load(); }")
+  // A none success value is absent too.
+  Assert.stringContains(source, "if (doof::is_failure(_assignment_target) || doof::is_null(doof::success_value(_assignment_target))) { _assignment_target = ")
 }
 
 export function testSerializableStructCalleeUsesValueType(): none {
@@ -160,8 +162,8 @@ function emittedSource(source: string): string {
 
 export function testForceAccessOnAResultUnwrapsTheReceiverOnce(): none {
   source := emittedSource("class User { email: string }\nfunction load(): Result<User, string> => Success(User { email: \"a\" })\nfunction email(): string => load()!.email")
-  Assert.stringContains(source, "auto _assert_value = load(); if (doof::is_failure(_assert_value)) doof::panic(")
-  Assert.stringContains(source, "return std::move(doof::success_value(_assert_value)); }()->email")
+  Assert.stringContains(source, "auto _forced_value = load(); if (doof::is_failure(_forced_value)) doof::panic_at(")
+  Assert.stringContains(source, "return std::move(doof::success_value(_forced_value)); }()->email")
 }
 
 export function testEqualityConvertsTheNarrowerOperandToTheUnion(): none {

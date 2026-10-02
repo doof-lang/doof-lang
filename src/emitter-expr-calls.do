@@ -10,10 +10,10 @@ import { EmitContext } from "./emitter-context"
 import { substituteTypeParams } from "./checker-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { decoratedExpressionType, exprModuleNamespaceFor, variantVisitValue } from "./emitter-expr-utils"
-import { emitContextReturnType, emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
+import { emitContextReturnType, emitContextType, emitResultPayloadType, emitType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { classInstantiationKey, functionInstantiationKey, methodInstantiationKey } from "./emitter-monomorphize"
 import { emitSyncActorCall } from "./emitter-expr-actor"
-import { emitOptionalCall } from "./emitter-optional-chain"
+import { emitOptionalAbsent, emitOptionalCall, emitOptionalPresent } from "./emitter-optional-chain"
 import { emitArrayMethodCall } from "./emitter-array-methods"
 import { emitNoImplementationsAccess, implementationlessInterface } from "./emitter-no-implementations"
 
@@ -117,10 +117,6 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       let arrayObjectType = decoratedExpressionType(member.object)
       if arrayObjectType != none {
         arrayObjectType = specializeEmitType(arrayObjectType!, context)
-        if member.force {
-          forcedType := naturalNullableUnionMember(arrayObjectType!)
-          if forcedType != none { arrayObjectType = forcedType }
-        }
       }
       let nominalReceiver = false
       if arrayObjectType != none {
@@ -192,9 +188,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
             }
             if member.property == "values" { return emitContextType(enum_, context) + "_values()" }
             if member.property == "toSerialValue" {
-              let receiver = emitExpression(member.object, context)
-              if member.force { receiver = "doof::unwrap_optional(" + receiver + ")" }
-              return emitContextType(enum_, context) + "_toSerialValue(" + receiver + ")"
+              return emitContextType(enum_, context) + "_toSerialValue(" + emitExpression(member.object, context) + ")"
             }
             if member.property == "fromSerialValue" {
               let args = ""
@@ -410,34 +404,16 @@ function emitWeakMemberCall(expression: CallExpression, member: MemberExpression
       _ -> { return "[&]() -> " + emitType(resultType, context.modulePath, context.names) + " { auto " + storage + " = " + object + "; " + noneCheck + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) doof::panic(\"Weak reference has expired\"); auto " + temporary + " = std::move(_weak_locked.value()); return " + call + "; }()" }
     }
   }
-  case expression.resolvedType! {
-    result: ResultResolvedType -> {
-      resultCpp := emitType(result, context.modulePath, context.names)
-      payloadCpp := emitResultPayloadType(result.valueType, context.modulePath, context.names)
-      errorCpp := emitResultPayloadType(result.errorType, context.modulePath, context.names)
-      failure := if result.errorType.kind == "union" then errorCpp + "{::doof::WeakReferenceError{}}" else "::doof::WeakReferenceError{}"
-      absentSuccess := if result.valueType.kind == "none" then "doof::Success<void>{}" else "doof::Success<" + payloadCpp + ">{" + payloadCpp + "{}}"
-      noneReturn := if nullable then "if (!" + storage + ".has_value()) return " + absentSuccess + "; " else ""
-      prefix := "[&]() -> " + resultCpp + " { auto " + storage + " = " + object + "; " + noneReturn + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) return doof::Failure<" + errorCpp + ">{" + failure + "}; auto " + temporary + " = std::move(_weak_locked.value()); "
-      if originalReturn != none {
-        case originalReturn! {
-          nested: ResultResolvedType -> {
-            nestedErrorCpp := emitResultPayloadType(nested.errorType, context.modulePath, context.names)
-            promotedError := if result.errorType.kind == "union" then errorCpp + "{doof::failure_error(_weak_result)}" else "doof::failure_error(_weak_result)"
-            if nested.valueType.kind == "none" {
-              return prefix + "auto _weak_result = " + call + "; if (doof::is_failure(_weak_result)) return doof::Failure<" + errorCpp + ">{" + promotedError + "}; return doof::Success<void>{}; }()"
-            }
-            return prefix + "auto _weak_result = " + call + "; if (doof::is_failure(_weak_result)) return doof::Failure<" + errorCpp + ">{" + promotedError + "}; return doof::Success<" + payloadCpp + ">{" + payloadCpp + "{doof::success_value(_weak_result)}}; }()"
-          }
-          _: NoneType -> { return prefix + call + "; return doof::Success<void>{}; }()" }
-          _ -> { }
-        }
-      }
-      return prefix + "return doof::Success<" + payloadCpp + ">{" + payloadCpp + "{" + call + "}}; }()"
-    }
-    _ -> { panic("Optional weak method call must resolve to Result") }
+  // '?.' on an absent or expired reference is none.
+  resultType := expression.resolvedType!
+  noneReturn := if nullable then "if (!" + storage + ".has_value()) return; " else ""
+  if resultType.kind == "none" {
+    return "[&]() -> void { auto " + storage + " = " + object + "; " + noneReturn + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) return; auto " + temporary + " = std::move(_weak_locked.value()); " + call + "; }()"
   }
-  return ""
+  absent := emitOptionalAbsent(resultType, context)
+  absentReturn := if nullable then "if (!" + storage + ".has_value()) return " + absent + "; " else ""
+  present := emitOptionalPresent(call, expression.resolvedOptionalValue!, resultType, string(context.tryCounter), context)
+  return "[&]() -> " + emitContextType(resultType, context) + " { auto " + storage + " = " + object + "; " + absentReturn + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) return " + absent + "; auto " + temporary + " = std::move(_weak_locked.value()); return " + present + "; }()"
 }
 
 function isBuiltinIdentifier(identifier: Identifier, name: string): bool {

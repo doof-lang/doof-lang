@@ -94,7 +94,7 @@ export function nameInstantiations(checked: CheckedInstantiations, moduleNames: 
       item: DiscoveredMethod -> {
         let ownerEmittedName = item.owner.name
         if item.owner.typeParams.length > 0 {
-          found := try? classNames.get(item.ownerKey)
+          found := classNames.get(item.ownerKey)?
           if found != none { ownerEmittedName = found! }
         }
         arguments: ResolvedType[] := []
@@ -106,7 +106,7 @@ export function nameInstantiations(checked: CheckedInstantiations, moduleNames: 
   }
   for i of 0..<checked.interfaces.length {
     for implementation of checked.interfaces[i].implementations {
-      typeName_ := if implementation.specializationKey == "" then implementation.typeName else try! classNames.get(implementation.specializationKey)
+      typeName_ := if implementation.specializationKey == "" then implementation.typeName else classNames.get(implementation.specializationKey)!
       plan.interfaces[i].implementations.push(ImplementationRef { modulePath: implementation.modulePath, typeName: typeName_ })
     }
   }

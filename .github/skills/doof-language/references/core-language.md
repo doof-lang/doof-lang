@@ -371,8 +371,7 @@ Rules:
 - Arithmetic: `+`, `-`, `*`, `/`, `\\`, `%`, `**`
 - Comparison: `==`, `!=`, `<`, `<=`, `>`, `>=`
 - Logical: `&&`, `||`, `!`
-- Optional helpers: `??`, `?.`, `?[]`
-- Force access: postfix `!`, `!.`, `try!`, `try?`
+- Absence (none or Failure): postfix `?`, `?.`, `?[]` give `none`; postfix `!`, `!.`, `![]` panic; `??` falls back
 - Checked narrowing: `as`
 
 Notes:
@@ -382,8 +381,9 @@ Notes:
 - `%` is integer-only.
 - Numeric casts use call syntax such as `int(x)` or `double(x)`.
 - There is no operator overloading.
-- `?.` and `?[]` evaluate their receiver once and short-circuit to `none`
-  (calls returning `none` are skipped). They cannot be assignment targets.
+- `?.` and `?[]` evaluate their receiver once and short-circuit to `none` when it
+  is `none` or a `Failure` (calls returning `none` are skipped). They cannot be
+  assignment targets.
 
 ## String Interpolation
 

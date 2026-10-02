@@ -5,41 +5,41 @@ import { acquireProjectBuildLock, projectBuildLockPath } from "./project-build-l
 
 export function testProjectBuildLockExcludesAndReleases(): none {
   root := join([tempDirectory(), "doof-project-lock-test"])
-  handle := try! acquireProjectBuildLock(root, "build/nested")
+  handle := acquireProjectBuildLock(root, "build/nested")!
   path := projectBuildLockPath(root, "build/nested")
   Assert.isTrue(exists(path))
   let blocked = false
   case File { path, mode: .ReadWrite, lock: .Exclusive, waitForLock: false } {
     failure: Failure -> { blocked = failure.error == IoError.WouldBlock }
-    success: Success -> { try! success.value.close() }
+    success: Success -> { success.value.close()! }
   }
   Assert.isTrue(blocked)
-  other := try! acquireProjectBuildLock(root, "independent")
-  try! other.close()
-  try! handle.close()
+  other := acquireProjectBuildLock(root, "independent")!
+  other.close()!
+  handle.close()!
   // A leftover file is harmless: ownership is in the OS, not file existence.
   Assert.isTrue(exists(path))
-  next := try! acquireProjectBuildLock(root, "build/nested")
-  try! next.close()
-  try! remove(path)
-  try! remove(join([root, "build/nested"]))
-  try! remove(join([root, "build"]))
-  try! remove(projectBuildLockPath(root, "independent"))
-  try! remove(join([root, "independent"]))
-  try! remove(root)
+  next := acquireProjectBuildLock(root, "build/nested")!
+  next.close()!
+  remove(path)!
+  remove(join([root, "build/nested"]))!
+  remove(join([root, "build"]))!
+  remove(projectBuildLockPath(root, "independent"))!
+  remove(join([root, "independent"]))!
+  remove(root)!
 }
 
 export function testProjectBuildLockReportsFilesystemFailure(): none {
   root := join([tempDirectory(), "doof-project-lock-invalid-test"])
-  if !exists(root) { try! mkdir(root) }
+  if !exists(root) { mkdir(root)! }
   blocker := join([root, "file"])
-  try! writeText(blocker, "not a directory")
+  writeText(blocker, "not a directory")!
   let reported = false
   case acquireProjectBuildLock(root, "file/nested") {
     failure: Failure -> { reported = failure.error.contains("Could not create project build directory:") && failure.error.contains(blocker) }
-    success: Success -> { try! success.value.close() }
+    success: Success -> { success.value.close()! }
   }
   Assert.isTrue(reported)
-  try! remove(blocker)
-  try! remove(root)
+  remove(blocker)!
+  remove(root)!
 }

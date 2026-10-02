@@ -35,6 +35,7 @@ several layers, use the [horizontal architecture map](compiler-architecture.md).
 | `analyzer.do` | Main-thread module discovery, parallel parse scheduling, deterministic graph ordering, declaration collection, imports/re-exports, module symbols, named-type decoration | Lexical scopes or expression typing |
 | `semantic.do` | Diagnostics, symbols, bindings, scopes, resolved-type records and non-semantic identity stamps | Pass orchestration |
 | `semantic-type-identities.do` | Serial semantic identity preparation and read-only renderer lookup | Semantic equivalence or type canonicalization |
+| `absence-types.do` | Absence layers of a value type (outer none, one Result, none success value), its present type, and the declaration-else error type | Checking policy or lowering |
 | `diagnostics.do` | Shared diagnostic severity queries | Creation of feature-specific diagnostics |
 | `compiler.do` | Analyze → check all modules → graph validations → specialize → emit orchestration | Filesystem, package, or native compiler operations |
 | `frontend-cache.do` | Versioned pointer-free frontend fingerprints, resolution probes, and module-output records | AST/checker serialization or filesystem access |
@@ -58,6 +59,7 @@ modules own the following decisions:
 | `checker-common.do` | State-aware diagnostics, expression type decoration, and centralized assignment-binding validation |
 | `checker-statements.do` | Statements, declarations, scopes, returns, destructuring, enum backing-value resolution, and control-flow continuation |
 | `checker-try.do` | Result propagation boundaries, error compatibility, and success declaration and assignment (`try target = expr`) checking |
+| `checker-absence.do` | Types of postfix `?`, optional access, and the postfix `?`/`!` receiver nodes that lower Result receivers of `?.`, `?[]`, `!.`, and `??` |
 | `checker-struct-layout.do` | Struct value-layout validation, rejecting structs that contain themselves by value |
 | `checker-numeric.do` | Numeric bound membership, operator capabilities, and correlated promotion |
 | `checker-inference.do` | Contextual path validation and common-type inference; only optional unions are synthesized for value paths |
@@ -152,7 +154,8 @@ emitter or individual expression branch.
 | `emitter-expr-calls.do` | Call target selection, runtime member dispatch, and positional Result payload construction |
 | `emitter-array-methods.do` | Built-in array member lowering onto runtime helpers, with callbacks emitted against the checked signature and `find` converted into the `T \| none` carrier |
 | `emitter-no-implementations.do` | Identifies interfaces without implementing classes (lowered to `doof::NoImplementations`) and emits unreachable member access for them |
-| `emitter-optional-chain.do` | `?.` and `?[]` over nullable receivers and `?.` over Result receivers: single evaluation, none and Failure short-circuits, Result flattening for calls, and access through the checked unwrapped receiver |
+| `emitter-optional-chain.do` | `?.` and `?[]` over nullable receivers (Result receivers arrive as postfix `?`): single evaluation, none short-circuits, a Result-valued access widened with a none success value, and access through the checked unwrapped receiver |
+| `emitter-absence.do` | Layered absence lowering for postfix `!` and `?`, declaration-else tests and error capture, and `??=` tests |
 | `emitter-call-arguments.do` | Shared named/positional argument ordering, checked contextual argument types, and call-site default emission for direct and dispatched calls |
 | `emitter-construction.do` | Positional, named, contextual, and actor construction from checked plans; shared argument/default lowering, owner specialization, and spread handling |
 | `emitter-expr-literals.do` | Literal, array, object, tuple, and string lowering; shared contextual absence values for literals and catch initialization |

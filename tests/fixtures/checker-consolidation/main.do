@@ -6,7 +6,7 @@ class Generic<T> { size(values: T[] = []): int => values.length }
 interface Contract { read(first: int = 2, second: int = 3): int }
 class Input { value: int }
 function weakRead(value: weak Reader): int => value!.read{second: 4}
-function optionalRead(value: weak Reader): Result<int | none, WeakReferenceError> => value?.read{second: 4}
+function optionalRead(value: weak Reader): int | none => value?.read{second: 4}
 function size(value: weak Generic<int>): int => value!.size()
 class Stored { let value: int = 7
 read(): int => this.value
@@ -29,14 +29,14 @@ function main(): int {
   check(owned.value == 13)
   check(second.read() == 9)
   check(DefaultBox<int>().values.length == 0)
-  check((try! FallibleBox<int> { value: 8 }).value == 8)
+  check((FallibleBox<int> { value: 8 }!).value == 8)
   check(Box<int>(3).value == 3)
   check(Box<int> { value: 4 }.value == 4)
   input := Input { value: 5 }
   check(Box<int> { ...input }.value == 5)
   reader := Reader {}
   check(weakRead(reader) == 13)
-  check((try! optionalRead(reader))! == 13)
+  check(optionalRead(reader)! == 13)
   contract: Contract := reader
   check(contract.read{second: 4} == 6)
   generic := Generic<int> {}

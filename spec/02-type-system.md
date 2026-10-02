@@ -1718,7 +1718,7 @@ class Observer {
 
 ### Access Semantics
 
-Because a weak-referenced object may have been destroyed, accessing a `weak` reference yields `Result<T, WeakReferenceError>`. The standard `?.` and `!.` operators provide lightweight access:
+Because a weak-referenced object may have been destroyed, accessing a `weak` reference yields `Result<T, WeakReferenceError>`. The standard `?.` and `!.` operators provide lightweight access: an absent or expired reference is `none` under `?.` and panics under `!.`.
 
 A `case` subject that stores `weak T` reads it once as
 `Result<T, WeakReferenceError>`. `Success` retains the live referent for the
@@ -1743,7 +1743,7 @@ class Node {
 | Reference count | Does not contribute |
 | Access type | `Result<T, WeakReferenceError>` |
 | Cleared when | Referent's count reaches zero |
-| Use with `?.` | Propagates WeakReferenceError on cleared reference |
+| Use with `?.` | `none` on a cleared reference |
 | Use with `!.` | Panics if cleared |
 | Scope | Fields, local variables |
 
@@ -1843,15 +1843,11 @@ function test(): int {
 }
 ```
 
-This form works only for nullable and/or `Result` types. Inside the `else` block, the binding still has the full original type. After the block, the binding has the narrowed happy-path type.
+This form works only for nullable and/or `Result` types. After the block, the binding has the present type.
 
-Each declaration removes exactly one fallible layer. For
-`Result<T, E> | none`, the binding becomes `Result<T, E>`; use a second
-declaration-`else` to unwrap that Result. For `Result<T | none, E>`, the first
-declaration unwraps the Result and produces `T | none`.
-
-For `Result<T | none, E>`, the happy-path type is `T | none`: the declaration
-unwraps the Result, but a none carried by `Success` remains part of its payload.
+`none`, a `Failure`, and a `none` success value are all absent, so one
+declaration removes every layer: `Result<T, E> | none` and `Result<T | none, E>`
+both bind `T`. See [Error Handling — Declaration-`else`](09-error-handling.md#declaration-else).
 
 #### `as`
 

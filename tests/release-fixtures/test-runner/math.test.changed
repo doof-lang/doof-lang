@@ -11,5 +11,5 @@ export function testAddsNegativeValues(): none {
 }
 
 export function testUsesPackageRootAsWorkingDirectory(): none {
-  try! writeText("runtime-cwd.txt", "ok")
+  writeText("runtime-cwd.txt", "ok")!
 }

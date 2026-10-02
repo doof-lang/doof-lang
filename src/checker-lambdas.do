@@ -147,7 +147,7 @@ function bindLambdaParameters(state: CheckerState, expression: LambdaExpression,
   for i of 0..<slots.length {
     bound.push(slots[i] ?? Parameter { name: "_", type_: none, defaultValue: none, span: expression.span })
   }
-  while params.length > 0 { ignored := try! params.pop() }
+  while params.length > 0 { ignored := params.pop()! }
   for parameter of bound { params.push(parameter) }
   return true
 }

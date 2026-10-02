@@ -3,10 +3,10 @@
 import { checkArguments, callArguments } from "./checker-arguments"
 import { insideConstructorFactory, resolveConstructor, validateConstructorVisibility, validateFieldArguments } from "./checker-construction"
 
-import { ActorType, Binding, ClassType, EnumType, FunctionParamType, FunctionType, PrimitiveType, ResolvedType, ResultResolvedType, Scope, UnionResolvedType, UnknownType, WeakResolvedType } from "./semantic"
+import { ActorType, Binding, ClassType, EnumType, FunctionParamType, FunctionType, PrimitiveType, ResolvedType, Scope, UnionResolvedType, UnknownType, WeakResolvedType } from "./semantic"
 
 import { CallExpression, ClassDeclaration, DotShorthand, Expression, FunctionDeclaration, Identifier, LambdaExpression, MemberExpression, SourceSpan, TypeParameterConstraint } from "./ast"
-import { classType, functionType, resultArmExpectation, resultArmType, resultType, neverType, noneType, primitive, typeName, unionType, substituteTypeParams, unknownType, weakReferenceErrorType } from "./checker-types"
+import { classType, functionType, resultArmExpectation, resultArmType, neverType, noneType, primitive, typeName, substituteTypeParams, unknownType } from "./checker-types"
 
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 
@@ -20,6 +20,7 @@ import { inferCallTypeArguments } from "./checker-call-inference"
 import { withCallbackArity } from "./checker-array-methods"
 import { classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
+import { optionalAccessType } from "./checker-absence"
 
 export function checkCall(state: CheckerState, expression: CallExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   case expression.callee {
@@ -191,7 +192,7 @@ function adaptArrayCallbackArity(state: CheckerState, expression: CallExpression
     if parameterIndex < 0 || parameterIndex >= adapted.params.length || adapted.params[parameterIndex].type_.kind != "function" { continue }
     diagnosticMark := state.diagnostics.length
     actual := checkExpression(state, argument.value, scope, none)
-    while state.diagnostics.length > diagnosticMark { ignored := try! state.diagnostics.pop() }
+    while state.diagnostics.length > diagnosticMark { ignored := state.diagnostics.pop()! }
     case actual {
       function_: FunctionType -> {
         narrowed := withCallbackArity(adapted, parameterIndex, function_.params.length)
@@ -207,38 +208,19 @@ function adaptArrayCallbackArity(state: CheckerState, expression: CallExpression
 function checkedMemberCallReturnType(expression: CallExpression, returnType: ResolvedType): ResolvedType {
   case expression.callee {
     member: MemberExpression -> {
-      if member.object.resolvedType != none {
+      if member.object.resolvedType != none && member.optional {
+        // A Result receiver was already lowered to '(r?)', so every '?.' call
+        // short-circuits to none; a Result-returning method keeps its Failure.
         case member.object.resolvedType! {
           _: WeakResolvedType -> {
-            if member.optional {
-              case returnType {
-                result: ResultResolvedType -> {
-                  return resultType(unionType([result.valueType, noneType()]), unionType([result.errorType, weakReferenceErrorType()]))
-                }
-                _ -> { return resultType(unionType([returnType, noneType()]), weakReferenceErrorType()) }
-              }
-            }
-          }
-          receiver: ResultResolvedType -> {
-            // '?.' over a Result keeps the receiver's Failure, adds none to the
-            // success channel, and flattens a Result-returning method.
-            if member.optional && member.resolvedOptionalReceiver != none {
-              expression.resolvedOptionalValue = optionalResolvedType(returnType)
-              case returnType {
-                nested: ResultResolvedType -> {
-                  return resultType(unionType([nested.valueType, noneType()]), unionType([receiver.errorType, nested.errorType]))
-                }
-                _ -> { return resultType(unionType([returnType, noneType()]), receiver.errorType) }
-              }
-            }
+            expression.resolvedOptionalValue = optionalResolvedType(returnType)
+            return optionalAccessType(returnType)
           }
           union_: UnionResolvedType -> {
-            if member.optional {
-              let includesNone = false
-              for arm of union_.types { if arm.kind == "none" { includesNone = true } }
-              if includesNone {
+            for arm of union_.types {
+              if arm.kind == "none" {
                 expression.resolvedOptionalValue = optionalResolvedType(returnType)
-                return unionType([returnType, noneType()])
+                return optionalAccessType(returnType)
               }
             }
           }

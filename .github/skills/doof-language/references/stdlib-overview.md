@@ -97,4 +97,4 @@ declarations in `index.do` are the exact callable surface.
 - Streams are pull-based and lazy. Consume them once, surface per-item failures,
   and keep owning handles alive until iteration ends.
 - Directory and resource helpers can fail even when string manipulation cannot.
-  Do not use `try!` for user-controlled paths or environmental failures.
+  Do not use postfix `!` for user-controlled paths or environmental failures.

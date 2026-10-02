@@ -23,16 +23,16 @@ export class ModuleResolver {
     for source of sources { if source.path == path { return source } }
     for loaded of loadedPaths { if loaded == path { return none } }
     loadedPaths.push(path)
+    // A missing source is none; a Failure is a load error.
     loaded := loader(path) else diagnostic {
-      failedPaths.push(path)
-      diagnostics.push(diagnostic)
+      if diagnostic != none {
+        failedPaths.push(path)
+        diagnostics.push(diagnostic!)
+      }
       return none
     }
-    if loaded != none {
-      sources.push(loaded!)
-      return loaded!
-    }
-    return none
+    sources.push(loaded)
+    return loaded
   }
 
   failed(path: string): bool {

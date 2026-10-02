@@ -241,22 +241,59 @@ export function testOptionalChainingOverResultReceivers(): none {
   prelude := "enum LookupError { Missing }\nenum ProfileError { Private }\nclass Profile { bio: string }\n" +
     "class User { name: string\nprofile(): Result<Profile, ProfileError> => Success(Profile { bio: name })\nshout(): string => name\nping(): none { } }\n" +
     "function findUser(): Result<User, LookupError> => Success(User { name: \"ada\" })\n" +
-    "function maybeUser(): Result<User | none, LookupError> => Success(none)\n"
+    "function maybeUser(): Result<User | none, LookupError> => Success(none)\n" +
+    "function outerUser(): Result<User, LookupError> | none => none\n"
+  // The receiver's Failure and none are both absent; a Result-returning
+  // member keeps its own Failure and receives the none in its success value.
   typed := checked(prelude +
     "function f(): none {\n" +
-    "let name: Result<string | none, LookupError> = findUser()?.name\n" +
-    "let profile: Result<Profile | none, LookupError | ProfileError> = findUser()?.profile()\n" +
-    "let bio: Result<string | none, LookupError | ProfileError> = findUser()?.profile()?.bio\n" +
-    "let shout: Result<string | none, LookupError> = maybeUser()?.shout()\n" +
-    "let pinged: Result<none, LookupError> = findUser()?.ping() }")
+    "let name: string | none = findUser()?.name\n" +
+    "let profile: Result<Profile | none, ProfileError> = findUser()?.profile()\n" +
+    "let bio: string | none = findUser()?.profile()?.bio\n" +
+    "let shout: string | none = maybeUser()?.shout()\n" +
+    "let outer: string | none = outerUser()?.name\n" +
+    "let forced: string = maybeUser()!.name\n" +
+    "findUser()?.ping() }")
   for diagnostic of typed.diagnostics { println(diagnostic.message) }
   Assert.equal(typed.diagnostics.length, 0)
-  widened := checked(prelude + "function f(): none { let name: Result<string, LookupError> = findUser()?.name }")
+  widened := checked(prelude + "function f(): none { let name: string = findUser()?.name }")
   Assert.equal(widened.diagnostics.length, 1)
-  Assert.equal(widened.diagnostics[0].message, "Cannot assign Result<string | none, LookupError> to Result<string, LookupError>")
+  Assert.equal(widened.diagnostics[0].message, "Cannot assign string | none to string")
   plain := checked(prelude + "function f(): none { _ := findUser().name }")
   Assert.equal(plain.diagnostics.length, 1)
   Assert.stringContains(plain.diagnostics[0].message, "has no member \"name\"")
+  noValue := checked(prelude + "function done(): Result<none, LookupError> => Success()\nfunction f(): none { _ := done()?.name }")
+  Assert.equal(noValue.diagnostics.length, 1)
+  Assert.stringContains(noValue.diagnostics[0].message, "the Result has no success value")
+}
+
+export function testPostfixOperatorsCollapseEveryAbsentLayer(): none {
+  prelude := "class Box { value: int\nitems: int[] = [] }\n" +
+    "function plain(): Result<Box, string> => Success(Box { value: 1 })\n" +
+    "function nested(): Result<Box | none, string> => Success(none)\n" +
+    "function outer(): Result<Box, string> | none => none\n" +
+    "function done(): Result<none, string> => Success()\n"
+  typed := checked(prelude +
+    "function f(maybe: Box | none): none {\n" +
+    "let a: Box | none = plain()?\n" +
+    "let b: Box | none = nested()?\n" +
+    "let c: Box | none = outer()?\n" +
+    "let d: Box | none = maybe?\n" +
+    "let e: Box = nested()!\n" +
+    "let g: Box = outer()!\n" +
+    "let h: Box = nested() ?? Box { value: 2 }\n" +
+    "let i: Box = outer() ?? Box { value: 3 }\n" +
+    "let j: int | none = nested()?.items?[0]\n" +
+    "let k: int = nested()!.items[0]\n" +
+    "done()! }")
+  for diagnostic of typed.diagnostics { println(diagnostic.message) }
+  Assert.equal(typed.diagnostics.length, 0)
+  plainValue := checked(prelude + "function f(): none { _ := 1? }")
+  Assert.equal(plainValue.diagnostics.length, 1)
+  Assert.equal(plainValue.diagnostics[0].message, "Postfix '?' requires a nullable or Result operand, got int")
+  noValue := checked(prelude + "function f(): none { _ := done()? }")
+  Assert.equal(noValue.diagnostics.length, 1)
+  Assert.equal(noValue.diagnostics[0].message, "Postfix '?' requires a Result with a success value, got Result<none, string>")
 }
 
 export function testBareTryIsRejectedInExpressionPosition(): none {
@@ -270,8 +307,17 @@ export function testBareTryIsRejectedInExpressionPosition(): none {
     Assert.isTrue(result.diagnostics.length > 0)
     Assert.stringContains(result.diagnostics[0].message, "'try' is a statement, not an expression; write 'try name := value'")
   }
-  valid := checked(prefix + "function run(): Result<int, string> {\ntry x := load()\ny := try! load()\nz := try? load()\nreturn Success(x + y + (z ?? 0))\n}")
+  valid := checked(prefix + "function run(): Result<int, string> {\ntry x := load()\ny := load()!\nz := load()?\nreturn Success(x + y + (z ?? 0))\n}")
   Assert.equal(valid.diagnostics.length, 0)
+}
+
+export function testPrefixTryBangAndQuestionNameTheirPostfixForms(): none {
+  prefix := "function load(): Result<int, string> => Success(1)\n"
+  removed := checked(prefix + "function run(): int {\ny := try! load()\nz := try? load()\ntry! load()\nreturn y + (z ?? 0)\n}")
+  Assert.equal(removed.diagnostics.length, 3)
+  Assert.equal(removed.diagnostics[0].message, "'try! value' was removed; write 'value!'")
+  Assert.equal(removed.diagnostics[1].message, "'try? value' was removed; write 'value?'")
+  Assert.equal(removed.diagnostics[2].message, "'try! value' was removed; write 'value!'")
 }
 
 function caseDiagnostics(subject: string, arms: string): CheckResult {

@@ -1,14 +1,16 @@
 // Assignment, identifier, operator, member, and index lowering.
 
 import { emitCarrierConversion } from "./emitter-carrier-values"
-import { emitOptionalIndex, emitOptionalMember } from "./emitter-optional-chain"
+import { emitOptionalAbsent, emitOptionalIndex, emitOptionalMember, emitOptionalPresent } from "./emitter-optional-chain"
+import { emitAbsentTest, emitForced, emitOptional, emitterAbsenceLayers } from "./emitter-absence"
+import { hasFailureLayer } from "./absence-types"
 import { carrierOf, weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
 import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Identifier, IndexExpression, MemberExpression, StringLiteral, ThisExpression, UnaryExpression } from "./ast"
 import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, SerialValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
-import { emitNoneLiteral, emitStringConstant, quote } from "./emitter-expr-literals"
-import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, hasSinglePrimitiveMember, isNullableVariantType, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
+import { emitStringConstant, quote } from "./emitter-expr-literals"
+import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
 import { emitClassInnerType, emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { cppIdentifier as emittedCppIdentifier, moduleDiagnosticPath } from "./emitter-names"
 import { isNumeric, isSerialBytesType, sameType } from "./checker-types"
@@ -191,17 +193,18 @@ export function emitTriedAssignment(expression: AssignmentExpression, successVal
 
 /**
  * Lowers `target ??= value`: the value is evaluated and stored only when the
- * target is none or a Failure. A plain value assigned to a Result target is
+ * target is absent (see absence-types). A plain value assigned to a Result target is
  * wrapped as its Success arm.
  */
 function emitCoalescingAssignment(expression: AssignmentExpression, context: EmitContext): string {
   targetResolved := requireExpressionType(expression.target, "coalescing assignment target")
   target := emitAssignmentTarget(expression.target, context)
-  let test = "doof::is_null(_assignment_target)"
+  // Any absent layer assigns, including a none success value.
+  layers := emitterAbsenceLayers(targetResolved, context)
+  test := if layers.length == 0 then "doof::is_null(_assignment_target)" else emitAbsentTest("_assignment_target", layers, context)
   let value = emitExpression(expression.value, context, targetResolved)
   case targetResolved {
     result: ResultResolvedType -> {
-      test = "doof::is_failure(_assignment_target)"
       valueKind := requireExpressionType(expression.value, "coalescing assignment value").kind
       if valueKind != "result" && valueKind != "success" && valueKind != "failure" && valueKind != "never" {
         value = "doof::Success<" + emitContextType(result.valueType, context) + ">{" + emitExpression(expression.value, context, result.valueType) + "}"
@@ -296,82 +299,16 @@ export function emitIdentifier(expression: Identifier, context: EmitContext): st
 export function cppIdentifier(name: string): string { return emittedCppIdentifier(name) }
 
 export function emitUnary(expression: UnaryExpression, context: EmitContext): string {
-  if expression.operator == "try!" || expression.operator == "try?" {
+  // Postfix '!' panics and '?' returns none at the first absent layer. A
+  // nullable operand of '?' already has the converted type.
+  if !expression.prefix && (expression.operator == "!" || expression.operator == "?") {
+    operandType := requireExpressionType(expression.operand, "postfix " + expression.operator + " operand")
     operand := emitExpression(expression.operand, context)
-    operandType := specializeEmitType(requireExpressionType(expression.operand, expression.operator + " operand"), context)
-    case operandType {
-      result: ResultResolvedType -> {
-        valueType := emitContextType(result.valueType, context)
-        if expression.operator == "try?" {
-          expressionType := specializeEmitType(requireExpressionType(expression, "try? expression"), context)
-          expressionCpp := emitContextType(expressionType, context)
-          successValue := emitCarrierConversion("std::move(doof::success_value(_try_value))", result.valueType, expressionType, context)
-          noneValue := emitNoneLiteral(expressionType, context)
-          return "[&]() -> " + expressionCpp + " { auto _try_value = " + operand + "; if (doof::is_failure(_try_value)) return " + noneValue + "; return " + successValue + "; }()"
-        }
-        let failureMessage = "std::string(\"" + expression.operator + " failed\")"
-        case result.errorType {
-          primitive: PrimitiveType -> {
-            if primitive.name == "string" {
-              failureMessage = failureMessage + " + std::string(\": \") + doof::failure_error(_try_value)"
-            }
-          }
-          _ -> { }
-        }
-        sourcePath := moduleDiagnosticPath(context.modulePath, true, context.names)
-        body := "auto _try_value = " + operand + "; if (doof::is_failure(_try_value)) doof::panic_at(" + quote(sourcePath) + ", " + string(expression.span.start.line) + ", " + failureMessage + "); "
-        if carrierOf(result.valueType, .Payload).kind == .Void { return "[&]() -> std::monostate { " + body + " return {}; }()" }
-        return "[&]() -> " + valueType + " { " + body + "return std::move(doof::success_value(_try_value)); }()"
-      }
-      _ -> { panic(expression.operator + " operand is not a Result") }
-    }
+    if expression.operator == "!" { return emitForced(operand, operandType, expression.span.start.line, context) }
+    if !hasFailureLayer(specializeEmitType(operandType, context)) { return operand }
+    return emitOptional(operand, operandType, requireExpressionType(expression, "postfix ? expression"), context)
   }
   operand := emitExpression(expression.operand, context)
-  if !expression.prefix && expression.operator == "!" {
-    operandType := decoratedExpressionType(expression.operand)
-    if operandType != none {
-      case operandType! {
-        result: ResultResolvedType -> {
-          valueType := emitType(result.valueType, context.modulePath, context.names)
-          body := "auto _assert_value = " + operand + "; if (doof::is_failure(_assert_value)) doof::panic(\"! failed\"); "
-          if carrierOf(specializeEmitType(result.valueType, context), .Payload).kind == .Void { return "[&]() -> std::monostate { " + body + "return {}; }()" }
-          return "[&]() -> " + valueType + " { " + body + "return std::move(doof::success_value(_assert_value)); }()"
-        }
-        _ -> { }
-      }
-    }
-    if operandType != none {
-      case expression.operand {
-        _: MemberExpression -> {
-          case operandType! {
-            union_: UnionResolvedType -> {
-              if usesVariantRepresentation(union_) {
-                let nonNullMembers: ResolvedType[] = []
-                for member of union_.types { if member.kind != "none" { nonNullMembers.push(member) } }
-                if nonNullMembers.length == 1 { return "std::get<" + emitType(nonNullMembers[0], context.modulePath, context.names) + ">(" + operand + ")" }
-              }
-            }
-            _ -> { }
-          }
-          return "doof::unwrap_optional(" + operand + ")"
-        }
-        _ -> { }
-      }
-      case operandType! {
-        union_: UnionResolvedType -> {
-          if hasSinglePrimitiveMember(union_) { return operand + ".value()" }
-          if usesVariantRepresentation(union_) {
-            let nonNullMembers: ResolvedType[] = []
-            for member of union_.types { if member.kind != "none" { nonNullMembers.push(member) } }
-            if nonNullMembers.length == 1 { return "std::get<" + emitType(nonNullMembers[0], context.modulePath, context.names) + ">(" + operand + ")" }
-          }
-          if isNullableVariantType(operandType) { return "doof::unwrap_optional(" + operand + ")" }
-        }
-        _ -> { }
-      }
-    }
-    return "doof::unwrap_optional(" + operand + ")"
-  }
   return binaryOperator(expression.operator) + operand
 }
 
@@ -476,19 +413,6 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
         if expression.optional || expression.force { return emitWeakFieldAccess(expression, object, context) }
       }
       _ -> { }
-    }
-    if expression.force {
-      inner := naturalNullableUnionMember(objectType!)
-      if inner != none {
-        case inner! {
-          enum_: EnumType -> {
-            unwrapped := "doof::unwrap_optional(" + object + ")"
-            if expression.property == "value" { return emitType(enum_, context.modulePath, context.names) + "_value(" + unwrapped + ")" }
-            if expression.property == "name" { return emitType(enum_, context.modulePath, context.names) + "_name(" + unwrapped + ")" }
-          }
-          _ -> { }
-        }
-      }
     }
   }
   case expression.object {
@@ -622,26 +546,12 @@ function emitWeakFieldAccess(expression: MemberExpression, object: string, conte
     noneCheck := if nullable then "if (!" + storage + ".has_value()) doof::panic(\"Weak reference is none\"); " else ""
     return "[&]() -> " + resultType + " { auto " + storage + " = " + object + "; " + noneCheck + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) doof::panic(\"Weak reference has expired\"); auto " + temporary + " = std::move(_weak_locked.value()); return " + access + "; }()"
   }
-  case expression.resolvedType! {
-      result: ResultResolvedType -> {
-      resultCpp := emitType(result, context.modulePath, context.names)
-      payloadCpp := emitResultPayloadType(result.valueType, context.modulePath, context.names)
-      errorCpp := emitResultPayloadType(result.errorType, context.modulePath, context.names)
-      failure := weakFailureValue(result.errorType, errorCpp, context)
-      noneReturn := if nullable then "if (!" + storage + ".has_value()) return doof::Success<" + payloadCpp + ">{" + payloadCpp + "{}}; " else ""
-      return "[&]() -> " + resultCpp + " { auto " + storage + " = " + object + "; " + noneReturn + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) return doof::Failure<" + errorCpp + ">{" + failure + "}; auto " + temporary + " = std::move(_weak_locked.value()); return doof::Success<" + payloadCpp + ">{" + payloadCpp + "{" + access + "}}; }()"
-    }
-    _ -> { panic("Optional weak field access must resolve to Result") }
-  }
-  return ""
-}
-
-function weakFailureValue(errorType: ResolvedType, errorCpp: string, context: EmitContext): string {
-  case errorType {
-    _: UnionResolvedType -> { return errorCpp + "{::doof::WeakReferenceError{}}" }
-    _ -> { }
-  }
-  return "::doof::WeakReferenceError{}"
+  // '?.' on an absent or expired reference is none.
+  resultType := expression.resolvedType!
+  absent := emitOptionalAbsent(resultType, context)
+  absentReturn := if nullable then "if (!" + storage + ".has_value()) return " + absent + "; " else ""
+  present := emitOptionalPresent(access, expression.resolvedOptionalValue!, resultType, string(context.tryCounter), context)
+  return "[&]() -> " + emitContextType(resultType, context) + " { auto " + storage + " = " + object + "; " + absentReturn + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) return " + absent + "; auto " + temporary + " = std::move(_weak_locked.value()); return " + present + "; }()"
 }
 
 export function emitIndex(expression: IndexExpression, context: EmitContext): string {

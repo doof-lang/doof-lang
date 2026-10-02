@@ -68,7 +68,7 @@ export function testGenericNoneLiteralConstructPayloadUsesSpecializedCarrier(): 
     "class Item {}\n" +
     "function load<T>(value: T): Result<T, string> { return Success { value: value } }\n" +
     "function fail<E>(error: E): Result<int, E> { return Failure(error) }\n" +
-    "function main(): none { try? load(Item {})\ntry? fail(Item {}) }",
+    "function main(): none { load(Item {})?\nfail(Item {})? }",
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   Assert.isTrue(result.emission != none)
@@ -203,11 +203,13 @@ export function testMapDeleteLowersToErase(): none {
 export function testWeakOptionalCallToNoneMethodHandlesAbsence(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "class Node { visit(): none {} }\nclass Holder { let target: weak Node | none = none }\n" +
-    "function main(): none { holder := Holder {}\n_ := holder.target?.visit() }",
+    "function main(): none { holder := Holder {}\nholder.target?.visit() }",
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   source := result.emission!.modules[0].source
-  Assert.stringContains(source, ".has_value()) return doof::Success<void>{};")
+  // An absent or expired reference skips the call.
+  Assert.stringContains(source, ".has_value()) return; auto _weak_locked")
+  Assert.stringContains(source, "if (!_weak_locked.has_value()) return;")
   Assert.stringNotContains(source, "void{}")
 }
 

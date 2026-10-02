@@ -11,7 +11,7 @@ async function until(predicate: () => boolean, message: string) {
 export async function testDebugger(root: vscode.Uri) {
     if (process.platform !== 'darwin' || !process.env.DOOF_TEST_COMPILER) return;
     const uri = vscode.Uri.joinPath(root, 'debug-smoke.do');
-    await vscode.workspace.fs.writeFile(uri, Buffer.from('import { env } from "std/os"\nfunction main(arguments: string[]): none {\n  let count = 41\n  count += 1\n  println(count)\n  for argument of arguments { println(argument) }\n  println(try! env("DOOF_VSCODE_DEBUG_SMOKE"))\n}\n'));
+    await vscode.workspace.fs.writeFile(uri, Buffer.from('import { env } from "std/os"\nfunction main(arguments: string[]): none {\n  let count = 41\n  count += 1\n  println(count)\n  for argument of arguments { println(argument) }\n  println(env("DOOF_VSCODE_DEBUG_SMOKE")!)\n}\n'));
     const breakpoints = [new vscode.SourceBreakpoint(new vscode.Location(uri, new vscode.Position(3, 0)))];
     const stops: { threadId: number }[] = [];
     let output = '';

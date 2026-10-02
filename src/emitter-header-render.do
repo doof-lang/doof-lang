@@ -29,7 +29,7 @@ export class HeaderRenderCache {
   section(section: HeaderSection, state: HeaderAliasState, registry: CppTypeRegistry | none): RenderedHeaderSection {
     key := string(section.namespaceName.length) + ":" + section.namespaceName + ":" + string(state.nextIndex) + ":" + section.plan.identity
     if section.plan.identity != "" && sections.has(key) {
-      value := try! sections.get(key)
+      value := sections.get(key)!
       state.nextIndex = value.nextAliasIndex
       return value
     }

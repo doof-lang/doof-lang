@@ -27,6 +27,8 @@ import { builtinSourceLocationType, casePatternName, optionalResolvedType, resol
 import { checkPositionalLiteralConstruction, positionalLiteralClass, resolveConstructor, validateConstructorVisibility, validateFieldArguments, checkConstruct } from "./checker-construction"
 import { checkerSemanticSpan } from "./checker-validation"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
+import { forcedValue, optionalAccessType, optionalConversion, optionalType } from "./checker-absence"
+import { absenceLayers, canBeAbsent, hasFailureLayer, hasPresentValue, presentType } from "./absence-types"
 
 export function checkCaseExpression(state: CheckerState, expression: CaseExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   subjectType := checkedCaseSubjectType(checkExpression(state, expression.subject, scope, none))
@@ -442,7 +444,28 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       if objectType.kind == "never" { return finish(state, expression, neverType()) }
       let weakReceiver: WeakResolvedType | none = none
       let nullableReceiver = false
-      let resultReceiver: ResultResolvedType | none = none
+      // 'x!.m' is '(x!).m' for every absent receiver, and 'r?.m' is '(r?)?.m'
+      // when the receiver has a Result layer, so lowering reuses the postfix
+      // step. Weak references keep their own checked access.
+      if member.force && canBeAbsent(objectType) || member.optional && hasFailureLayer(objectType) {
+        if !hasPresentValue(objectType) {
+          typeError(state, "Cannot access member \"" + member.property + "\" on " + typeName(objectType) + ": the Result has no success value", member.span)
+          return finish(state, expression, unknownType())
+        }
+        if member.optional {
+          member.object = optionalConversion(state, member.object, objectType)
+          nullableReceiver = true
+          objectType = presentType(objectType)
+          member.resolvedOptionalReceiver = optionalResolvedType(objectType)
+        } else {
+          member.object = forcedValue(state, member.object, objectType)
+          member.force = false
+          objectType = presentType(objectType)
+        }
+      } else if member.force && objectType.kind != "weak" && objectType.kind != "unknown" {
+        typeError(state, "Force access '!.' requires a nullable or Result receiver, got " + typeName(objectType), member.span)
+        member.force = false
+      }
       case objectType {
         weak_: WeakResolvedType -> {
           weakReceiver = weak_
@@ -452,38 +475,17 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
           }
         }
         union_: UnionResolvedType -> {
-          if member.optional {
+          if member.optional && !nullableReceiver {
             unwrapped := weakAccessTarget(union_)
             if !sameType(unwrapped, union_) {
               objectType = unwrapped
               nullableReceiver = true
               member.resolvedOptionalReceiver = optionalResolvedType(unwrapped)
             }
-          } else if !member.force && hasNoneMember(state, union_) {
+          } else if !member.optional && !member.force && hasNoneMember(state, union_) {
             // Member resolution skips the none arm so '?.' and '!.' can share
             // it; a plain '.' must not read through an absent value.
             typeError(state, "Cannot access member \"" + member.property + "\" on possibly-none value of type \"" + typeName(objectType) + "\"; use '?.', '!.', or narrow it first", member.span)
-          }
-        }
-        result_: ResultResolvedType -> {
-          // '?.' over a Result reads the success value, preserving Failure
-          // and short-circuiting a none success value.
-          if member.optional {
-            resultReceiver = result_
-            objectType = weakAccessTarget(result_.valueType)
-            member.resolvedOptionalReceiver = optionalResolvedType(objectType)
-          } else if member.force {
-            // 'r!.m' is '(r!).m': the receiver becomes a postfix unwrap, so
-            // lowering reuses its panic. A nullable success value keeps '!.'.
-            if result_.valueType.kind == "none" {
-              typeError(state, "Cannot access member \"" + member.property + "\" on " + typeName(objectType) + ": the Result has no success value", member.span)
-              return finish(state, expression, unknownType())
-            }
-            unwrapped := UnaryExpression { kind: "non-null-assertion", operator: "!", operand: member.object, prefix: false, span: member.object.span }
-            finish(state, unwrapped, result_.valueType)
-            member.object = unwrapped
-            member.force = isNullableType(result_.valueType)
-            objectType = result_.valueType
           }
         }
         _ -> { }
@@ -535,17 +537,16 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         case memberValue {
           _: FunctionType -> { return finish(state, expression, memberValue) }
           _ -> {
-            if member.optional { return finish(state, expression, resultType(unionType([memberValue, noneType()]), weakReferenceErrorType())) }
+            if member.optional {
+              member.resolvedOptionalValue = optionalResolvedType(memberValue)
+              return finish(state, expression, optionalAccessType(memberValue))
+            }
           }
         }
       }
-      if resultReceiver != none && memberValue.kind != "function" && memberValue.kind != "unknown" {
-        member.resolvedOptionalValue = optionalResolvedType(memberValue)
-        return finish(state, expression, resultType(unionType([memberValue, noneType()]), resultReceiver!.errorType))
-      }
       if nullableReceiver && memberValue.kind != "function" {
         member.resolvedOptionalValue = optionalResolvedType(memberValue)
-        return finish(state, expression, unionType([memberValue, noneType()]))
+        return finish(state, expression, optionalAccessType(memberValue))
       }
       return finish(state, expression, memberValue)
     }
@@ -554,22 +555,34 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       indexValueType := checkExpression(state, index.index, scope, optionalResolvedType(primitive("int")))
       let optionalReceiver = false
       if index.optional {
-        case objectType {
-          union_: UnionResolvedType -> {
-            if hasNoneMember(state, union_) {
-              objectType = weakAccessTarget(union_)
-              optionalReceiver = true
-              index.resolvedOptionalReceiver = optionalResolvedType(objectType)
-            }
+        if hasFailureLayer(objectType) {
+          // 'r?[i]' is '(r?)?[i]'.
+          if !hasPresentValue(objectType) {
+            typeError(state, "Cannot index " + typeName(objectType) + ": the Result has no success value", index.span)
+            return finish(state, expression, unknownType())
           }
-          _ -> { }
+          index.object = optionalConversion(state, index.object, objectType)
+          objectType = presentType(objectType)
+          optionalReceiver = true
+          index.resolvedOptionalReceiver = optionalResolvedType(objectType)
+        } else {
+          case objectType {
+            union_: UnionResolvedType -> {
+              if hasNoneMember(state, union_) {
+                objectType = weakAccessTarget(union_)
+                optionalReceiver = true
+                index.resolvedOptionalReceiver = optionalResolvedType(objectType)
+              }
+            }
+            _ -> { }
+          }
         }
       }
       resolved := indexType(state, objectType, indexValueType, index.span)
       if objectType.kind == "never" || indexValueType.kind == "never" { return finish(state, expression, neverType()) }
       if optionalReceiver && resolved.kind != "unknown" {
         index.resolvedOptionalValue = optionalResolvedType(resolved)
-        return finish(state, expression, unionType([resolved, noneType()]))
+        return finish(state, expression, optionalAccessType(resolved))
       }
       return finish(state, expression, resolved)
     }
@@ -1006,8 +1019,16 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
     return finish(state, expression, primitive("bool"))
   }
   if operator == "??" {
-    if !isFallibleType(left) { typeError(state, "Operator '??' requires a nullable or Result left operand, got " + typeName(left), expression.left.span) }
-    return finish(state, expression, pathType(state, fallibleValueType(left) ?? unknownType(), right, expected, expression.span))
+    if left.kind == "none" { return finish(state, expression, pathType(state, unknownType(), right, expected, expression.span)) }
+    layers := absenceLayers(left)
+    if layers.length == 0 {
+      typeError(state, "Operator '??' requires a nullable or Result left operand, got " + typeName(left), expression.left.span)
+      return finish(state, expression, pathType(state, unknownType(), right, expected, expression.span))
+    }
+    // Every absent layer falls back: 'x ?? y' is 'x? ?? y' when x has more
+    // than one layer.
+    if layers.length > 1 && hasPresentValue(left) { expression.left = optionalConversion(state, expression.left, left) }
+    return finish(state, expression, pathType(state, presentType(left), right, expected, expression.span))
   }
   if right.kind == "never" { return finish(state, expression, neverType()) }
   if operator == "..<" || operator == ".." {
@@ -1081,41 +1102,42 @@ export function checkUnary(state: CheckerState, expression: UnaryExpression, sco
   value := checkExpression(state, expression.operand, scope, none)
   // Keep the operand decoration explicit at this boundary.  The emitter
   // consumes the operand node later, and must not reconstruct its type from
-  // the unary state.result (notably for try! over imported Result functions).
+  // the unary state.result (notably for postfix ! over imported Result functions).
         expression.operand.resolvedType = optionalResolvedType(value)
   if value.kind == "never" { return finish(state, expression, neverType()) }
   if expression.operator == "try" {
     // Bare `try` propagates by returning, so it only exists as a statement.
-    typeError(state, "'try' is a statement, not an expression; write 'try name := value' to propagate, or use 'try!' or 'try?' inside an expression", expression.span)
+    typeError(state, "'try' is a statement, not an expression; write 'try name := value' to propagate, or use postfix 'value!' or 'value?' inside an expression", expression.span)
     case value {
       result: ResultResolvedType -> { return finish(state, expression, result.valueType) }
       _ -> { return finish(state, expression, unknownType()) }
     }
   }
   if expression.operator == "try!" || expression.operator == "try?" {
-    case value {
-      result: ResultResolvedType -> {
-        if result.valueType.kind == "none" {
-          if expression.operator == "try?" { typeError(state, "try? requires a Result with a success value", expression.span) }
-          return finish(state, expression, result.valueType)
-        }
-        if expression.operator == "try?" { return finish(state, expression, unionType([result.valueType, noneType()])) }
-        return finish(state, expression, result.valueType)
-      }
-      _ -> { typeError(state, expression.operator + " requires a Result expression", expression.span) }
-    }
-    return finish(state, expression, unknownType())
+    // The prefix forms were replaced by postfix '!' and '?'; recover with the
+    // postfix type so later diagnostics stay meaningful.
+    postfix := expression.operator.substring(3, 4)
+    typeError(state, "'" + expression.operator + " value' was removed; write 'value" + postfix + "'", expression.span)
+    if !canBeAbsent(value) { return finish(state, expression, unknownType()) }
+    return finish(state, expression, if postfix == "!" then presentType(value) else optionalType(value))
   }
-  if !expression.prefix && expression.operator == "!" {
-    case value {
-      result: ResultResolvedType -> { return finish(state, expression, result.valueType) }
-      _ -> { }
-    }
-    if !isNullableType(value) {
-      typeError(state, "Postfix '!' requires a nullable or Result operand, got " + typeName(value), expression.span)
+  if !expression.prefix && (expression.operator == "!" || expression.operator == "?") {
+    // Every absent layer (an outer none, a Failure, a none success value)
+    // panics under '!' and becomes none under '?'.
+    if !canBeAbsent(value) && value.kind != "none" {
+      typeError(state, "Postfix '" + expression.operator + "' requires a nullable or Result operand, got " + typeName(value), expression.span)
       return finish(state, expression, unknownType())
     }
-    return finish(state, expression, nonNoneType(state, value))
+    if expression.operator == "!" {
+      if value.kind == "none" { return finish(state, expression, unknownType()) }
+      return finish(state, expression, presentType(value))
+    }
+    if !hasPresentValue(value) && hasFailureLayer(value) {
+      typeError(state, "Postfix '?' requires a Result with a success value, got " + typeName(value), expression.span)
+      return finish(state, expression, unknownType())
+    }
+    if value.kind == "none" { return finish(state, expression, value) }
+    return finish(state, expression, optionalType(value))
   }
   if expression.operator == "!" { requireBool(state, value, expression.span); return finish(state, expression, primitive("bool")) }
   if expression.operator == "+" || expression.operator == "-" || expression.operator == "~" {
@@ -1289,7 +1311,7 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
 function validateAssignmentOperator(state: CheckerState, operator: string, target: ResolvedType, value: ResolvedType, span: SourceSpan): none {
   if operator == "=" || target.kind == "unknown" || value.kind == "unknown" { return }
   if operator == "??=" {
-    if !isFallibleType(target) { typeError(state, "Operator '??=' requires a nullable or Result assignment target, got " + typeName(target), span); return }
+    if !canBeAbsent(target) && target.kind != "none" { typeError(state, "Operator '??=' requires a nullable or Result assignment target, got " + typeName(target), span); return }
     case target {
       result: ResultResolvedType -> {
         if !isAssignableWithInterfaces(state.result, value, target) && !isAssignableWithInterfaces(state.result, value, result.valueType) {
@@ -1330,25 +1352,6 @@ function isNullableType(type_: ResolvedType): bool {
     _ -> { }
   }
   return false
-}
-
-function isFallibleType(type_: ResolvedType): bool {
-  case type_ { _: ResultResolvedType -> { return true } _ -> { return isNullableType(type_) } }
-}
-
-function fallibleValueType(type_: ResolvedType): ResolvedType | none {
-  case type_ {
-    result: ResultResolvedType -> { return result.valueType }
-    union_: UnionResolvedType -> {
-      let members: ResolvedType[] = []
-      for member of union_.types { if member.kind != "none" { members.push(member) } }
-      if members.length == 1 { return members[0] }
-      if members.length > 1 { return unionType(members) }
-    }
-    _: NoneType -> { return unknownType() }
-    _ -> { }
-  }
-  return none
 }
 
 function orderedTypes(state: CheckerState, left: ResolvedType, right: ResolvedType): bool {

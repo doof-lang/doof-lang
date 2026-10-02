@@ -171,7 +171,7 @@ export function releaseCheckedReferences(statements: Statement[]): none {
   for statement of statements { pending.push(statement) }
   let expressions: Expression[] = []
   while pending.length > 0 {
-    statement := try! pending.pop()
+    statement := pending.pop()!
     case statement {
       function_: FunctionDeclaration -> { releaseFunctionBody(function_, pending, expressions) }
       class_: ClassDeclaration -> {
@@ -185,7 +185,7 @@ export function releaseCheckedReferences(statements: Statement[]): none {
       _ -> { collectStatementExpressions(statement, expressions) }
     }
     while expressions.length > 0 {
-      expression := try! expressions.pop()
+      expression := expressions.pop()!
       releaseExpression(expression)
       collectNestedExpressions(expression, expressions)
     }

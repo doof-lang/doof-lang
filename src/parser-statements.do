@@ -537,7 +537,7 @@ function parseTrailingLambdaExpressionStatement(parser: Parser, expression: Expr
         parser.check(TokenType.Dot) || parser.check(TokenType.DoubleColon) ||
         parser.check(TokenType.QuestionDot) || parser.check(TokenType.BangDot) ||
         parser.check(TokenType.LeftParen) || parser.check(TokenType.LeftBracket) ||
-        parser.check(TokenType.QuestionBracket) || parser.check(TokenType.Bang)
+        parser.check(TokenType.QuestionBracket) || parser.check(TokenType.Bang) || parser.check(TokenType.Question)
       ) {
         parser.fail("Chaining after a trailing lambda is not allowed; use an explicit lambda instead")
       }
@@ -550,7 +550,7 @@ function parseTrailingLambdaExpressionStatement(parser: Parser, expression: Expr
 export isolated function parseTryStatement(parser: Parser): Statement {
   start := parser.location()
   parser.expect(TokenType.Try)
-  if parser.check(TokenType.Bang) || (parser.check(TokenType.Identifier) && parser.text(parser.current()) == "?") {
+  if parser.check(TokenType.Bang) || parser.check(TokenType.Question) {
     let operator = "try!"
     if parser.match(TokenType.Bang) { operator = "try!" }
     else { parser.advance(); operator = "try?" }

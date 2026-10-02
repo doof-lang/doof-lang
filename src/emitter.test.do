@@ -211,17 +211,19 @@ export function testEmitsWeakFieldsAsWeakPointers(): none {
 }
 
 export function testEmitsCheckedWeakReferenceAccess(): none {
-  result := emit("class Node { value: int\nread(): int => value\nfallible(): Result<int, string> => Success { value: value } }\nfunction optionalField(node: weak Node): Result<int | none, WeakReferenceError> => node?.value\nfunction optionalCall(node: weak Node): Result<int | none, WeakReferenceError> => node?.read()\nfunction optionalFallibleCall(node: weak Node): Result<int | none, string | WeakReferenceError> => node?.fallible()\nfunction forcedField(node: weak Node): int => node!.value\nfunction forcedCall(node: weak Node): int => node!.read()")
+  result := emit("class Node { value: int\nread(): int => value\nfallible(): Result<int, string> => Success { value: value } }\nfunction optionalField(node: weak Node): int | none => node?.value\nfunction optionalCall(node: weak Node): int | none => node?.read()\nfunction optionalFallibleCall(node: weak Node): Result<int | none, string> => node?.fallible()\nfunction forcedField(node: weak Node): int => node!.value\nfunction forcedCall(node: weak Node): int => node!.read()")
   Assert.stringContains(result.source, "doof::lock_weak(")
-  Assert.stringContains(result.source, "doof::WeakReferenceError{}")
+  // An expired reference is absent under '?.' and panics under '!.'.
+  Assert.stringNotContains(result.source, "doof::WeakReferenceError{}")
+  Assert.stringContains(result.source, "if (!_weak_locked.has_value()) return std::nullopt;")
   Assert.stringContains(result.source, "Weak reference has expired")
-  Assert.stringContains(result.source, "doof::failure_error(_weak_result)")
+  Assert.stringContains(result.source, "doof::failure_error(_optional_result_")
   Assert.stringNotContains(result.source, "node->value")
   Assert.stringNotContains(result.source, "node->read()")
 }
 
 export function testEmitsCheckedWeakUnionAccess(): none {
-  result := emit("class Cat { name: string\nspeak(): string => name }\nclass Dog { name: string\nspeak(): string => name }\nclass Holder { weak pet: Cat | Dog }\nfunction name(holder: Holder): Result<string | none, WeakReferenceError> => holder.pet?.name\nfunction speak(holder: Holder): string => holder.pet!.speak()")
+  result := emit("class Cat { name: string\nspeak(): string => name }\nclass Dog { name: string\nspeak(): string => name }\nclass Holder { weak pet: Cat | Dog }\nfunction name(holder: Holder): string | none => holder.pet?.name\nfunction speak(holder: Holder): string => holder.pet!.speak()")
   Assert.stringContains(result.header, "std::variant<std::weak_ptr<Cat>, std::weak_ptr<Dog>> pet")
   Assert.stringContains(result.source, "doof::lock_weak(")
   Assert.stringContains(result.source, "std::visit([](auto&& _weak_item)")
@@ -263,7 +265,7 @@ export function testNestedTryBangLambdaCapturesShorthandConstructionBindings(): 
     "function useDraw(draw: Draw): Result<none, string> => Success()\n" +
     "function invoke(callback: (): none): none { callback() }\n" +
     "function main(): none { pipeline := Box { value: 1 }\nvertices := Box { value: 2 }\n" +
-    "invoke((): none => { invoke((): none => { try! useDraw(Draw { pipeline, vertices }) }) }) }",
+    "invoke((): none => { invoke((): none => { useDraw(Draw { pipeline, vertices })! }) }) }",
   )
   Assert.stringContains(result.source, "doof::callback<void()>([pipeline, vertices]() -> void")
 }
@@ -421,7 +423,7 @@ export function testEmitsSetAndReadonlySetOperations(): none {
 
 export function testEmitsNullableJsonValueAsNarrowing(): none {
   result := emit("function read(value: SerialValue | null): Result<string, string> => value! as string")
-  Assert.equal(result.source.contains("std::get<doof::SerialValue>(value)"), true)
+  Assert.equal(result.source.contains("std::get<doof::SerialValue>(_forced_value)"), true)
   Assert.equal(result.source.contains("doof::unwrap_optional(value)"), false)
 }
 
@@ -638,7 +640,7 @@ export function testSpecializesGenericResultCasePatterns(): none {
 }
 
 export function testEmitsActorCreationCallsPromiseAndRetirement(): none {
-  result := emit("class Worker { let value: int\nfunction add(amount: int): int { this.value = this.value + amount\nreturn this.value } }\nfunction main(): int { worker := Actor<Worker>(1)\nfirst := worker.add(2)\npromise := async worker.add(3)\nsecond := try! promise.get()\nstate := retire worker\nreturn first + second + state.value }")
+  result := emit("class Worker { let value: int\nfunction add(amount: int): int { this.value = this.value + amount\nreturn this.value } }\nfunction main(): int { worker := Actor<Worker>(1)\nfirst := worker.add(2)\npromise := async worker.add(3)\nsecond := promise.get()!\nstate := retire worker\nreturn first + second + state.value }")
   Assert.equal(result.source.contains("std::make_shared<doof::Actor<Worker>>(Worker{1})"), true)
   Assert.equal(result.source.contains("->template call_sync<int32_t>"), true)
   Assert.equal(result.source.contains("->template call_async<int32_t>"), true)
@@ -702,33 +704,33 @@ export function testEmitsIsolatedAsyncFunctionCalls(): none {
   Assert.stringContains(noneResult.source, "doof::submit_async<void>([=]() { notify(value); })")
 }
 
-export function testTryBangPanicIncludesOriginAndStringFailure(): none {
-  result := emit("function load(): Result<int, string> => Failure { error: \"disk failed\" }\nfunction main(): int => try! load()")
-  Assert.stringContains(result.source, "doof::panic_at(\"main\", 2, std::string(\"try! failed\") + std::string(\": \") + doof::failure_error(_try_value))")
+export function testPostfixBangPanicIncludesOriginAndStringFailure(): none {
+  result := emit("function load(): Result<int, string> => Failure { error: \"disk failed\" }\nfunction main(): int => load()!")
+  Assert.stringContains(result.source, "doof::panic_at(\"main\", 2, std::string(\"! failed\") + std::string(\": \") + doof::failure_error(_forced_value))")
 
-  enumFailure := emit("enum Problem { Broken }\nfunction load(): Result<int, Problem> => Failure { error: Problem.Broken }\nfunction main(): int => try! load()")
-  Assert.stringContains(enumFailure.source, "doof::panic_at(\"main\", 3, std::string(\"try! failed\"))")
+  enumFailure := emit("enum Problem { Broken }\nfunction load(): Result<int, Problem> => Failure { error: Problem.Broken }\nfunction main(): int => load()!")
+  Assert.stringContains(enumFailure.source, "doof::panic_at(\"main\", 3, std::string(\"! failed\"))")
 }
 
-export function testTryQuestionReturnsNoneOnFailureWithoutPanicking(): none {
-  result := emit("function main(): string | none { values: Map<string, string> := {}\nreturn try? values.get(\"missing\") }")
-  Assert.stringContains(result.source, "if (doof::is_failure(_try_value)) return std::nullopt;")
-  Assert.stringContains(result.source, "return std::move(doof::success_value(_try_value));")
-  Assert.stringNotContains(result.source, "try? failed")
+export function testPostfixQuestionReturnsNoneOnFailureWithoutPanicking(): none {
+  result := emit("function main(): string | none { values: Map<string, string> := {}\nreturn values.get(\"missing\")? }")
+  Assert.stringContains(result.source, "if (doof::is_failure(_optional_value)) return std::nullopt;")
+  Assert.stringContains(result.source, "std::move(doof::success_value(_optional_value))")
+  Assert.stringNotContains(result.source, "! failed")
   Assert.stringNotContains(result.source, "std::optional<std::optional<std::string>>")
 }
 
-export function testTryQuestionFlattensNullableSuccessPayload(): none {
-  result := emit("function maybe(): Result<string | none, string> => Success { value: none }\nfunction main(): string | none => try? maybe()")
+export function testPostfixQuestionFlattensNullableSuccessPayload(): none {
+  result := emit("function maybe(): Result<string | none, string> => Success { value: none }\nfunction main(): string | none => maybe()?")
   Assert.stringContains(result.source, "[&]() -> std::optional<std::string>")
-  Assert.stringContains(result.source, "if (doof::is_failure(_try_value)) return std::nullopt;")
+  Assert.stringContains(result.source, "if (doof::is_failure(_optional_value)) return std::nullopt; if (doof::is_null(doof::success_value(_optional_value))) return std::nullopt;")
   Assert.stringNotContains(result.source, "std::optional<std::optional<std::string>>")
 }
 
-export function testTryQuestionPromotesUnionSuccessIntoNullableUnion(): none {
-  result := emit("function maybe(flag: bool): Result<int | string, string> => if flag then Success { value: 1 } else Success { value: \"present\" }\nfunction main(): int | string | none => try? maybe(true)")
-  Assert.stringContains(result.source, "doof::variant_promote<std::variant<std::monostate, int32_t, std::string>>(std::move(doof::success_value(_try_value)))")
-  Assert.stringContains(result.source, "if (doof::is_failure(_try_value)) return std::monostate{};")
+export function testPostfixQuestionPromotesUnionSuccessIntoNullableUnion(): none {
+  result := emit("function maybe(flag: bool): Result<int | string, string> => if flag then Success { value: 1 } else Success { value: \"present\" }\nfunction main(): int | string | none => maybe(true)?")
+  Assert.stringContains(result.source, "doof::variant_promote<std::variant<std::monostate, int32_t, std::string>>(std::move(doof::success_value(_optional_value)))")
+  Assert.stringContains(result.source, "if (doof::is_failure(_optional_value)) return std::monostate{};")
 }
 
 export function testActorCreationUsesTrailingFieldDefaults(): none {
@@ -881,9 +883,9 @@ export function testEmitsNullableIfExpressionBranchesThroughCheckedResultType():
 
 export function testKeepsNullableNativePseudoFieldNamesAsMethodCalls(): none {
   result := emit("import class NativeNode from \"native.hpp\" as native::Node { kind(): string resolvedType(): string span(): int }\nfunction describe(node: NativeNode | none): string { if node != none { return node!.kind() + node!.resolvedType() + string(node!.span()) }\nreturn \"\" }")
-  Assert.stringContains(result.source, "node->kind()")
-  Assert.stringContains(result.source, "node->resolvedType()")
-  Assert.stringContains(result.source, "node->span()")
+  Assert.stringContains(result.source, "}()->kind()")
+  Assert.stringContains(result.source, "}()->resolvedType()")
+  Assert.stringContains(result.source, "}()->span()")
   Assert.equal(result.source.contains("doof::kind(node)"), false)
   Assert.equal(result.source.contains("doof::resolved_type(node)"), false)
   Assert.equal(result.source.contains("doof::span(node)"), false)
@@ -898,8 +900,8 @@ export function testUnwrapsNullableEnumFieldsToTheirEnumValue(): none {
     "function checkLocal(pending: Outcome | none): bool => isVictory(pending!)",
   )
   Assert.stringContains(result.header, "std::optional<Outcome>")
-  Assert.stringContains(result.source, "isVictory(doof::unwrap_optional(state->pending))")
-  Assert.stringContains(result.source, "isVictory(doof::unwrap_optional(pending))")
+  Assert.stringContains(result.source, "isVictory([&]() -> Outcome { auto _forced_value = state->pending; if (doof::is_null(_forced_value)) doof::panic_at(")
+  Assert.stringContains(result.source, "isVictory([&]() -> Outcome { auto _forced_value = pending;")
   Assert.stringNotContains(result.header, "std::variant<std::monostate, Outcome>")
 }
 
@@ -1019,8 +1021,9 @@ export function testEmitsArbitrarySharedUnionMembersFromResolvedTypes(): none {
   result := emit("class Left { value: int\nread(): int => value }\nclass Right { value: int\nread(): int => value }\ntype Either = Left | Right\ntype MaybeEither = Left | Right | none\nfunction total(item: Either): int => item.value + item.read()\nfunction maybeTotal(item: MaybeEither): int => item!.value + item!.read()")
   Assert.stringContains(result.source, "std::visit([](auto&& _obj) { return _obj->value; }, item)")
   Assert.stringContains(result.source, "std::visit([&](auto&& _obj) -> int32_t { return _obj->read(); }, item)")
-  Assert.stringContains(result.source, "std::visit([](auto&& _obj) { return _obj->value; }, doof::unwrap_optional(item))")
-  Assert.stringContains(result.source, "std::visit([&](auto&& _obj) -> int32_t { return _obj->read(); }, doof::unwrap_optional(item))")
+  // 'item!' is checked before the variant is visited.
+  Assert.stringContains(result.source, "std::visit([](auto&& _obj) { return _obj->value; }, [&]() -> std::variant<std::shared_ptr<Left>, std::shared_ptr<Right>> { auto _forced_value = item; if (doof::is_null(_forced_value)) doof::panic_at(")
+  Assert.stringContains(result.source, "std::visit([&](auto&& _obj) -> int32_t { return _obj->read(); }, [&]() -> std::variant<std::shared_ptr<Left>, std::shared_ptr<Right>> { auto _forced_value = item;")
 }
 
 export function testEmitsMapSizeAsContainerCall(): none {
@@ -1053,7 +1056,7 @@ export function testInvokesCallbackValuedMemberThroughCallMethod(): none {
 
 export function testInvokesCallbackFieldAfterPostfixNullableStructUnwrap(): none {
   result := emit("struct Handler { callback: (value: int): int }\nfunction findHandler(): Handler | none => Handler { callback: (value: int): int => value + 1 }\nfunction invoke(): int { handler := findHandler()\nif handler != none { return handler!.callback(41) }\nreturn 0 }")
-  Assert.stringContains(result.source, "handler->callback.call(41)")
+  Assert.stringContains(result.source, "}().callback.call(41)")
   Assert.equal(result.source.contains("handler->callback(41)"), false)
 }
 
@@ -1178,8 +1181,9 @@ export function testKeepsDeclarationElseStructBindingsShallowImmutable(): none {
 
 export function testEmitsPostfixBangResultUnwrap(): none {
   result := emit("function decode(): Result<string, string> => Success { value: \"ok\" }\nfunction main(): string => decode()!")
-  Assert.equal(result.source.contains("if (doof::is_failure(_assert_value)) doof::panic(\"! failed\")"), true)
-  Assert.equal(result.source.contains("return std::move(doof::success_value(_assert_value))"), true)
+  Assert.stringContains(result.source, "if (doof::is_failure(_forced_value)) doof::panic_at(")
+  Assert.stringContains(result.source, "std::string(\"! failed\") + std::string(\": \") + doof::failure_error(_forced_value)")
+  Assert.stringContains(result.source, "return std::move(doof::success_value(_forced_value))")
 }
 
 export function testEmitsResultStatusMethods(): none {
@@ -1427,8 +1431,8 @@ export function testEmitsValueBackedEnumHelpersAndDirectJson(): none {
   Assert.stringContains(result.source, "WireState_toSerialValue(value)")
   Assert.stringContains(result.source, "State_value(State::Ready)")
   Assert.stringContains(result.source, "WireState_value(WireState::Ready)")
-  Assert.stringContains(result.source, "State_name(doof::unwrap_optional(State_fromValue(7)))")
-  Assert.stringContains(result.source, "State_value(doof::unwrap_optional(State_fromName")
+  Assert.stringContains(result.source, "State_name([&]() -> State { auto _forced_value = State_fromValue(7);")
+  Assert.stringContains(result.source, "State_value([&]() -> State { auto _forced_value = State_fromName")
   Assert.stringContains(result.source, "WireState_fromSerialValue(value, false)")
   Assert.stringContains(result.source, "doof::to_string(value)")
 }
@@ -1463,8 +1467,8 @@ export function testEmitsNullableEnumsThroughAllOrdinaryCarrierFlows(): none {
   Assert.stringContains(result.header, "std::optional<Outcome> current")
   Assert.stringContains(result.header, "std::optional<Outcome> maybe")
   Assert.stringContains(result.header, "parameter(const std::optional<Outcome>& value)")
-  Assert.stringContains(result.source, "doof::unwrap_optional(value)")
-  Assert.stringContains(result.source, "Outcome_toSerialValue(doof::unwrap_optional(value))")
+  Assert.stringContains(result.source, "doof::unwrap_optional(_forced_value)")
+  Assert.stringContains(result.source, "Outcome_toSerialValue([&]() -> Outcome { auto _forced_value = value;")
   Assert.stringContains(result.source, "doof::unwrap_optional(_binding_value_")
   Assert.stringContains(result.source, "std::optional<Outcome>{doof::serial_decode_value(Outcome_fromSerialValue")
   Assert.stringNotContains(result.header, "std::variant<std::monostate, Outcome>")

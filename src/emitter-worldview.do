@@ -312,7 +312,7 @@ function collectSymbolDependency(
   selection := selectionFor(index, symbol.modulePath)
   selection.statements.push(declaration!)
   collectExplicitTypeImports(findModule(index, symbol.modulePath)!, rootPath, index)
-  summary := try! index.graph.summaries.get(declarationKey(symbol.modulePath, symbol.name))
+  summary := index.graph.summaries.get(declarationKey(symbol.modulePath, symbol.name))!
   replayDependencies(summary, rootPath, index, forceTransitiveDefinitions)
   collectNativeHeaderClosure(symbol, rootPath, index)
 }

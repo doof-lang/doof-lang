@@ -302,7 +302,7 @@ function pathSignature(path: string, contentHash: bool): NativeInputSignature | 
   if !exists(path) || isDirectory(path) { return none }
   info := metadata(path) else { return none }
   modifiedNanos := info.modifiedAt.toEpochNanos()
-  signature := if contentHash then sha256Hex(try! readBlob(path)) else string(info.size) + ":" + string(modifiedNanos)
+  signature := if contentHash then sha256Hex(readBlob(path)!) else string(info.size) + ":" + string(modifiedNanos)
   return NativeInputSignature { path, signature, contentHash, size: info.size, modifiedNanos }
 }
 
@@ -359,11 +359,11 @@ export function nativeTaskStateIsCurrent(
 }
 
 function captureTaskState(task: NativeCompileTask, fingerprint: string): NativeTaskState {
-  info := try! metadata(task.outputPath)
+  info := metadata(task.outputPath)!
   state := NativeTaskState { id: task.id, fingerprint, outputPath: task.outputPath, outputSize: info.size, outputModifiedNanos: info.modifiedAt.toEpochNanos() }
   let paths: string[] = [task.sourcePath]
   if task.dependencyFilePath != "" && exists(task.dependencyFilePath) {
-    dependencySource := try! readText(task.dependencyFilePath)
+    dependencySource := readText(task.dependencyFilePath)!
     dependencies := if task.dependencyFilePath.toLowerCase().endsWith(".json")
       then parseMsvcDependencies(dependencySource)
       else parseMakeDependencies(dependencySource)
@@ -377,7 +377,7 @@ function captureTaskState(task: NativeCompileTask, fingerprint: string): NativeT
 }
 
 function captureLinkState(outputPath: string, fingerprint: string, objectPaths: string[]): NativeTaskState {
-  info := try! metadata(outputPath)
+  info := metadata(outputPath)!
   state := NativeTaskState { id: "link:" + outputPath, fingerprint, outputPath, outputSize: info.size, outputModifiedNanos: info.modifiedAt.toEpochNanos() }
   for path of objectPaths {
     signature := pathSignature(path, false)
@@ -395,16 +395,16 @@ function readBuildState(path: string): NativeBuildState {
 
 function writeBuildState(path: string, state: NativeBuildState): none {
   temporaryPath := path + ".tmp"
-  try! writeText(temporaryPath, renderNativeBuildState(state))
-  try! rename(temporaryPath, path)
+  writeText(temporaryPath, renderNativeBuildState(state))!
+  rename(temporaryPath, path)!
 }
 
 function writeTextIfChanged(path: string, content: string): none {
   if exists(path) {
-    previous := readText(path) else { try! writeText(path, content); return }
+    previous := readText(path) else { writeText(path, content)!; return }
     if !nativeSupportFileNeedsWrite(previous, content) { return }
   }
-  try! writeText(path, content)
+  writeText(path, content)!
 }
 
 /** Keeps generated build inputs stable so unchanged PCH dependencies remain reusable. */
@@ -477,14 +477,14 @@ function collectManagedNativeCopyOutputs(outputs: string[], indexed: Set<string>
     appendManagedOutput(outputs, indexed, outputPath)
     return
   }
-  for entry of try! readDir(sourcePath) {
+  for entry of readDir(sourcePath)! {
     collectManagedNativeCopyOutputs(outputs, indexed, joinOutput(sourcePath, entry.name), joinOutput(outputPath, entry.name))
   }
 }
 
 function removeStaleOutputs(previous: string[], current: string[], outputDirectory: string): none {
   for path of staleManagedOutputCandidates(previous, current, outputDirectory) {
-    if exists(path) && !isDirectory(path) { try! remove(path) }
+    if exists(path) && !isDirectory(path) { remove(path)! }
   }
 }
 
@@ -547,5 +547,5 @@ function ensureDirectory(path: string): none {
   if path == "" || exists(path) { return }
   parent := parentDirectory(path)
   if parent != path { ensureDirectory(parent) }
-  try! mkdir(path)
+  mkdir(path)!
 }

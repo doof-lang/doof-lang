@@ -139,7 +139,9 @@ export class Identifier {
 export class BinaryExpression {
   kind: string
   operator: string
-  left: Expression
+  // The checker lowers a Result `??` operand with a nullable success value
+  // through postfix `?`.
+  let left: Expression
   right: Expression
   let resolvedType: ResolvedType | none = none
   // `==`/`!=` between a union (or Result or interface) and a narrower operand:
@@ -151,7 +153,9 @@ export class BinaryExpression {
 export class UnaryExpression {
   kind: string
   operator: string
-  operand: Expression
+  // The checker nests a Result unwrap under postfix `!` when the success value
+  // is nullable.
+  let operand: Expression
   prefix: bool
   let resolvedType: ResolvedType | none = none
   span: SourceSpan
@@ -206,7 +210,8 @@ export class MemberExpression {
 
 export class IndexExpression {
   kind: string
-  object: Expression
+  // The checker lowers a Result receiver of `?[]` through postfix `?`.
+  let object: Expression
   index: Expression
   optional: bool
   // Set when '?[]' short-circuits a nullable receiver.

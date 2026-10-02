@@ -45,7 +45,7 @@ function main(): none {
   Assert.equal(shifted(3, 2L), 12)
   Assert.equal(integerPower(3), 27.0)
   Assert.isTrue(equal(2, 2.0))
-  Assert.equal(try! widened(), 2147483649L)
+  Assert.equal(widened()!, 2147483649L)
   error := catch {
     try readonly values: int[] = loadArray()
     Assert.equal(values.length, 2)
@@ -53,7 +53,7 @@ function main(): none {
     Assert.equal(value + 2147483648L, 2147483649L)
     try propagate()
   }
-  Assert.equal(try! (error as string), "expected")
+  Assert.equal((error as string)!, "expected")
   Assert.equal(scoped(), 7)
   println("type checker review native checks passed")
 }

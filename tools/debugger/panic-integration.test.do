@@ -10,7 +10,7 @@ import { Duration, Thread } from "std/time"
 
 function checkPanic(mode: string, functionName: string, line: int): none {
   path := env("DOOF_DEBUG_PANIC_TEST_LAUNCH") else { return }
-  original := try! DebugLaunch.fromSerialValue(try! parseJsonValue(try! readText(path)))
+  original := DebugLaunch.fromSerialValue(parseJsonValue(readText(path)!)!)!
   launch := DebugLaunch { executable: original.executable, directory: original.directory, symbols: original.symbols, source: original.source, arguments: [mode] }
   session := DebugSession { launch }
   session.start()
@@ -36,7 +36,7 @@ function checkPanic(mode: string, functionName: string, line: int): none {
   }
   Assert.equal(session.breakpoints.has(launch.source), mode == "explicit")
   if mode == "explicit" {
-    points := try! session.breakpoints.get(launch.source)
+    points := session.breakpoints.get(launch.source)!
     Assert.equal(points.length, 1)
     Assert.equal(points[0].line, 1)
   }

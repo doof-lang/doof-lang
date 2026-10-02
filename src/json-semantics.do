@@ -125,7 +125,7 @@ export function canGenerateJsonSerialization(
   cache: JsonEligibilityCache | none = none,
 ): bool {
   key := jsonOwnerKey(owner)
-  if cache != none && cache!.serialization.has(key) { return try! cache!.serialization.get(key) }
+  if cache != none && cache!.serialization.has(key) { return cache!.serialization.get(key)! }
   let visited: string[] = []
   result := canGenerateJsonSerializationInner(owner, programs, visited)
   if cache != none { cache!.serialization.set(key, result) }
@@ -148,7 +148,7 @@ export function canGenerateJsonDeserialization(
   cache: JsonEligibilityCache | none = none,
 ): bool {
   key := jsonOwnerKey(owner)
-  if cache != none && cache!.deserialization.has(key) { return try! cache!.deserialization.get(key) }
+  if cache != none && cache!.deserialization.has(key) { return cache!.deserialization.get(key)! }
   let visited: string[] = []
   result := canGenerateJsonDeserializationInner(owner, programs, visited)
   if cache != none { cache!.deserialization.set(key, result) }

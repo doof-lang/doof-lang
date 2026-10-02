@@ -226,12 +226,12 @@ export function testEditorExactFilterDoesNotSelectLongerTestNames(): none {
 import { selectTestsFromJson } from "./test-runner"
 export function testBatchSelectionKeepsExactIdsAndHarness(): none {
   tests := [DiscoveredTest { id: "a::one", name: "one", modulePath: "a", moduleDisplayPath: "a" }, DiscoveredTest { id: "a::oneMore", name: "oneMore", modulePath: "a", moduleDisplayPath: "a" }, DiscoveredTest { id: "a::two", name: "two", modulePath: "a", moduleDisplayPath: "a" }]
-  selected := try! selectTestsFromJson(tests, "[\"a::two\",\"a::one\",\"a::one\"]")
+  selected := selectTestsFromJson(tests, "[\"a::two\",\"a::one\",\"a::one\"]")!
   Assert.equal(selected.length, 2)
   Assert.equal(selected[0].id, "a::one")
   Assert.equal(selected[1].id, "a::two")
   Assert.equal(tests.length, 3)
-  Assert.equal((try! selectTestsFromJson(tests, "[]")).length, 0)
+  Assert.equal((selectTestsFromJson(tests, "[]")!).length, 0)
   for invalid of ["{", "{}", "[1]", "[\"\"]", "[\"missing\"]"] {
     result := selectTestsFromJson(tests, invalid)
     unexpected := result else error { Assert.isTrue(error != ""); continue }

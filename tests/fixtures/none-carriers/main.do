@@ -4,6 +4,11 @@ class Maps { values: Map<string, none>[] }
 class Tuples { values: Tuple<none, int>[] }
 function identity<T>(value: T): T => value
 function block<T>(value: T): T { return value }
+// The stored value of a present key, which may itself be none.
+function stored<V, E>(result: Result<V, E>): V => case result {
+  s: Success -> s.value,
+  _: Failure -> panic("missing key"),
+}
 function widen(value: (weak Item) | none): (weak Item) | string | none => value
 function expired(): weak Item { item := Item {}
 return item }
@@ -17,14 +22,14 @@ function main(): int {
  ints.set("a", absent)
  ints.set("b", none)
  ints.set("c", 7)
- if (try! ints.get("a")) != none || (try! ints.get("b")) != none { return 2 }
- if (try! ints.get("c")) == none { return 3 }
+ if stored(ints.get("a")) != none || stored(ints.get("b")) != none { return 2 }
+ if stored(ints.get("c")) == none { return 3 }
  let items: Map<string, Item | none> = {}
  items.set("a", none)
  items.set("b", absent)
  items.set("c", Item {})
- if (try! items.get("a")) != none || (try! items.get("b")) != none { return 4 }
- if (try! items.get("c")) == none { return 5 }
+ if stored(items.get("a")) != none || stored(items.get("b")) != none { return 4 }
+ if stored(items.get("c")) == none { return 5 }
  if widen(none) != none || widen(expired()) == none { return 6 }
  item := Item {}
  let reference: (weak Item) | none = item
@@ -63,7 +68,7 @@ function probe<T>(sample: T): none {
   let map: Map<string, T | none> = {}
   map.set("absent", n)
   map.set("present", sample)
-  if (try! map.get("absent")) != none || (try! map.get("present")) == none { panic("map carriers") }
+  if stored(map.get("absent")) != none || stored(map.get("present")) == none { panic("map carriers") }
 }
 
 enum Mode { First, Second }
@@ -103,7 +108,7 @@ function nativeMatrix(): none {
   probe(result)
   let wrapped: Result<int, string> | Marker | none = result
   case wrapped {
-    payload: Result<int, string> -> { if (try! payload) != 7 { panic("nested result payload") } }
+    payload: Result<int, string> -> { if (payload!) != 7 { panic("nested result payload") } }
     _ -> { panic("nested result arm") }
   }
   let failed: Result<int, string> = Failure { error: "expected" }
@@ -120,7 +125,7 @@ function nativeMatrix(): none {
     _: Success -> { panic("widened result failure arm") }
   }
   consume(unitEffect())
-  consume(try! unitResult())
+  consume(unitResult()!)
   consume(unitResult()!)
   unitPair()
   callback := (): none => unitEffect()

@@ -76,7 +76,7 @@ export function inferCallTypeArguments(state: CheckerState, args: CallArgument[]
     inferred.push(found!)
   }
   if !evidence.consistent { return none }
-  while state.diagnostics.length > diagnosticMark { ignored := try! state.diagnostics.pop() }
+  while state.diagnostics.length > diagnosticMark { ignored := state.diagnostics.pop()! }
   // Trailing lambdas are statement blocks for none-returning callbacks; one
   // cannot be what determines a generic callback's result.
   for i of 0..<args.length {

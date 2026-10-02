@@ -331,12 +331,12 @@ function main(): int {
 ```
 
 Similarly, `try` statements (which desugar to `return` on failure) are also
-forbidden inside case-expression arms.  `try?` and `try!` are fine because they
-desugar to a default value or a panic respectively, not a `return`.
+forbidden inside case-expression arms.  Postfix `?` and `!` are fine because
+they produce `none` or panic respectively, not a `return`.
 
 If you need early exit from inside a case expression, either:
 - Move the `case` to statement level, or
-- Use `try?` or `try!` inside the arm (but not `try`).
+- Use postfix `?` or `!` inside the arm (but not `try`).
 
 ---
 
@@ -385,7 +385,7 @@ case isValid {
 
 ## Else-Narrow Statement
 
-The `else` narrow form provides a compact "unwrap or bail" pattern for Result and nullable types. It evaluates an expression, removes one outer fallible layer, runs the `else` block (which must exit scope) for that layer's unhappy case, and binds the narrowed happy-path result to a new variable after the block.
+The `else` narrow form provides a compact "unwrap or bail" pattern for Result and nullable types. It evaluates an expression, runs the `else` block (which must exit scope) when the value is absent (`none`, a `Failure`, or a `none` success value), and binds the present value to a new variable after the block.
 
 ### Syntax
 
@@ -405,8 +405,8 @@ Else-narrow works only on **Result** and/or **nullable** types. Plain unions (e.
 |---|---|
 | `string \| none` | `string` |
 | `Result<Config, Error>` | `Config` |
-| `Result<Config, Error> \| none` | `Result<Config, Error>` |
-| `Result<Config \| none, Error>` | `Config \| none` |
+| `Result<Config, Error> \| none` | `Config` |
+| `Result<Config \| none, Error>` | `Config` |
 | `int` | ❌ compile error |
 | `Circle \| Rect` | ❌ compile error |
 
@@ -435,43 +435,27 @@ function test(): string {
 }
 ```
 
-### Result | none Narrowing
+### Layered Absence
 
-When the expression is both nullable and a Result, one declaration removes the
-outer none layer. A second declaration unwraps the remaining Result:
+One declaration removes every absent layer. An outer `none`, a `Failure`, and
+a `none` success value all run the `else` block:
 
 ```doof
 function loadConfig(): Result<Config, AppError> | none => none
+function findConfig(): Result<Config | none, AppError> => Success { value: none }
 
 function test(): string {
-    result := loadConfig() else { return "missing" }
-    // result is Result<Config, AppError> here
-    config := result else { return "failed" }
-    // config is Config here
-    return config.name
-}
-```
-
-### Nullable Result Success Values
-
-Declaration-`else` unwraps the Result but preserves none inside its success
-payload. A successful none is data carried by `Success`, not an unhappy state
-handled by this declaration-`else`:
-
-```doof
-function loadConfig(): Result<Config | none, AppError> => Success { value: none }
-
-function test(): string {
-    x := loadConfig() else { return "" }
-    // x is Config | none here
-    return x!.name
+    config := loadConfig() else { return "missing or failed" }
+    found := findConfig() else { return "not found or failed" }
+    // config and found are Config here
+    return config.name + found.name
 }
 ```
 
 ### Capturing a Result Failure
 
-The success binding is available only after the `else` block. For a `Result<T, E>` subject without an outer `none` member,
-`else error { ... }` captures the `Failure<E>.error` payload directly:
+The success binding is available only after the `else` block.
+`else error { ... }` captures the `Failure`'s error payload:
 
 ```doof
 function loadConfig(): Result<Config, AppError> => Failure { error: AppError { message: "not found" } }
@@ -485,9 +469,23 @@ function test(): string {
 }
 ```
 
-Failure capture is Result-only. Nullable-only subjects and
-`Result<T, E> | none` subjects cannot use `else error` because the unhappy path
-may be `none` and has no failure payload.
+When the subject can also be absent as `none`, the error has type `E | none`,
+and `none` means no `Failure` occurred:
+
+```doof
+function findConfig(): Result<Config | none, AppError> => Success { value: none }
+
+function test(): string {
+    x := findConfig() else error {
+        // error has type AppError | none
+        return error?.message ?? "not found"
+    }
+    return x.name
+}
+```
+
+Failure capture requires a `Result` subject; nullable-only subjects cannot use
+`else error`.
 
 ### With Type Annotations
 

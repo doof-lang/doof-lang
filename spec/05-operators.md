@@ -169,241 +169,170 @@ if list.length > 0 && list[0] == target {
 
 ---
 
-## Optional Coalescing and Chaining
+## Absence Operators
 
-### Optional Coalescing (`??`)
+`none` and a `Failure` are both **absent**. The `?` operators collapse absence
+to `none`, the `!` operators panic on it, and `??` replaces it. None of them
+propagates a `Failure`; use the `try` statement to return one (see
+[Result Propagation](#result-propagation)).
 
-Provides a fallback value when an expression is `none` or a `Failure`:
+A value can be absent at up to three layers, outermost first: an outer `none`
+arm, one `Result`, and a `none` success value. Every operator below handles all
+of them at once:
 
-```doof
-// With nullable types
-name: string | none := none
-displayName := name ?? "Anonymous"  // "Anonymous"
+| Operand type | Present value | `x?` | `x!` |
+|---|---|---|---|
+| `T \| none` | `T` | `T \| none` | `T` |
+| `Result<T, E>` | `T` | `T \| none` | `T` |
+| `Result<T \| none, E>` | `T` | `T \| none` | `T` |
+| `Result<T, E> \| none` | `T` | `T \| none` | `T` |
 
-value: int | none := 0
-result := value ?? 42  // 0 (present, so left side used)
+A `Result` inside a success value is a present value, not another layer.
+`Result<none, E>` has no present value: `x!` is a statement that panics on
+`Failure`, and `x?` is an error.
 
-// With Result types
-config := loadConfig() ?? defaultConfig  // Config (unwraps Success or uses fallback)
-data := readFile("cache.txt") ?? ""      // string
-```
+Applying any absence operator to a value that is neither nullable nor a
+`Result` is a compile error.
 
-**Type signatures:**
-- `T | none ?? T` → `T` (unwraps nullable)
-- `Result<T, E> ?? T` → `T` (unwraps Success or uses fallback on Failure)
-
-**Associativity:** Right-to-left (ensures type correctness in chains)
-
-**Lazy evaluation:** The right operand is **only evaluated if needed** (i.e., if left is `none` or `Failure`). This is crucial for performance and avoiding side effects:
-
-```doof
-// expensiveComputation() only called if loadFromCache() fails
-data := loadFromCache() ?? expensiveComputation()
-
-// Chaining: right-to-left associativity with lazy evaluation
-config := loadFromCache() ?? loadFromDisk() ?? fetchFromNetwork() ?? defaultConfig
-// Groups as: loadFromCache() ?? (loadFromDisk() ?? (fetchFromNetwork() ?? defaultConfig))
-// Evaluates loadFromCache() first; only if it fails, evaluates loadFromDisk(), and so on
-// Each Result<T, E> ?? T → T, so types compose naturally
-```
-
-**Important:** `??` only checks for `none` and `Failure`, not falsiness. `||` requires `bool` operands.
-
-### Optional Coalescing Assignment (`??=`)
-
-Assigns a value only if the variable is currently `none` or `Failure`:
-
-```doof
-// With nullable types
-let cache: string | none = none
-cache ??= loadFromDisk()  // Assigns result of loadFromDisk()
-cache ??= loadFromDisk()  // No-op, cache already has value
-
-let config: Config | none = getConfig()
-config ??= defaultConfig  // Only assigns if getConfig() returned none
-```
-
-**With Result types:**
-
-`??=` also works with variables holding `Result` types, assigning only if the current value is a `Failure`:
-
-```doof
-let data: Result<string, Error> = readCache()
-data ??= readFromDisk()     // Replaces data only if readCache() failed
-data ??= fetchFromNetwork() // No-op if data is Success from previous line
-
-// Common pattern: progressive fallback
-let value: Result<Config, Error> = loadFromCache()
-value ??= loadFromDisk()     // Try disk if cache failed
-value ??= fetchDefault()     // Use default if both failed
-```
-
-**Type requirement:** The right-hand side must be assignable to the variable's type. For `Result<T, E>` variables, the RHS can be either `Result<T, E>` or a plain `T` (which gets wrapped in `Success`).
-
-**Lazy evaluation:** Like `??`, the right operand is only evaluated if the assignment will occur.
-
-### Optional Chaining (`?.`)
-
-Safely access properties/methods on potentially none values:
-
-```doof
-user: User | none := getUser()
-city := user?.address?.city    // string | none
-logger?.log("Hello")           // Only calls if logger is present
-```
-
-The receiver is evaluated once. When it is `none`, the access short-circuits:
-field reads and value-returning calls produce `none`, and calls returning
-`none` are skipped. `?.` and `?[]` cannot be used as assignment targets.
-
-**Interaction with Result types:**
-
-When the `?.` operator is used with Result types, it propagates `none` while
-preserving the Result wrapper:
-
-```doof
-// foo(): Result<MyObject, Error>
-// MyObject.bar(): Result<int, Error>
-
-result := foo()?.bar()  // Result<int | none, Error>
-// If foo() is Success(obj), calls bar() on obj
-// If foo() is Success(none), short-circuits to Success(none)
-// If foo() is Failure(e), propagates Failure(e)
-
-// If bar() returns a plain value (not Result):
-// MyObject.getValue(): int
-result := foo()?.getValue()  // Result<int | none, Error>
-
-// Multiple error types are unioned:
-// bar(): Result<int, Error2>
-result := foo()?.bar()  // Result<int | none, Error | Error2>
-```
-
-The `?.` operator only checks for none and propagates it - it does not unwrap Result types.
-
-### Combining `?.` and `??`
-
-```doof
-// Nullable types
-city := user?.address?.city ?? "Unknown"  // string (never none)
-
-// Result types - unwrap and provide fallback
-data := parseFile("config.json")?.data ?? []  // Returns [] if parse fails or data is `none`
-
-// Can also use with try? for same effect
-data := try? parseFile("config.json") ?? []   // Less clear: conflates `none` and Failure
-data := parseFile("config.json") ?? { data: [] }  // Clearer: explicit about Failure handling
-```
-
-### Optional Indexing (`?[]`)
-
-```doof
-items: string[] | none := getItems()
-first := items?[0]  // string | none
-
-map: Map<string, int> | none := getScores()
-score := map?["alice"]  // int | none
-```
-
-### Force Access (`!.`)
-
-The `!.` operator provides non-optional access with **panic on failure**. It works with nullable types and Result types:
-
-**With nullable types:**
-
-```doof
-user: User | none := getUser()
-name := user!.name  // string (panics if user is `none`)
-
-// Equivalent to:
-if user == none {
-    panic("Attempted to access none value")
-}
-name := user.name
-```
-
-**With Result types:**
-
-When accessing fields or calling methods on a `Result<T, E>`, the `!.` operator unwraps the Success value or panics on Failure:
-
-```doof
-// loadUser(): Result<User, Error>
-result := loadUser()
-name := result!.name  // string (panics if result is Failure)
-
-// Chaining
-email := loadUser()!.getEmail()  // Panics if loadUser fails
-```
-
-This is equivalent to using `try!` followed by regular access:
-
-```doof
-// These are equivalent:
-name := result!.name
-name := (try! result).name
-```
-
-The postfix `!` operator on a `Result<T, E>` does the same unwrap-or-panic step when you want the success value itself:
+### Postfix `?` — Convert to Optional
 
 ```doof
 import { parseInt } from "std/parse"
 
-value := parseInt("12")!      // int
-sum := parseInt("12")! + 2    // int
+value := parseInt("12")?          // int | none (none on Failure)
+name := maybeName()?              // string | none (a no-op on a nullable)
+profile := loadProfile()?         // Profile | none for Result<Profile | none, E>
 ```
 
-Applying postfix `!` to a value that is neither nullable nor a `Result` is a compile error.
-
-**Note:** Weak references use Result semantics (see [Type System — Weak References](02-type-system.md)), so `!.` works with them as a consequence of working with Result types.
-
-**When to use `!.`:**
+### Postfix `!` — Panic When Absent
 
 ```doof
-// ✅ When none/failure indicates a programming error
-let config: Config | none = loadConfig()
-port := config!.port  // Config should always exist here; panic if not
-
-// ✅ When you need to fail fast on errors
-data := loadCriticalData()!.parse()  // Panic if load fails
-
-// ❌ For expected none/failure cases — use ?. or case/try instead
-let optional: Result<Data, Error> = tryLoadData()
-value := optional!.field  // Bad: failure might be expected; use case or try? instead
+value := parseInt("12")!          // int (panics on Failure)
+sum := parseInt("12")! + 2        // int
+user := maybeUser()!              // User (panics on none)
+saveConfig(config)!               // Result<none, E>: panics on Failure
 ```
 
-**Type signatures:**
-- `(T | none)!.field` → `FieldType` (panics if none)
-- `Result<T, E>!.method()` → `ReturnType` (panics if Failure)
-- `Result<T, E>!.field` → `FieldType` (panics if Failure)
+The panic names the source path and line. A `Failure` with a `string` error
+includes the error text.
 
-**Comparison with `?.`:**
+### Optional Coalescing (`??`)
 
-| Operator | None/Failure Behavior | Return Type |
-|----------|----------------------|-------------|
-| `?.` | Short-circuits, propagates none | `T \| none` or `Result<T \| none, E>` |
-| `!.` | Panics immediately | `T` (never none/Failure) |
+Provides a fallback when the left operand is absent:
+
+```doof
+name: string | none := none
+displayName := name ?? "Anonymous"          // "Anonymous"
+
+config := loadConfig() ?? defaultConfig     // Config (fallback on Failure)
+data := readFile("cache.txt") ?? ""         // string
+```
+
+**Type:** `x ?? y` has the present type of `x`, joined with the type of `y`.
+
+**Associativity:** Right-to-left, so chains compose:
+
+```doof
+config := loadFromCache() ?? loadFromDisk() ?? fetchFromNetwork() ?? defaultConfig
+// Groups as: loadFromCache() ?? (loadFromDisk() ?? (fetchFromNetwork() ?? defaultConfig))
+```
+
+**Lazy evaluation:** The right operand is evaluated only when the left is
+absent.
+
+**Important:** `??` checks only for absence, not falsiness. `||` requires
+`bool` operands.
+
+### Optional Coalescing Assignment (`??=`)
+
+Assigns only when the target is currently absent:
+
+```doof
+let cache: string | none = none
+cache ??= loadFromDisk()  // Assigns result of loadFromDisk()
+cache ??= loadFromDisk()  // No-op, cache already has value
+
+let data: Result<string, Error> = readCache()
+data ??= readFromDisk()     // Replaces data only if it is absent
+data ??= fetchFromNetwork() // No-op if data is present
+```
+
+**Type requirement:** The right-hand side must be assignable to the target. For
+a `Result<T, E>` target, the right-hand side can be a `Result<T, E>` or a plain
+`T`, which is wrapped in `Success`.
+
+**Lazy evaluation:** Like `??`, the right operand is only evaluated if the
+assignment will occur.
+
+### Optional Chaining (`?.`) and Indexing (`?[]`)
+
+Access a member or element only when the receiver is present:
 
 ```doof
 user: User | none := getUser()
+city := user?.address?.city     // string | none
+logger?.log("Hello")            // Only calls if logger is present
 
-// Optional: safe, returns `none` if user is `none`
-age1 := user?.age  // int | none
+items: string[] | none := getItems()
+first := items?[0]              // string | none
 
-// Force: panics if user is `none`, always returns int
-age2 := user!.age  // int (panics if user is `none`)
-
-// With Result types
-result: Result<User, Error> := loadUser()
-
-// Optional: propagates Failure as Result
-email1 := result?.getEmail()  // Result<string | none, Error>
-
-// Force: unwraps or panics
-email2 := result!.getEmail()  // string (panics if result is Failure)
+name := loadUser(id)?.name      // string | none: none when loadUser fails
 ```
 
----
+`x?.m` is `(x?)?.m`. The receiver is evaluated once; when it is absent, field
+reads and value-returning calls produce `none`, and calls returning `none` are
+skipped. `?.` and `?[]` cannot be used as assignment targets.
 
+The receiver's absence becomes `none`. A member that itself returns a `Result`
+keeps its own `Failure`, and the `none` joins its success value:
+
+```doof
+// findUser(): Result<User, LookupError>
+// User.profile(): Result<Profile, ProfileError>
+profile := findUser(id)?.profile()   // Result<Profile | none, ProfileError>
+// findUser fails or yields none -> Success(none); profile() fails -> its Failure
+
+bio := findUser(id)?.profile()?.bio  // string | none: every absence collapses
+```
+
+`Result<none, E>` receivers have no present value, so `?.` on them is an error.
+
+### Force Access (`!.` and `![]`)
+
+`x!.m` is `(x!).m` and `x![i]` is `(x!)[i]`: the receiver panics when absent,
+then the access proceeds.
+
+```doof
+user: User | none := getUser()
+name := user!.name                   // string (panics if user is none)
+
+email := loadUser()!.getEmail()      // panics if loadUser fails
+first := maybeItems()![0]            // panics if maybeItems() is absent
+```
+
+**When to use `!`:**
+
+```doof
+// ✅ When absence indicates a programming error
+port := loadConfig()!.port
+
+// ❌ For expected absence — use ?, ??, declaration-else, or case instead
+value := tryLoadData()!.field  // Bad: failure might be expected
+```
+
+**Comparison:**
+
+| Operator | When absent | Result |
+|----------|-------------|--------|
+| `x?`, `x?.m`, `x?[i]` | `none` | present value or `none` |
+| `x!`, `x!.m`, `x![i]` | panics | present value |
+| `x ?? y` | evaluates `y` | present value or `y` |
+
+**Note:** Weak references read as `Result<T, WeakReferenceError>` (see
+[Type System — Weak References](02-type-system.md)), so `?.` and `!.` treat an
+expired reference as absent.
+
+---
 ## Bitwise Operators
 
 ```doof
@@ -515,8 +444,8 @@ s := value as string else { return defaultValue }
 // Else blocks may also terminate with panic:
 object := value as readonly Map<string, SerialValue> else { panic("Expected object") }
 
-// With try! (panic on failure):
-s := try! value as string
+// With postfix ! (panic on failure):
+s := (value as string)!
 
 // Pattern match:
 case value as string {
@@ -527,11 +456,12 @@ case value as string {
 
 ### Precedence
 
-`as` binds tighter than unary prefix operators (`try`, `try!`, `try?`, `!`, `-`) but looser than postfix operators (`.`, `()`, `[]`):
+`as` binds tighter than unary prefix operators (`!`, `-`) but looser than postfix operators (`.`, `()`, `[]`, `?`, `!`):
 
 ```doof
-try! value as string        // try! (value as string)
+(value as string)!          // parentheses unwrap the narrowing Result
 obj.method() as Foo         // (obj.method()) as Foo
+maybeValue()! as string     // (maybeValue()!) as string
 ```
 
 ### Invalid Narrowing
@@ -545,13 +475,10 @@ r := x as string    // ❌ Error: Cannot narrow "int" to "string"
 
 ---
 
-## Result Propagation Operators
+## Result Propagation
 
-Doof provides three prefix operators for working with `Result<T, E>` types:
-
-### `try` — Propagate Failures
-
-Unwraps a `Success` value or returns the `Failure` from the enclosing function:
+The `try` statement unwraps a `Success` value or returns the `Failure` from the
+enclosing function:
 
 ```doof
 function loadConfig(): Result<Config, Error> {
@@ -562,24 +489,11 @@ function loadConfig(): Result<Config, Error> {
 }
 ```
 
-Can only be used inside functions returning `Result<T, E>`.
-
-### `try!` — Panic on Failure
-
-Unwraps a `Success` value or panics:
-
-```doof
-config := try! loadConfig()  // Config (panics if loadConfig fails)
-```
-
-### `try?` — Convert to Optional
-
-Converts `Result<T, E>` to `T | none`:
-
-```doof
-config := try? loadConfig()  // Config | none (none on Failure)
-value := try? foo()?.bar()   // Combines with optional chaining
-```
+`try` can only be used inside functions returning `Result<T, E>`, and only as a
+statement. Within an expression, use postfix `!` to panic or postfix `?` to
+convert to `none` (see [Absence Operators](#absence-operators)). The prefix
+`try!` and `try?` forms were removed; the compiler names their postfix
+replacement.
 
 See [09-error-handling.md](09-error-handling.md) for detailed semantics.
 
@@ -591,9 +505,9 @@ From highest to lowest:
 
 | Precedence | Operators | Associativity |
 |------------|-----------|---------------|
-| 1 | `()` `[]` `.` `?.` `!.` `?[]` | Left to right |
+| 1 | `()` `[]` `.` `?.` `!.` `?[]` postfix `?` postfix `!` | Left to right |
 | 2 | `as` | Left to right |
-| 3 | `!` `~` `-` (unary) `+` (unary) `try` `try!` `try?` | Right to left |
+| 3 | `!` `~` `-` (unary) `+` (unary) | Right to left |
 | 4 | `**` | Right to left |
 | 5 | `*` `/` `\` `%` | Left to right |
 | 6 | `+` `-` | Left to right |
@@ -608,7 +522,10 @@ From highest to lowest:
 | 15 | `??` | Right to left |
 | 16 | `??=` `:=` `=` `+=` `-=` etc. | Right to left |
 
-**Note:** The `try` operators have prefix unary precedence, which means they bind tightly to the expression immediately following them. Postfix operators like `.` and `()` and `?.` bind more tightly, so `try foo().bar()` means `try (foo().bar())`.
+**Note:** Postfix `?` and `!` bind as tightly as member access, so
+`loadUser()!.email` reads the email of the unwrapped user and
+`(value as string)!` needs parentheses to unwrap the narrowing result. A postfix
+`?` or `!` must be on the same line as its operand.
 
 **Best Practice:** Use parentheses for clarity when mixing operators.
 

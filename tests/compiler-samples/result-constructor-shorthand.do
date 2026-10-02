@@ -21,12 +21,12 @@ function captured(): (): Result<int, string> {
 }
 
 function main(): none {
-  Assert.equal(try! widened(), 7)
+  Assert.equal(widened()!, 7)
   error := catch { try failed("bad") }
   Assert.equal(error!, "bad")
-  value := try! promoted("kept")
+  value := promoted("kept")!
   Assert.equal((value as string)!, "kept")
-  Assert.equal(try! generic(19), 19)
+  Assert.equal(generic(19)!, 19)
   read := captured()
-  Assert.equal(try! read(), 11)
+  Assert.equal(read()!, 11)
 }

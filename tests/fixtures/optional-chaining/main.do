@@ -42,9 +42,13 @@ function findAccount(id: int): Result<Account, LookupError> {
 function maybeAccount(present: bool): Result<Account | none, LookupError> {
   return if present then Success(Account { name: "bob", hidden: false }) else Success(none)
 }
-function chainText<E>(value: Result<string | none, E>): string => case value {
-  s: Success -> s.value ?? "<none>",
+function chainText<E>(value: Result<Profile | none, E>): string => case value {
+  s: Success -> s.value?.bio ?? "<none>",
   _: Failure -> "<failure>",
+}
+function outerAccount(id: int): Result<Account, LookupError> | none {
+  if id == 0 { return none }
+  return findAccount(id)
 }
 
 function main(): none {
@@ -74,10 +78,16 @@ function main(): none {
   assert((maybeScores?["k"] ?? -1) == 7, "optional map index")
   lookups = 0
   assert((lookup(true)?.name ?? "-") == "ada" && lookups == 1, "receiver is evaluated once")
-  assert(chainText(findAccount(1)?.name) == "ada", "Result field")
-  assert(chainText(findAccount(0)?.name) == "<failure>", "Result failure is preserved")
-  assert(chainText(findAccount(1)?.profile()?.bio) == "ada", "Result-returning call is flattened")
-  assert(chainText(findAccount(2)?.profile()?.bio) == "<failure>", "nested failure propagates")
-  assert(chainText(maybeAccount(false)?.shout()) == "<none>" && chainText(maybeAccount(true)?.shout()) == "BOB", "none success short-circuits")
-  assert((try? findAccount(0)?.profile()) == none, "try? collapses failure")
+  // A Result receiver is absent on Failure or a none success value.
+  assert((findAccount(1)?.name ?? "-") == "ada", "Result field")
+  assert((findAccount(0)?.name ?? "-") == "-", "Result failure is absent")
+  assert((maybeAccount(false)?.shout() ?? "-") == "-" && (maybeAccount(true)?.shout() ?? "-") == "BOB", "none success is absent")
+  assert((outerAccount(0)?.name ?? "-") == "-" && (outerAccount(1)?.name ?? "-") == "ada", "outer none is absent")
+  // A Result-returning member keeps its Failure and widens its success value.
+  assert(chainText(findAccount(1)?.profile()) == "ada", "Result-returning call")
+  assert(chainText(findAccount(2)?.profile()) == "<failure>", "member failure is kept")
+  assert(chainText(findAccount(0)?.profile()) == "<none>", "absent receiver is a none success value")
+  assert((findAccount(2)?.profile()?.bio ?? "-") == "-" && (findAccount(1)?.profile()?.bio ?? "-") == "ada", "chained Result")
+  assert(findAccount(0)? == none && findAccount(1)?!.name == "ada", "postfix ? collapses failure")
+  assert(maybeAccount(true)!.name == "bob" && (maybeAccount(false) ?? Account { name: "z", hidden: false }).name == "z", "! and ?? collapse every layer")
 }

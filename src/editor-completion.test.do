@@ -59,7 +59,7 @@ export function testEditorCompletionUsesLivePrefixBeforeReanalysis(): none {
 export function testEditorCompletionBuiltinCatalogTracksResolver(): none {
   candidates := builtinMemberCandidates()
   for path of ["src/checker-resolution.do", "src/checker-array-methods.do"] {
-    source := try! readText(path)
+    source := readText(path)!
     tokens := Lexer { source }.tokenize()
     for i of 0..<tokens.length - 2 {
       if tokenValue(tokens[i], source) != "property" || tokenValue(tokens[i + 1], source) != "==" || tokens[i + 2].kind != TokenType.StringLiteral { continue }

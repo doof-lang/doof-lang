@@ -21,7 +21,7 @@ export function testObserveAndRunSuppressSuccessfulNativeBuildProgress(): none {
 
 export function testDetachedObservedAppUrlFileIsConsumed(): none {
   path := "/tmp/doof-observe-url-driver-test"
-  try! writeText(path, "http://127.0.0.1:4317/token/\n")
+  writeText(path, "http://127.0.0.1:4317/token/\n")!
   Assert.equal(takeObserveUrlFile(path, 1), "http://127.0.0.1:4317/token/")
   Assert.isFalse(exists(path))
   Assert.equal(takeObserveUrlFile(path, 0), "")
@@ -29,9 +29,9 @@ export function testDetachedObservedAppUrlFileIsConsumed(): none {
 
 export function testEditorDriverReportsExactIdentityAndExitStatus(): none {
   value := structuredTestResult("example.test.do::testOne", 7, "failure\n")
-  Assert.equal(try! value.get("id"), "example.test.do::testOne")
-  Assert.equal(try! value.get("exitCode"), 7)
-  Assert.equal(try! value.get("output"), "failure\n")
+  Assert.equal(value.get("id")!, "example.test.do::testOne")
+  Assert.equal(value.get("exitCode")!, 7)
+  Assert.equal(value.get("output")!, "failure\n")
 }
 
 import { frontendEmissionCacheSupported } from "./driver"
@@ -56,9 +56,9 @@ export function testDebugDriverExternalLaunchIntegration(): none {
     arguments := ["debug", fixture, "-o", output + "/" + target, "--launch-json", descriptor]
     if target == "macos-app" { arguments.push("--target"); arguments.push("macos-app") }
     arguments.push("--"); arguments.push("a b"); arguments.push("工具")
-    result := try! run(compiler, arguments, ExecOptions { inheritOutput: true })
+    result := run(compiler, arguments, ExecOptions { inheritOutput: true })!
     Assert.equal(result.exitCode, 0)
-    launch := try! DebugLaunch.fromSerialValue(try! parseJsonValue(try! readText(descriptor)))
+    launch := DebugLaunch.fromSerialValue(parseJsonValue(readText(descriptor)!)!)!
     Assert.isTrue(exists(launch.executable))
     Assert.isTrue(exists(launch.symbols))
     Assert.equal(launch.arguments.length, 2)
@@ -66,6 +66,6 @@ export function testDebugDriverExternalLaunchIntegration(): none {
     Assert.equal(launch.arguments[1], "工具")
     Assert.stringContains(launch.executable, "/debug/")
     if target == "macos-app" { Assert.stringContains(launch.executable, ".app/Contents/MacOS/") }
-    try! remove(descriptor)
+    remove(descriptor)!
   }
 }

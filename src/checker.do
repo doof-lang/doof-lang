@@ -226,7 +226,7 @@ function prepareClassFieldTypes(state: CheckerState): none {
                 fieldType = checkExpression(state, field.defaultValue!, classScope, none)
                 state.allowsCaller = previousAllowsCaller
               }
-              while state.diagnostics.length > diagnosticCount { ignored := try! state.diagnostics.pop() }
+              while state.diagnostics.length > diagnosticCount { ignored := state.diagnostics.pop()! }
               if fieldType.kind == "unknown" { continue }
               if field.readonly_ || field.const_ { fieldType = applyDeepReadonly(fieldType) }
               field.resolvedType = optionalResolvedType(if field.weak_ then weakType(fieldType) else fieldType)

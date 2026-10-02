@@ -10,11 +10,11 @@ function session(): DebugSession {
 export function testSessionBreakpointsToggleBeforeLaunch(): none {
   s := session()
   s.toggleBreakpoint("/tmp/main.do", 4)
-  Assert.equal((try! s.breakpoints.get("/tmp/main.do")).length, 1)
+  Assert.equal((s.breakpoints.get("/tmp/main.do")!).length, 1)
   s.toggleBreakpoint("/tmp/main.do", 4)
-  Assert.equal((try! s.breakpoints.get("/tmp/main.do")).length, 0)
+  Assert.equal((s.breakpoints.get("/tmp/main.do")!).length, 0)
   s.toggleBreakpoint("/tmp/main.do", 0)
-  Assert.equal((try! s.breakpoints.get("/tmp/main.do")).length, 0)
+  Assert.equal((s.breakpoints.get("/tmp/main.do")!).length, 0)
 }
 
 export function testSessionBreakpointsToggleDisplayedLine(): none {
@@ -29,18 +29,18 @@ export function testSessionBreakpointsToggleDisplayedLine(): none {
   ])
   s.breakpoints.set(otherPath, [SourceBreakpoint { line: 6 }])
   s.toggleBreakpoint(path, 6)
-  remaining := try! s.breakpoints.get(path)
+  remaining := s.breakpoints.get(path)!
   Assert.equal(remaining.length, 1)
   Assert.equal(remaining[0].line, 9)
-  Assert.equal((try! s.breakpoints.get(otherPath)).length, 1)
+  Assert.equal((s.breakpoints.get(otherPath)!).length, 1)
 
   // An unmarked requested line adds a new point, retaining its relocated peer.
   s.breakpoints.set(path, [SourceBreakpoint { line: 4, actualLine: 6, verified: true }])
   s.toggleBreakpoint(path, 4)
-  Assert.equal((try! s.breakpoints.get(path)).length, 2)
+  Assert.equal((s.breakpoints.get(path)!).length, 2)
   s.toggleBreakpoint(path, 4)
-  Assert.equal((try! s.breakpoints.get(path)).length, 1)
-  Assert.equal((try! s.breakpoints.get(path))[0].actualLine, 6)
+  Assert.equal((s.breakpoints.get(path)!).length, 1)
+  Assert.equal((s.breakpoints.get(path)!)[0].actualLine, 6)
 
   // Unverified or missing resolved locations render at the requested line.
   s.breakpoints.set(path, [
@@ -48,9 +48,9 @@ export function testSessionBreakpointsToggleDisplayedLine(): none {
     SourceBreakpoint { line: 8, actualLine: 0, verified: true },
   ])
   s.toggleBreakpoint(path, 4)
-  Assert.equal((try! s.breakpoints.get(path)).length, 1)
+  Assert.equal((s.breakpoints.get(path)!).length, 1)
   s.toggleBreakpoint(path, 8)
-  Assert.equal((try! s.breakpoints.get(path)).length, 0)
+  Assert.equal((s.breakpoints.get(path)!).length, 0)
 }
 
 export function testSessionContinuedInvalidatesStoppedState(): none {

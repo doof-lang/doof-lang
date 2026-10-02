@@ -84,7 +84,7 @@ export function takeObserveUrlFile(path: string, attempts: int = 100): string {
   for _ of 0..<attempts {
     if exists(path) {
       content := readText(path) else { return "" }
-      try! remove(path)
+      remove(path)!
       return content.trim()
     }
     Thread.sleep(Duration.ofMillis(50L))
@@ -111,7 +111,7 @@ function runProfileTarget(
   }
   tracePath := if request.traceOutput == ""
     then joinPath(joinPath(buildDirectory, "profiles"), traceName + "-" + string(Instant.now().toEpochMillis()) + ".trace")
-    else try! absolute(request.traceOutput)
+    else absolute(request.traceOutput)!
   if exists(tracePath) {
     println("error: profile trace already exists: " + tracePath)
     return 1
@@ -488,7 +488,7 @@ function sourceLoaderForRequest(
   let acquisitions: ModuleAcquisition[] = []
   let stdlibBundle: StdlibBundleProvider | none = none
   if stdlibRoot != "" {
-    acquisition := ModuleAcquisition { logicalPrefix: "/std", diskRoot: try! absolute(stdlibRoot), containsPackages: true }
+    acquisition := ModuleAcquisition { logicalPrefix: "/std", diskRoot: absolute(stdlibRoot)!, containsPackages: true }
     acquisitions.push(acquisition)
   } else {
     bundleResourcePath := resourcePath("doof-stdlib.tar") else error {
@@ -533,7 +533,7 @@ function configureDeclaredDependencies(
   for requested of manifest.dependencies {
     if requested.name.startsWith("std/") { continue }
     logicalPrefix := "/" + requested.name
-    let diskRoot = try! absolute(requested.path)
+    let diskRoot = absolute(requested.path)!
     for existing of acquisitions {
       if existing.logicalPrefix == logicalPrefix {
         if existing.diskRoot != diskRoot {
@@ -608,7 +608,7 @@ function preparationTargetForRequest(
 }
 
 function driverLogicalPrefix(path: string): string {
-  absolutePath := try! absolute(path)
+  absolutePath := absolute(path)!
   sourceSuffix := driverSourceSuffix(absolutePath)
   if sourceSuffix != absolutePath { return sourceSuffix }
   if absolutePath.startsWith("/") { return absolutePath }
@@ -623,8 +623,8 @@ export function driverRootLogicalPrefix(packageName: string, rootDirectory: stri
 export function driverRootLogicalPath(path: string, rootDirectory: string, packageName: string): string {
   if !packageName.startsWith("std/") { return driverLogicalPath(path) }
   prefix := driverRootLogicalPrefix(packageName, rootDirectory)
-  absolutePath := try! absolute(path)
-  absoluteRoot := try! absolute(rootDirectory)
+  absolutePath := absolute(path)!
+  absoluteRoot := absolute(rootDirectory)!
   if absolutePath == absoluteRoot { return prefix }
   rootPrefix := if absoluteRoot.endsWith("/") then absoluteRoot else absoluteRoot + "/"
   if absolutePath.startsWith(rootPrefix) {
@@ -648,7 +648,7 @@ function projectNativePackages(projectRoot: string, projectManifest: PackageMani
   if projectManifest.target == "wasm" && stdlibRoot != "" {
     jsonRoot := joinPath(stdlibRoot, "json")
     jsonManifestPath := joinPath(jsonRoot, "doof.json")
-    jsonManifest := try! parsePackageManifest(try! readText(jsonManifestPath), jsonManifestPath, jsonRoot, "wasm")
+    jsonManifest := parsePackageManifest(readText(jsonManifestPath)!, jsonManifestPath, jsonRoot, "wasm")!
     packages.push(NativePackageInput {
       logicalPrefix: "/std/json",
       outputRoot: "std/json",
@@ -669,27 +669,27 @@ function ensureOutputDirectory(path: string): none {
   if path == "" || exists(path) { return }
   parent := parentPath(path)
   if parent != path { ensureOutputDirectory(parent) }
-  try! mkdir(path)
+  mkdir(path)!
 }
 
 function materializeNativeCopy(sourcePath: string, outputPath: string): none {
   if isDirectory(sourcePath) {
     ensureOutputDirectory(outputPath)
-    for entry of try! readDir(sourcePath) {
+    for entry of readDir(sourcePath)! {
       materializeNativeCopy(joinPath(sourcePath, entry.name), joinPath(outputPath, entry.name))
     }
     return
   }
   ensureOutputDirectory(parentPath(outputPath))
-  writeBlobIfChanged(outputPath, try! readBlob(sourcePath))
+  writeBlobIfChanged(outputPath, readBlob(sourcePath)!)
 }
 
 function writeTextIfChanged(path: string, content: string): none {
   if exists(path) {
-    existing := try! readText(path)
+    existing := readText(path)!
     if existing == content { return }
   }
-  try! writeText(path, content)
+  writeText(path, content)!
 }
 
 // Generated C++ materialization is content preserving so native dependency
@@ -757,12 +757,12 @@ export function frontendStateMatches(
     if sha256HexString(source) != input.sourceHash { return false }
   }
   for probe of state!.probes {
-    source := loader(probe.logicalPath) else { return false }
-    if probe.missing {
-      if source != none { return false }
-    } else {
-      if source == none || sha256HexString(source!.source) != probe.sourceHash { return false }
+    // A missing source is none; a Failure is a load error.
+    source := loader(probe.logicalPath) else error {
+      if error != none || !probe.missing { return false }
+      continue
     }
+    if probe.missing || sha256HexString(source.source) != probe.sourceHash { return false }
   }
   return true
 }
@@ -839,8 +839,8 @@ function addFrontendFileInput(inputs: FrontendFileInput[], path: string): none {
 function writeFrontendState(path: string, state: FrontendCacheState): none {
   ensureOutputDirectory(parentPath(path))
   temporaryPath := path + ".tmp"
-  try! writeText(temporaryPath, renderFrontendCacheState(state))
-  try! rename(temporaryPath, path)
+  writeText(temporaryPath, renderFrontendCacheState(state))!
+  rename(temporaryPath, path)!
 }
 
 function removeStaleFrontendOutputs(
@@ -860,17 +860,17 @@ function removeStaleFrontendOutputs(
     if retained { continue }
     for name of [old.headerName, old.sourceName] {
       path := driverOutputPath(outputDirectory, name)
-      if path.startsWith(prefix) && exists(path) && !isDirectory(path) { try! remove(path) }
+      if path.startsWith(prefix) && exists(path) && !isDirectory(path) { remove(path)! }
     }
   }
 }
 
 function writeBlobIfChanged(path: string, content: readonly byte[]): none {
   if exists(path) {
-    existing := try! readBlob(path)
+    existing := readBlob(path)!
     if blobsEqual(existing, content) { return }
   }
-  try! writeBlob(path, content)
+  writeBlob(path, content)!
 }
 
 function blobsEqual(left: readonly byte[], right: readonly byte[]): bool {
@@ -924,15 +924,15 @@ function materializeTrackedResource(
 ): none {
   if isDirectory(sourcePath) {
     ensureOutputDirectory(outputPath)
-    for entry of try! readDir(sourcePath) {
+    for entry of readDir(sourcePath)! {
       materializeTrackedResource(joinPath(sourcePath, entry.name), joinPath(outputPath, entry.name), previous, next)
     }
     return
   }
-  sourceInfo := try! metadata(sourcePath)
+  sourceInfo := metadata(sourcePath)!
   prior := findMaterializedResource(previous, sourcePath, outputPath)
   if exists(outputPath) && !isDirectory(outputPath) {
-    outputInfo := try! metadata(outputPath)
+    outputInfo := metadata(outputPath)!
     if materializedResourceIsCurrent(
       prior,
       sourceInfo.size,
@@ -945,7 +945,7 @@ function materializeTrackedResource(
     }
   }
   materializeNativeCopy(sourcePath, outputPath)
-  outputInfo := try! metadata(outputPath)
+  outputInfo := metadata(outputPath)!
   next.files.push(MaterializedResource {
     sourcePath,
     outputPath,
@@ -979,12 +979,12 @@ export function synchronizeExecutableResources(
   for old of previous.files {
     if resourceOutputIsCurrent(next.files, old.outputPath) || !old.outputPath.startsWith(prefix) ||
       !exists(old.outputPath) || isDirectory(old.outputPath) { continue }
-    try! remove(old.outputPath)
+    remove(old.outputPath)!
   }
   ensureOutputDirectory(parentPath(statePath))
   temporaryPath := statePath + ".tmp"
-  try! writeText(temporaryPath, renderResourceState(next))
-  try! rename(temporaryPath, statePath)
+  writeText(temporaryPath, renderResourceState(next))!
+  rename(temporaryPath, statePath)!
 }
 
 function materializeRuntimeHeader(outputDirectory: string): none {
@@ -994,7 +994,7 @@ function materializeRuntimeHeader(outputDirectory: string): none {
   runtimeSource := if sourcePath == ""
     then readTextResource("doof_runtime.hpp")
     else readText(sourcePath)
-  writeTextIfChanged(driverOutputPath(outputDirectory, "doof_runtime.hpp"), try! runtimeSource)
+  writeTextIfChanged(driverOutputPath(outputDirectory, "doof_runtime.hpp"), runtimeSource!)
 }
 
 function materializeObserverRuntime(outputDirectory: string): none {
@@ -1027,7 +1027,7 @@ function buildAppleWasmTestRunner(buildRoot: string): Result<string, string> {
   writeTextIfChanged(sourcePath, source)
   fingerprint := sha256HexString(source)
   if exists(runnerPath) && exists(fingerprintPath) {
-    previousFingerprint := try! readText(fingerprintPath)
+    previousFingerprint := readText(fingerprintPath)!
     if previousFingerprint.trim() == fingerprint { return Success(runnerPath) }
   }
   plan := planAppleWasmTestRunnerBuild(sourcePath, runnerPath)
@@ -1038,7 +1038,7 @@ function buildAppleWasmTestRunner(buildRoot: string): Result<string, string> {
       else BlobReader(built.output).readString(long(built.output.length)).trim()
     return Failure("Could not build the Apple JavaScriptCore Wasm test runner" + if output == "" then "" else ":\n" + output)
   }
-  try! writeText(fingerprintPath, fingerprint + "\n")
+  writeText(fingerprintPath, fingerprint + "\n")!
   return Success(runnerPath)
 }
 
@@ -1068,7 +1068,7 @@ function collectTestFiles(path: string, results: string[], root: bool = true): n
     return
   }
   if !root && exists(joinPath(path, "doof.json")) { return }
-  entries := try! readDir(path)
+  entries := readDir(path)!
   for entry of entries {
     entryPath := joinPath(path, entry.name)
     if entry.kind == EntryKind.Directory {
@@ -1172,16 +1172,16 @@ export function writeCoverageHtml(report: CoverageReport, jsonPath: string, root
     indexHref := "../".repeat(depth) + fileName(indexPath)
     sourcePath := joinPath(rootDirectory, file.path)
     let source = ""
-    if exists(sourcePath) { source = try! readText(sourcePath) }
-    try! writeText(pagePath, renderCoverageFileHtml(file, source, indexHref))
+    if exists(sourcePath) { source = readText(sourcePath)! }
+    writeText(pagePath, renderCoverageFileHtml(file, source, indexHref))!
   }
-  try! writeText(indexPath, renderCoverageHtml(report, filesDirectoryName))
+  writeText(indexPath, renderCoverageHtml(report, filesDirectoryName))!
   return indexPath
 }
 
 /** Runs the one-harness-per-module test convention. */
 function testRequest(request: CliRequest): int {
-  target := try! absolute(request.entry)
+  target := absolute(request.entry)!
   if !exists(target) {
     println("error: File not found: " + target)
     return 1
@@ -1273,7 +1273,7 @@ function testRequest(request: CliRequest): int {
     }
     buildRoot := if request.outputDirectory == ""
       then joinPath(project.rootDirectory, project.buildDirectory)
-      else try! absolute(request.outputDirectory)
+      else absolute(request.outputDirectory)!
     coverageSuffix := if request.coverage then "-coverage" else ""
     targetSuffix := if wasmTests then "-wasm" else ""
     outputDirectory := joinPath(joinPath(buildRoot, ".doof-tests"), group.outputName + targetSuffix + coverageSuffix)
@@ -1431,9 +1431,9 @@ function testRequest(request: CliRequest): int {
     printCoverageSummary(report)
     outputPath := if request.coverageOutput == ""
       then joinPath(joinPath(rootDirectory, "build"), "coverage/doof-test-coverage.json")
-      else try! absolute(request.coverageOutput)
+      else absolute(request.coverageOutput)!
     ensureOutputDirectory(parentPath(outputPath))
-    try! writeText(outputPath, renderCoverageJson(report))
+    writeText(outputPath, renderCoverageJson(report))!
     println("Coverage report written to " + outputPath)
     htmlPath := writeCoverageHtml(report, outputPath, rootDirectory)
     println("Coverage HTML report written to " + htmlPath)
@@ -1512,7 +1512,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
   rootManifest := project.manifest
   buildDirectory := if request.outputDirectory == ""
     then joinPath(project.rootDirectory, project.buildDirectory)
-    else try! absolute(request.outputDirectory)
+    else absolute(request.outputDirectory)!
   entryPath := joinPath(project.rootDirectory, project.entry)
   entry := driverRootLogicalPath(entryPath, project.rootDirectory, project.name)
   stdlibRoot := environmentValue("DOOF_STDLIB_ROOT")
@@ -1618,7 +1618,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
   }
   observeUiRoot := if project.observeUiRoot != "" then project.observeUiRoot else driverOutputPath(outputDirectory, "observer-ui")
   legacyProvenance := driverOutputPath(outputDirectory, "provenance.json")
-  if exists(legacyProvenance) { try! remove(legacyProvenance) }
+  if exists(legacyProvenance) { remove(legacyProvenance)! }
   if !reusedFrontend && request.command != "package" && frontendEmissionCacheSupported(project.target) {
     nextEmissionState := frontendStateForCompilation(result, frontendConfiguration, rootManifest)
     removeStaleFrontendOutputs(previousEmissionState, nextEmissionState, outputDirectory)
@@ -1684,7 +1684,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
         installResult := runNativeCommand(installPlan.command, installPlan.arguments, installPlan.directory, true)
         if installResult.error != "" { println("error: " + installResult.error) }
         if installResult.exitCode != 0 { return installResult.exitCode }
-        try! projectLock.close()
+        projectLock.close()!
         launchPlan := planIOSDeviceLaunch(project.iosApp!.bundleId, deviceIdentifier, project.rootDirectory)
         launchResult := runNativeCommand(launchPlan.command, launchPlan.arguments, launchPlan.directory, true)
         if launchResult.error != "" { println("error: " + launchResult.error) }
@@ -1694,7 +1694,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
       installResult := runNativeCommand(installPlan.command, installPlan.arguments, installPlan.directory, true)
       if installResult.error != "" { println("error: " + installResult.error) }
       if installResult.exitCode != 0 { return installResult.exitCode }
-      try! projectLock.close()
+      projectLock.close()!
       launchPlan := planIOSSimulatorLaunch(project.iosApp!.bundleId, project.rootDirectory)
       launchResult := runNativeCommand(launchPlan.command, launchPlan.arguments, launchPlan.directory, true)
       if launchResult.error != "" { println("error: " + launchResult.error) }
@@ -1707,7 +1707,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
       }
       if request.command == "build" { return 0 }
       if request.command == "debug" {
-        try! projectLock.close()
+        projectLock.close()!
         return launchDebugger(joinPath(joinPath(appPath, "Contents/MacOS"), executableName), entryPath, project.rootDirectory, outputDirectory, request.programArguments, request.debugLaunchJson)
       }
       if request.command == "profile" {
@@ -1716,7 +1716,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
           project.rootDirectory, buildDirectory, executableName, false,
         )
       }
-      try! projectLock.close()
+      projectLock.close()!
       urlFile := driverOutputPath(outputDirectory, ".doof-observe-url-" + string(Instant.now().toEpochMillis()))
       launchPlan := if request.command == "observe"
         then planObservedMacOSAppRun(appPath, project.rootDirectory, observeEnvironment(request.observePort, request.observeNoOpen, request.observeRetainEvents, observeUiRoot, urlFile))
@@ -1735,7 +1735,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     }
     if request.command == "build" { return 0 }
     if request.command == "debug" {
-      try! projectLock.close()
+      projectLock.close()!
       return launchDebugger(outputPath, entryPath, project.rootDirectory, outputDirectory, request.programArguments, request.debugLaunchJson)
     }
     if request.command == "profile" {
@@ -1744,7 +1744,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
         project.rootDirectory, buildDirectory, executableName, true,
       )
     }
-    try! projectLock.close()
+    projectLock.close()!
     runPlan := planNativeProgramRun(outputPath, request.programArguments, project.rootDirectory)
     let environment: Map<string, string> = {}
     if request.command == "observe" {
@@ -1756,7 +1756,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
   }
   if request.command == "package" {
     if project.packageConfig == none { panic("project package settings were not resolved") }
-    distDirectory := if request.distDirectory != "" then try! absolute(request.distDirectory) else project.packageConfig!.distDirectory
+    distDirectory := if request.distDirectory != "" then absolute(request.distDirectory)! else project.packageConfig!.distDirectory
     ensureOutputDirectory(distDirectory)
     executableName := if project.target == "wasm" then nativeBuildOutputName(project.name, "") + ".wasm" else if project.macosApp != none then project.macosApp!.executableName else if project.iosApp != none then project.iosApp!.executableName else nativeBuildOutputName(project.name, nativePlatform)
     outputPath := if project.macosApp == none && project.iosApp == none
@@ -1781,8 +1781,8 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
       if environmentIdentity != "" { iosConfig.identity = environmentIdentity }
       if request.iosSignIdentity != "" { iosConfig.identity = request.iosSignIdentity }
       environmentProfile := environmentValue("DOOF_IOS_PROVISIONING_PROFILE")
-      if environmentProfile != "" { iosConfig.provisioningProfilePath = try! absolute(environmentProfile) }
-      if request.iosProvisioningProfile != "" { iosConfig.provisioningProfilePath = try! absolute(request.iosProvisioningProfile) }
+      if environmentProfile != "" { iosConfig.provisioningProfilePath = absolute(environmentProfile)! }
+      if request.iosProvisioningProfile != "" { iosConfig.provisioningProfilePath = absolute(request.iosProvisioningProfile)! }
       archivePath := driverOutputPath(distDirectory, iosPackageArchiveName(project.iosApp!.executableName, project.iosApp!.version))
       _ := signAndArchiveIOSApp(appPath, archivePath, project.iosApp!.bundleId, iosConfig, outputDirectory) else error {
         println("error: " + error)
@@ -1801,7 +1801,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     if environmentIdentity != "" { packageConfig.identity = environmentIdentity }
     if request.macosSignIdentity != "" { packageConfig.identity = request.macosSignIdentity }
     if request.macosSandbox { packageConfig.sandbox = true }
-    if request.macosEntitlements != "" { packageConfig.entitlementsPath = try! absolute(request.macosEntitlements) }
+    if request.macosEntitlements != "" { packageConfig.entitlementsPath = absolute(request.macosEntitlements)! }
     archivePath := driverOutputPath(distDirectory, macOSPackageArchiveName(project.macosApp!.executableName, project.macosApp!.version))
     _ := signAndArchiveMacOSApp(appPath, archivePath, packageConfig, outputDirectory) else error {
       println("error: " + error)

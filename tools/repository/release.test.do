@@ -3,7 +3,7 @@ import { signingPreflight, validateReleaseStatus, smokeDebuggerApplication } fro
 import { TemporaryDirectory } from "./test-support"
 import { path, write, command } from "./common"
 export function testRepositoryPublishedVersionsAreImmutable(): none {
-  try! validateReleaseStatus("404")
+  validateReleaseStatus("404")!
   for status of ["200", "403", "500"] {
     let rejected = false
     case validateReleaseStatus(status) {
@@ -22,17 +22,17 @@ export function testRepositorySigningRequiresConfiguration(): none {
   Assert.isTrue(rejected)
 }
 export function testRepositoryDebuggerStartupRejectsEarlyExit(): none {
-  temp := try! TemporaryDirectory()
+  temp := TemporaryDirectory()!
   executable := path(temp.root, "Doof Debugger.app/Contents/MacOS/DoofDebugger")
-  try! write(executable, "#!/bin/sh\nexit 1\n")
-  try! command("chmod", ["+x", executable])
+  write(executable, "#!/bin/sh\nexit 1\n")!
+  command("chmod", ["+x", executable])!
   let rejected = false
   case smokeDebuggerApplication(temp.root) {
     failure: Failure -> { rejected = failure.error.contains("startup") }
     success: Success -> {}
   }
   Assert.isTrue(rejected)
-  try! write(executable, "#!/bin/sh\nexec /bin/sleep 20\n")
-  try! smokeDebuggerApplication(temp.root)
+  write(executable, "#!/bin/sh\nexec /bin/sleep 20\n")!
+  smokeDebuggerApplication(temp.root)!
   temp.close()
 }

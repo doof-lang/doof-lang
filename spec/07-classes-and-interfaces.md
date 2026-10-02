@@ -252,7 +252,7 @@ class Email {
     }
 }
 
-email := try! Email("a@example.com") // Email(...) has type Result<Email, string>
+email := Email("a@example.com")! // Email(...) has type Result<Email, string>
 ```
 
 Generic classes follow the same rule. The class type arguments may be written

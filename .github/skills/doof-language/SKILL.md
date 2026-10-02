@@ -47,7 +47,7 @@ let total = 0
 readonly config = load()
 readonly VERSION = "0.1"
 
-result := try! loadConfig()
+result := loadConfig()!
 value := source as string else { return "" }
 
 message := `Hello ${name},
@@ -84,7 +84,7 @@ Load the narrowest matching file for the task.
 | Core syntax, strings, multiline literals, interpolation, bindings, lambdas, control flow, operators, language differences | [references/core-language.md](./references/core-language.md) |
 | Types, collections, enums, `SerialValue`, inference, nullability | [references/type-system.md](./references/type-system.md) |
 | Classes, structs, interfaces, construction, statics, destructors, `weak` references | [references/classes-and-memory.md](./references/classes-and-memory.md) |
-| `Result`, `try`, `try!`, `try?`, declaration-`else`, `catch`, `as`, `panic` | [references/error-handling.md](./references/error-handling.md) |
+| `Result`, `try`, postfix `!` and `?`, `??`, declaration-`else`, `catch`, `as`, `panic` | [references/error-handling.md](./references/error-handling.md) |
 | Imports, exports, package dependencies, `import class`, `import function` | [references/modules-and-interop.md](./references/modules-and-interop.md) |
 | JSON serialization, generated metadata, schema/invoke behavior | [references/json-and-metadata.md](./references/json-and-metadata.md) |
 | `isolated`, `async`, `Promise<T>`, `Actor<T>` | [references/concurrency.md](./references/concurrency.md) |

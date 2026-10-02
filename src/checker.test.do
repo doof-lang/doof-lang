@@ -1037,11 +1037,11 @@ export function testChecksCanonicalNoneReturnsAndLegacyUnionNormalization(): non
   }
 }
 
-export function testChecksPayloadlessNoneResultAndRejectsTryQuestion(): none {
+export function testChecksPayloadlessNoneResultAndRejectsPostfixQuestion(): none {
   valid := checked("function save(): Result<none, string> => Success()\nfunction fail(): Result<int, none> => Failure()\nfunction use(): Result<none, string> { try save()\nreturn Success() }")
   Assert.equal(valid.diagnostics.length, 0)
 
-  invalid := checked("function save(): Result<none, string> => Success()\nfunction use(): none { value := try? save() }")
+  invalid := checked("function save(): Result<none, string> => Success()\nfunction use(): none { value := save()? }")
   Assert.equal(invalid.diagnostics.length, 1)
   Assert.equal(invalid.diagnostics[0].message.contains("requires a Result with a success value"), true)
 }
@@ -1379,7 +1379,7 @@ export function testChecksByteCastBuiltin(): none {
 }
 
 export function testChecksActorCreationSyncAsyncPromiseAndRetire(): none {
-  result := checked("class Worker { let value: int\nfunction add(amount: int): int { this.value = this.value + amount\nreturn this.value } }\nfunction run(): int { worker: Actor<Worker> := Actor<Worker>(1)\nvalue := worker.add(2)\npromise: Promise<int> := async worker.add(3)\nasyncValue := try! promise.get()\nstate: Worker := retire worker\nreturn value + asyncValue + state.value }")
+  result := checked("class Worker { let value: int\nfunction add(amount: int): int { this.value = this.value + amount\nreturn this.value } }\nfunction run(): int { worker: Actor<Worker> := Actor<Worker>(1)\nvalue := worker.add(2)\npromise: Promise<int> := async worker.add(3)\nasyncValue := promise.get()!\nstate: Worker := retire worker\nreturn value + asyncValue + state.value }")
   Assert.equal(result.diagnostics.length, 0)
 }
 
@@ -1394,7 +1394,7 @@ export function testValidatesActorConstructorArguments(): none {
 }
 
 export function testChecksAsyncBlocksWithImmutableCapturesAndMutableResults(): none {
-  result := checked("function run(input: int): int { offset := 2\npromise: Promise<int[]> := async { let values = [input, offset]\nvalues.push(5)\nyield values }\nvalues := try! promise.get()\nreturn values.length }\n")
+  result := checked("function run(input: int): int { offset := 2\npromise: Promise<int[]> := async { let values = [input, offset]\nvalues.push(5)\nyield values }\nvalues := promise.get()!\nreturn values.length }\n")
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
 
@@ -1455,7 +1455,7 @@ export function testRejectsNonIsolatedAsyncBlocksAndUnsafeResults(): none {
 }
 
 export function testAllowsNestedAsyncWorkOwnedByTheOuterBlock(): none {
-  result := checked("class Job { function value(): int => 7 }\nfunction run(): Promise<int> => async { worker := Actor<Job>()\nnested := async worker.value()\nvalue := try! nested.get()\nretire worker\nyield value }")
+  result := checked("class Job { function value(): int => 7 }\nfunction run(): Promise<int> => async { worker := Actor<Job>()\nnested := async worker.value()\nvalue := nested.get()!\nretire worker\nyield value }")
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
 }
@@ -1789,9 +1789,21 @@ export function testChecksDeclarationElseNarrowingAndCapture(): none {
   Assert.equal(result.diagnostics.length, 0)
 }
 
-export function testChecksDeclarationElseNarrowsOneLayerAtATime(): none {
-  result := checked("function load(): Result<int, string> | null => null\nfunction main(): int { result := load() else { return 1 }\nvalue := result else { return 2 }\nreturn value }")
-  Assert.equal(result.diagnostics.length, 0)
+export function testChecksDeclarationElseRemovesEveryAbsentLayer(): none {
+  outer := checked("function load(): Result<int, string> | none => none\nfunction main(): int { value := load() else error {\nlet reason: string | none = error\nreturn 1 }\nlet narrowed: int = value\nreturn narrowed }")
+  for diagnostic of outer.diagnostics { println(diagnostic.message) }
+  Assert.equal(outer.diagnostics.length, 0)
+  nested := checked("function load(): Result<int | none, string> => Success(none)\nfunction main(): int { value := load() else error {\nlet reason: string | none = error\nreturn 1 }\nlet narrowed: int = value\nreturn narrowed }")
+  Assert.equal(nested.diagnostics.length, 0)
+  // Failure is the only absent layer, so the error is present.
+  plain := checked("function load(): Result<int, string> => Success(1)\nfunction main(): int { value := load() else error {\nlet reason: string = error\nreturn 1 }\nreturn value }")
+  Assert.equal(plain.diagnostics.length, 0)
+  nullable := checked("function main(maybe: int | none): int { value := maybe else error { return 1 }\nreturn value }")
+  Assert.equal(nullable.diagnostics.length, 1)
+  Assert.equal(nullable.diagnostics[0].message, "declaration-else failure capture requires a Result expression")
+  present := checked("function main(): int { value := 1 else { return 1 }\nreturn value }")
+  Assert.equal(present.diagnostics.length, 1)
+  Assert.equal(present.diagnostics[0].message, "declaration-else requires a Result or nullable expression")
 }
 
 export function testRequiresDeclarationElseHandlerToExit(): none {
@@ -2667,17 +2679,18 @@ export function testRejectsWeakScalarTargets(): none {
 
 export function testChecksWeakReferenceAccessOperators(): none {
   source := "class Node { value: int\nread(): int => value\nfallible(): Result<int, string> => Success { value } }\n" +
-    "function optionalField(node: weak Node): Result<int | none, WeakReferenceError> => node?.value\n" +
-    "function optionalCall(node: weak Node): Result<int | none, WeakReferenceError> => node?.read()\n" +
-    "function optionalFallibleCall(node: weak Node): Result<int | none, string | WeakReferenceError> => node?.fallible()\n" +
+    "function optionalField(node: weak Node): int | none => node?.value\n" +
+    "function optionalCall(node: weak Node): int | none => node?.read()\n" +
+    "function optionalFallibleCall(node: weak Node): Result<int | none, string> => node?.fallible()\n" +
     "function forcedField(node: weak Node): int => node!.value\n" +
     "function forcedCall(node: weak Node): int => node!.read()"
   result := checked(source)
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
 }
 
 export function testChecksWeakUnionReferenceAccess(): none {
-  result := checked("class Cat { name: string\nspeak(): string => name }\nclass Dog { name: string\nspeak(): string => name }\nclass Holder { weak pet: Cat | Dog }\nfunction make(cat: Cat): Holder => Holder { pet: cat }\nfunction name(holder: Holder): Result<string | none, WeakReferenceError> => holder.pet?.name\nfunction speak(holder: Holder): string => holder.pet!.speak()")
+  result := checked("class Cat { name: string\nspeak(): string => name }\nclass Dog { name: string\nspeak(): string => name }\nclass Holder { weak pet: Cat | Dog }\nfunction make(cat: Cat): Holder => Holder { pet: cat }\nfunction name(holder: Holder): string | none => holder.pet?.name\nfunction speak(holder: Holder): string => holder.pet!.speak()")
   Assert.equal(result.diagnostics.length, 0)
 }
 

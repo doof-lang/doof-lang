@@ -26,7 +26,7 @@ function waitForStop(session: DebugSession): none {
 
 export function testRealLldbSession(): none {
   path := env("DOOF_DEBUG_TEST_LAUNCH") else { return }
-  launch := try! DebugLaunch.fromSerialValue(try! parseJsonValue(try! readText(path)))
+  launch := DebugLaunch.fromSerialValue(parseJsonValue(readText(path)!)!)!
   session := DebugSession { launch }
   session.toggleBreakpoint(launch.source, 5)
   session.start()
@@ -41,7 +41,7 @@ export function testRealLldbSession(): none {
   visibleFrames := sourceFrames(session.frames)
   Assert.equal(visibleFrames.length > 0, true)
   Assert.equal(frameLabel(visibleFrames[0]), "main · 5")
-  Assert.equal((try! session.breakpoints.get(launch.source))[0].verified, true)
+  Assert.equal((session.breakpoints.get(launch.source)!)[0].verified, true)
   for row of session.scopes { session.expandVariable(row) }
   for i of 0..<100 {
     session.tick()
@@ -51,7 +51,7 @@ export function testRealLldbSession(): none {
   let foundArguments = false
   let foundGlobal = false
   for scope of session.scopes {
-    identifiers := sourceIdentifiers(try! readText(launch.source))
+    identifiers := sourceIdentifiers(readText(launch.source)!)
     for variable of visibleVariables(scope.children, identifiers, false, isGlobalScope(scope)) {
       Assert.equal(textField(variable.data, "name").startsWith("_iterable_"), false)
       if isGlobalScope(scope) {

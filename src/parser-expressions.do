@@ -119,6 +119,7 @@ export isolated function parseUnary(parser: Parser): Expression {
     parser.advance()
     return IntLiteral { kind: "int-literal", value: -2147483647 - 1, span: parser.span(start) }
   }
+  // Removed prefix forms parse so the checker can report their postfix spelling.
   if parser.check(TokenType.Identifier) && (parser.text(parser.current()) == "try!" || parser.text(parser.current()) == "try?") {
     start := parser.location()
     operator := parser.text(parser.advance())
@@ -131,8 +132,7 @@ export isolated function parseUnary(parser: Parser): Expression {
     let operator = "try"
     if parser.match(TokenType.Bang) {
       operator = "try!"
-    } else if parser.check(TokenType.Identifier) && parser.text(parser.current()) == "?" {
-      parser.advance()
+    } else if parser.match(TokenType.Question) {
       operator = "try?"
     }
     operand := parseUnary(parser)
@@ -224,6 +224,9 @@ isolated function parsePostfix(parser: Parser): Expression {
     } else if parser.check(TokenType.Bang) && parser.sameLineAsPrevious() {
       parser.advance()
       expression = UnaryExpression { kind: "non-null-assertion", operator: "!", operand: expression, prefix: false, span: SourceSpan { start: expression.span.start, end: parser.previousEnd() } }
+    } else if parser.check(TokenType.Question) && parser.sameLineAsPrevious() {
+      parser.advance()
+      expression = UnaryExpression { kind: "optional-conversion", operator: "?", operand: expression, prefix: false, span: SourceSpan { start: expression.span.start, end: parser.previousEnd() } }
     } else {
       break
     }

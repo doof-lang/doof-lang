@@ -14,7 +14,7 @@ class Fixture {
 }
 
 function main(arguments: string[]): none {
-  fixture := try! Fixture.fromSerialValue(try! parseJsonValue(try! readText(arguments[0])))
+  fixture := Fixture.fromSerialValue(parseJsonValue(readText(arguments[0])!)!)!
   issues := analyze(fixture.sources, fixture.entry)
   let values: SerialValue[] = []
   for issue of issues { values.push(issue.toSerialObject()) }

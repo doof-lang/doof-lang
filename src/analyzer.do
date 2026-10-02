@@ -170,7 +170,7 @@ export class ModuleAnalyzer {
     if editorMode { for path of additionalEntries { queueModuleParse(path, none, scheduled, pending) } }
     let completedIndex = 0
     while pending.length > 0 || completedIndex < completedParses.length {
-      completed := if serialParsing then completedParses[completedIndex] else try! pending.takeFirstCompleted()
+      completed := if serialParsing then completedParses[completedIndex] else pending.takeFirstCompleted()!
       if serialParsing { completedIndex += 1 }
       if completed.program == none {
         location := SemanticLocation { line: completed.errorLine, column: completed.errorColumn, offset: completed.errorOffset }
@@ -253,7 +253,7 @@ export class ModuleAnalyzer {
     resolveImports(info)
     resolveExportLists(info)
     resolveNamedTypes(info)
-    ignored := try! inProgress.pop()
+    ignored := inProgress.pop()!
     resolvedPaths.push(path)
     for item of info.diagnostics { diagnostics.push(item) }
     return info

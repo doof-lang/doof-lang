@@ -6,18 +6,18 @@ import { commandOutputChecks, interactiveCheck, projectLockChecks } from "./proc
 export function testRepositoryNativeCommandOutputContract(): none {
   root := setting("DOOF_REPOSITORY_TEST_ROOT"); compiler := setting("DOOF_REPOSITORY_TEST_COMPILER")
   if root == "" || compiler == "" { return }
-  stdlib := try! stdlibDirectory(root)
-  try! commandOutputChecks(compiler, path(root, "tests/release-fixtures"), path(root, "build/command-output-check"), stdlib)
+  stdlib := stdlibDirectory(root)!
+  commandOutputChecks(compiler, path(root, "tests/release-fixtures"), path(root, "build/command-output-check"), stdlib)!
 }
 export function testRepositoryNativeInteractiveInput(): none {
   root := setting("DOOF_REPOSITORY_TEST_ROOT"); compiler := setting("DOOF_REPOSITORY_TEST_COMPILER")
   if root == "" || compiler == "" { return }
-  stdlib := try! stdlibDirectory(root)
-  try! interactiveCheck(compiler, path(root, "tests/release-fixtures/interactive-run"), stdlib)
+  stdlib := stdlibDirectory(root)!
+  interactiveCheck(compiler, path(root, "tests/release-fixtures/interactive-run"), stdlib)!
 }
 export function testRepositoryNativeProjectBuildQueue(): none {
   root := setting("DOOF_REPOSITORY_TEST_ROOT"); compiler := setting("DOOF_REPOSITORY_TEST_COMPILER")
   if root == "" || compiler == "" { return }
-  stdlib := try! stdlibDirectory(root)
-  try! projectLockChecks(root, compiler, stdlib)
+  stdlib := stdlibDirectory(root)!
+  projectLockChecks(root, compiler, stdlib)!
 }

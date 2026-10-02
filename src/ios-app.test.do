@@ -27,9 +27,9 @@ export function testRendersIOSSupportFiles(): none {
 }
 
 export function testPlansIOSTargetsArchiveAndSigning(): none {
-  Assert.equal(try! iosTargetTriple("16.0", "simulator", "arm64"), "arm64-apple-ios16.0-simulator")
-  Assert.equal(try! iosTargetTriple("16.0", "simulator", "x86_64"), "x86_64-apple-ios16.0-simulator")
-  Assert.equal(try! iosTargetTriple("16.0", "device", "arm64"), "arm64-apple-ios16.0")
+  Assert.equal(iosTargetTriple("16.0", "simulator", "arm64")!, "arm64-apple-ios16.0-simulator")
+  Assert.equal(iosTargetTriple("16.0", "simulator", "x86_64")!, "x86_64-apple-ios16.0-simulator")
+  Assert.equal(iosTargetTriple("16.0", "device", "arm64")!, "arm64-apple-ios16.0")
   Assert.equal(iosPackageArchiveName("Demo", "1.0 beta"), "Demo-1.0-beta-ios.ipa")
   arguments := iosCodesignArguments("/tmp/Demo.app", "Apple Distribution: Example", "/tmp/entitlements.plist")
   Assert.equal(arguments.contains("--generate-entitlement-der"), true)
@@ -38,11 +38,11 @@ export function testPlansIOSTargetsArchiveAndSigning(): none {
 
 export function testExpandsWildcardProfileApplicationIdentifierForSigning(): none {
   Assert.equal(
-    try! iosExactApplicationIdentifier("TEAMID.dev.doof.*", "dev.doof.demo"),
+    iosExactApplicationIdentifier("TEAMID.dev.doof.*", "dev.doof.demo")!,
     "TEAMID.dev.doof.demo",
   )
   Assert.equal(
-    try! iosExactApplicationIdentifier("TEAMID.dev.doof.demo", "dev.doof.demo"),
+    iosExactApplicationIdentifier("TEAMID.dev.doof.demo", "dev.doof.demo")!,
     "TEAMID.dev.doof.demo",
   )
 }

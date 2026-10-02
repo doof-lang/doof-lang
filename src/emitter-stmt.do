@@ -22,6 +22,8 @@ import { emitExpressionReturn } from "./emitter-expr-utils"
 import { emitCaseSubjectValue, emitCaseTypePattern, emitCaseValuePattern } from "./emitter-case-pattern"
 import { cppIdentifier, emitExpression, emitDiscardedExpression } from "./emitter-expr"
 import { quote } from "./emitter-expr-literals"
+import { emitAbsentError, emitAbsentTest, emitPresentValue, emitterAbsenceLayers } from "./emitter-absence"
+import { absenceErrorType } from "./absence-types"
 import { emitContextType, emitType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 
 export function emitBlock(block: Block, level: int, context: EmitContext): string {
@@ -241,6 +243,22 @@ function emitBindingElse(binding: ImmutableBinding, level: int, context: EmitCon
   if binding.else_ == none { return emitLocalDeclaration(ind, binding.name, binding.type_, binding.resolvedType!, binding.value, context, true, true) }
   context.tryCounter = context.tryCounter + 1
   temporaryName := "_binding_value_" + string(context.tryCounter)
+  layers := emitterAbsenceLayers(binding.value.resolvedType!, context)
+  if layers.length > 1 {
+    // Every absent layer runs the handler; the error is none unless a Failure
+    // made the value absent.
+    let output = ind + "auto " + temporaryName + " = " + emitExpression(binding.value, context) + ";\n"
+    output = output + ind + "if (" + emitAbsentTest(temporaryName, layers, context) + ") {\n"
+    if binding.failureName != none && binding.failureName! != "_" {
+      output = output + indent(level + 1) + "const auto " + cppIdentifier(binding.failureName!) + " = " + emitAbsentError(temporaryName, layers, absenceErrorType(specializeEmitType(binding.value.resolvedType!, context))!, context) + ";\n"
+    } else if binding.failureName == none && binding.name != "_" {
+      output = output + indent(level + 1) + "const auto& " + cppIdentifier(binding.name) + " = " + temporaryName + ";\n"
+    }
+    output = output + emitBlock(binding.else_!, level + 1, context)
+    output = output + ind + "}\n"
+    if binding.name == "_" { return output }
+    return output + emitExtractedLocal(ind, binding.name, binding.resolvedType!, emitPresentValue(temporaryName, layers, context), true, true)
+  }
   if binding.value.resolvedType != none && isSingleOptional(binding.value.resolvedType!) {
     let output = ind + "auto " + temporaryName + " = " + emitExpression(binding.value, context) + ";\n"
     output = output + ind + "if (doof::is_null(" + temporaryName + ")) {\n"
@@ -621,11 +639,11 @@ function beginLabeledLoop(label: string | none, hasThen: bool, context: EmitCont
 }
 
 function endLabeledLoop(loopId: int, context: EmitContext): none {
-  try! context.loopUnlabeledBreakTargets.pop()
+  context.loopUnlabeledBreakTargets.pop()!
   if loopId < 0 { return }
-  try! context.loopLabels.pop()
-  try! context.loopBreakTargets.pop()
-  try! context.loopContinueTargets.pop()
+  context.loopLabels.pop()!
+  context.loopBreakTargets.pop()!
+  context.loopContinueTargets.pop()!
 }
 
 function emitLabeledLoopBody(body: Block, level: int, loopId: int, context: EmitContext): string {

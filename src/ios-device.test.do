@@ -7,23 +7,23 @@ import {
 } from "./ios-device"
 
 export function testParsesConnectedPhysicalIOSDevices(): none {
-  devices := try! parseConnectedIOSDevices(
+  devices := parseConnectedIOSDevices(
     "{\"result\":{\"devices\":[" +
       "{\"identifier\":\"watch-1\",\"hardwareProperties\":{\"platform\":\"watchOS\",\"reality\":\"physical\"},\"connectionProperties\":{\"tunnelState\":\"connected\"},\"deviceProperties\":{\"name\":\"Watch\"}}," +
       "{\"identifier\":\"sim-1\",\"hardwareProperties\":{\"platform\":\"iOS\",\"reality\":\"virtual\"},\"connectionProperties\":{\"tunnelState\":\"connected\"},\"deviceProperties\":{\"name\":\"Simulator\"}}," +
       "{\"identifier\":\"phone-1\",\"hardwareProperties\":{\"platform\":\"iOS\",\"reality\":\"physical\"},\"connectionProperties\":{\"tunnelState\":\"connected\"},\"deviceProperties\":{\"name\":\"My iPhone\"}}]}}",
-  )
+  )!
   Assert.equal(devices.length, 1)
   Assert.equal(devices[0].identifier, "phone-1")
   Assert.equal(devices[0].name, "My iPhone")
 }
 
 export function testSelectsExplicitOrSingleConnectedDevice(): none {
-  devices := try! parseConnectedIOSDevices(
+  devices := parseConnectedIOSDevices(
     "{\"result\":{\"devices\":[{\"identifier\":\"phone-1\",\"hardwareProperties\":{\"platform\":\"iOS\",\"reality\":\"physical\"},\"connectionProperties\":{\"tunnelState\":\"connected\"},\"deviceProperties\":{\"name\":\"My iPhone\"}}]}}",
-  )
-  Assert.equal(try! selectIOSDeviceIdentifier("override", []), "override")
-  Assert.equal(try! selectIOSDeviceIdentifier("", devices), "phone-1")
+  )!
+  Assert.equal(selectIOSDeviceIdentifier("override", [])!, "override")
+  Assert.equal(selectIOSDeviceIdentifier("", devices)!, "phone-1")
 }
 
 export function testReportsMissingAndAmbiguousDevices(): none {
@@ -31,9 +31,9 @@ export function testReportsMissingAndAmbiguousDevices(): none {
   Assert.equal(missing.isFailure(), true)
   case missing { failure: Failure<string> -> Assert.stringContains(failure.error, "Could not auto-detect") }
 
-  first := try! parseConnectedIOSDevices(
+  first := parseConnectedIOSDevices(
     "{\"result\":{\"devices\":[{\"identifier\":\"one\",\"hardwareProperties\":{\"platform\":\"iOS\"},\"connectionProperties\":{\"tunnelState\":\"connected\"},\"deviceProperties\":{\"name\":\"Work iPhone\"}},{\"identifier\":\"two\",\"hardwareProperties\":{\"platform\":\"iOS\"},\"connectionProperties\":{\"tunnelState\":\"connected\"},\"deviceProperties\":{\"name\":\"Personal iPhone\"}}]}}",
-  )
+  )!
   ambiguous := selectIOSDeviceIdentifier("", first)
   Assert.equal(ambiguous.isFailure(), true)
   case ambiguous { failure: Failure<string> -> {
@@ -48,10 +48,10 @@ export function testSelectsMostSpecificActiveProvisioningProfile(): none {
     IOSProvisioningProfile { profilePath: "/exact-expired", applicationIdentifier: "TEAM.dev.doof.demo", expirationEpochMs: 90L },
     IOSProvisioningProfile { profilePath: "/exact-active", applicationIdentifier: "TEAM.dev.doof.demo", expirationEpochMs: 200L },
   ]
-  selected := try! selectProvisioningProfile("dev.doof.demo", profiles, 100L)
+  selected := selectProvisioningProfile("dev.doof.demo", profiles, 100L)!
   Assert.equal(selected.profilePath, "/exact-active")
 
-  expiredExact := try! selectProvisioningProfile("dev.doof.demo", [profiles[0], profiles[1]], 100L)
+  expiredExact := selectProvisioningProfile("dev.doof.demo", [profiles[0], profiles[1]], 100L)!
   Assert.equal(expiredExact.profilePath, "/exact-expired")
 }
 
@@ -82,7 +82,7 @@ export function testParsesAndMatchesCodesignIdentityFingerprint(): none {
     certFingerprints: ["11966AB9C099F8FABEFAC54C08D5BE2BD8C903AF"],
     expirationEpochMs: 200L,
   }
-  Assert.equal(try! selectSigningIdentity(profile, identities), identities[0].name)
+  Assert.equal(selectSigningIdentity(profile, identities)!, identities[0].name)
 }
 
 export function testValidatesAdHocPackageProfileAndIdentityTogether(): none {
@@ -122,7 +122,7 @@ export function testAutoResolvesSingleDistributionIdentityFromProfileCertificate
     },
   ]
   Assert.equal(
-    try! resolveIOSAdHocSigningIdentity(profile, identities, ""),
+    resolveIOSAdHocSigningIdentity(profile, identities, "")!,
     "Apple Distribution: Jane Doe (TEAMID)",
   )
 }

@@ -4,7 +4,7 @@ import { BlobReader } from "std/blob"
 import { Duration, Thread } from "std/time"
 
 export function testTransportDrainsSeparateStreamsAndCloses(): none {
-  process := try! DebugTransport.start("/bin/sh", ["-c", "printf protocol; printf diagnostic >&2"])
+  process := DebugTransport.start("/bin/sh", ["-c", "printf protocol; printf diagnostic >&2"])!
   let out = ""
   let err = ""
   for i of 0..<100 {
@@ -22,10 +22,10 @@ export function testTransportDrainsSeparateStreamsAndCloses(): none {
 }
 
 export function testTransportNonblockingRoundTripAndCancellation(): none {
-  process := try! DebugTransport.start("/bin/cat", [])
+  process := DebugTransport.start("/bin/cat", [])!
   let payload = "工具"
   for i of 0..<15 { payload += payload }
-  try! process.send(payload)
+  process.send(payload)!
   let count = 0
   for i of 0..<1000 {
     process.flush()

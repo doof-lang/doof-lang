@@ -40,7 +40,7 @@ function actorResult(): int {
   first := worker.add(2)
   promise := async worker.add(4)
   state := retire worker
-  second := try! promise.get()
+  second := promise.get()!
   return first + second + state.value
 }
 
@@ -51,10 +51,10 @@ function asyncBlockResult(): int {
     nested := async {
       yield base + 1
     }
-    values.push(try! nested.get())
+    values.push(nested.get()!)
     yield values
   }
-  values := try! promise.get()
+  values := promise.get()!
   values.push(6)
   return values[0] + values[1] + values[2]
 }
@@ -67,7 +67,7 @@ function queuedActorResult(): int {
   }
   let total = 0
   for promise of promises {
-    total = total + try! promise.get()
+    total = total + promise.get()!
   }
   state := retire worker
   return total + state.value
@@ -82,14 +82,14 @@ function queuedAsyncResult(): int {
   }
   let total = 0
   for promise of promises {
-    total = total + try! promise.get()
+    total = total + promise.get()!
   }
   return total
 }
 
 function crossModulePromiseResult(): int {
   promise := producePromise(41)
-  return try! promise.get()
+  return promise.get()!
 }
 
 function values(): int[] => [1, 2, 3]
@@ -147,7 +147,7 @@ function enumResult(): int {
   if ValueState.fromName("Ready")!.value != 7 || ValueState.fromValue(8)!.name != "Done" { return 92 }
   if ValueState.values()[1] != ValueState.Ready { return 93 }
   direct := ValueState.Ready.toSerialValue() as int else { return 94 }
-  if direct != 7 || (try! decodeJson<WireState>("ready")) != WireState.Ready { return 95 }
+  if direct != 7 || (decodeJson<WireState>("ready")!) != WireState.Ready { return 95 }
   resolved := maybeValueState(true) else { return 96 }
   if acceptValueState(resolved) != 7 { return 97 }
   payload := EnumPayload.fromSerialValue({

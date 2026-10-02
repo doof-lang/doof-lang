@@ -71,7 +71,7 @@ The native entry-script scope is the exception: because top-level execution
 has no return channel, statement-level `try` panics on failure.
 
 `try` is a statement, not an expression: write `try x := load()`, not
-`x := try load()`. Inside an expression use `try!` or `try?`.
+`x := try load()`. Inside an expression use postfix `!` or `?`.
 
 ```doof
 function loadConfig(): Result<Config, Error> {
@@ -94,46 +94,41 @@ try { name, age } := expr
 try x = expr
 ```
 
-### `try!`
+### Absence: `!`, `?`, `??`
 
-Expression-level unwrap-or-panic:
-
-```doof
-config := try! loadConfig()
-```
-
-Failure panics identify the source path and line of the `try!` expression. If
-the error payload is a `string`, its value is included in the panic message.
-
-### `try?`
-
-Expression-level conversion from failure to `none`:
+`none`, a `Failure`, and a `none` success value are all **absent**. The `?`
+forms collapse absence to `none`, the `!` forms panic on it, and `??` replaces
+it. None of them propagates a `Failure`; use statement `try` for that.
+`Result<T | none, E>` and `Result<T, E> | none` both read as `T` once present.
 
 ```doof
-config := try? loadConfig()
-```
-
-`try?` requires a non-`none` success type.
-
-### `??` and `??=`
-
-```doof
+config := loadConfig()!            // Config; panics on Failure (or a none success)
+maybe := loadConfig()?             // Config | none
 config := loadConfig() ?? defaultConfig
+saveState()!                       // Result<none, E>: panics on Failure
 
 let cache: string | none = none
-cache ??= loadFromDisk()
+cache ??= loadFromDisk()           // assigns only when absent
 ```
 
-`??` works on nullable and `Result` sources. Evaluation is right-associative and lazy.
+`!` panics identify the source path and line; a `string` error payload is
+included in the message. `x?` requires a success value (not `Result<none, E>`).
+`??` is right-associative and lazy. The prefix `try!` / `try?` forms were
+removed.
 
-### Force Access
+### Force and Optional Access
 
 ```doof
-result!.field
-user!.name
+user!.name                // (user!).name
+loadUser()!.email         // panics if loadUser() fails
+items![0]                 // (items!)[0]
+user?.address?.city       // string | none
+loadUser()?.name          // string | none: none when loadUser() fails
 ```
 
-`!` unwraps nullable values or `Result` values and panics on the unhappy path.
+`?.` and `?[]` turn the receiver's absence into `none`. A member that itself
+returns `Result<U, E2>` keeps its own Failure: `loadUser()?.profile()` is
+`Result<Profile | none, E2>`; chain `?.`, or add `?`, `!`, or `??`, to collapse it.
 
 ## Declaration-`else`
 
@@ -149,21 +144,23 @@ Rules:
 
 - The `else` block must exit the current scope via `return`, `break`, `continue`, or `panic(...)` when the binding name is used after the block.
 - `_ := result else ...` is a discard handler; it does not introduce a binding after the block, so its `else` block can continue.
-- `else error { ... }` captures the error payload for present `Result<T, E>` subjects.
-- The success binding is not in scope inside the `else` block. Use `else error`
-  to inspect a Result failure.
-- After the block, the binding has the narrowed happy-path type.
-- Each declaration removes exactly one fallible layer. `Result<T, E> | none`
-  becomes `Result<T, E>` and needs a second declaration to unwrap the Result.
-- For `Result<T | none, E>`, the happy-path type remains `T | none`; `none`
-  inside `Success` is payload data and is not handled by the `else` block.
-- It applies only to nullable and/or `Result` types.
+- Every absent layer runs the block, so the binding is the present value:
+  `Result<T, E> | none` and `Result<T | none, E>` both bind `T`.
+- `else error { ... }` captures the Failure's error as `E`. When the subject can
+  also be absent as `none`, `error` is `E | none` and `none` means no Failure.
+- The success binding is not in scope inside the `else` block.
+- It applies only to nullable and/or `Result` types; nullable-only subjects
+  cannot capture an error.
 
 ```doof
-x := loadConfig() else error {
-    return "load failed: " + error.message
+// loadSource(): Result<Source | none, Diagnostic>; none means "not found"
+source := loadSource(path) else diagnostic {
+    if diagnostic != none { report(diagnostic!) }
+    return none
 }
 ```
+
+When you need to keep a none success value while handling Failure, use `case`.
 
 ## Result Statement-`else`
 
@@ -207,17 +204,9 @@ Useful combinations:
 
 ```doof
 try s := x as string
-s := try! x as string
+s := (x as string)!
 s := x as string else { return "" }
 ```
-
-## Optional Chaining Across Results
-
-```doof
-result := foo()?.bar()
-```
-
-When `foo()` returns `Result<MyObj, E1>` and `bar()` returns `Result<int, E2>`, the final type is `Result<int | none, E1 | E2>`. A `Failure` receiver is preserved, a `Success(none)` receiver short-circuits to `Success(none)`, plain members give `Result<T | none, E1>`, and only calls are flattened (a `Result`-typed field stays nested). Use `try?` to collapse both failure and none to `none`.
 
 ## Catch Expressions
 
@@ -237,7 +226,7 @@ an explicit union of the error types plus `none`.
 Inside `catch`:
 
 - statement-level `try` exits the `catch` block, not the outer function
-- `try!` and `try?` keep their usual behavior
+- postfix `!` and `?` keep their usual behavior
 
 ## Panic
 
@@ -266,8 +255,8 @@ Use it only as a controlled escape hatch at process or host boundaries. It is no
 | --- | --- |
 | `Result` + `case` | detailed error handling and branching |
 | statement-level `try` | sequential propagation in `Result`-returning functions |
-| `try!` | required success or crash |
-| `try?` | convert failure to nullable when details do not matter |
+| postfix `!` | required value or crash |
+| postfix `?` | convert absence to `none` when details do not matter |
 | declaration-`else` | unwrap-or-bail control flow |
 | `??` | specific fallback value |
 | `catch` | local error capture without propagation |

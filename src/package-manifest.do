@@ -10,7 +10,7 @@ import { MacOSAppConfig, MacOSAppResource, MacOSEmbeddedLibrary, MacOSPackageCon
 import { IOSAppConfig, IOSAppResource, IOSEmbeddedLibrary, IOSPackageConfig } from "./ios-app"
 
 function manifestJoinPath(directory: string, name: string): string => join([directory, name])
-function manifestJsonField(object: SerialObject, name: string): SerialValue => try! object.get(name)
+function manifestJsonField(object: SerialObject, name: string): SerialValue => object.get(name)!
 function manifestJsonHas(object: SerialObject, name: string): bool => object.has(name)
 
 /** Normalized native inputs contributed by one or more reached packages. */
@@ -719,7 +719,7 @@ function normalizeResourceDestination(
       if segments.length == 0 {
         return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + " must stay within the executable resource directory")
       }
-      ignored := try! segments.pop()
+      ignored := segments.pop()!
       continue
     }
     segments.push(segment)

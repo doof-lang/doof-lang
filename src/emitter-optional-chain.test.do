@@ -31,15 +31,18 @@ export function testOptionalIndexUsesCheckedElementAccess(): none {
   Assert.stringContains(source, "if (doof::is_null(_optional_source_")
 }
 
-export function testOptionalChainOverResultPreservesFailureAndFlattens(): none {
+export function testOptionalChainOverResultCollapsesTheReceiverAndKeepsTheMemberFailure(): none {
   source := emitted(
     "enum LookupError { Missing }\nenum ProfileError { Private }\nclass Profile { bio: string }\n" +
     "class User { name: string\nprofile(): Result<Profile, ProfileError> => Success(Profile { bio: name }) }\n" +
     "function findUser(): Result<User, LookupError> => Success(User { name: \"ada\" })\n" +
-    "function profile(): Result<Profile | none, LookupError | ProfileError> => findUser()?.profile()",
+    "function profile(): Result<Profile | none, ProfileError> => findUser()?.profile()",
   )
-  Assert.stringContains(source, "if (doof::is_failure(_optional_source_")
-  Assert.stringContains(source, "doof::success_value(_optional_source_")
+  // The receiver lowers through postfix '?', so a Failure becomes none.
+  Assert.stringContains(source, "if (doof::is_failure(_optional_value)) return")
+  Assert.stringContains(source, "if (doof::is_null(_optional_source_")
+  // An absent receiver is a none success value; the member keeps its Failure.
+  Assert.stringContains(source, "return doof::Success<")
   Assert.stringContains(source, "if (doof::is_failure(_optional_result_")
-  Assert.stringContains(source, "doof::variant_promote<")
+  Assert.stringNotContains(source, "doof::variant_promote<")
 }

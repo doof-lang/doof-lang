@@ -60,7 +60,7 @@ export function projectEntryRequestError(project: ProjectSpec, requestedPath: st
 }
 
 export function readProjectSpec(requestedPath: string, platform: string = "", targetOverride: string = ""): ProjectSpec {
-  absolutePath := try! absolute(requestedPath)
+  absolutePath := absolute(requestedPath)!
   directory := if isDirectory(absolutePath) then absolutePath else parentPath(absolutePath)
   manifest := projectManifestPath(absolutePath)
   if manifest == "" {
@@ -84,17 +84,17 @@ export function readProjectSpec(requestedPath: string, platform: string = "", ta
   }
 
   packageDirectory := parentPath(manifest)
-  manifestSource := try! readText(manifest)
-  packageManifest := try! parsePackageManifest(manifestSource, manifest, packageDirectory, platform, targetOverride)
-  root := try! (try! parseJsonValue(manifestSource)) as SerialObject
+  manifestSource := readText(manifest)!
+  packageManifest := parsePackageManifest(manifestSource, manifest, packageDirectory, platform, targetOverride)!
+  root := (parseJsonValue(manifestSource)! as SerialObject)!
   let name = fileName(packageDirectory)
-  if root.has("name") { name = try! (try! root.get("name")) as string }
+  if root.has("name") { name = (root.get("name")! as string)! }
   let entry = "main.do"
   let buildDirectory = "build"
   if root.has("build") {
-    build := try! (try! root.get("build")) as SerialObject
-    if build.has("entry") { entry = try! (try! build.get("entry")) as string }
-    if build.has("buildDir") { buildDirectory = try! (try! build.get("buildDir")) as string }
+    build := (root.get("build")! as SerialObject)!
+    if build.has("entry") { entry = (build.get("entry")! as string)! }
+    if build.has("buildDir") { buildDirectory = (build.get("buildDir")! as string)! }
   }
   // An explicit source file wins over the package default entry. Passing a
   // directory (or omitting the argument) selects build.entry from doof.json.

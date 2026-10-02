@@ -60,27 +60,27 @@ function ensureDirectory(path: string): none {
   if path == "" || exists(path) { return }
   parent := parentPath(path)
   if parent != path { ensureDirectory(parent) }
-  try! mkdir(path)
+  mkdir(path)!
 }
 
 function copyPath(sourcePath: string, destinationPath: string): none {
   if isDirectory(sourcePath) {
     ensureDirectory(destinationPath)
-    for entry of try! readDir(sourcePath) {
+    for entry of readDir(sourcePath)! {
       copyPath(outputPath(sourcePath, entry.name), outputPath(destinationPath, entry.name))
     }
     return
   }
   ensureDirectory(parentPath(destinationPath))
-  try! writeBlob(destinationPath, try! readBlob(sourcePath))
+  writeBlob(destinationPath, readBlob(sourcePath)!)!
 }
 
 function removeTree(path: string): none {
   if !exists(path) { return }
   if isDirectory(path) {
-    for entry of try! readDir(path) { removeTree(outputPath(path, entry.name)) }
+    for entry of readDir(path)! { removeTree(outputPath(path, entry.name)) }
   }
-  try! remove(path)
+  remove(path)!
 }
 
 function appendUnique(values: string[], value: string): none {
@@ -99,8 +99,8 @@ export function configureIOSNativeBuild(
   try sdkPath := commandText("xcrun", ["--sdk", sdk, "--show-sdk-path"], "resolving the iOS SDK")
   try architecture := commandText("uname", ["-m"], "resolving the host architecture")
   try target := iosTargetTriple(config.minimumDeploymentTarget, destination, architecture)
-  try! writeText(outputPath(outputDirectory, "Info.plist"), renderIOSInfoPlist(config))
-  try! writeText(outputPath(outputDirectory, "ios-main.mm"), renderIOSMainSource(config.executableName))
+  writeText(outputPath(outputDirectory, "Info.plist"), renderIOSInfoPlist(config))!
+  writeText(outputPath(outputDirectory, "ios-main.mm"), renderIOSMainSource(config.executableName))!
   appendUnique(native.sourceFiles, "ios-main.mm")
   appendUnique(native.frameworks, "UIKit")
   appendUnique(native.frameworks, "Foundation")
@@ -141,7 +141,7 @@ function globMatches(pattern: string, value: string, patternIndex: int = 0, valu
 
 function collectResourceFiles(path: string, baseDirectory: string, pattern: string, results: string[]): none {
   if isDirectory(path) {
-    for entry of try! readDir(path) { collectResourceFiles(outputPath(path, entry.name), baseDirectory, pattern, results) }
+    for entry of readDir(path)! { collectResourceFiles(outputPath(path, entry.name), baseDirectory, pattern, results) }
     return
   }
   prefix := if baseDirectory.endsWith("/") then baseDirectory else baseDirectory + "/"
@@ -184,7 +184,7 @@ function compileIOSIcon(config: IOSAppConfig, appPath: string, destination: stri
   iconSetPath := outputPath(catalogPath, "AppIcon.appiconset")
   removeTree(catalogPath)
   ensureDirectory(iconSetPath)
-  try! writeText(outputPath(iconSetPath, "Contents.json"), renderIOSIconSetContents() + "\n")
+  writeText(outputPath(iconSetPath, "Contents.json"), renderIOSIconSetContents() + "\n")!
   readonly names = [
     "iphone_notification_20@2x.png", "iphone_notification_20@3x.png", "iphone_settings_29@2x.png",
     "iphone_settings_29@3x.png", "iphone_spotlight_40@2x.png", "iphone_spotlight_40@3x.png",
@@ -213,7 +213,7 @@ function compileIOSIcon(config: IOSAppConfig, appPath: string, destination: stri
     "/usr/libexec/PlistBuddy", ["-c", "Merge " + partialPlistPath, outputPath(appPath, "Info.plist")],
     "merging iOS app icon metadata",
   )
-  if exists(partialPlistPath) { try! remove(partialPlistPath) }
+  if exists(partialPlistPath) { remove(partialPlistPath)! }
   return Success()
 }
 
@@ -238,7 +238,7 @@ export function assembleIOSApp(
   if exists(infoPlistPath) {
     copyPath(infoPlistPath, outputPath(appPath, "Info.plist"))
   } else {
-    try! writeText(outputPath(appPath, "Info.plist"), renderIOSInfoPlist(config))
+    writeText(outputPath(appPath, "Info.plist"), renderIOSInfoPlist(config))!
   }
   try copyIOSResources(config, appPath)
   try compileIOSIcon(config, appPath, destination, buildDirectory)
@@ -248,7 +248,7 @@ export function assembleIOSApp(
 function collectNestedCode(path: string, results: string[]): none {
   if !exists(path) { return }
   if isDirectory(path) {
-    for entry of try! readDir(path) { collectNestedCode(outputPath(path, entry.name), results) }
+    for entry of readDir(path)! { collectNestedCode(outputPath(path, entry.name), results) }
     if path.endsWith(".framework") || path.endsWith(".appex") { results.push(path) }
     return
   }
@@ -337,7 +337,7 @@ export function signAndArchiveIOSApp(
   ensureDirectory(payloadDirectory)
   try runRequiredCommand("ditto", [appPath, outputPath(payloadDirectory, fileName(appPath))], "staging the iOS app payload")
   ensureDirectory(parentPath(archivePath))
-  if exists(archivePath) { try! remove(archivePath) }
+  if exists(archivePath) { remove(archivePath)! }
   try runRequiredCommand(
     "ditto", ["-c", "-k", "--sequesterRsrc", "--keepParent", payloadDirectory, archivePath],
     "archiving the iOS app",

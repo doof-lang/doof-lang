@@ -161,7 +161,7 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
             aliasScope := Scope { parent: scope }
             for typeParam of alias.typeParams { aliasScope.typeParams.push(typeParam) }
             let resolvedAlias = resolveAnnotationType(resolution, alias.type_, classModuleFor(state.result, symbol!), aliasScope, false)
-            ignoredAlias := try! resolution.aliases.pop()
+            ignoredAlias := resolution.aliases.pop()!
             let typeArgs: ResolvedType[] = []
             for argument of named.typeArgs { typeArgs.push(resolveAnnotationType(resolution, argument, module, scope, validateConstraints)) }
             if validateConstraints { validateAnnotationConstraints(state, alias.typeParams, alias.typeParamConstraints, typeArgs, named.span, classModuleFor(state.result, symbol!), scope) }

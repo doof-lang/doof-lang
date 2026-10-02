@@ -20,7 +20,7 @@ function load<T>(value: T, ok: bool): Result<T, string> {
 }
 
 function optional<T>(value: T, ok: bool): T | none {
-  return try? load(value, ok)
+  return load(value, ok)?
 }
 
 function fail<E>(error: E, ok: bool): Result<int, E> {

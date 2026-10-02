@@ -5,7 +5,7 @@ function main(arguments: string[]): none {
   count += 1
   println(count)
   for argument of arguments { println(argument) }
-  println(try! env("DOOF_DEBUG_FIXTURE_ENV"))
+  println(env("DOOF_DEBUG_FIXTURE_ENV")!)
   println(debuggerGlobal)
 }
 

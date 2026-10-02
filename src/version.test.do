@@ -4,8 +4,8 @@ import { readText } from "std/fs"
 import { parseJsonValue } from "std/json"
 
 export function testEditorCompilerVersionMatchesManifest(): none {
-  manifest := try! (try! parseJsonValue(try! readText("doof.json"))) as SerialObject
-  version := try! (try! manifest.get("version")) as string
+  manifest := (parseJsonValue(readText("doof.json")!)! as SerialObject)!
+  version := (manifest.get("version")! as string)!
   EditorAssert.equal(compilerVersion, if compilerVersionStamped then version else version + "-dev.unstamped")
 }
 

@@ -4,13 +4,13 @@ import { projectEntryRequestError, readProjectSpec } from "./project"
 
 export function testReadsRootProjectNativeBuildThroughPackageManifestModel(): none {
   root := "/tmp/doof-compiler-project-native-test"
-  if !exists(root) { try! mkdir(root) }
-  if !exists(root + "/src") { try! mkdir(root + "/src") }
-  try! writeText(
+  if !exists(root) { mkdir(root)! }
+  if !exists(root + "/src") { mkdir(root + "/src")! }
+  writeText(
     root + "/doof.json",
     "{\"name\":\"native-root\",\"build\":{\"entry\":\"src/main.do\",\"native\":{\"sourceFiles\":[\"native.cpp\"],\"macos\":{\"frameworks\":[\"Foundation\"]}}}}",
-  )
-  try! writeText(root + "/src/main.do", "function main(): int => 0")
+  )!
+  writeText(root + "/src/main.do", "function main(): int => 0")!
 
   project := readProjectSpec(root + "/src/main.do", "macos")
   Assert.equal(project.name, "native-root")
@@ -23,13 +23,13 @@ export function testReadsRootProjectNativeBuildThroughPackageManifestModel(): no
 
 export function testReadsRootProjectExecutableResources(): none {
   root := "/tmp/doof-compiler-project-resource-test"
-  if !exists(root) { try! mkdir(root) }
-  try! writeText(
+  if !exists(root) { mkdir(root)! }
+  writeText(
     root + "/doof.json",
     "{\"name\":\"resource-root\",\"resources\":[{\"from\":\"doof_runtime.hpp\",\"to\":\".\"}],\"build\":{\"entry\":\"main.do\"}}",
-  )
-  try! writeText(root + "/main.do", "function main(): int => 0")
-  try! writeText(root + "/doof_runtime.hpp", "runtime")
+  )!
+  writeText(root + "/main.do", "function main(): int => 0")!
+  writeText(root + "/doof_runtime.hpp", "runtime")!
 
   project := readProjectSpec(root, "macos")
   Assert.equal(project.resources.length, 1)
@@ -39,18 +39,18 @@ export function testReadsRootProjectExecutableResources(): none {
 
 export function testReadsCustomObserveUiRootFromManifest(): none {
   root := "/tmp/doof-compiler-project-observe-test"
-  if !exists(root) { try! mkdir(root) }
-  try! writeText(root + "/doof.json", "{\"name\":\"observed\",\"observe\":{\"ui\":\"dashboard\"},\"build\":{\"entry\":\"main.do\"}}")
-  try! writeText(root + "/main.do", "function main(): int => 0")
+  if !exists(root) { mkdir(root)! }
+  writeText(root + "/doof.json", "{\"name\":\"observed\",\"observe\":{\"ui\":\"dashboard\"},\"build\":{\"entry\":\"main.do\"}}")!
+  writeText(root + "/main.do", "function main(): int => 0")!
   project := readProjectSpec(root, "macos")
   Assert.equal(project.observeUiRoot, root + "/dashboard")
 }
 
 export function testFallsBackWhenNoProjectManifestExists(): none {
   root := "/tmp/doof-compiler-project-no-manifest-test"
-  if !exists(root) { try! mkdir(root) }
+  if !exists(root) { mkdir(root)! }
   entry := root + "/standalone.do"
-  try! writeText(entry, "function main(): int => 0")
+  writeText(entry, "function main(): int => 0")!
 
   project := readProjectSpec(entry, "macos")
   Assert.equal(project.hasManifest, false)

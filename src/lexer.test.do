@@ -261,3 +261,11 @@ export function testLongLiteralsRejectFractionsAndExponents(): none {
     Assert.equal(lexer.diagnostics[0].message, "Long literals must be whole numbers without a fraction or exponent")
   }
 }
+
+export function testLoneQuestionIsAPostfixToken(): none {
+  assertTypes(types("a? ?? b?.c?[0]"), [
+    TokenType.Identifier, TokenType.Question, TokenType.QuestionQuestion, TokenType.Identifier,
+    TokenType.QuestionDot, TokenType.Identifier, TokenType.QuestionBracket, TokenType.IntLiteral,
+    TokenType.RightBracket, TokenType.EndOfFile,
+  ])
+}

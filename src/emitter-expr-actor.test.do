@@ -27,7 +27,12 @@ export function testRestrictedAsyncYieldCarrier(): none {
 
 export function testRestrictedAsyncYieldRuntime(): none {
   task := async { if true { yield none } else { yield 1 } }
-  value := try! task.get()
+  // A none success value is the yielded value, not an absent result.
+  let value: int | none = 0
+  case task.get() {
+    s: Success -> { value = s.value }
+    _: Failure -> { panic("async yield failed") }
+  }
   Assert.isTrue(value == none)
 }
 

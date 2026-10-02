@@ -12,12 +12,12 @@ function bundleTestPath(directory: string, name: string): string => join([direct
 
 function removeBundleTestTree(target: string): none {
   if !exists(target) { return }
-  entries := try! readDir(target)
+  entries := readDir(target)!
   for entry of entries {
     child := bundleTestPath(target, entry.name)
-    if entry.kind == EntryKind.Directory { removeBundleTestTree(child) } else { try! remove(child) }
+    if entry.kind == EntryKind.Directory { removeBundleTestTree(child) } else { remove(child)! }
   }
-  try! remove(target)
+  remove(target)!
 }
 
 class TestBundleMember {
@@ -37,7 +37,7 @@ function bundleTestBytes(text: string): readonly byte[] {
 
 function compressedTestMember(path: string, source: string, mode: int = 420): readonly byte[] {
   tar := writeTarBlob(readonly [TarWriteEntry { name: path, data: bundleTestBytes(source), mode }])
-  return try! zstdCompressWithLevel(tar, 3)
+  return zstdCompressWithLevel(tar, 3)!
 }
 
 function testMemberJson(member: TestBundleMember): SerialObject {
@@ -61,7 +61,7 @@ function fixtureBundle(customNativeEntries: TarWriteEntry[] | none = none): read
     TarWriteEntry { name: "prepare.sh", data: bundleTestBytes(scriptSource), mode: 493 },
   ]
   if customNativeEntries != none { nativeTarEntries = customNativeEntries! }
-  nativeData := try! zstdCompressWithLevel(writeTarBlob(nativeTarEntries.cloneReadonly()), 3)
+  nativeData := zstdCompressWithLevel(writeTarBlob(nativeTarEntries.cloneReadonly()), 3)!
   let members: TestBundleMember[] = [
     TestBundleMember {
       kind: "manifest", logicalPath: "doof.json", memberPath: "manifests/json.tar.zst",
@@ -106,9 +106,9 @@ function fixtureBundle(customNativeEntries: TarWriteEntry[] | none = none): read
 
 function createBundleReaderFixture(root: string): string {
   removeBundleTestTree(root)
-  try! mkdir(root)
+  mkdir(root)!
   bundlePath := bundleTestPath(root, "doof-stdlib.tar")
-  try! writeBlob(bundlePath, fixtureBundle())
+  writeBlob(bundlePath, fixtureBundle())!
   return bundlePath
 }
 
@@ -122,24 +122,24 @@ function failureText<T>(result: Result<T, string>): string {
 export function testMaterializesAddressableStdlibBundlePackage(): none {
   root := "build/stdlib-bundle-reader-test"
   bundlePath := createBundleReaderFixture(root)
-  provider := try! openStdlibBundle(bundlePath)
+  provider := openStdlibBundle(bundlePath)!
   assert(provider.index.bundleDigest.length == 64, "expected bundle digest")
   targetKey := stdlibBundleTargetKey("macos", "", "", "")
-  materialized := try! materializeStdlibBundlePackage(
+  materialized := materializeStdlibBundlePackage(
     provider, "std/json", bundleTestPath(root, "packages"), targetKey, "macos",
-  )
-  assert(try! readText(bundleTestPath(materialized.rootDirectory, "index.do")) == "export function answer(): int => 42\n", "expected root module")
-  assert(try! readText(bundleTestPath(materialized.rootDirectory, "nested/value.do")) == "export readonly VALUE = 7\n", "expected nested module")
+  )!
+  assert(readText(bundleTestPath(materialized.rootDirectory, "index.do"))! == "export function answer(): int => 42\n", "expected root module")
+  assert(readText(bundleTestPath(materialized.rootDirectory, "nested/value.do"))! == "export readonly VALUE = 7\n", "expected nested module")
   assert(exists(bundleTestPath(materialized.rootDirectory, ".doof-stdlib-bundle.json")), "expected receipt")
   if platform() != "windows" {
-    executable := try! run("test", ["-x", bundleTestPath(materialized.rootDirectory, "prepare.sh")], ExecOptions { withStdin: false })
+    executable := run("test", ["-x", bundleTestPath(materialized.rootDirectory, "prepare.sh")], ExecOptions { withStdin: false })!
     assert(executable.exitCode == 0, "expected executable archive mode")
   }
-  otherTarget := try! materializeStdlibBundlePackage(
+  otherTarget := materializeStdlibBundlePackage(
     provider, "std/json", bundleTestPath(root, "packages"),
     stdlibBundleTargetKey("linux", "", "", ""),
     "linux",
-  )
+  )!
   assert(otherTarget.rootDirectory != materialized.rootDirectory, "expected target-separated materialization")
   removeBundleTestTree(root)
 }
@@ -147,7 +147,7 @@ export function testMaterializesAddressableStdlibBundlePackage(): none {
 export function testRejectsUnknownStdlibBundlePackage(): none {
   root := "build/stdlib-bundle-catalog-mismatch-test"
   bundlePath := createBundleReaderFixture(root)
-  provider := try! openStdlibBundle(bundlePath)
+  provider := openStdlibBundle(bundlePath)!
   message := failureText(materializeStdlibBundlePackage(
     provider, "std/missing", bundleTestPath(root, "packages"), stdlibBundleTargetKey("macos", "", "", ""), "macos",
   ))
@@ -158,7 +158,7 @@ export function testRejectsUnknownStdlibBundlePackage(): none {
 export function testRejectsStdlibBundleForUnsupportedTarget(): none {
   root := "build/stdlib-bundle-target-mismatch-test"
   bundlePath := createBundleReaderFixture(root)
-  provider := try! openStdlibBundle(bundlePath)
+  provider := openStdlibBundle(bundlePath)!
   message := failureText(materializeStdlibBundlePackage(
     provider, "std/json", bundleTestPath(root, "packages"),
     stdlibBundleTargetKey("windows", "", "", ""), "windows",
@@ -170,8 +170,8 @@ export function testRejectsStdlibBundleForUnsupportedTarget(): none {
 export function testRejectsCorruptedStdlibBundleMemberOnMaterialization(): none {
   root := "build/stdlib-bundle-corruption-test"
   bundlePath := createBundleReaderFixture(root)
-  bytes := try! readBlob(bundlePath)
-  archive := try! readTarBlob(bytes)
+  bytes := readBlob(bundlePath)!
+  archive := readTarBlob(bytes)!
   let memberOffset = -1L
   for entry of archive.entries {
     if entry.name == "modules/json/index.do.tar.zst" { memberOffset = entry.contentOffset }
@@ -181,8 +181,8 @@ export function testRejectsCorruptedStdlibBundleMemberOnMaterialization(): none 
   builder.writeBytes(bytes)
   builder.setPosition(memberOffset)
   builder.writeByte(byte((int(bytes[int(memberOffset)]) + 1) % 256))
-  try! writeBlob(bundlePath, builder.build())
-  provider := try! openStdlibBundle(bundlePath)
+  writeBlob(bundlePath, builder.build())!
+  provider := openStdlibBundle(bundlePath)!
   message := failureText(materializeStdlibBundlePackage(
     provider, "std/json", bundleTestPath(root, "packages"),
     stdlibBundleTargetKey("macos", "", "", ""),
@@ -205,10 +205,10 @@ export function testRejectsUnsafeAndDuplicateInnerEntries(): none {
   for entries of cases {
     root := "build/stdlib-bundle-unsafe-test"
     removeBundleTestTree(root)
-    try! mkdir(root)
+    mkdir(root)!
     bundlePath := bundleTestPath(root, "doof-stdlib.tar")
-    try! writeBlob(bundlePath, fixtureBundle(entries))
-    provider := try! openStdlibBundle(bundlePath)
+    writeBlob(bundlePath, fixtureBundle(entries))!
+    provider := openStdlibBundle(bundlePath)!
     message := failureText(materializeStdlibBundlePackage(
       provider, "std/json", bundleTestPath(root, "packages"),
       stdlibBundleTargetKey("macos", "", "", ""),
@@ -222,8 +222,8 @@ export function testRejectsUnsafeAndDuplicateInnerEntries(): none {
 export function testRejectsMissingOuterMember(): none {
   root := "build/stdlib-bundle-missing-member-test"
   removeBundleTestTree(root)
-  try! mkdir(root)
-  original := try! readTarBlob(fixtureBundle())
+  mkdir(root)!
+  original := readTarBlob(fixtureBundle())!
   let incomplete: TarWriteEntry[] = []
   for entry of original.entries {
     if entry.name != "modules/json/index.do.tar.zst" {
@@ -231,7 +231,7 @@ export function testRejectsMissingOuterMember(): none {
     }
   }
   bundlePath := bundleTestPath(root, "doof-stdlib.tar")
-  try! writeBlob(bundlePath, writeTarBlob(incomplete.cloneReadonly()))
+  writeBlob(bundlePath, writeTarBlob(incomplete.cloneReadonly()))!
   message := failureText(openStdlibBundle(bundlePath))
   assert(message.contains("does not match its index") || message.contains("missing"), "expected missing-member diagnostic")
   removeBundleTestTree(root)

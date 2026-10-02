@@ -119,6 +119,7 @@ export enum TokenType {
   QuestionDot,
   BangDot,
   QuestionBracket,
+  Question,
   Underscore,
   DollarBrace,
   TagOpen,
@@ -331,9 +332,9 @@ export class Lexer {
           emit(TokenType.Greater, line, column, pos, 1)
           tagAttributeDelimiterDepth = 0
           if tagMode == "closing-tag" {
-            tagMode = try! tagModeStack.pop()
+            tagMode = tagModeStack.pop()!
           } else if tokens.length >= 2 && tokens[tokens.length - 2].kind == TokenType.Slash {
-            tagMode = try! tagModeStack.pop()
+            tagMode = tagModeStack.pop()!
           } else {
             tagMode = "children"
           }
@@ -358,9 +359,9 @@ export class Lexer {
 
       if templateDelimiters.length > 0 && peek() == '}' && braceDepth[braceDepth.length - 1] == 0 {
         advance()
-        ignoredBrace := try! braceDepth.pop()
-        ignoredLine := try! interpolationLines.pop()
-        ignoredColumn := try! interpolationColumns.pop()
+        ignoredBrace := braceDepth.pop()!
+        ignoredLine := interpolationLines.pop()!
+        ignoredColumn := interpolationColumns.pop()!
         readTemplateContinuation()
         continue
       }
@@ -369,8 +370,8 @@ export class Lexer {
         index := tagExpressionDepths.length - 1
         if tagExpressionDepths[index] == 0 {
           emit(TokenType.RightBrace, line, column, pos, 1)
-          ignoredDepth := try! tagExpressionDepths.pop()
-          tagMode = try! tagModeStack.pop()
+          ignoredDepth := tagExpressionDepths.pop()!
+          tagMode = tagModeStack.pop()!
           continue
         }
         tagExpressionDepths[index] = tagExpressionDepths[index] - 1
@@ -709,7 +710,7 @@ export class Lexer {
     else { diagnostic("Unterminated template literal", tokenLine, tokenColumn) }
     let valueEnd = pos
     if closed { valueEnd = pos - 1 }
-    ignoredDelimiter := try! templateDelimiters.pop()
+    ignoredDelimiter := templateDelimiters.pop()!
     addToken(TokenType.TemplateLiteralEnd, start, pos - start, contentStart, valueEnd - contentStart, needsDecode, tokenLine, tokenColumn)
   }
 
@@ -873,7 +874,7 @@ export class Lexer {
       else if peek(1) == '?' { emit(TokenType.QuestionQuestion, tokenLine, tokenColumn, start, 2) }
       else if peek(1) == '.' { emit(TokenType.QuestionDot, tokenLine, tokenColumn, start, 2) }
       else if peek(1) == '[' { emit(TokenType.QuestionBracket, tokenLine, tokenColumn, start, 2) }
-      else { emit(TokenType.Identifier, tokenLine, tokenColumn, start, 1) }
+      else { emit(TokenType.Question, tokenLine, tokenColumn, start, 1) }
       return
     }
     if ch == '@' && pos + 7 <= source.length && source.substring(pos, pos + 7) == "@caller" && !isIdentPart(peek(7)) {

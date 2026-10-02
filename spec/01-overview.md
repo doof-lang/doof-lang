@@ -17,7 +17,7 @@ Doof is a statically-typed, compiled programming language designed around safety
 - **Strong static typing** with bidirectional type inference
 - **Immutability control** via `:=` (shallow) and `readonly` (deep)
 - **No none by default** — nullability is explicit via union types (`T | none`)
-- **No exceptions** — error handling via `Result` types with `try`/`try!`/`try?`/`??` operators, and `panic` for bugs
+- **No exceptions** — error handling via `Result` types with the `try` statement and the `!`, `?`, and `??` operators, and `panic` for bugs
 - **Pattern matching** via `case` expressions with type capture
 - **Concurrency without data races** — actor-owned mutable domains
 - **ESM-style modules** with static imports/exports

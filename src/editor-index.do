@@ -59,7 +59,7 @@ export function itemIdentity(item: EditorItem): string => item.module + ":" + st
 
 export function bindingItem(index: EditorIndex, binding: Binding): EditorItem {
   key := binding.module + ":" + string(binding.span.start.offset) + ":" + binding.name
-  if index.bindingItems.has(key) { return try! index.bindingItems.get(key) }
+  if index.bindingItems.has(key) { return index.bindingItems.get(key)! }
   local := nameItem(index, binding.module, binding.name, binding.span.start.offset, binding.span.end.offset, binding.kind)
   let target = local
   if binding.symbol != none { target = symbolItem(index, binding.symbol!) }

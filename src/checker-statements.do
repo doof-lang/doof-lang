@@ -40,12 +40,13 @@ import { pathType } from "./checker-inference"
 import { CheckerState, LambdaReturnObservation } from "./checker-state"
 import { checkTry } from "./checker-try"
 import { validateStructLayout } from "./checker-struct-layout"
-import { checkedCaseSubjectType, casePatternsExhaustive, checkCasePatterns, checkExpression, addClassMethods, nonNoneType, hasNoneMember } from "./checker-expressions"
+import { checkedCaseSubjectType, casePatternsExhaustive, checkCasePatterns, checkExpression, addClassMethods } from "./checker-expressions"
 import { checkOmittedCollectionLiteral } from "./checker-literals"
 import { resolveType, memberType } from "./checker-resolution"
 import { deprecatedClassMethodFunction, deprecatedConstField, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
 import { decorateAnnotationWithResolved, blockContainsLoopExit, containsString, optionalResolvedType, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
 import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterface, isAssignableWithInterfaces } from "./checker-interfaces"
+import { absenceErrorType, canBeAbsent, presentType } from "./absence-types"
 import { checkerSemanticSpan } from "./checker-validation"
 
 export function checkStatement(state: CheckerState, statement: Statement, scope: Scope, inLoop: bool = false): bool {
@@ -296,26 +297,19 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
   }
   if annotation != none && inferredCollectionType != none { decorateAnnotationWithResolved(annotation!, declaredType) }
   if elseBlock != none {
+    // Every absent layer (an outer none, a Failure, a none success value)
+    // takes the else path, so the binding is the present value.
     let narrowedType: ResolvedType = unknownType()
-    let failureType: ResolvedType | none = none
+    let failureType: ResolvedType | none = absenceErrorType(valueType)
     let validElseSubject = true
-    case valueType {
-      result: ResultResolvedType -> {
-        narrowedType = result.valueType
-        failureType = optionalResolvedType(result.errorType)
-        if result.valueType.kind == "none" && name != "_" {
-          typeError(state, "Cannot bind a none success value; use a discard binding '_ := expr else ...'", span)
-        }
+    if !canBeAbsent(valueType) {
+      typeError(state, "declaration-else requires a Result or nullable expression", span)
+      validElseSubject = false
+    } else {
+      narrowedType = presentType(valueType)
+      if narrowedType.kind == "none" && name != "_" {
+        typeError(state, "Cannot bind a none success value; use a discard binding '_ := expr else ...'", span)
       }
-      union_: UnionResolvedType -> {
-        if hasNoneMember(state, union_) {
-          narrowedType = nonNoneType(state, valueType)
-        } else {
-          typeError(state, "declaration-else requires a nullable expression", span)
-          validElseSubject = false
-        }
-      }
-      _ -> { typeError(state, "declaration-else requires a Result or nullable expression", span); validElseSubject = false }
     }
     if annotation == none { declaredType = narrowedType }
     else if validElseSubject && !isAssignableWithInterfaces(state.result, narrowedType, declaredType) {

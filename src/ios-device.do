@@ -305,15 +305,15 @@ function ensureDirectory(path: string): none {
   if path == "" || exists(path) { return }
   parent := dirname(path)
   if parent != path { ensureDirectory(parent) }
-  try! mkdir(path)
+  mkdir(path)!
 }
 
 function removeTree(path: string): none {
   if !exists(path) { return }
   if isDirectory(path) {
-    for entry of try! readDir(path) { removeTree(devicePath(path, entry.name)) }
+    for entry of readDir(path)! { removeTree(devicePath(path, entry.name)) }
   }
-  try! remove(path)
+  remove(path)!
 }
 
 function runDeviceCommand(command: string, arguments: string[]): IOSDeviceCommandResult {
@@ -338,7 +338,7 @@ function deviceCommandText(command: string, arguments: string[], description: st
 function decodeProvisioningProfile(profilePath: string, decodedPath: string): Result<none, string> {
   securityResult := runDeviceCommand("security", ["cms", "-D", "-i", profilePath])
   if securityResult.exitCode == 0 {
-    try! writeText(decodedPath, securityResult.output)
+    writeText(decodedPath, securityResult.output)!
     return Success()
   }
   opensslResult := runDeviceCommand("openssl", [
@@ -356,9 +356,9 @@ function decodeProvisioningProfile(profilePath: string, decodedPath: string): Re
 }
 
 function resolveUserPath(path: string): string {
-  if path == "~" { return try! homeDirectory() }
-  if path.startsWith("~/") { return devicePath(try! homeDirectory(), path.substring(2, path.length)) }
-  return try! absolute(path)
+  if path == "~" { return homeDirectory()! }
+  if path.startsWith("~/") { return devicePath(homeDirectory()!, path.substring(2, path.length)) }
+  return absolute(path)!
 }
 
 function appendUnique(values: string[], value: string): none {
@@ -471,7 +471,7 @@ function collectProvisioningProfilePaths(profileDirectories: string[]): string[]
   for directory of directories {
     expanded := resolveUserPath(directory)
     if !isDirectory(expanded) { continue }
-    for entry of try! readDir(expanded) {
+    for entry of readDir(expanded)! {
       if entry.name.endsWith(".mobileprovision") { appendUnique(paths, devicePath(expanded, entry.name)) }
     }
   }
@@ -533,14 +533,14 @@ export function resolveIOSDeviceIdentifier(overrideIdentifier: string, workDirec
   if hostPlatform() != "macos" { return Failure("iOS device discovery is only supported on macOS") }
   ensureDirectory(workDirectory)
   devicesPath := devicePath(workDirectory, "devices.json")
-  if exists(devicesPath) { try! remove(devicesPath) }
+  if exists(devicesPath) { remove(devicesPath)! }
   result := deviceCommandText(
     "xcrun", ["devicectl", "list", "devices", "--json-output", devicesPath],
     "listing connected iOS devices",
   ) else error { return Failure(error) }
   rawJson := readText(devicesPath) else { return Failure("Could not read devicectl device output") }
   devices := parseConnectedIOSDevices(rawJson) else error { return Failure(error) }
-  if exists(devicesPath) { try! remove(devicesPath) }
+  if exists(devicesPath) { remove(devicesPath)! }
   return selectIOSDeviceIdentifier("", devices)
 }
 
@@ -548,7 +548,7 @@ function collectNestedIOSCode(path: string, results: string[]): none {
   if !exists(path) { return }
   if isDirectory(path) {
     if path.endsWith(".framework") || path.endsWith(".appex") { results.push(path); return }
-    for entry of try! readDir(path) { collectNestedIOSCode(devicePath(path, entry.name), results) }
+    for entry of readDir(path)! { collectNestedIOSCode(devicePath(path, entry.name), results) }
     return
   }
   if path.endsWith(".dylib") || path.endsWith(".so") { results.push(path) }
@@ -585,7 +585,7 @@ export function signIOSDeviceApp(
     "plutil", ["-extract", "Entitlements", "xml1", "-o", entitlementsPath, decodedPath],
     "extracting iOS signing entitlements",
   )
-  try! writeBlob(devicePath(appPath, "embedded.mobileprovision"), try! readBlob(options.provisioningProfilePath))
+  writeBlob(devicePath(appPath, "embedded.mobileprovision"), readBlob(options.provisioningProfilePath)!)!
   let nested: string[] = []
   collectNestedIOSCode(devicePath(appPath, "Frameworks"), nested)
   collectNestedIOSCode(devicePath(appPath, "PlugIns"), nested)

@@ -88,7 +88,7 @@ import { hasErrorDiagnostics } from "./diagnostics"
 export function testQuarkFixKeywordNamespacesCompileNatively(): none {
   root := join([tempDirectory(), "doof-native-keyword-namespaces"])
   clearNativeMatrix(root)
-  try! mkdir(root)
+  mkdir(root)!
   compiled := compileWithLoader([
     SourceFile { path: "/main.do", source: "import { left } from \"./vendor/explicit\"\nimport { right } from \"./vendor/class\"\nfunction main(): int => if left() + right() == 42 then 0 else 1" },
     SourceFile { path: "/vendor/explicit.do", source: "
@@ -99,20 +99,20 @@ export function right(): int => 22" },
   for diagnostic of compiled.diagnostics { println(diagnostic.message) }
   Assert.equal(hasErrorDiagnostics(compiled.diagnostics), false)
   Assert.isTrue(compiled.emission != none)
-  try! writeText(join([root, "doof_runtime.hpp"]), try! readText("runtime/doof_runtime.hpp"))
+  writeText(join([root, "doof_runtime.hpp"]), readText("runtime/doof_runtime.hpp")!)!
   executable := join([root, "matrix"])
   let args = ["-std=c++17", "-O0", "-pthread", "-o", executable]
   for module of compiled.emission!.modules {
-    try! writeText(join([root, module.headerName]), module.header)
+    writeText(join([root, module.headerName]), module.header)!
     path := join([root, module.sourceName])
-    try! writeText(path, module.source)
+    writeText(path, module.source)!
     args.push(path)
   }
   compiler := env("CXX") ?? "c++"
-  built := try! run(compiler, args, ExecOptions { withStdin: false, mergeStderrIntoStdout: true })
+  built := run(compiler, args, ExecOptions { withStdin: false, mergeStderrIntoStdout: true })!
   if built.exitCode != 0 { println(BlobReader(built.stdout).readString(long(built.stdout.length))) }
   Assert.equal(built.exitCode, 0)
-  executed := try! run(executable, [], ExecOptions { withStdin: false, mergeStderrIntoStdout: true })
+  executed := run(executable, [], ExecOptions { withStdin: false, mergeStderrIntoStdout: true })!
   if executed.exitCode != 0 { println(BlobReader(executed.stdout).readString(long(executed.stdout.length))) }
   Assert.equal(executed.exitCode, 0)
   clearNativeMatrix(root)
@@ -120,8 +120,8 @@ export function right(): int => 22" },
 
 function clearNativeMatrix(path: string): none {
   if !exists(path) { return }
-  if isDirectory(path) { for entry of try! readDir(path) { clearNativeMatrix(join([path, entry.name])) } }
-  try! remove(path)
+  if isDirectory(path) { for entry of readDir(path)! { clearNativeMatrix(join([path, entry.name])) } }
+  remove(path)!
 }
 
 export function testReadonlyEmissionNamesAreIndependentAndDoNotCacheMisses(): none {

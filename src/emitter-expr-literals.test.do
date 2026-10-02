@@ -66,7 +66,7 @@ export function testGenericNoneLiteralResultPayloadUsesSpecializedCarrier(): non
     "class Item {}\n" +
     "function load<T>(value: T): Result<T, string> { return Success { value: value } }\n" +
     "function fail<E>(error: E): Result<int, E> { return Failure { error: error } }\n" +
-    "function main(): none { try? load(Item {})\ntry? fail(Item {}) }",
+    "function main(): none { load(Item {})?\nfail(Item {})? }",
   }], "/main.do")
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)

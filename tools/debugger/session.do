@@ -230,7 +230,7 @@ export class DebugSession {
     // DAP replaces all breakpoints for a source. Merge the private startup
     // point into each request without exposing it to gutter rendering/toggling.
     let points: SourceBreakpoint[] = []
-    users: SourceBreakpoint[] := if breakpoints.has(path) then try! breakpoints.get(path) else []
+    users: SourceBreakpoint[] := if breakpoints.has(path) then breakpoints.get(path)! else []
     for point of users { points.push(point) }
     if path == launch.source && entryBreakpoint != none { points.push(entryBreakpoint!) }
     let values: SerialValue[] = []
@@ -269,7 +269,7 @@ export class DebugSession {
         }
         framePath := textField(objectField(frames[0].data, "source"), "path")
         if seekingEntry && loaderStop && !framePath.endsWith(".do") {
-          points: SourceBreakpoint[] := if breakpoints.has(launch.source) then try! breakpoints.get(launch.source) else []
+          points: SourceBreakpoint[] := if breakpoints.has(launch.source) then breakpoints.get(launch.source)! else []
           let hasVerified = entryBreakpoint != none && entryBreakpoint!.verified
           for point of points { if point.verified { hasVerified = true } }
           if hasVerified { loaderStop = false; seekingEntry = false; control("continue"); return }

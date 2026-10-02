@@ -7,15 +7,15 @@ export function testDapFramingFragmentedUnicodeAndBatchedMessages(): none {
   let count = 0
   for byteValue of wire {
     let one: byte[] = [byteValue]
-    messages := try! decoder.feed(one.drainToReadonly())
+    messages := decoder.feed(one.drainToReadonly())!
     for message of messages {
       if count == 0 { Assert.equal(textField(message, "event"), "工具"); Assert.equal(intField(message, "seq"), 7) }
       count += 1
     }
   }
   Assert.equal(count, 2)
-  try! decoder.finish()
-  batched := try! DapDecoder {}.feed(wire)
+  decoder.finish()!
+  batched := DapDecoder {}.feed(wire)!
   Assert.equal(batched.length, 2)
 }
 
@@ -25,6 +25,6 @@ export function testDapFramingRejectsInvalidAndTruncatedMessages(): none {
     Assert.equal(result.isFailure(), true)
   }
   decoder := DapDecoder {}
-  try! decoder.feed(bytesOf("Content-Length: 10\r\n\r\n{}"))
+  decoder.feed(bytesOf("Content-Length: 10\r\n\r\n{}"))!
   Assert.equal(decoder.finish().isFailure(), true)
 }

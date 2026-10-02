@@ -202,7 +202,7 @@ class CxxModuleEmitter {
     sectionContext.metricsClassLifecycle = configuration.metricsClassLifecycle
     if instantiations != none { configureInstantiationRegistry(sectionContext, instantiations!) }
     if typeLowering != none {
-      let session = try? headerTypeSessions.get(view.path)
+      let session = headerTypeSessions.get(view.path)?
       if session == none {
         sessionStart := timings.start()
         session = TypeLoweringSession { graph: typeLowering! }
@@ -942,7 +942,7 @@ function visitInitializationModule(
     if !imported.typeOnly { visitInitializationModule(result, imported.sourceModule, entry, entryMode, visiting, visited, order) }
   }
   for reExport of info!.reExports { visitInitializationModule(result, reExport, entry, entryMode, visiting, visited, order) }
-  let ignored = try! visiting.pop()
+  let ignored = visiting.pop()!
   visited.push(path)
   scriptEntry := path == entry && (entryMode == "executable" || entryMode == "ios-app") &&
     hasScriptStatements([info!.program])

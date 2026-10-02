@@ -15,7 +15,7 @@ function main(): none {
   assert("${fail()}" == "Failure(bad)", "failure formatting")
   assert("${infallible()}" == "Success(42)", "success formatting")
   assert((fail() ?? 42) == 42, "fallback")
-  optional := try? fail()
+  optional := fail()?
   assert(optional == none, "optional")
   let calls = 0
   local := catchPanic((): none => { calls += 1

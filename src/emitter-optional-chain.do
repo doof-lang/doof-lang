@@ -1,14 +1,15 @@
-// Optional chaining ('?.' and '?[]') over nullable and Result receivers.
+// Optional chaining ('?.' and '?[]') over nullable receivers.
 //
-// The checker records the receiver with its none arm removed and the value
-// before it is widened with none. Lowering evaluates the receiver once, returns
-// early when it is absent (or, for a Result receiver, when it is a Failure),
+// The checker lowers a Result receiver through postfix '?', records the receiver
+// with its none arm removed, and records the value before it is widened with
+// none. Lowering evaluates the receiver once, returns early when it is absent,
 // and otherwise emits the ordinary access through a synthetic receiver of the
 // unwrapped type, so field, method, variant, struct, and builtin access paths
-// are shared with plain member and index expressions.
+// are shared with plain member and index expressions. A Result-valued access
+// keeps its Failure and receives the none in its success channel.
 
 import { CallExpression, Expression, Identifier, IndexExpression, MemberExpression, SourceSpan } from "./ast"
-import { ResolvedType, ResultResolvedType, UnionResolvedType } from "./semantic"
+import { ResolvedType, ResultResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { emitCarrierConversion } from "./emitter-carrier-values"
@@ -19,13 +20,13 @@ import { cppIdentifier } from "./emitter-names"
 
 export function emitOptionalMember(expression: MemberExpression, context: EmitContext): string {
   valueType := expression.resolvedOptionalValue!
-  return lowerOptional(expression.object, expression.resolvedOptionalReceiver!, valueType, requireExpressionType(expression, "optional member access"), false, expression.span, context,
+  return lowerOptional(expression.object, expression.resolvedOptionalReceiver!, valueType, requireExpressionType(expression, "optional member access"), expression.span, context,
     (receiver: Expression): Expression => unwrappedMember(expression, receiver, valueType))
 }
 
 export function emitOptionalCall(expression: CallExpression, member: MemberExpression, context: EmitContext): string {
   valueType := expression.resolvedOptionalValue!
-  return lowerOptional(member.object, member.resolvedOptionalReceiver!, valueType, requireExpressionType(expression, "optional method call"), true, expression.span, context, (receiver: Expression): Expression => {
+  return lowerOptional(member.object, member.resolvedOptionalReceiver!, valueType, requireExpressionType(expression, "optional method call"), expression.span, context, (receiver: Expression): Expression => {
     callee := unwrappedMember(member, receiver, requireExpressionType(member, "optional callee"))
     call := CallExpression { kind: expression.kind, callee, args: expression.args, typeArgs: expression.typeArgs, span: expression.span }
     call.resolvedConstruction = expression.resolvedConstruction
@@ -41,7 +42,7 @@ export function emitOptionalCall(expression: CallExpression, member: MemberExpre
 
 export function emitOptionalIndex(expression: IndexExpression, context: EmitContext): string {
   valueType := expression.resolvedOptionalValue!
-  return lowerOptional(expression.object, expression.resolvedOptionalReceiver!, valueType, requireExpressionType(expression, "optional index"), false, expression.span, context, (receiver: Expression): Expression => {
+  return lowerOptional(expression.object, expression.resolvedOptionalReceiver!, valueType, requireExpressionType(expression, "optional index"), expression.span, context, (receiver: Expression): Expression => {
     index := IndexExpression { kind: expression.kind, object: receiver, index: expression.index, optional: false, span: expression.span }
     index.resolvedType = valueType
     return index
@@ -57,14 +58,13 @@ function unwrappedMember(member: MemberExpression, receiver: Expression, valueTy
   return access
 }
 
-// `flattensResult` is set for calls: over a Result receiver, a
-// Result-returning method's channels are merged into the chain's Result.
+// The checker lowers a Result receiver through postfix `?`, so the receiver
+// here is always nullable.
 function lowerOptional(
   object: Expression,
   receiverType: ResolvedType,
   valueType: ResolvedType,
   resultType: ResolvedType,
-  flattensResult: bool,
   span: SourceSpan,
   context: EmitContext,
   access: (receiver: Expression): Expression,
@@ -80,68 +80,47 @@ function lowerOptional(
   // Bind by reference so an lvalue receiver is not copied; prvalues are
   // lifetime-extended for the duration of the access.
   prefix := "auto&& " + sourceName + " = " + source + "; "
-  case requireExpressionType(object, "optional receiver") {
-    chained: ResultResolvedType -> {
-      case resultType {
-        out: ResultResolvedType -> {
-          return lowerResultReceiver(prefix, sourceName, cppIdentifier(receiverName), suffix, inner, chained, valueType, out, flattensResult, context)
-        }
-        _ -> { panic("Optional chaining over a Result must resolve to Result") }
-      }
-    }
-    _ -> { }
-  }
   unwrap := "auto&& " + cppIdentifier(receiverName) + " = doof::unwrap_optional(" + sourceName + "); "
   if resultType.kind == "none" {
     return "[&]() -> void { " + prefix + "if (doof::is_null(" + sourceName + ")) return; " + unwrap + inner + "; }()"
   }
-  value := emitCarrierConversion(inner, valueType, resultType, context)
-  return "[&]() -> " + emitContextType(resultType, context) + " { " + prefix + "if (doof::is_null(" + sourceName + ")) return " + emitNoneLiteral(resultType, context) + "; " + unwrap + "return " + value + "; }()"
+  return "[&]() -> " + emitContextType(resultType, context) + " { " + prefix + "if (doof::is_null(" + sourceName + ")) return " + emitOptionalAbsent(resultType, context) + "; " + unwrap + "return " + emitOptionalPresent(inner, valueType, resultType, suffix, context) + "; }()"
 }
 
-function lowerResultReceiver(
-  prefix: string,
-  sourceName: string,
-  receiverCpp: string,
-  suffix: string,
-  inner: string,
-  receiverResult: ResultResolvedType,
-  valueType: ResolvedType,
-  out: ResultResolvedType,
-  flattensResult: bool,
-  context: EmitContext,
-): string {
-  successName := "_optional_success_" + suffix
-  let body = prefix + "if (doof::is_failure(" + sourceName + ")) return " + failure(sourceName, receiverResult, out, context) + "; "
-  body = body + "auto&& " + successName + " = doof::success_value(" + sourceName + "); "
-  if allowsNone(receiverResult.valueType) {
-    body = body + "if (doof::is_null(" + successName + ")) return " + successOf(emitNoneLiteral(out.valueType, context), out, context) + "; "
-    body = body + "auto&& " + receiverCpp + " = doof::unwrap_optional(" + successName + "); "
-  } else {
-    body = body + "auto&& " + receiverCpp + " = " + successName + "; "
+/** The value of an optional access whose receiver is absent. */
+export function emitOptionalAbsent(resultType: ResolvedType, context: EmitContext): string {
+  case resultType {
+    out: ResultResolvedType -> { return successOf(emitNoneLiteral(out.valueType, context), out, context) }
+    _ -> { }
   }
-  if flattensResult {
-    case valueType {
-      nested: ResultResolvedType -> {
-        nestedName := "_optional_result_" + suffix
-        body = body + "auto&& " + nestedName + " = " + inner + "; "
-        body = body + "if (doof::is_failure(" + nestedName + ")) return " + failure(nestedName, nested, out, context) + "; "
-        if nested.valueType.kind == "none" {
-          body = body + "return " + successOf("", out, context) + ";"
-        } else {
-          body = body + "return " + successOf(emitCarrierConversion("doof::success_value(" + nestedName + ")", nested.valueType, out.valueType, context), out, context) + ";"
+  return emitNoneLiteral(resultType, context)
+}
+
+/**
+ * Widens a present access value to the optional access type. A Result value
+ * keeps its Failure and widens its success value with none.
+ */
+export function emitOptionalPresent(inner: string, valueType: ResolvedType, resultType: ResolvedType, suffix: string, context: EmitContext): string {
+  case resultType {
+    out: ResultResolvedType -> {
+      case valueType {
+        nested: ResultResolvedType -> {
+          nestedName := "_optional_result_" + suffix
+          let body = "auto&& " + nestedName + " = " + inner + "; "
+          body = body + "if (doof::is_failure(" + nestedName + ")) return " + failureOf(nestedName, out, context) + "; "
+          if nested.valueType.kind == "none" {
+            body = body + "return " + successOf("", out, context) + ";"
+          } else {
+            body = body + "return " + successOf(emitCarrierConversion("doof::success_value(" + nestedName + ")", nested.valueType, out.valueType, context), out, context) + ";"
+          }
+          return "[&]() -> " + emitContextType(out, context) + " { " + body + " }()"
         }
-        return "[&]() -> " + emitContextType(out, context) + " { " + body + " }()"
+        _ -> { }
       }
-      _ -> { }
     }
+    _ -> { }
   }
-  if valueType.kind == "none" {
-    body = body + inner + "; return " + successOf("", out, context) + ";"
-  } else {
-    body = body + "return " + successOf(emitCarrierConversion(inner, valueType, out.valueType, context), out, context) + ";"
-  }
-  return "[&]() -> " + emitContextType(out, context) + " { " + body + " }()"
+  return emitCarrierConversion(inner, valueType, resultType, context)
 }
 
 function successOf(value: string, out: ResultResolvedType, context: EmitContext): string {
@@ -150,23 +129,8 @@ function successOf(value: string, out: ResultResolvedType, context: EmitContext)
   return "doof::Success<" + payload + ">{" + value + "}"
 }
 
-// Promotes a source Failure into the chain's (possibly wider) error channel.
-function failure(sourceName: string, source: ResultResolvedType, out: ResultResolvedType, context: EmitContext): string {
+function failureOf(sourceName: string, out: ResultResolvedType, context: EmitContext): string {
   errorCpp := emitResultPayloadType(out.errorType, context.modulePath, context.names)
   if errorCpp == "void" { return "doof::Failure<void>{}" }
-  if emitResultPayloadType(source.errorType, context.modulePath, context.names) == "void" {
-    return "doof::Failure<" + errorCpp + ">{" + errorCpp + "{}}"
-  }
-  return "doof::Failure<" + errorCpp + ">{doof::variant_promote<" + errorCpp + ">(doof::failure_error(" + sourceName + "))}"
-}
-
-function allowsNone(type_: ResolvedType): bool {
-  if type_.kind == "none" { return true }
-  case type_ {
-    union_: UnionResolvedType -> {
-      for member of union_.types { if member.kind == "none" { return true } }
-    }
-    _ -> { }
-  }
-  return false
+  return "doof::Failure<" + errorCpp + ">{doof::failure_error(" + sourceName + ")}"
 }

@@ -622,7 +622,7 @@ than a per-module state machine.
 
 ### Error Handling in `main()`
 
-The `main()` function can use `try!/try?` for error handling:
+The `main()` function can use postfix `!` and `?` for error handling:
 
 ```doof
 import { IoError, readText } from "std/fs"
@@ -630,7 +630,7 @@ import type { Config } from "./types"
 
 function main(): none {
     // Panic if file read fails (acceptable for entry point)
-    config := try! loadConfig("config.json")
+    config := loadConfig("config.json")!
     println("Loaded: ${config.name}")
 }
 
@@ -755,7 +755,7 @@ import class Database from "./db.hpp" {
 
 function main(): none {
     db := Database("localhost", 5432)   // shared_ptr<Database>
-    result := try! db.query("SELECT 1")
+    result := db.query("SELECT 1")!
 }
 ```
 

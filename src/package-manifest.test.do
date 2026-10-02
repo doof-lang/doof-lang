@@ -4,16 +4,16 @@ import { Assert } from "std/assert"
 import { NativeBuildPlan, parsePackageManifest } from "./package-manifest"
 
 export function testParsesLocalPackageDependenciesAndStdlibPreparation(): none {
-  manifest := try! parsePackageManifest(
+  manifest := parsePackageManifest(
     "{\"dependencies\":{\"local\":{\"path\":\"../local\"}},\"build\":{\"stdlib\":{\"prepare\":[{\"program\":\"sh\",\"args\":[\"\${packageRoot}/build.sh\",\"\${nativeTarget}\"],\"env\":{\"SDKROOT\":\"\${sdkPath}\"},\"workingDirectory\":\"vendor\"}]}}}",
     "/app/doof.json",
     "/app",
     "macos",
-  )
+  )!
 
   Assert.equal(manifest.dependencies[0].path, "/local")
   Assert.equal(manifest.stdlibPreparation[0].args[1], "\${nativeTarget}")
-  Assert.equal(try! manifest.stdlibPreparation[0].env.get("SDKROOT"), "\${sdkPath}")
+  Assert.equal(manifest.stdlibPreparation[0].env.get("SDKROOT")!, "\${sdkPath}")
 }
 
 export function testRejectsRemotePackageDependencies(): none {
@@ -48,12 +48,12 @@ export function testRejectsRetiredDependencyFields(): none {
 }
 
 export function testParsesAndNormalizesExecutableResources(): none {
-  manifest := try! parsePackageManifest(
+  manifest := parsePackageManifest(
     "{\"name\":\"doof\",\"resources\":[{\"from\":\"doof_runtime.hpp\",\"to\":\".\"},\"assets\"]}",
     "/compiler/doof.json",
     "/compiler",
     "macos",
-  )
+  )!
 
   Assert.equal(manifest.resources.length, 2)
   Assert.equal(manifest.resources[0].sourcePath, "/compiler/doof_runtime.hpp")
@@ -63,10 +63,10 @@ export function testParsesAndNormalizesExecutableResources(): none {
 }
 
 export function testParsesCustomObserveUiWithinPackageRoot(): none {
-  manifest := try! parsePackageManifest(
+  manifest := parsePackageManifest(
     "{\"observe\":{\"ui\":\"observability\"}}",
     "/app/doof.json", "/app", "linux",
-  )
+  )!
   Assert.equal(manifest.observeUiRoot, "/app/observability")
 
   outside := parsePackageManifest(
@@ -81,12 +81,12 @@ export function testParsesCustomObserveUiWithinPackageRoot(): none {
 }
 
 export function testUsesBuildResourcesWhenRootResourcesAreAbsent(): none {
-  manifest := try! parsePackageManifest(
+  manifest := parsePackageManifest(
     "{\"build\":{\"resources\":[\"assets\"]}}",
     "/app/doof.json",
     "/app",
     "linux",
-  )
+  )!
 
   Assert.equal(manifest.resources.length, 1)
   Assert.equal(manifest.resources[0].sourcePath, "/app/assets")
@@ -108,12 +108,12 @@ export function testRejectsExecutableResourceDestinationsOutsideResourceDirector
 }
 
 export function testParsesAndNormalizesBaseNativeInputs(): none {
-  manifest := try! parsePackageManifest(
+  manifest := parsePackageManifest(
     "{\"name\":\"std/time\",\"build\":{\"native\":{\"includePaths\":[\"include\"],\"sourceFiles\":[\"./doof_time.cpp\"],\"extraCopyPaths\":[\"doof_time.hpp\"],\"defines\":[\"DOOF_TIME=1\"]}}}",
     "/stdlib/time/doof.json",
     "/stdlib/time",
     "macos",
-  )
+  )!
 
   Assert.equal(manifest.name, "std/time")
   Assert.equal(manifest.nativeBuild.includePaths.length, 1)
@@ -127,12 +127,12 @@ export function testParsesAndNormalizesBaseNativeInputs(): none {
 }
 
 export function testMergesOnlyTheSelectedPlatformFragment(): none {
-  manifest := try! parsePackageManifest(
+  manifest := parsePackageManifest(
     "{\"name\":\"std/path\",\"build\":{\"native\":{\"frameworks\":[\"Base\"],\"macos\":{\"frameworks\":[\"CoreFoundation\"],\"sourceFiles\":[\"path.mm\"]},\"linux\":{\"linkLibraries\":[\"pthread\"],\"sourceFiles\":[\"path.cpp\"]}}}}",
     "/stdlib/path/doof.json",
     "/stdlib/path",
     "macos",
-  )
+  )!
 
   Assert.equal(manifest.nativeBuild.frameworks.length, 2)
   Assert.equal(manifest.nativeBuild.frameworks[0], "Base")
@@ -143,12 +143,12 @@ export function testMergesOnlyTheSelectedPlatformFragment(): none {
 }
 
 export function testSelectsWasmNativeFragmentForWasmTargets(): none {
-  manifest := try! parsePackageManifest(
+  manifest := parsePackageManifest(
     "{\"build\":{\"target\":\"wasm\",\"native\":{\"defines\":[\"BASE\"],\"linux\":{\"defines\":[\"LINUX\"]},\"wasm\":{\"sourceFiles\":[\"native_wasm.cpp\"],\"defines\":[\"WASM\"]}}}}",
     "/app/doof.json",
     "/app",
     "linux",
-  )
+  )!
 
   Assert.equal(manifest.target, "wasm")
   Assert.equal(manifest.nativeBuild.sourceFiles[0], "/app/native_wasm.cpp")
@@ -158,12 +158,12 @@ export function testSelectsWasmNativeFragmentForWasmTargets(): none {
 }
 
 export function testDeduplicatesManifestNativeInputs(): none {
-  first := try! parsePackageManifest(
+  first := parsePackageManifest(
     "{\"build\":{\"native\":{\"frameworks\":[\"CoreFoundation\",\"CoreFoundation\"]}}}",
     "/one/doof.json",
     "/one",
     "macos",
-  )
+  )!
   Assert.equal(first.nativeBuild.frameworks.length, 1)
   Assert.equal(first.nativeBuild.frameworks[0], "CoreFoundation")
 }
@@ -183,12 +183,12 @@ export function testRejectsInvalidNativeStringArrays(): none {
 }
 
 export function testParsesCompactMacOSAppAndReleaseSettings(): none {
-  manifest := try! parsePackageManifest(
+  manifest := parsePackageManifest(
     "{\"name\":\"demo-app\",\"version\":\"1.2\",\"target\":\"macos-app\",\"executable\":\"Demo\",\"id\":\"dev.example.demo\",\"title\":\"Demo App\",\"icon\":\"icon.png\",\"resources\":[\"assets\"],\"build\":{\"macosApp\":{\"category\":\"public.app-category.games\",\"embeddedLibraries\":[{\"library\":\"SDL3\"},{\"path\":\"vendor/Foo.framework\"}]},\"package\":{\"distDir\":\"artifacts\",\"macos\":{\"signing\":\"ad-hoc\",\"sandbox\":true,\"entitlements\":\"release.plist\"}}}}",
     "/app/doof.json",
     "/app",
     "macos",
-  )
+  )!
 
   Assert.equal(manifest.target, "macos-app")
   Assert.equal(manifest.macosApp != none, true)
@@ -221,12 +221,12 @@ export function testRejectsManagedMacOSInfoPlistOverrides(): none {
 }
 
 export function testParsesIOSAppAndPackageSettings(): none {
-  manifest := try! parsePackageManifest(
+  manifest := parsePackageManifest(
     "{\"name\":\"demo-ios\",\"version\":\"2.0\",\"target\":\"ios-app\",\"executable\":\"Demo\",\"build\":{\"iosApp\":{\"bundleId\":\"dev.example.ios\",\"displayName\":\"Demo iOS\",\"minimumDeploymentTarget\":\"17.0\",\"icon\":\"icon.png\",\"resources\":[{\"from\":\"assets\",\"to\":\"Data\"}]},\"package\":{\"ios\":{\"identity\":\"Apple Distribution: Example\",\"provisioningProfile\":\"profiles/app.mobileprovision\"}},\"native\":{\"frameworks\":[\"Base\"],\"iosDevice\":{\"frameworks\":[\"UIKit\"]}}}}",
     "/app/doof.json",
     "/app",
     "ios-device",
-  )
+  )!
 
   Assert.equal(manifest.iosApp != none, true)
   Assert.equal(manifest.iosApp!.executableName, "Demo")
@@ -282,7 +282,7 @@ export function testRejectsMacOSPackagePathsOutsidePackageRoot(): none {
 }
 
 export function testEditorPackageSourceInputsShareLocalDependencyRules(): none {
-  result := try! parsePackageSourceInputs("{\"build\":{\"entry\":\"src/main.do\"},\"dependencies\":{\"lib\":{\"path\":\"../lib\"}}}", "/project/doof.json", "/project")
+  result := parsePackageSourceInputs("{\"build\":{\"entry\":\"src/main.do\"},\"dependencies\":{\"lib\":{\"path\":\"../lib\"}}}", "/project/doof.json", "/project")!
   EditorAssert.equal(result.entry, "src/main.do")
   EditorAssert.equal(result.dependencies[0].name, "lib")
 }

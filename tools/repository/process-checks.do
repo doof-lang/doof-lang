@@ -105,7 +105,7 @@ export function projectLockChecks(root: string, compiler: string, stdlib: string
   try write(path(project, "doof.json"), "{\"name\":\"lock-test\",\"build\":{\"entry\":\"main.do\"}}")
   try write(path(project, "main.do"), "function main(): none {}\n")
   ready := path(project, "ready"); release := path(project, "release")
-  worker := "import { exists, writeText } from \"std/fs\"\nimport { Duration, Thread } from \"std/time\"\nexport function testWait(): none {\ntry! writeText(\"" + ready + "\", \"ready\")\nfor attempt of 0..<3000 { if exists(\"" + release + "\") { return }\nThread.sleep(Duration.ofMillis(10L)) }\npanic(\"release timed out\")\n}\n"
+  worker := "import { exists, writeText } from \"std/fs\"\nimport { Duration, Thread } from \"std/time\"\nexport function testWait(): none {\nwriteText(\"" + ready + "\", \"ready\")!\nfor attempt of 0..<3000 { if exists(\"" + release + "\") { return }\nThread.sleep(Duration.ofMillis(10L)) }\npanic(\"release timed out\")\n}\n"
   try write(path(project, "main.test.do"), worker)
   try write(release, "")
   children := Children()

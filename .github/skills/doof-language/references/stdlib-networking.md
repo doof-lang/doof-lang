@@ -98,7 +98,7 @@ import { connect, SshClient, SshConnectOptions, SshCommandResult, SftpClient } f
 ```doof
 import { wakeOnLan } from "std/wol"
 
-try! wakeOnLan("aa:bb:cc:dd:ee:ff", "192.168.1.255")
+wakeOnLan("aa:bb:cc:dd:ee:ff", "192.168.1.255")!
 ```
 
 `wakeOnLan(mac, broadcast = "255.255.255.255", port = 9)` returns

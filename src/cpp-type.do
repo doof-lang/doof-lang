@@ -30,7 +30,7 @@ export class CppTypeRegistry {
     for argument of arguments { key.append(":" + string(argument.id)) }
     identity := key.drainToString()
     existing := nodes.get(identity) else {
-      inherited := try? base.nodes.get(identity)
+      inherited := base.nodes.get(identity)?
       if inherited != none { return inherited! }
       node := CppType { id: base.nodes.size + nodes.size, kind, name, owner, arguments: arguments.cloneReadonly() }
       nodes.set(identity, node)
@@ -42,7 +42,7 @@ export class CppTypeRegistry {
   atom(name: string, owner: string = ""): CppType {
     key := "atom:" + string(name.length) + ":" + name + ":" + string(owner.length) + ":" + owner
     existing := nodes.get(key) else {
-      inherited := try? base.nodes.get(key)
+      inherited := base.nodes.get(key)?
       if inherited != none { return inherited! }
       node := CppType { id: base.nodes.size + nodes.size, kind: "atom", name, owner, arguments: [] }
       nodes.set(key, node)
@@ -54,7 +54,7 @@ export class CppTypeRegistry {
   render(type_: CppType, namespace: string): string {
     key := string(type_.id) + ":" + namespace
     text := rendered.get(key) else {
-      inherited := try? base.rendered.get(key)
+      inherited := base.rendered.get(key)?
       if inherited != none { return inherited! }
       value := renderCppType(type_, namespace)
       rendered.set(key, value)
@@ -85,8 +85,8 @@ export function isReferenceVariant(type_: CppType): bool {
 }
 
 export function renderCppType(type_: CppType, namespace: string = "", aliases: Map<int, string> = {}, rendered: Map<int, string> | none = none): string {
-  if aliases.has(type_.id) { return try! aliases.get(type_.id) }
-  if rendered != none && rendered!.has(type_.id) { return try! rendered!.get(type_.id) }
+  if aliases.has(type_.id) { return aliases.get(type_.id)! }
+  if rendered != none && rendered!.has(type_.id) { return rendered!.get(type_.id)! }
   value := renderCanonicalCppType(type_, namespace, aliases, rendered)
   if rendered != none { rendered!.set(type_.id, value) }
   return value

@@ -170,8 +170,8 @@ Valid ways to acknowledge the result include:
 result := readText("config.json")
 _ := readText("config.json")  // explicitly discard the Result
 try text := readText("config.json")
-text := try! readText("config.json")
-text := try? readText("config.json")
+text := readText("config.json")!
+text := readText("config.json")?
 text := readText("config.json") ?? "default"
 
 readText("config.json") else error {
@@ -250,34 +250,38 @@ compound operators such as `+=` cannot apply to a Result.
 For array destructuring, the success type must be an array. The generated code
 panics at runtime if the success array is shorter than the pattern.
 
-### `try!` Expression
+### Postfix `!`
 
-`try!` unwraps the success payload or panics on failure:
-
-```doof
-config := try! loadConfig("required.json")
-```
-
-It is an expression and can be used in any function. Use it only when failure
-means the program cannot sensibly continue.
-
-The panic identifies the source path and line of the `try!` expression. When
-the failure payload is a `string`, the message also includes that payload so
-the originating error is not discarded.
-
-### `try?` Expression
-
-`try?` converts `Result<T, E>` to `T | none`:
+Postfix `!` unwraps the present value or panics when the value is absent:
+a `Failure`, a `none` success value, or an outer `none`.
 
 ```doof
-config := try? loadConfig("optional.json")
+config := loadConfig("required.json")!
 ```
 
-On success, the result is the success payload. On failure, the result is
-`none`.
+It is an expression and can be used in any function. Use it only when absence
+means the program cannot sensibly continue. For `Result<none, E>`, `x!` panics
+on `Failure` and has no value.
 
-`try?` is rejected for `Result<none, E>` because there is no success payload to
-return. Use bare `try`, `case`, or statement-`else` instead.
+The panic identifies the source path and line of the `!` expression. When the
+failure payload is a `string`, the message also includes that payload so the
+originating error is not discarded.
+
+### Postfix `?`
+
+Postfix `?` converts any absent value to `none`:
+
+```doof
+config := loadConfig("optional.json")?   // Config | none
+```
+
+On success, the result is the present value. On `Failure` or a `none` success
+value, the result is `none`. `x?` is rejected for `Result<none, E>` because
+there is no success value to return. Use `try`, `case`, or statement-`else`
+instead.
+
+The prefix forms `try!` and `try?` were removed; the compiler reports the
+postfix replacement.
 
 ---
 
@@ -296,36 +300,37 @@ name := maybeName() else {
 }
 ```
 
-The binding after the `else` block is the happy-path type:
+Every absent layer runs the handler, so the binding after the `else` block is
+the present value:
 
-| Subject type | Binding type after `else` |
-| --- | --- |
-| `T | none` | `T` |
-| `Result<T, E>` | `T` |
-| `Result<T, E> | none` | `Result<T, E>` |
-| `Result<T | none, E>` | `T | none` |
+| Subject type | Binding type after `else` | `error` in `else error` |
+| --- | --- | --- |
+| `T | none` | `T` | not allowed |
+| `Result<T, E>` | `T` | `E` |
+| `Result<T | none, E>` | `T` | `E | none` |
+| `Result<T, E> | none` | `T` | `E | none` |
 
 Rules:
 
 - The subject must be nullable, a `Result`, or both.
-- A declaration removes exactly one layer. A nullable Result first loses its
-  outer none; a second declaration is required to unwrap the Result.
 - If a binding is introduced and used after the `else`, the `else` block must
   exit the current scope with `return`, `break`, `continue`, or `panic(...)`.
 - The success binding is not in scope inside the `else` block. Use
   `else error { ... }` to inspect a Result failure.
-- `else error { ... }` captures the error payload for present `Result<T, E>`
-  subjects.
-- Failure capture is not allowed for nullable-only subjects or
-  `Result<T, E> | none` subjects because the unhappy path may be `none`.
+- `else error { ... }` captures the `Failure`'s error. When the subject can also
+  be absent as `none`, the error is `E | none`, and `none` means no `Failure`
+  occurred.
+- Failure capture is not allowed for nullable-only subjects.
 
 ```doof
 text := readText(path) else error {
     return Failure("read failed: ${error}")
 }
 
-value := maybeResult() else error {
-    return Failure(error)
+// loadSource(): Result<Source | none, Diagnostic>; none means "not found".
+source := loadSource(path) else diagnostic {
+    if diagnostic != none { report(diagnostic!) }
+    return none
 }
 ```
 
@@ -367,9 +372,13 @@ This form satisfies the must-use rule for side-effecting fallible calls.
 
 ## Fallback and Force Operators
 
+`none`, a `Failure`, and a `none` success value are all absent. The fallback and
+force operators treat them alike and never propagate a `Failure`; see
+[Operators — Absence Operators](05-operators.md#absence-operators).
+
 ### `??`
 
-`??` works with nullable values and `Result` values:
+`??` evaluates its fallback when the left side is absent:
 
 ```doof
 name := maybeName() ?? "anonymous"
@@ -381,7 +390,7 @@ the fallback on failure. Evaluation is lazy and right-associative.
 
 ### `??=`
 
-`??=` assigns only when the left-hand variable is `none` or a `Failure`:
+`??=` assigns only when the left-hand variable is absent:
 
 ```doof
 let cached: string | none = none
@@ -396,8 +405,7 @@ For `Result<T, E>` variables, the right-hand side may be either a compatible
 
 ### `!` and `!.`
 
-Postfix `!` unwraps nullable values and `Result` success values, panicking on
-none or `Failure`:
+Postfix `!` unwraps the present value, panicking when it is absent:
 
 ```doof
 user := maybeUser()!
@@ -418,35 +426,31 @@ compile-time error.
 
 ## Optional Chaining Across Results
 
-`?.` checks for none and propagates none through the success channel. It does
-not unwrap `Result`.
+`?.` treats a `Failure` receiver like `none`: `r?.m` is `(r?)?.m`. The receiver
+is evaluated once.
 
 ```doof
 // findUser(): Result<User, LookupError>
+name := findUser(id)?.name  // string | none
+```
+
+A member whose own type is a `Result` keeps its `Failure`, and the receiver's
+absence becomes a `none` success value:
+
+```doof
 // User.profile(): Result<Profile, ProfileError>
-
 profile := findUser(id)?.profile()
-// Result<Profile | none, LookupError | ProfileError>
+// Result<Profile | none, ProfileError>
 ```
 
-If the left side is `Failure`, the failure is preserved. If the success value is
-none, the chain short-circuits as a success containing none. If a later call
-also returns `Result`, the error types are unioned. Only calls are flattened this
-way; a field whose type is `Result` is read as a nested value. The receiver is
-evaluated once.
-
-For a plain member on the success value:
+Chain further, or add `?`, `!`, or `??`, to collapse that `Failure` too:
 
 ```doof
-// findUser(): Result<User, LookupError>
-name := findUser(id)?.name  // Result<string | none, LookupError>
+bio := findUser(id)?.profile()?.bio   // string | none
+profile := findUser(id)?.profile()?   // Profile | none
 ```
 
-Use `try?` if both failures and nulls should collapse to `none`:
-
-```doof
-profile := try? findUser(id)?.profile()  // Profile | none
-```
+To propagate the receiver's `Failure`, unwrap it with `try` first.
 
 ---
 
@@ -471,7 +475,7 @@ to return.
 
 Doof has no callback-based combinators such as `map` or `andThen`. Transform
 or chain Results with statement-level `try` in a Result-returning function,
-convert to a nullable with `try?`, and branch on the error with `case` or a
+convert to a nullable with postfix `?`, and branch on the error with `case` or a
 declaration `else`:
 
 ```doof
@@ -518,7 +522,7 @@ Because `as` returns `Result`, all standard Result patterns apply:
 
 ```doof
 try name := value as string
-name := try! value as string
+name := (value as string)!
 name := (value as string) ?? "default"
 
 case value as string {
@@ -565,8 +569,8 @@ err: IOError | HeaderParseError | none := catch {
 Rules:
 
 - Only statement-level `try` is redirected by `catch`.
-- `try!` still panics on failure.
-- `try?` still converts failure to `none`.
+- Postfix `!` still panics on failure.
+- Postfix `?` still converts failure to `none`.
 - Nested `catch` blocks capture independently.
 - A `catch` body with no `try` statements produces a warning.
 - In binding form, `return` inside the body returns from the enclosing function.
@@ -681,8 +685,8 @@ Prometheus labels. Increments and snapshots are thread-safe.
 | --- | --- |
 | `Result` + `case` | Detailed branching by success or failure |
 | statement-level `try` | Sequential propagation in a `Result`-returning function |
-| `try!` or `!` | Required success where failure is unrecoverable |
-| `try?` | Converting failure to nullable when details do not matter |
+| postfix `!` | Required value where absence is unrecoverable |
+| postfix `?` | Converting absence to `none` when details do not matter |
 | `??` | Supplying a fallback value |
 | declaration-`else` | Guard-style unwrap-or-bail control flow |
 | statement-`else` | Handling a side-effecting `Result` without a success binding |
@@ -712,8 +716,8 @@ case result {
 // Propagation and conversion
 try value := fallible()
 try stepReturningNone()
-value := try! fallible()
-maybe := try? fallible()
+value := fallible()!
+maybe := fallible()?
 value := fallible() ?? fallback
 
 // Local handlers

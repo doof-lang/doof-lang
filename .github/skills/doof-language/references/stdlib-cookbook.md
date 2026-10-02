@@ -22,7 +22,7 @@ package-family references. Imports from `std/<name>` do not belong in
 ## Choose an error strategy first
 
 Use `try` when the callee's error type already matches the enclosing function.
-Translate errors where package boundaries differ, and reserve `try!` for startup
+Translate errors where package boundaries differ, and reserve postfix `!` for startup
 invariants, tests, and other failures that truly make continued execution
 invalid.
 
@@ -133,8 +133,8 @@ do not build a resource path relative to the current working directory.
 import { readTextResource } from "std/fs"
 import { parseJsonObject } from "std/json"
 
-text := try! readTextResource("config/defaults.json")
-defaults := try! parseJsonObject(text)
+text := readTextResource("config/defaults.json")!
+defaults := parseJsonObject(text)!
 ```
 
 Use `std/path.resourcePath` when an API needs a filesystem path rather than
@@ -176,12 +176,12 @@ document := parseCsv(input) else error {
 }
 println(document.row(1).field(1))
 
-output := try! stringifyCsv(CsvDocument {
+output := stringifyCsv(CsvDocument {
   rows: readonly [
     CsvRow { fields: readonly ["name", "score"] },
     CsvRow { fields: readonly ["Ada", "10"] },
   ]
-})
+})!
 ```
 
 ## Read practical XML
@@ -221,12 +221,12 @@ consumes it once without loading the complete input or output into memory.
 import { readLineStream, writeLineStream } from "std/fs"
 import { Chain } from "std/stream"
 
-source := try! readLineStream("input.log")
+source := readLineStream("input.log")!
 selected := Chain<string> { source }
   .filter(=> it.contains("ERROR"))
   .map(=> it.trim())
 
-try! writeLineStream("errors.log", selected)
+writeLineStream("errors.log", selected)!
 ```
 
 Keep the resource behind a stream alive until iteration finishes. Database row
@@ -258,7 +258,7 @@ function fetchUser(client: HttpClient, id: int): Result<User, string> {
 }
 
 client := createClient()
-user := try! fetchUser(client, 42)
+user := fetchUser(client, 42)!
 ```
 
 HTTP 4xx and 5xx are successful transport results, so always inspect status.
@@ -290,16 +290,16 @@ router := Router()
 }
 receiver.onMessage((request: Request): none => {
   response := router.handle(request) ?? Response.text(404, "not found")
-  try! request.respond(response)
+  request.respond(response)!
 })
 
-server := try! Server.listen{
+server := Server.listen{
   options: ServerOptions { host: "127.0.0.1", port: 8080 },
   requests,
-}
+}!
 println("listening on http://${server.host}:${server.port}")
 runMainEventLoop()
-try! server.close()
+server.close()!
 ```
 
 Use `Router.staticFiles` rather than joining decoded URL segments manually; its
@@ -394,8 +394,8 @@ stream into `writeBlobStream`.
 import { readBlockStream, writeBlobStream } from "std/fs"
 import { GzipStream } from "std/gzip"
 
-chunks := try! readBlockStream("archive.bin")
-try! writeBlobStream("archive.bin.gz", GzipStream(chunks))
+chunks := readBlockStream("archive.bin")!
+writeBlobStream("archive.bin.gz", GzipStream(chunks))!
 ```
 
 Use matching formats: `std/archive` handles ZIP and raw deflate,
@@ -411,11 +411,11 @@ ordinary payloads; `readTarEntry` then reads only the selected byte range.
 import { readTarEntry, scanTarFile } from "std/archive"
 import { zstdDecompress } from "std/zstd"
 
-entries := try! scanTarFile("stdlib.tar")
+entries := scanTarFile("stdlib.tar")!
 for entry of entries {
   if entry.name == "modules/archive.tar.zst" {
-    compressed := try! readTarEntry("stdlib.tar", entry)
-    moduleTar := try! zstdDecompress(compressed)
+    compressed := readTarEntry("stdlib.tar", entry)!
+    moduleTar := zstdDecompress(compressed)!
     // Pass moduleTar to readTarBlob when the inner artifact is itself a TAR.
   }
 }
@@ -434,10 +434,10 @@ the selected member. Store already-compressed `.tar.zst` members with
 ```doof
 import { readZipEntry, scanZipFile } from "std/archive"
 
-entries := try! scanZipFile("stdlib.zip")
+entries := scanZipFile("stdlib.zip")!
 for entry of entries {
   if entry.name == "modules/archive.tar.zst" {
-    compressed := try! readZipEntry("stdlib.zip", entry)
+    compressed := readZipEntry("stdlib.zip", entry)!
   }
 }
 ```
@@ -456,8 +456,8 @@ changes.
 import { DateTime, Duration, Instant, TimeZone } from "std/time"
 
 deadline := Instant.now().plus(Duration.ofSeconds(30L))
-sydney := try! TimeZone.lookup("Australia/Sydney")
-localStart := try! DateTime.parse("2026-08-29T09:00:00")
+sydney := TimeZone.lookup("Australia/Sydney")!
+localStart := DateTime.parse("2026-08-29T09:00:00")!
 meeting := localStart.atZone(sydney)
 
 println(deadline.toISOString())

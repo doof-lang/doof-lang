@@ -11,12 +11,12 @@ function path(directory: string, name: string): string => join([directory, name]
 
 function removeTree(target: string): none {
   if !exists(target) { return }
-  entries := try! readDir(target)
+  entries := readDir(target)!
   for entry of entries {
     child := path(target, entry.name)
-    if entry.kind == EntryKind.Directory { removeTree(child) } else { try! remove(child) }
+    if entry.kind == EntryKind.Directory { removeTree(child) } else { remove(child)! }
   }
-  try! remove(target)
+  remove(target)!
 }
 
 function assertBytes(actual: readonly byte[], expected: readonly byte[]): none {
@@ -25,7 +25,7 @@ function assertBytes(actual: readonly byte[], expected: readonly byte[]): none {
 }
 
 function entryData(archiveData: readonly byte[], name: string): readonly byte[] {
-  archive := try! readTarBlob(archiveData)
+  archive := readTarBlob(archiveData)!
   for entry of archive.entries {
     if entry.name == name { return archive.entryData(entry) }
   }
@@ -36,7 +36,7 @@ function entryData(archiveData: readonly byte[], name: string): readonly byte[] 
 function text(data: readonly byte[]): string => BlobReader(data).readString(long(data.length))
 
 function testCommand(program: string, arguments: string[]): string {
-  result := try! run(program, arguments, ExecOptions { withStdin: false, mergeStderrIntoStdout: true })
+  result := run(program, arguments, ExecOptions { withStdin: false, mergeStderrIntoStdout: true })!
   output := text(result.stdout).trim()
   assert(result.exitCode == 0, program + " failed: " + output)
   return output
@@ -83,52 +83,52 @@ export function testStdlibBundleCurationIsCoarseAndExplicit(): none {
 export function testStdlibBundleCreatesDeterministicAddressableMembers(): none {
   root := "build/stdlib-bundle-test"
   removeTree(root)
-  try! mkdir(root)
+  mkdir(root)!
   packageRoot := path(root, "json")
-  try! mkdir(packageRoot)
-  try! mkdir(path(packageRoot, "nested"))
-  try! mkdir(path(packageRoot, "tests"))
-  try! writeText(path(packageRoot, "doof.json"), "{\"name\":\"std/json\",\"version\":\"0.2.0\",\"dependencies\":{}}\n")
-  try! writeText(path(packageRoot, "index.do"), "export function answer(): int => 42\n")
-  try! writeText(path(packageRoot, "nested/codec.do"), "export function encode(): string => \"ok\"\n")
-  try! writeText(path(packageRoot, "index.test.do"), "export function testNope(): none {}\n")
-  try! writeText(path(packageRoot, "native_json.hpp"), "// native\n")
-  try! writeText(path(packageRoot, "tests/fixture.txt"), "excluded\n")
+  mkdir(packageRoot)!
+  mkdir(path(packageRoot, "nested"))!
+  mkdir(path(packageRoot, "tests"))!
+  writeText(path(packageRoot, "doof.json"), "{\"name\":\"std/json\",\"version\":\"0.2.0\",\"dependencies\":{}}\n")!
+  writeText(path(packageRoot, "index.do"), "export function answer(): int => 42\n")!
+  writeText(path(packageRoot, "nested/codec.do"), "export function encode(): string => \"ok\"\n")!
+  writeText(path(packageRoot, "index.test.do"), "export function testNope(): none {}\n")!
+  writeText(path(packageRoot, "native_json.hpp"), "// native\n")!
+  writeText(path(packageRoot, "tests/fixture.txt"), "excluded\n")!
 
   catalog := "{\"schemaVersion\":1,\"compilerVersion\":\"0.2.0\",\"digest\":\"" +
     "0000000000000000000000000000000000000000000000000000000000000000\",\"packages\":[{" +
     "\"name\":\"std/json\",\"url\":\"https://example.invalid/json\",\"ref\":\"v0.2.0\"," +
     "\"version\":\"0.2.0\",\"commit\":\"0000000000000000000000000000000000000000\"}]}"
-  first := try! buildStdlibBundle(root, 3)
-  second := try! buildStdlibBundle(root, 3)
+  first := buildStdlibBundle(root, 3)!
+  second := buildStdlibBundle(root, 3)!
   assertBytes(first.data, second.data)
   assert(first.packageCount == 1, "expected one package")
   assert(first.moduleCount == 2, "expected production modules only")
   assert(first.nativePackageCount == 1, "expected native blob")
 
   indexSource := text(entryData(first.data, "bundle-index.json"))
-  indexValue := try! parseJsonValue(indexSource)
+  indexValue := parseJsonValue(indexSource)!
   index := indexValue as SerialObject else { panic("expected bundle index object") }
-  format := (try! index.get("format")) as string else { panic("expected bundle format string") }
+  format := (index.get("format")!) as string else { panic("expected bundle format string") }
   assert(format == "doof-stdlib-tar-of-tar-zst", "expected bundle format")
-  schemaVersion := (try! index.get("schemaVersion")) as int else { panic("expected schema version") }
+  schemaVersion := (index.get("schemaVersion")!) as int else { panic("expected schema version") }
   assert(schemaVersion == 4, "expected target-aware bundle schema")
-  targets := (try! index.get("targets")) as readonly SerialValue[] else { panic("expected bundle targets") }
+  targets := (index.get("targets")!) as readonly SerialValue[] else { panic("expected bundle targets") }
   assert(targets.length == 6, "expected default bundle to support every target")
-  bundleDigest := (try! index.get("bundleDigest")) as string else { panic("expected bundle digest") }
+  bundleDigest := (index.get("bundleDigest")!) as string else { panic("expected bundle digest") }
   assert(bundleDigest == first.bundleDigest && bundleDigest.length == 64, "expected bundle identity")
-  membersValue := (try! index.get("members")) as readonly SerialValue[] else { panic("expected members") }
+  membersValue := (index.get("members")!) as readonly SerialValue[] else { panic("expected members") }
   firstMember := membersValue[0] as SerialObject else { panic("expected member object") }
-  memberHash := (try! firstMember.get("sha256")) as string else { panic("expected member hash") }
+  memberHash := (firstMember.get("sha256")!) as string else { panic("expected member hash") }
   assert(memberHash.length == 64, "expected member SHA-256")
 
   moduleCompressed := entryData(first.data, "modules/json/nested/codec.do.tar.zst")
-  moduleTar := try! zstdDecompress(moduleCompressed)
+  moduleTar := zstdDecompress(moduleCompressed)!
   assert(text(entryData(moduleTar, "nested/codec.do")) == "export function encode(): string => \"ok\"\n", "expected module payload")
 
   nativeCompressed := entryData(first.data, "native/json.tar.zst")
-  nativeTar := try! zstdDecompress(nativeCompressed)
-  nativeArchive := try! readTarBlob(nativeTar)
+  nativeTar := zstdDecompress(nativeCompressed)!
+  nativeArchive := readTarBlob(nativeTar)!
   assert(nativeArchive.entries.length == 1, "expected only build native material")
   assert(nativeArchive.entries[0].name == "native_json.hpp", "expected native header")
   removeTree(root)
@@ -137,25 +137,25 @@ export function testStdlibBundleCreatesDeterministicAddressableMembers(): none {
 export function testStdlibBundleIncludesCurlOnlyForLinuxProfiles(): none {
   root := "build/stdlib-bundle-curl-profile-test"
   removeTree(root)
-  try! mkdir(root)
+  mkdir(root)!
   packageRoot := path(root, "http")
-  try! mkdir(packageRoot)
-  try! mkdir(path(packageRoot, "vendor"))
-  try! mkdir(path(packageRoot, "vendor/curl"))
-  try! mkdir(path(packageRoot, "vendor/curl/lib"))
-  try! writeText(path(packageRoot, "doof.json"), "{\"name\":\"std/http\",\"version\":\"0.2.0\",\"dependencies\":{}}\n")
-  try! writeText(path(packageRoot, "index.do"), "export function get(): none {}\n")
-  try! writeText(path(packageRoot, "native_http_client.hpp"), "// shared native input\n")
-  try! writeText(path(packageRoot, "vendor/curl/COPYING"), "curl license\n")
-  try! writeText(path(packageRoot, "vendor/curl/lib/easy.c"), "/* curl source */\n")
+  mkdir(packageRoot)!
+  mkdir(path(packageRoot, "vendor"))!
+  mkdir(path(packageRoot, "vendor/curl"))!
+  mkdir(path(packageRoot, "vendor/curl/lib"))!
+  writeText(path(packageRoot, "doof.json"), "{\"name\":\"std/http\",\"version\":\"0.2.0\",\"dependencies\":{}}\n")!
+  writeText(path(packageRoot, "index.do"), "export function get(): none {}\n")!
+  writeText(path(packageRoot, "native_http_client.hpp"), "// shared native input\n")!
+  writeText(path(packageRoot, "vendor/curl/COPYING"), "curl license\n")!
+  writeText(path(packageRoot, "vendor/curl/lib/easy.c"), "/* curl source */\n")!
 
-  apple := try! buildStdlibBundle(root, 3, ["macos", "wasm"])
-  appleNative := try! readTarBlob(try! zstdDecompress(entryData(apple.data, "native/http.tar.zst")))
+  apple := buildStdlibBundle(root, 3, ["macos", "wasm"])!
+  appleNative := readTarBlob(zstdDecompress(entryData(apple.data, "native/http.tar.zst"))!)!
   assert(appleNative.entries.length == 1, "expected Apple native member to omit curl")
   assert(appleNative.entries[0].name == "native_http_client.hpp", "expected shared HTTP native input")
 
-  linux := try! buildStdlibBundle(root, 3, ["linux", "wasm"])
-  linuxNative := try! readTarBlob(try! zstdDecompress(entryData(linux.data, "native/http.tar.zst")))
+  linux := buildStdlibBundle(root, 3, ["linux", "wasm"])!
+  linuxNative := readTarBlob(zstdDecompress(entryData(linux.data, "native/http.tar.zst"))!)!
   let foundCurlSource = false
   let foundCurlLicense = false
   for entry of linuxNative.entries {
@@ -170,14 +170,14 @@ export function testStdlibBundleIncludesCurlOnlyForLinuxProfiles(): none {
 export function testStdlibBundleRejectsMissingVendoredLicense(): none {
   root := "build/stdlib-bundle-license-test"
   removeTree(root)
-  try! mkdir(root)
+  mkdir(root)!
   packageRoot := path(root, "image")
-  try! mkdir(packageRoot)
-  try! mkdir(path(packageRoot, "vendor"))
-  try! mkdir(path(packageRoot, "vendor/libwebp"))
-  try! writeText(path(packageRoot, "doof.json"), "{\"name\":\"std/image\",\"version\":\"0.2.0\",\"dependencies\":{}}\n")
-  try! writeText(path(packageRoot, "index.do"), "export function width(): int => 1\n")
-  try! writeText(path(packageRoot, "vendor/libwebp/COPYING"), "license\n")
+  mkdir(packageRoot)!
+  mkdir(path(packageRoot, "vendor"))!
+  mkdir(path(packageRoot, "vendor/libwebp"))!
+  writeText(path(packageRoot, "doof.json"), "{\"name\":\"std/image\",\"version\":\"0.2.0\",\"dependencies\":{}}\n")!
+  writeText(path(packageRoot, "index.do"), "export function width(): int => 1\n")!
+  writeText(path(packageRoot, "vendor/libwebp/COPYING"), "license\n")!
 
   catalog := "{\"schemaVersion\":1,\"compilerVersion\":\"0.2.0\",\"digest\":\"" +
     "0000000000000000000000000000000000000000000000000000000000000000\",\"packages\":[{" +

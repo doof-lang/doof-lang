@@ -47,7 +47,7 @@ until the method completes.
 ```doof
 worker := Actor<Counter>(0)
 p := async worker.increment(10)
-try! p.get()
+p.get()!
 ```
 
 Ordinary functions may be dispatched directly when they are inferred isolated
@@ -69,7 +69,7 @@ promise := async {
     values.push(22)
     yield values
 }
-values := try! promise.get()
+values := promise.get()!
 ```
 
 Every reachable path must `yield`. Captures are copied and must come from
@@ -122,7 +122,7 @@ instance method and `isolated static create(): Worker` for a static method.
 ```doof
 job := Actor<Counter>(0)
 p := async job.increment(10)
-try! p.get()
+p.get()!
 
 state: Counter := retire job
 ```
@@ -232,7 +232,7 @@ local call or posting behavior explicitly instead of receiving an erased
 promise := async {
     yield compute()
 }
-answer := try! promise.get()
+answer := promise.get()!
 ```
 
 Use a temporary actor instead when the background work needs a persistent
@@ -251,6 +251,6 @@ class Computation {
 
 job := Actor<Computation>(42)
 p := async job.run()
-answer := try! p.get()
+answer := p.get()!
 retire job
 ```

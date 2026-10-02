@@ -58,7 +58,7 @@ Actor calls may be asynchronous:
 
 ```doof
 p := async counter.increment(10)
-try! p.get()
+p.get()!
 ```
 
 `async actor.method(args)` returns `Promise<T>`, where `T` is the actor method's
@@ -73,7 +73,7 @@ promise := async {
     values.push(43)
     yield values
 }
-values := try! promise.get()
+values := promise.get()!
 ```
 
 `async { ... }` executes outside the caller's actor domain and returns

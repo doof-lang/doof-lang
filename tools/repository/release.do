@@ -48,7 +48,7 @@ export function smokeToolchain(artifacts: string, work: string, version: string)
   try makeDirectory(work)
   try write(path(work, "doof.json"), "{\"name\":\"doof-release-smoke\",\"build\":{\"entry\":\"smoke.do\"}}\n")
   sample := path(work, "smoke.do")
-  try write(sample, "import { parseJsonValue } from \"std/json\"\nfunction main(): int { value := try! parseJsonValue(\"{}\")\nreturn 0 }\n")
+  try write(sample, "import { parseJsonValue } from \"std/json\"\nfunction main(): int { value := parseJsonValue(\"{}\")!\nreturn 0 }\n")
   return command("env", ["-u", "DOOF_STDLIB_ROOT", "-u", "DOOF_RUNTIME_HEADER", "-u", "CXX", compiler, "run", sample, "-o", path(work, "output")], {}, work)
 }
 export function smokeDebuggerApplication(artifacts: string): Result<none, string> {
@@ -152,7 +152,7 @@ function buildWindowsReleaseArtifact(compiler: string, source: string, stdlib: s
     timeoutMs: 30000,
   })
   remoteRoot := "doof-release-" + version
-  _ := try! client.run("powershell.exe -NoProfile -NonInteractive -Command \"$root = Join-Path $env:USERPROFILE 'doof-release-" + version + "'; Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue; New-Item -ItemType Directory -Force -Path $root | Out-Null\"")
+  _ := client.run("powershell.exe -NoProfile -NonInteractive -Command \"$root = Join-Path $env:USERPROFILE 'doof-release-" + version + "'; Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue; New-Item -ItemType Directory -Force -Path $root | Out-Null\"")!
   try sftp := client.sftp()
   emittedBytes := readBlob(emittedArchive) else { return Failure("Cannot read emitted Windows archive") }
   bundleBytes := readBlob(stdlibBundle) else { return Failure("Cannot read Windows stdlib bundle") }

@@ -1,7 +1,7 @@
 import { Assert as EditorAssert } from "std/assert"
 import { Parser as EditorParser } from "./parser"
 import { Assert } from "std/assert"
-import { CallExpression, ConstructExpression, ExpressionStatement } from "./ast"
+import { BinaryExpression, CallExpression, ConstructExpression, ExpressionStatement, MemberExpression, UnaryExpression } from "./ast"
 import { parse } from "./parser"
 
 export function testInterfaceBoundNestedExplicitCallClosers(): none {
@@ -31,4 +31,22 @@ export function testEditorPostfixRecoveryKeepsLiteralReceiver(): none {
   program := parser.parse()
   EditorAssert.equal(program.statements.length, 1)
   EditorAssert.equal(parser.issues.length, 1)
+}
+
+export function testPostfixQuestionConvertsTheOperand(): none {
+  statement := parse("load()?").statements[0] as ExpressionStatement else { panic("expected statement") }
+  conversion := statement.expression as UnaryExpression else { panic("expected postfix conversion") }
+  Assert.equal(conversion.kind, "optional-conversion")
+  Assert.equal(conversion.operator, "?")
+  Assert.isFalse(conversion.prefix)
+  Assert.equal(conversion.span.end.offset, 7)
+  // Postfix binds tighter than '??', and '?.' stays one token.
+  coalesce := parse("load()? ?? 1").statements[0] as ExpressionStatement else { panic("expected statement") }
+  binary := coalesce.expression as BinaryExpression else { panic("expected coalescing") }
+  Assert.equal(binary.operator, "??")
+  Assert.equal(binary.left.kind, "optional-conversion")
+  chained := parse("load()?!.name").statements[0] as ExpressionStatement else { panic("expected statement") }
+  member := chained.expression as MemberExpression else { panic("expected member access") }
+  Assert.isTrue(member.force)
+  Assert.equal(member.object.kind, "optional-conversion")
 }

@@ -84,7 +84,7 @@ arrays as T[]" (or the `readonly T[]` equivalent).
 Only `isSuccess`, `isFailure` and `unwrapOr` existed, while ch. 9 and ch. 13
 also documented `map`, `mapError`, `andThen`, `orElse`, `unwrapOrElse`, `ok`
 and `err`. Each duplicates an existing form: `try` in a Result-returning
-function chains and transforms, `try?` converts to a nullable, and `case` or a
+function chains and transforms, postfix `?` converts to a nullable, and `case` or a
 declaration `else` recovers from the error. The callback combinators also
 needed special rules for payloadless arms. They are removed from the spec, and
 ch. 9 shows the `try` and `else` equivalents.
@@ -93,8 +93,8 @@ ch. 9 shows the `try` and `else` equivalents.
 
 `loadUser()!.email` failed with `Result<User, string> has no member "email"`.
 The checker now treats `r!.m` as `(r!).m`, so the receiver is evaluated once
-and lowered through postfix `!`, panicking on Failure. A nullable success value
-keeps `!.`, so `Result<User | none, E>!.email` also panics on none. On
+and lowered through postfix `!`, panicking on Failure. Every absent layer
+panics, so `Result<User | none, E>!.email` also panics on none. On
 `Result<none, E>` there is no success value, and member access reports that.
 
 ### A7. Array callback conventions — **Fixed**
