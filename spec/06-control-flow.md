@@ -514,5 +514,5 @@ function process(data: Data | none): Result | none {
 | `for i of a..<b` | Iterate over exclusive range |
 | `break` / `break label` | Exit innermost or labeled loop |
 | `continue` / `continue label` | Skip to next iteration |
-| `loop ... else` | Execute else when loop completes without break |
+| `loop ... then` | Execute then when loop completes without break |
 | `return` | Exit function with value |

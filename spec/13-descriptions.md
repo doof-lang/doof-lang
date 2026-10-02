@@ -178,8 +178,9 @@ The metadata object itself also exposes an `.invoke` helper for name-based dispa
 meta := Calculator.metadata
 calc := Calculator { }
 result := meta.invoke(calc, "add", { a: 1, b: 2 })
-if result.isSuccess() {
-    println(result.value)  // 3
+case result {
+    success: Success -> println(success.value)  // 3
+    failure: Failure -> println(failure.error)
 }
 ```
 
@@ -201,8 +202,9 @@ meta := Calculator.metadata
 method := meta.methods[0]
 calc := Calculator { }
 result := method.invoke(calc, { a: 1, b: 2 })
-if result.isSuccess() {
-    println(result.value)  // 3
+case result {
+    success: Success -> println(success.value)  // 3
+    failure: Failure -> println(failure.error)
 }
 ```
 
@@ -240,12 +242,14 @@ When a method parameter or return type references another class or struct, that 
 
 ### Result Members
 
-The `Result<SerialValue, SerialValue>` returned by `.invoke` supports:
+The `Result<SerialValue, SerialValue>` returned by `.invoke` supports the helper
+methods below. Use `case` to capture a `Success` or `Failure` arm before reading
+its payload; `isSuccess()` and `isFailure()` do not narrow the Result.
 
 | Member | Type | Description |
 |---|---|---|
-| `.value` | `SerialValue` | The success value (only valid when `isSuccess()` is true) |
-| `.error` | `SerialValue` | The failure payload (only valid when `isFailure()` is true) |
+| Captured `Success.value` | `SerialValue` | The success value after explicit narrowing |
+| Captured `Failure.error` | `SerialValue` | The failure payload after explicit narrowing |
 | `.isSuccess()` | `bool` | Whether the invocation succeeded |
 | `.isFailure()` | `bool` | Whether the invocation failed |
 | `.unwrapOr(value)` | `SerialValue` | Return the success payload or a fallback |

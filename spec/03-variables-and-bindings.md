@@ -18,9 +18,12 @@ Doof provides binding mechanisms with distinct semantics for deep immutability, 
 
 ```doof
 readonly MAX_SIZE = 100             // Deep immutable module constant
-readonly CONFIG = loadConfig()      // Runtime constant, deeply immutable
-timestamp := getCurrentTime()       // Immutable binding, shallow
-let counter = 0                     // Mutable binding
+
+function main(): none {
+    readonly CONFIG = loadConfig()  // Runtime constant, deeply immutable
+    timestamp := getCurrentTime()   // Immutable binding, shallow
+    let counter = 0                 // Mutable binding
+}
 ```
 
 ### Yield-Block Initializers with `<-`
@@ -173,15 +176,17 @@ frozen = [4, 5, 6]        // ✅ OK: binding is mutable
 
 ### Global Scope
 
-`readonly` is permitted at global scope for runtime-computed immutable values:
+`readonly` is permitted at global scope. In declarative modules, its initializer
+must be construction-only, as described in [Module-Level Initialization](11-modules.md#module-level-initialization):
 
 ```doof
 readonly MAX_SIZE = 100                 // Module constant
-readonly CONFIG = loadConfig()          // Runtime-computed, deeply immutable
 readonly PRIMES = readonly [2, 3, 5, 7] // Deeply immutable array
-
-// CONFIG is computed at runtime but immutable thereafter
 ```
+
+Runtime-computed module values such as `readonly CONFIG = loadConfig()` are
+allowed only in native entry scripts. In ordinary modules, compute them inside
+`main()` or another function instead.
 
 ### Local Scope
 
@@ -264,21 +269,26 @@ z := [1, 2]                  // int[] (mutable content, immutable binding)
 - `<-` yield-block initializers are **not** allowed at global scope
 - Module `let` is explicit mutable global state and is unavailable to isolated
   or actor-dispatched call paths
+- Declarative module initializers are construction-only. Runtime calls and
+  top-level executable statements are allowed only in native entry scripts;
+  ordinary modules put this work inside `main()` or another function.
 
 ```doof
 // ✅ Valid — module constants
 readonly PI = 3.14159
 readonly MAX_USERS = 1000
 
-// ✅ Valid — runtime-computed readonly
-readonly CONFIG = loadConfig()        // Runtime initialization
+// ✅ Valid — construction-only readonly
 readonly PRIMES = readonly [2, 3, 5]
 
 // ✅ Valid — shallow immutable module binding
-config := loadConfig()                // Binding is immutable; value interior may be mutable
+config := { name: "default" }         // Binding is immutable; value interior may be mutable
 
 // ✅ Valid — functions hoist
-bar(5)  // Works — functions hoist
+function main(): none {
+    readonly CONFIG = loadConfig()    // Runtime work belongs inside a function
+    bar(5)                           // Works — functions hoist
+}
 function greet(name: string): none => println("Hello, " + name)
 function bar(x: int): int => x * 12
 
@@ -289,8 +299,8 @@ let counter = 0
 readonly value <- { yield 1 } // Error: <- blocks are local-only
 
 // ❌ Hoisting error for readonly and :=
-let x = CONFIG             // Error: CONFIG used before declaration
-readonly CONFIG = load()   // readonly doesn't hoist
+let x = LIMIT              // Error: LIMIT used before declaration
+readonly LIMIT = 100       // readonly doesn't hoist
 ```
 
 ### Nested (Local) Scope
@@ -300,7 +310,8 @@ readonly CONFIG = load()   // readonly doesn't hoist
 - **Nothing hoists** — strict declaration order
 - Re-declaring the same binding name in the **same local scope** is a compile-time error
 - Nested scopes may still shadow an outer binding with a new local binding
-- Functions can reference themselves for recursion
+- Local functions cannot reference themselves for recursion; module-level
+  functions can (see [Named Functions and Lambda Bindings](04-functions-and-lambdas.md#named-functions-and-lambda-bindings))
 
 ```doof
 function outer() {
@@ -313,10 +324,6 @@ function outer() {
     function helper(x: int): int => x * 2
     
     helper(5)  // ✅ Works
-    
-    // Recursion works — name available in own body
-    function factorial(n: int): int => 
-        if n == 0 then 1 else n * factorial(n - 1)
 }
 
 function scopes() {

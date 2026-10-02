@@ -388,7 +388,7 @@ class User {
     private passwordHash: string
     name: string
 
-    function checkPassword(input: string): bool {
+    checkPassword(input: string): bool {
         return hash(input) == passwordHash   // ✅ same file
     }
 }
@@ -407,8 +407,8 @@ h := u.passwordHash   // ❌ Error: "passwordHash" is private
 ```doof
 class Parser {
     source: string
-    private function advance(): none { /* ... */ }
-    function parse(): none { this.advance() }   // ✅ same file
+    private advance(): none { /* ... */ }
+    parse(): none { this.advance() }   // ✅ same file
 }
 ```
 
@@ -507,7 +507,7 @@ class Player {
 
 ```doof
 class Point {
-    x, y: float
+    let x, y: float
     
     // Parameter 'x' shadows field 'x' — this.x required
     setX(x: float): none {

@@ -5,7 +5,8 @@ probe programs were written from spec claims and examples, then run through
 `dist/doof check` and `dist/doof run`.
 
 The seven "group 1" defects fixed alongside this document are listed first for
-reference. Everything else below is open.
+reference. Chapter B's documentation fixes are also complete; the other items
+remain open unless marked otherwise.
 
 ## Fixed with this review
 
@@ -306,7 +307,11 @@ to qualify.
 
 ---
 
-## B. Spec text that contradicts itself or the compiler (doc fixes)
+## B. Spec text that contradicts itself or the compiler (doc fixes) — Fixed
+
+All 16 recommendations below are implemented in `spec/`. Revised examples
+were checked with the installed compiler, with local context and supporting
+declarations supplied where the spec uses partial snippets.
 
 | Where | Problem | Fix |
 |---|---|---|
@@ -338,6 +343,6 @@ to qualify.
 ## Suggested order
 
 1. **The remaining checker test helpers** (section C), now that A1, A2, A27 and A28 are done.
-2. **Chapter B doc fixes.** Cheap, and they remove misleading examples.
+2. **Chapter B doc fixes — completed.** The misleading examples and contradictory text are corrected.
 3. **Common gaps: A10, A12, A13, A29.**
 4. **Needs a decision first: A14, A16.**

@@ -240,7 +240,7 @@ async-block completion:
 
 ```doof
 class Promise<T> {
-    function get(): Result<T, string>
+    get(): Result<T, string>
 }
 ```
 

@@ -78,7 +78,7 @@ println(formatJsonValue(u.toSerialObject()))
 | `T[]` | JSON array |
 | `Tuple<T1, T2, ...>` | JSON array |
 | `Map<string, T>` | JSON object when `T` is serializable |
-| Enums | JSON string (member name) |
+| Enums | JSON backing value (int or string) |
 | `T | none` | Value or JSON `null` |
 | `SerialValue` | Preserved as-is |
 
@@ -236,14 +236,14 @@ class Circle implements Shape {
   kind: "circle"
   radius: float
 
-  function area(): float => 3.14159 * radius * radius
+  area(): float => 3.14159f * radius * radius
 }
 
 class Rect implements Shape {
   kind: "rect"
   width, height: float
 
-  function area(): float => width * height
+  area(): float => width * height
 }
 
 result := Shape.fromSerialValue({ kind: "circle", radius: 5.0 })
@@ -412,7 +412,7 @@ import { formatJsonValue } from "std/json"
 class Foo {
   x: int
 
-  function toSerialObject(): SerialObject {
+  toSerialObject(): SerialObject {
     return { "x": 1 }
   }
 }

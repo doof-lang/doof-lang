@@ -59,7 +59,10 @@ function sum(values: Range): int {
     return total
 }
 
-window: Range := 1..<5
+function main(): none {
+    window: Range := 1..<5
+    println(sum(window))  // 10
+}
 ```
 
 Open-ended forms such as `5..` and `..<10` are range patterns only; they are not
@@ -995,7 +998,7 @@ class Vector {
 }
 
 // At compile time, Thing2D resolves to: Point | Vector | ...any other matching classes
-function distance(a: Thing2D, b: Thing2D): float {
+function distance(a: Thing2D, b: Thing2D): double {
     return (b.x - a.x) ** 2 + (b.y - a.y) ** 2
 }
 
@@ -1748,7 +1751,7 @@ class Node {
 
 ## Type Narrowing
 
-Doof keeps implicit narrowing intentionally narrow. It does not perform broad flow-sensitive narrowing across arbitrary control flow. Instead, it supports one limited implicit rule plus several explicit narrowing forms.
+Doof uses explicit narrowing forms. It does not perform implicit flow-sensitive narrowing across control flow.
 
 ### No Implicit Narrowing in `if`
 
@@ -1789,7 +1792,7 @@ println(value!)  // explicit assertion still required here
 
 ### Explicit Narrowing Forms
 
-For everything beyond the simple none-check rule above, use an explicit narrowing form.
+Use an explicit narrowing form to access a union member or unwrap a nullable or Result value.
 
 #### `case` with Type Capture
 
@@ -1897,7 +1900,7 @@ Use `!` only for nullable and `Result` values. Applying it to an already present
 | Enums | Named value sets with optional int/string values |
 | Inference | Bidirectional, single-step |
 | Immutability | Deep/transitive readonly |
-| Generics | Built-in collections and Tuple (user-defined planned) |
+| Generics | Built-in collections and Tuple; user-defined generic classes, structs, interfaces, functions, and type aliases |
 | Function types | Named parameters in signatures |
 | Type narrowing | Explicit only: use `case`, declaration-`else`, `as`, and `!` |
 | Weak references | `weak T` — non-owning reference, access yields Result |

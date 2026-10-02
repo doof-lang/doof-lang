@@ -427,9 +427,12 @@ let x = 10
 x += 5    // x = x + 5
 x -= 3    // x = x - 3
 x *= 2    // x = x * 2
-x /= 4    // x = x / 4
+x \= 4    // x = x \ 4 (integer division)
 x %= 4    // x = x % 4
-x **= 3   // x = x ** 3
+
+let y: double = 10.0
+y /= 4    // y = y / 4
+y **= 3   // y = y ** 3 (exponentiation produces double)
 
 // Bitwise compound assignment
 x &= 0b111
@@ -592,7 +595,7 @@ From highest to lowest:
 | 2 | `as` | Left to right |
 | 3 | `!` `~` `-` (unary) `+` (unary) `try` `try!` `try?` | Right to left |
 | 4 | `**` | Right to left |
-| 5 | `*` `/` `%` | Left to right |
+| 5 | `*` `/` `\` `%` | Left to right |
 | 6 | `+` `-` | Left to right |
 | 7 | `<<` `>>` `>>>` | Left to right |
 | 8 | `<` `<=` `>` `>=` | Left to right |

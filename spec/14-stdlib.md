@@ -214,9 +214,12 @@ enum JwtError {
 ### Example
 
 ```doof
-import { parseJwt, sha256HexString } from "std/crypto"
+import { parseJwt, sha256HexString, JwtError } from "std/crypto"
 
-digest := sha256HexString("hello")
+function main(): none {
+    digest := sha256HexString("hello")
+    println(digest)
+}
 
 function readClaims(token: string): Result<readonly Map<string, SerialValue>, JwtError> {
     try parsed := parseJwt(token)
@@ -368,7 +371,7 @@ import { createClient, get, send, HttpRequest, HttpHeader } from "std/http"
 
 function fetchJson(url: string): Result<SerialValue, string> {
     client := createClient()
-    try resp := get(client, url)
+    resp := get(client, url) else error { return Failure(error.message) }
     if !resp.ok() {
         return Failure { error: "HTTP ${string(resp.status)}" }
     }
@@ -383,7 +386,7 @@ function patchResource(url: string, data: readonly byte[]): Result<none, string>
         headers: readonly [HttpHeader { name: "Content-Type", value: "application/octet-stream" }],
         body: data,
     }
-    try resp := send(client, req)
+    resp := send(client, req) else error { return Failure(error.message) }
     if !resp.ok() {
         return Failure { error: "HTTP ${string(resp.status)}" }
     }
@@ -668,12 +671,11 @@ Decodes a sequence of raw byte chunks as UTF-8 and splits on `\n`, `\r`, or `\r\
 ### Example
 
 ```doof
-import { Chain } from "std/stream"
-import { readBlockStream } from "std/fs"
+import { Chain, blobStreamToLineStream } from "std/stream"
+import { readBlockStream, IoError } from "std/fs"
 
 function firstTenNonEmptyLines(path: string): Result<string[], IoError> {
     try blocks := readBlockStream(path)
-    import { blobStreamToLineStream } from "std/stream"
     lines := blobStreamToLineStream(blocks)
     result := Chain<string> { source: lines }
         .filter(=> it.length > 0)
@@ -979,7 +981,9 @@ import { createClient, get } from "std/http"
 
 function fetchUser(id: int): Result<SerialValue, string> {
     client := createClient()
-    try resp := get(client, "https://api.example.com/users/${string(id)}")
+    resp := get(client, "https://api.example.com/users/${string(id)}") else error {
+        return Failure(error.message)
+    }
     if !resp.ok() {
         return Failure { error: "HTTP ${string(resp.status)}" }
     }
@@ -997,7 +1001,9 @@ class CreateUserResponse { id: int; name: string }
 
 function createUser(req: CreateUserRequest): Result<CreateUserResponse, string> {
     client := createClient()
-    try resp := postJsonValue(client, "https://api.example.com/users", req.toSerialObject())
+    resp := postJsonValue(client, "https://api.example.com/users", req.toSerialObject()) else error {
+        return Failure(error.message)
+    }
     if !resp.ok() {
         return Failure { error: "HTTP ${string(resp.status)}" }
     }
