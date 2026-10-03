@@ -159,19 +159,9 @@ Ch. 7 drops the `::` syntax. Interfaces may declare static members as a
 contract for generic bounds, and a type parameter reaches them through `T.name`
 (`T.zero()`); statics remain unreachable through instances or interface values.
 
-### A11. Implicit numeric widening isn't transitive — **Implement**
+### A11. Implicit numeric widening isn't transitive — **Done**
 
-`checker-types.do:663` allows only four conversions:
-
-- `byte`→`int`
-- `int`→`long`
-- `int`→`double`
-- `float`→`double`
-
-So these are rejected even though they're safe: `byte`→`long`, `byte`→`float`,
-`byte`→`double`, `int`→`float`. Ch. 2 says safe widening is implicit.
-
-**Recommendation**: allow every lossless pair. `int`→`float` is lossy above 2^24, so leave it out and say so in the spec.
+`byte` now widens to `int`, `long`, `float` and `double`, in addition to `int`→`long`, `int`→`double` and `float`→`double`. `int`→`float` stays rejected because it is lossy above 2^24; Ch. 2 says so.
 
 ### A12. Semicolons after block statements — **Implement**
 

@@ -44,6 +44,17 @@ export function testAllowsByteToIntWidening(): none {
   Assert.isTrue(isAssignable(primitive("byte"), primitive("int")))
 }
 
+export function testAllowsByteToWiderNumericWidening(): none {
+  Assert.isTrue(isAssignable(primitive("byte"), primitive("long")))
+  Assert.isTrue(isAssignable(primitive("byte"), primitive("float")))
+  Assert.isTrue(isAssignable(primitive("byte"), primitive("double")))
+}
+
+export function testRejectsLossyIntToFloatWidening(): none {
+  Assert.isFalse(isAssignable(primitive("int"), primitive("float")))
+  Assert.isFalse(isAssignable(primitive("long"), primitive("double")))
+}
+
 export function testRequiresInvariantCollectionElementTypes(): none {
   Assert.isFalse(isAssignable(arrayType(primitive("int")), arrayType(primitive("long"))))
   Assert.isFalse(isAssignable(mapType(primitive("string"), primitive("int")), mapType(primitive("string"), primitive("long"))))

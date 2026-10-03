@@ -171,6 +171,9 @@ let i: int = b       // ✅ Implicit widening byte → int
 let i: int = 42
 let l: long = i      // ✅ Implicit widening int → long
 let d: double = i    // ✅ Implicit widening int → double
+let bl: long = b    // ✅ Implicit widening byte → long
+let bf: float = b    // ✅ Implicit widening byte → float
+let bd: double = b   // ✅ Implicit widening byte → double
 
 let f: float = 3.14f
 let fd: double = f   // ✅ Implicit widening float → double
@@ -180,6 +183,8 @@ let i: int = l       // ❌ Error: potential data loss
 
 let i: int = 255
 let b: byte = i      // ❌ Error: potential data loss
+
+let f: float = i     // ❌ Error: int values above 2^24 lose precision
 ```
 
 **Rationale:** Widening is always safe (no precision/range loss), while narrowing can lose data and should be explicit.
