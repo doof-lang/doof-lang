@@ -6,7 +6,7 @@ import { insideConstructorFactory, resolveConstructor, validateConstructorVisibi
 import { ActorType, Binding, ClassType, EnumType, FunctionParamType, FunctionType, PrimitiveType, ResolvedType, Scope, UnionResolvedType, UnknownType, WeakResolvedType } from "./semantic"
 
 import { CallExpression, ClassDeclaration, DotShorthand, Expression, FunctionDeclaration, Identifier, LambdaExpression, MemberExpression, SourceSpan, TypeParameterConstraint } from "./ast"
-import { classType, functionType, resultArmExpectation, resultArmType, neverType, noneType, primitive, typeName, substituteTypeParams, unknownType } from "./checker-types"
+import { classType, functionType, resultArmExpectation, resultArmType, isStringInterpolatable, neverType, noneType, primitive, typeName, substituteTypeParams, unknownType } from "./checker-types"
 
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 
@@ -118,7 +118,8 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         }
       }
       checkArguments(state, callArguments(expression.args), effectiveFunction.params, scope, expression.span,
-        "", "Argument", !genericInferenceFailed && !isBuiltinPrintlnCall(expression.callee), !genericInferenceFailed)
+        "", "Argument", !genericInferenceFailed && !isBuiltinPrintlnCall(expression.callee), !genericInferenceFailed && !isBuiltinPrintlnCall(expression.callee))
+      if isBuiltinPrintlnCall(expression.callee) { checkPrintlnArguments(state, expression) }
       validateActorMethodBoundary(state, expression, effectiveFunction)
       if callArgumentsDiverge(expression) { return finish(state, expression, neverType()) }
       return finish(state, expression, checkedMemberCallReturnType(expression, effectiveFunction.returnType))
@@ -332,3 +333,13 @@ export function validateActorMethodBoundary(state: CheckerState, expression: Cal
 }
 
 export { checkLambda } from "./checker-lambdas"
+
+// println accepts every type that string interpolation can format.
+function checkPrintlnArguments(state: CheckerState, expression: CallExpression): none {
+  for argument of expression.args {
+    actual := argument.value.resolvedType
+    if actual != none && !isStringInterpolatable(actual!) {
+      typeError(state, "Type \"" + typeName(actual!) + "\" cannot be passed to println", argument.value.span)
+    }
+  }
+}

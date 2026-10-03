@@ -192,10 +192,9 @@ An empty array literal now needs an expected type (annotation, parameter, return
 
 The spec was right. `let q = { x: 1.0 }` is now an error ("Cannot infer the type of an object literal without context"), and an object literal assigned to an interface reports "Ambiguous object literal for Positioned; multiple candidates: ..." instead of a Map-to-interface assignment error.
 
-### A16. `println` and `print` — **Partly done**
+### A16. `println` and `print` — **Done**
 
-- `print` is dropped: it doesn't exist and ch. 2 no longer mentions it.
-- Still open: `println` accepts only `SerialValue`, so `println('c')` and `println(Direction.North)` are rejected,, so ch. 2 no longer lists `println` among the name-backed formatters. Recommendation: accept every interpolatable type (the same set as `${}`).
+`print` is dropped from the spec. `println` now accepts every type string interpolation accepts (chars, enums, collections of them, and so on) and rejects the rest with "cannot be passed to println".
 
 ### A17. `string.replace` is missing — **Implement**
 
@@ -336,4 +335,4 @@ declarations supplied where the spec uses partial snippets.
 1. **The remaining checker test helpers** (section C), now that A1, A2, A27 and A28 are done.
 2. **Chapter B doc fixes — completed.** The misleading examples and contradictory text are corrected.
 3. **Common gaps: A10, A12, A13, A29.**
-4. **Remaining: the `println` half of A16.**
+4. **No remaining decisions.**

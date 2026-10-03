@@ -790,7 +790,7 @@ one greater than the preceding resolved value. String enums require a unique,
 non-interpolated string literal for every variant and cannot mix string and
 integer backing values.
 
-Formatting is always name-backed: interpolation, `string(value)`,
+Formatting is always name-backed: interpolation, `string(value)`, `println`,
 and formatting within collections or results render the declared
 name. `.value` is the explicit route to the backing value. JSON serialization
 and schema generation are value-backed.

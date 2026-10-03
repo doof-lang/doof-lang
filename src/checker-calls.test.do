@@ -213,3 +213,19 @@ export function testResultArmConstructionDiagnostics(): none {
     Assert.equal(result.diagnostics[0].message, pair[1])
   }
 }
+
+export function testPrintlnAcceptsInterpolatableTypes(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "enum Direction { North, South }\nfunction main(): none { println('c')\nprintln(Direction.North)\nprintln([Direction.South])\nprintln(1.5)\nprintln(\"s\") }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testPrintlnRejectsNonInterpolatableTypes(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Box { value: int }\nfunction main(): none { println(Box { value: 1 }) }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "cannot be passed to println")
+}
