@@ -54,12 +54,10 @@ function emitArrayFind(member: MemberExpression, expression: CallExpression, arr
     + "; }()"
 }
 
-// Named function values are normalized to the callback carrier the runtime
-// invokes; lambdas already lower to one.
+// Named functions and lambdas both lower to the callback carrier the runtime
+// invokes (see emitter-function-refs).
 function emitArgument(value: Expression, expected: ResolvedType | none, context: EmitContext): string {
-  emitted := emitExpression(value, context, expected)
-  if expected == none || expected!.kind != "function" || value.kind == "lambda-expression" { return emitted }
-  return emitContextType(expected!, context) + "(" + emitted + ")"
+  return emitExpression(value, context, expected)
 }
 
 function checkedSignature(member: MemberExpression, expression: CallExpression, context: EmitContext): FunctionType | none {

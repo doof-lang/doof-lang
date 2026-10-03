@@ -19,6 +19,7 @@ import { decoratedExpressionType } from "./emitter-expr-utils"
 import { specializeEmitType } from "./emitter-types"
 import { emitActorCreation, emitAsyncExpression, emitRetireActor } from "./emitter-expr-actor"
 import { moduleDiagnosticPath } from "./emitter-names"
+import { emitIdentifierValue, emitMemberValue } from "./emitter-function-refs"
 
 export function emitExpression(expression: Expression, context: EmitContext, expected: ResolvedType | none = none): string {
   let value = ""
@@ -38,12 +39,12 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
       fileName := moduleDiagnosticPath(context.modulePath, true, context.names)
       value = "std::make_shared<doof::SourceLocation>(std::string(\"" + fileName + "\"), " + string(span.start.line) + ", std::string(\"" + functionName + "\"))"
     }
-    identifier: Identifier -> { value = emitIdentifier(identifier, context) }
+    identifier: Identifier -> { value = emitIdentifierValue(identifier, emitIdentifier(identifier, context), context, expected) }
     binary: BinaryExpression -> { value = emitBinary(binary, context) }
     unary: UnaryExpression -> { value = emitUnary(unary, context) }
     as_: AsExpression -> { value = emitAs(as_, context) }
     assignment: AssignmentExpression -> { value = emitAssignment(assignment, context) }
-    member: MemberExpression -> { value = emitMember(member, context) }
+    member: MemberExpression -> { value = emitMemberValue(member, emitMember(member, context), context, expected) }
     index: IndexExpression -> { value = emitIndex(index, context) }
     call: CallExpression -> { value = emitCall(call, context, expected); sourcePosition = .Return }
     array: ArrayLiteral -> { value = emitArray(array, context, expected) }

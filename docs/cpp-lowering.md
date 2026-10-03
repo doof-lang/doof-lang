@@ -6,6 +6,13 @@ keys. Runtime callbacks share callable storage across copies, preserving
 identity and captured state for equality. Invocation retains that storage until
 it returns, even when a native owner clears its callback during the call.
 
+A function or method named without being called is a callback value. The
+emitter wraps free functions and static methods as `doof::callback<Sig>(name)`,
+using the expected function type when there is one. Bound instance methods
+become a lambda that captures the receiver once, when the reference is taken,
+and dispatches through the variant for interface receivers. Direct calls keep
+their plain C++ callee form.
+
 Generated definitions and executable statements carry C++ `#line` directives
 for their originating Doof spans. Ordinary emitted snapshots use stable logical
 module paths. Dedicated profile builds use the physical paths retained by the

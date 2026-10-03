@@ -17,6 +17,7 @@ import { emitOptionalAbsent, emitOptionalCall, emitOptionalPresent } from "./emi
 import { emitArrayMethodCall } from "./emitter-array-methods"
 import { emitNoImplementationsAccess, implementationlessInterface } from "./emitter-no-implementations"
 import { isTypeParameterName } from "./ast-walk"
+import { emitCalleeExpression } from "./emitter-function-refs"
 
 export function emitCall(expression: CallExpression, context: EmitContext, expected: ResolvedType | none = none): string {
   case expression.callee {
@@ -39,9 +40,8 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
         case expression.resolvedType! {
           result: ResultResolvedType -> {
             callbackExpression := expression.args[0].value
-            // A checked callable can also be a named function. Normalize it
-            // to the callback carrier before invoking the actor-affine call.
-            callback := emitContextType(callbackExpression.resolvedType!, context) + "(" + emitExpression(callbackExpression, context) + ")"
+            // Named functions lower to the callback carrier like lambdas do.
+            callback := emitExpression(callbackExpression, context, callbackExpression.resolvedType)
             valueType := specializeEmitType(result.valueType, context)
             successType := emitResultPayloadType(valueType, context.modulePath, context.names)
             if valueType.kind == "never" {
@@ -136,7 +136,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
           args = args + emitExpression(expression.args[i].value, context)
         }
         if expression.args.length == 1 { args = args + ", false" }
-        return emitExpression(expression.callee, context) + "(" + args + ")"
+        return emitCalleeExpression(expression.callee, context) + "(" + args + ")"
       }
       if member.property == "length" {
         if arrayObjectType != none {
@@ -276,7 +276,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
     }
     _ -> { }
   }
-  let callee = emitExpression(expression.callee, context)
+  let callee = emitCalleeExpression(expression.callee, context)
   if expression.callee.kind == "identifier" {
     case expression.callee {
       identifier: Identifier -> {

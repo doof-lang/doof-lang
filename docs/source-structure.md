@@ -161,6 +161,7 @@ emitter or individual expression branch.
 | `emitter-expr-literals.do` | Literal, array, object, tuple, and string lowering; shared contextual absence values for literals and catch initialization |
 | `emitter-expr-control.do` | Conditional, case, catch, dot-shorthand, and yield-block expressions; shares statement condition formatting for lowered C++ if branches |
 | `emitter-expr-lambda.do` | Lambda capture analysis, mutable capture boxing, and callback lowering |
+| `emitter-function-refs.do` | Function and method references used as values: wraps named functions, static methods, and receiver-capturing bound methods as `doof::callback`; emits call callees unwrapped |
 | `emitter-expr-actor.do` | Actors, promises, async calls, and retirement |
 | `emitter-expr-utils.do` | Decorated-type requirements, shared shorthand property emission, specialized expression-return boundaries, and model-backed nullable queries |
 | `emitter-case-pattern.do` | Type-pattern lowering from checked pattern types (a Result subject is the variant of its arms) and checker-decorated weak subject materialization shared by statement and expression cases; natural nullable absence patterns test for null, and absence bindings use the unit carrier |
