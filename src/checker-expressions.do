@@ -369,8 +369,16 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
         }
       }
       range: RangePattern -> {
-        validateCaseRangeBound(state, range.start, subjectType, scope, range.span)
-        validateCaseRangeBound(state, range.end, subjectType, scope, range.span)
+        // Ranges compare integer bounds; floating-point and other subjects are
+        // reported once per pattern rather than once per bound.
+        if subjectType.kind != "unknown" && !isInteger(subjectType) {
+          typeError(state, "Range patterns require an integer subject (byte, int, or long); got \"" + typeName(subjectType) + "\"", range.span)
+          if range.start != none { checkExpression(state, range.start!, scope, none) }
+          if range.end != none { checkExpression(state, range.end!, scope, none) }
+        } else {
+          validateCaseRangeBound(state, range.start, subjectType, scope, range.span)
+          validateCaseRangeBound(state, range.end, subjectType, scope, range.span)
+        }
       }
       _: WildcardPattern -> { }
     }
@@ -1495,7 +1503,11 @@ function typesOverlap(state: CheckerState, left: ResolvedType, right: ResolvedTy
 function validateCaseRangeBound(state: CheckerState, bound: Expression | none, subjectType: ResolvedType, scope: Scope, span: SourceSpan): none {
   if bound == none { return }
   boundType := checkExpression(state, bound!, scope, optionalResolvedType(subjectType))
-  if !isInteger(subjectType) || !isInteger(boundType) || !typesOverlap(state, subjectType, boundType) {
+  if boundType.kind != "unknown" && !isInteger(boundType) {
+    typeError(state, "Range pattern bounds must be integers; got \"" + typeName(boundType) + "\"", bound!.span)
+    return
+  }
+  if !typesOverlap(state, subjectType, boundType) {
     typeError(state, "Case range bound of type \"" + typeName(boundType) + "\" cannot match subject type \"" + typeName(subjectType) + "\"", span)
   }
 }

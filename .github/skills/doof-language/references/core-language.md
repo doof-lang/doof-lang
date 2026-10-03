@@ -368,6 +368,8 @@ Rules:
 
 - `case` matches values, ranges, and types.
 - Open-ended ranges such as `90..` and `..<18` are valid only as `case` patterns.
+- Range patterns need a `byte`, `int`, or `long` subject and integer bounds;
+  `double`, `char`, and nullable subjects are errors (use `if` instead).
 - Arms are separated by commas or line endings.
 - Commas may appear before line endings, and the final arm may have a trailing comma.
 - Multiple patterns for one arm use `|`.

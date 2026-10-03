@@ -241,10 +241,10 @@ the form; ch. 11's `1e-10` example now compiles.
 - ~~`return Success()` in a function returning `Result<int, string>` (ch. 9: only valid for `Result<none, E>`).~~ Fixed with A9: `Success()` and `Success {}` report that the Result needs a value.
 - ~~`(message) => …` where the contextual type names the parameter `msg`.~~ Resolved: ch. 4 no longer requires lambda parameter names to match the signature. Names from the signature bind by name; other names bind by position (see A7).
 
-### A25. Minor contextual typing gaps — **Implement**
+### A25. Minor contextual typing gaps — **Fixed**
 
 - ~~`Success(3)` fails when the expected type is `Result<int, string> | none`~~. Fixed with A9: a union with one Result member provides the payload context.
-- Double range patterns (`case score { 90.0.. -> … }`) report "Case range bound of type double cannot match subject type double". Either support them or give a clear "integer subjects only" diagnostic.
+- ~~Double range patterns (`case score { 90.0.. -> … }`) report "Case range bound of type double cannot match subject type double".~~ Decided: range patterns stay integer-only. A non-integer subject reports "Range patterns require an integer subject (byte, int, or long)" once per pattern, and a non-integer bound on an integer subject reports "Range pattern bounds must be integers". Ch. 8 documents the rule.
 
 ### A26. Interfaces with no class implementers — **Fixed**
 

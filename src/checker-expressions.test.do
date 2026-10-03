@@ -484,3 +484,24 @@ export function testExplicitGenericStaticReceivers(): none {
   bounded := checked("interface Shape { area(): double }\nclass Drawer<T: Shape> { static tag(): string => \"drawer\" }\nfunction main(): none { a := Drawer<int>.tag() }")
   Assert.isTrue(bounded.diagnostics.length > 0)
 }
+
+export function testRangePatternsRequireIntegerSubjectsAndBounds(): none {
+  floating := caseDiagnostics("double", "90.0.. -> 1, 80.0..<90.0 -> 2, _ -> 3")
+  Assert.equal(floating.diagnostics.length, 2)
+  for diagnostic of floating.diagnostics {
+    Assert.equal(diagnostic.message, "Range patterns require an integer subject (byte, int, or long); got \"double\"")
+  }
+
+  characters := caseDiagnostics("char", "'a'..'z' -> 1, _ -> 2")
+  Assert.equal(characters.diagnostics.length, 1)
+  Assert.stringContains(characters.diagnostics[0].message, "got \"char\"")
+
+  fractionalBound := caseDiagnostics("int", "90.5.. -> 1, _ -> 2")
+  Assert.equal(fractionalBound.diagnostics.length, 1)
+  Assert.equal(fractionalBound.diagnostics[0].message, "Range pattern bounds must be integers; got \"double\"")
+
+  for subject of ["byte", "int", "long"] {
+    valid := caseDiagnostics(subject, "..<10 -> 1, 10..<20 -> 2, 20.. -> 3")
+    Assert.equal(valid.diagnostics.length, 0)
+  }
+}

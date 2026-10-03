@@ -156,6 +156,15 @@ case day {
 | `n..` | Open-ended from n | `90..` matches 90 and above |
 | `..<n` | Open-ended up to n (exclusive) | `..<18` matches 0 to 17 |
 
+Range patterns match only integer subjects (`byte`, `int`, or `long`), and their
+bounds must be integers. Floating-point, `char`, nullable, and other subjects
+are compile errors; compare such values with `if` conditions instead.
+
+```doof
+case score { 90.0.. -> "A", _ -> "F" }   // ❌ Error: Range patterns require an integer subject (byte, int, or long); got "double"
+case count { 90.5.. -> "A", _ -> "F" }   // ❌ Error: Range pattern bounds must be integers; got "double"
+```
+
 Case expressions over `byte`, `int`, or `long` subjects are exhaustive without
 `_` when their value and range patterns together cover every value of the
 subject type, as in `..<0 -> ..., 0 -> ..., 1.. -> ...`. Other subjects need a
