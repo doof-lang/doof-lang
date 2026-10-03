@@ -3,7 +3,7 @@
 import { emitCarrierConversion } from "./emitter-carrier-values"
 import { emitOptionalAbsent, emitOptionalIndex, emitOptionalMember, emitOptionalPresent } from "./emitter-optional-chain"
 import { emitAbsentTest, emitForced, emitOptional, emitterAbsenceLayers } from "./emitter-absence"
-import { hasFailureLayer } from "./absence-types"
+import { absenceLayers, hasFailureLayer } from "./absence-types"
 import { carrierOf, weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
 import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Identifier, IndexExpression, MemberExpression, StringLiteral, ThisExpression, UnaryExpression } from "./ast"
 import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, SerialValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
@@ -342,12 +342,20 @@ export function emitBinary(expression: BinaryExpression, context: EmitContext): 
     fallback := if rightType.kind == "never" then "{ " + right + "; }" else "return " + right + ";"
     context.tryCounter = context.tryCounter + 1
     temporary := "_coalesce_" + string(context.tryCounter)
+    // `??` removes only the outer absent layer. The fallback may still be
+    // absent, so the present value converts to the joined result carrier
+    // (for example `A | B` into `A | B | none`).
+    let present = leftType
+    layers := absenceLayers(leftType)
+    if layers.length > 0 { present = layers[0].present }
     case leftType {
       _: ResultResolvedType -> {
-        return "[&]() -> " + emitType(resultType, context.modulePath, context.names) + " { auto " + temporary + " = " + left + "; if (doof::is_failure(" + temporary + ")) " + fallback + " return std::move(doof::success_value(" + temporary + ")); }()"
+        value := emitCarrierConversion("std::move(doof::success_value(" + temporary + "))", present, resultType, context)
+        return "[&]() -> " + emitType(resultType, context.modulePath, context.names) + " { auto " + temporary + " = " + left + "; if (doof::is_failure(" + temporary + ")) " + fallback + " return " + value + "; }()"
       }
       _ -> {
-        return "[&]() -> " + emitType(resultType, context.modulePath, context.names) + " { auto " + temporary + " = " + left + "; if (doof::is_null(" + temporary + ")) " + fallback + " return doof::unwrap_optional(" + temporary + "); }()"
+        value := emitCarrierConversion("doof::unwrap_optional(" + temporary + ")", present, resultType, context)
+        return "[&]() -> " + emitType(resultType, context.modulePath, context.names) + " { auto " + temporary + " = " + left + "; if (doof::is_null(" + temporary + ")) " + fallback + " return " + value + "; }()"
       }
     }
   }

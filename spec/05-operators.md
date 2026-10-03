@@ -228,7 +228,31 @@ config := loadConfig() ?? defaultConfig     // Config (fallback on Failure)
 data := readFile("cache.txt") ?? ""         // string
 ```
 
-**Type:** `x ?? y` has the present type of `x`, joined with the type of `y`.
+**Operands:** `x` must be able to be absent: a union with `none`, a
+`Result<T, E>`, or both. Any other left operand is an error. When `x` has
+several absent layers, every layer falls back: `x ?? y` is `x? ?? y`, so a
+`Result<T | none, E>` uses `y` on a `Failure` and on a `none` success. A
+leading-dot shorthand on the right (`x ?? .Default`) resolves against the
+present type of `x`. `y` may be `never`, such as `x ?? panic("missing")`.
+
+**Type:** `x ?? y` has the present type of `x` (every absent layer removed),
+joined with the type of `y`:
+
+- With an expected type, both the present type of `x` and the type of `y` must
+  be assignable to it, and the expression has that type.
+- Otherwise, when one is assignable to the other, the wider type is the result.
+- Otherwise the wider type of the two with `none` removed is used, and the
+  result stays nullable when either side was. A fallback that may itself be
+  absent therefore keeps the result nullable:
+
+```doof
+current: Circle | Square | none := selected()
+fallback: Circle | none := lastCircle()
+shape := current ?? fallback                // Circle | Square | none
+safe := current ?? Square {}                // Circle | Square
+```
+
+Types with no such relationship are an error; annotate the expected type.
 
 **Associativity:** Right-to-left, so chains compose:
 

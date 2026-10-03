@@ -172,3 +172,18 @@ export function testEqualityConvertsTheNarrowerOperandToTheUnion(): none {
   Assert.stringContains(source, "(ok() == [&]() -> doof::Result<int32_t, std::string> { const auto& _result_arm = doof::Success<int32_t>{ 1 };")
   Assert.stringContains(source, "(doof::Success<int32_t>{ 1 } == doof::Success<int32_t>{ 2 })")
 }
+
+export function testCoalescingPromotesThePresentValueIntoANullableResult(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class A { v: int = 1 }\nclass B { v: int = 2 }\n" +
+    "function pick(a: A | B | none, b: A | B | none): A | B | none => a ?? b\n" +
+    "function res(r: Result<A | B, string>, b: A | B | none): A | B | none => r ?? b\n" +
+    "function plain(a: A | B | none, b: A | B): A | B => a ?? b",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "return doof::variant_promote<std::variant<std::monostate, std::shared_ptr<A>, std::shared_ptr<B>>>(doof::unwrap_optional(_coalesce_")
+  Assert.stringContains(source, "return doof::variant_promote<std::variant<std::monostate, std::shared_ptr<A>, std::shared_ptr<B>>>(std::move(doof::success_value(_coalesce_")
+  Assert.stringContains(source, "if (doof::is_null(_coalesce_3)) return b; return doof::unwrap_optional(_coalesce_3);")
+}
