@@ -40,3 +40,19 @@ export function testNullableMapContextTypesMapLiterals(): none {
   Assert.isTrue(hasErrorDiagnostics(invalid.diagnostics))
   Assert.stringContains(invalid.diagnostics[0].message, "Cannot assign string to int")
 }
+
+export function testEmptyArrayLiteralRequiresContext(): none {
+  bare := compile([SourceFile { path: "/main.do", source: "function main(): none { values := []\n}" }], "/main.do")
+  Assert.isTrue(hasErrorDiagnostics(bare.diagnostics))
+  Assert.stringContains(bare.diagnostics[0].message, "empty array literal")
+}
+
+export function testEmptyArrayLiteralAllowedWithExpectedType(): none {
+  valid := compile([SourceFile { path: "/main.do", source:
+    "function take(values: int[]): int => values.length\n" +
+    "function make(): string[] => []\n" +
+    "function main(): int {\nlet a: int[] = []\nlet b: int[] | none = []\nlet c: Set<int> = []\nreturn take([]) + a.length + make().length\n}",
+  }], "/main.do")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+}

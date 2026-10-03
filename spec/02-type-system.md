@@ -423,9 +423,9 @@ let point = Point(1.0, 2.0)       // Point
 scores: Map := { "Alice": 100 }   // Map<string, int>
 unique: Set := [1, 2, 3]          // Set<int>
 
-// Empty arrays are currently accepted, though explicit annotation is clearer
-let empty = []
-let nums: int[] = []              // ✅ Explicit annotation required
+// An empty array literal needs an expected type (annotation, parameter, return type, field)
+let empty = []                    // Error: cannot infer element type
+let nums: int[] = []              // ✅ Explicit annotation
 m: Map := {}                      // Error: empty map needs full annotation
 s: Set := []                      // Error: empty set needs full annotation
 

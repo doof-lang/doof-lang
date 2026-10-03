@@ -748,7 +748,7 @@ export function testStopsBeforeEmissionOnUnknownCheckedTypes(): none {
   ], "/main.do")
   let foundUnknownDiagnostic = false
   for diagnostic of result.diagnostics {
-    if diagnostic.message.contains("Unknown resolved type") { foundUnknownDiagnostic = true }
+    if diagnostic.message.contains("Unknown resolved type") || diagnostic.message.contains("empty array literal") { foundUnknownDiagnostic = true }
   }
   Assert.equal(foundUnknownDiagnostic, true)
   Assert.equal(result.emission == none, true)

@@ -120,6 +120,8 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
           }
           return finish(state, expression, jsonValueType())
         }
+        presentCollection := soleNullableCollectionArm(union_)
+        if presentCollection != none { return checkArray(state, expression, scope, presentCollection) }
       }
       _ -> { }
     }
@@ -149,6 +151,9 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
       set: SetResolvedType -> { return finish(state, expression, setType(expectedElement!, set.readonly_)) }
       _ -> { }
     }
+  }
+  if expression.elements.length == 0 {
+    typeError(state, "Cannot infer the element type of an empty array literal; add a type annotation", expression.span)
   }
   let element = unknownType()
   for item of expression.elements { element = joinTypes(element, checkExpression(state, item, scope, none)) }
@@ -342,4 +347,25 @@ function joinNames(names: string[]): string {
 export function containsJsonValue(state: CheckerState, union_: UnionResolvedType): bool {
   for member of union_.types { if isJsonValueType(member) { return true } }
   return false
+}
+
+// A nullable array or set context types the literal like the collection itself.
+function soleNullableCollectionArm(union_: UnionResolvedType): ResolvedType | none {
+  let collection: ResolvedType | none = none
+  let hasNone = false
+  for member of union_.types {
+    case member {
+      _: NoneType -> { hasNone = true }
+      _: ArrayResolvedType -> {
+        if collection != none { return none }
+        collection = member
+      }
+      _: SetResolvedType -> {
+        if collection != none { return none }
+        collection = member
+      }
+      _ -> { return none }
+    }
+  }
+  return if hasNone then collection else none
 }
