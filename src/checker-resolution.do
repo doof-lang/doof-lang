@@ -79,6 +79,50 @@ function recordMember(resolved: CheckedMember, owner: ResolvedType, modulePath: 
   resolved.instance = instance
 }
 
+/**
+ * Resolves `T.name` against the static members of the interface bounding type
+ * parameter `T`. Instance members of the bound are reached through values.
+ */
+export function resolveBoundStaticMember(state: CheckerState, object: ResolvedType, property: string): CheckedMember | none {
+  if object.kind != "type-parameter" { return none }
+  case interfaceBoundReceiver(object) {
+    interfaceType_: InterfaceType -> {
+      declaration := declarationFor(state.result, interfaceType_.symbol)
+      if declaration == none { return none }
+      case declaration! {
+        interface_: InterfaceDeclaration -> {
+          module := classModuleFor(state.result, interfaceType_.symbol)
+          for field of interface_.staticFields {
+            if field.name != property { continue }
+            base := field.resolvedType ?? resolveAnnotation(field.type_, module, state.result, interface_.typeParams)
+            selected := CheckedMember {}
+            recordMember(selected, object, interfaceType_.symbol.module, none, true, none, false)
+            selected.type_ = substituteTypeParams(if field.readonly_ && field.resolvedType == none then applyDeepReadonly(base) else base, interface_.typeParams, interfaceType_.typeArgs)
+            return selected
+          }
+          for method of interface_.staticMethods {
+            if method.name != property { continue }
+            selected := CheckedMember {}
+            recordMember(selected, object, interfaceType_.symbol.module, method, false, none, false)
+            selected.type_ = substituteTypeParams(method.resolvedType ?? interfaceMethodSignature(state, method, interface_, interfaceType_.symbol), interface_.typeParams, interfaceType_.typeArgs)
+            return selected
+          }
+        }
+        _ -> { }
+      }
+    }
+    _ -> { }
+  }
+  return none
+}
+
+function serialDecodeType(parameter: TypeParameterType): ResolvedType {
+  return functionType([
+    FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false },
+    FunctionParamType { name: "lenient", type_: primitive("bool"), hasDefault: true },
+  ], resultType(parameter, primitive("string")))
+}
+
 export function memberType(state: CheckerState, object: ResolvedType, property: string, span: SourceSpan, validateVisibility: bool = true, declaredOnly: bool = false): ResolvedType {
   return resolveMember(state, object, property, span, validateVisibility, declaredOnly).type_!
 }
@@ -217,7 +261,15 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
     }
     parameter: TypeParameterType -> {
       bound := interfaceBoundReceiver(parameter)
-      if bound.kind == "interface" { return resolveMemberType(state, bound, property, span, validateVisibility, true, selection) }
+      if bound.kind == "interface" {
+        declared := resolveMemberType(state, bound, property, span, validateVisibility, true, selection)
+        // JSON members are compiler-provided, so an interface bound implies
+        // them without declaring them; instantiation validates the argument.
+        if declared.kind != "unknown" { return declared }
+        if property == "toSerialObject" { return functionType([], jsonObjectType()) }
+        if property == "fromSerialValue" { return serialDecodeType(parameter) }
+        return declared
+      }
       if property == "metadata" {
         if parameter.constraintName != "Reflectable" {
           typeError(state, "Static member \"metadata\" requires type parameter \"" + parameter.name + "\" to be constrained by Reflectable", span)
@@ -225,15 +277,19 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
         }
         return classMetadataType(parameter)
       }
+      if property == "toSerialObject" {
+        if parameter.constraintName != "Serializable" {
+          typeError(state, "Member \"toSerialObject\" requires type parameter \"" + parameter.name + "\" to be constrained by Serializable", span)
+          return unknownType()
+        }
+        return functionType([], jsonObjectType())
+      }
       if property == "fromSerialValue" {
         if parameter.constraintName != "Serializable" {
           typeError(state, "Static member \"" + property + "\" requires type parameter \"" + parameter.name + "\" to be constrained by Serializable", span)
           return unknownType()
         }
-        return functionType([
-          FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false },
-          FunctionParamType { name: "lenient", type_: primitive("bool"), hasDefault: true },
-        ], resultType(parameter, primitive("string")))
+        return serialDecodeType(parameter)
       }
       return unknownType()
     }

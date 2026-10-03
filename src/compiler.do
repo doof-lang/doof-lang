@@ -88,6 +88,13 @@ function compileInternal(
   instantiations := nameInstantiations(checkedInstantiations, names)
   timings.finish("compiler.instantiation-naming", namingStart)
   timings.finish("compiler.instantiations", instantiationStart)
+  if checkedInstantiations.jsonErrors.length > 0 {
+    zero := SemanticLocation { line: 0, column: 0, offset: 0 }
+    for message of checkedInstantiations.jsonErrors {
+      diagnostics.push(Diagnostic { severity: "error", message, span: SemanticSpan { start: zero, end: zero }, module: entry })
+    }
+    return Compilation { emission: none, diagnostics, sourceFiles: frontend.sourceFiles, resolutionProbes: frontend.resolutionProbes }
+  }
   if instantiations.overflow {
     let trace = ""
     for item of instantiations.overflowTrace { trace = trace + (if trace == "" then "" else " -> ") + item }

@@ -179,7 +179,10 @@ export function releaseCheckedReferences(statements: Statement[]): none {
         for field of class_.fields { if field.defaultValue != none { expressions.push(field.defaultValue!) } }
         if class_.destructor_ != none { for inner of class_.destructor_!.statements { pending.push(inner) } }
       }
-      interface_: InterfaceDeclaration -> { for method of interface_.methods { releaseFunctionBody(method, pending, expressions) } }
+      interface_: InterfaceDeclaration -> {
+        for method of interface_.methods { releaseFunctionBody(method, pending, expressions) }
+        for method of interface_.staticMethods { releaseFunctionBody(method, pending, expressions) }
+      }
       export_: ExportDeclaration -> { pending.push(export_.declaration) }
       block: Block -> { for inner of block.statements { pending.push(inner) } }
       _ -> { collectStatementExpressions(statement, expressions) }

@@ -1241,6 +1241,13 @@ Adjacent closing brackets such as `Reader<int>>` and `Box<Reader<int>>>` are
 accepted in generic declarations, type annotations, and explicit generic calls.
 Expression shift operators retain their ordinary meaning.
 
+An interface bound exposes the interface's declared **static** members through
+the type name: `T.zero()` or `T.label` in a bound declared with
+`static zero(): int` / `static label: string`. Only classes and structs that
+declare matching static members satisfy such a bound (see chapter 7, "Static and
+Interfaces"). Static members are never reached through a value, and instance
+members never through `T`.
+
 Interface bounds do not grant the compiler-generated static capabilities of
 `Reflectable` or `Serializable`. Combined/intersection constraints and
 associated types are not introduced by interface bounds.

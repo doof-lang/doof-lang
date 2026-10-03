@@ -434,6 +434,8 @@ export class ModuleAnalyzer {
         visitTypeParameterConstraints(interface_.typeParamConstraints, info, interface_.typeParams)
         for field of interface_.fields { visitType(field.type_, info, interface_.typeParams) }
         for method of interface_.methods { visitFunctionTypes(method, info, interface_.typeParams) }
+        for field of interface_.staticFields { visitType(field.type_, info, interface_.typeParams) }
+        for method of interface_.staticMethods { visitFunctionTypes(method, info, interface_.typeParams) }
       }
       alias: TypeAliasDeclaration -> { visitTypeParameterConstraints(alias.typeParamConstraints, info, alias.typeParams); visitType(alias.type_, info, alias.typeParams) }
       const_: ConstDeclaration -> { if const_.type_ != none { visitType(const_.type_!, info, []) } }

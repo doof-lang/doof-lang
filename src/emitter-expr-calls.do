@@ -248,7 +248,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
         object := emitExpression(member.object, context)
         objectType := decoratedExpressionType(member.object)
         if objectType != none {
-          case objectType! {
+          case specializeEmitType(objectType!, context) {
             class_: ClassType -> { if class_.symbol.kind == "struct" { return object + ".toSerialObject()" } }
             _ -> { }
           }
@@ -495,10 +495,12 @@ function concreteMethodNameFor(context: EmitContext, key: string): string {
   return ""
 }
 
+// `fromSerialValue` is reserved, so on any type parameter it is the implied
+// JSON decoder (Serializable bounds and interface bounds alike).
 function isSerializableTypeParameter(resolvedType: ResolvedType | none): bool {
   if resolvedType == none { return false }
   case resolvedType! {
-    parameter: TypeParameterType -> { return parameter.constraintName == "Serializable" }
+    _: TypeParameterType -> { return true }
     _ -> { return false }
   }
 }

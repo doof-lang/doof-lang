@@ -10,7 +10,7 @@ import { CheckerState } from "./checker-state"
 import { isNumericConstraint, satisfiesNumericConstraint } from "./checker-numeric"
 import { deprecatedNoneAlias, typeError } from "./checker-common"
 import { builtinSourceLocationType, declaredSymbolName, optionalResolvedType, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
-import { registerConcreteInterfaceImplementations, concreteTypes, classModuleFor, isAssignableWithInterfaces, satisfiesInterfaceBound } from "./checker-interfaces"
+import { registerConcreteInterfaceImplementations, concreteTypes, classModuleFor, isAssignableWithInterfaces, satisfiesInterfaceBound, satisfiesInterfaceInstanceBound } from "./checker-interfaces"
 
 class AnnotationResolution {
   state: CheckerState
@@ -291,11 +291,15 @@ export function validateAnnotationConstraints(state: CheckerState, names: string
     if isNumericConstraint(substitutedConstraint) {
       if !satisfiesNumericConstraint(arguments[index], substitutedConstraint) { reportConstraintViolation(state, names[index], arguments[index], typeName(substitutedConstraint), span) }
     } else if !satisfiesInterfaceBound(state.result, arguments[index], substitutedConstraint) {
-      reportConstraintViolation(state, names[index], arguments[index], typeName(substitutedConstraint), span)
+      let detail = ""
+      if satisfiesInterfaceInstanceBound(state.result, arguments[index], substitutedConstraint) {
+        detail = "; it must be a class or struct providing the interface's static members as non-private, read-only fields and matching methods"
+      }
+      reportConstraintViolation(state, names[index], arguments[index], typeName(substitutedConstraint), span, detail)
     }
   }
 }
 
-function reportConstraintViolation(state: CheckerState, typeParam: string, argument: ResolvedType, constraint: string, span: SourceSpan): none {
-  typeError(state, "Type \"" + typeName(argument) + "\" does not satisfy constraint \"" + constraint + "\" for type parameter \"" + typeParam + "\"", span)
+function reportConstraintViolation(state: CheckerState, typeParam: string, argument: ResolvedType, constraint: string, span: SourceSpan, detail: string = ""): none {
+  typeError(state, "Type \"" + typeName(argument) + "\" does not satisfy constraint \"" + constraint + "\" for type parameter \"" + typeParam + "\"" + detail, span)
 }

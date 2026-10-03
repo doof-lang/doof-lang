@@ -12,8 +12,9 @@ import {
   ExpressionStatement, ForOfStatement, ForStatement, FunctionDeclaration, Identifier, IfExpression, IfStatement,
   ImmutableBinding, IndexExpression, InterfaceDeclaration, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral,
   RangePattern, ReadonlyDeclaration, RetireExpression, ReturnStatement, Statement, StringLiteral, TryStatement, TupleLiteral, TypePattern, UnaryExpression, ValuePattern,
-  WhileStatement, WithStatement, YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression,
+  WhileStatement, WithStatement, YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression, Program,
 } from "./ast"
+import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
 import { AnalysisResult } from "./analyzer"
 import { sameType, substituteTypeParams, typeName } from "./checker-types"
 import { classSatisfiesConcreteInterface } from "./checker-interfaces"
@@ -74,6 +75,9 @@ export class CheckedInstantiations {
   let currentTrace: string[] = []
   jsonSerializationKeys: string[] = []
   jsonDeserializationKeys: string[] = []
+  // Implied JSON members used through a type parameter whose concrete argument
+  // cannot provide them. Serializable bounds are rejected at the call site.
+  jsonErrors: string[] = []
 }
 
 export function discoverInstantiations(result: AnalysisResult): CheckedInstantiations {
@@ -340,6 +344,7 @@ function collectPattern(pattern: CasePattern, modulePath: string, analysis: Anal
 function collectJsonMemberDemand(member: MemberExpression, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
   if member.object.resolvedType == none { return }
   receiver := specialize(member.object.resolvedType!, names, arguments)
+  if member.property == "toSerialObject" || member.property == "fromSerialValue" { validateImpliedJsonMember(member, receiver, analysis, plan) }
   if member.property == "toSerialObject" {
     addJsonSerializationDemand(plan, receiver, analysis)
     return
@@ -377,6 +382,35 @@ function collectJsonMemberDemand(member: MemberExpression, analysis: AnalysisRes
     }
     _ -> { }
   }
+}
+
+function validateImpliedJsonMember(member: MemberExpression, receiver: ResolvedType, analysis: AnalysisResult, plan: CheckedInstantiations): none {
+  case member.object.resolvedType! {
+    parameter: TypeParameterType -> { if parameter.constraintName == "Serializable" { return } }
+    _ -> { return }
+  }
+  let programs: Program[] = []
+  for module of analysis.modules { programs.push(module.program) }
+  let supported = false
+  let reason = ""
+  case receiver {
+    class_: ClassType -> {
+      owner := if class_.symbol.native_ then none else classDeclaration(analysis, class_.symbol.module, class_.symbol.name)
+      if owner != none {
+        supported = if member.property == "toSerialObject" then canGenerateJsonSerialization(owner!, programs) else canGenerateJsonDeserialization(owner!, programs)
+      }
+    }
+    _: EnumType -> {
+      supported = member.property == "fromSerialValue"
+      reason = " (enums use toSerialValue)"
+    }
+    _: InterfaceType -> { supported = member.property == "fromSerialValue" }
+    _ -> { }
+  }
+  if supported { return }
+  let trace = ""
+  for item of plan.currentTrace { trace = trace + (if trace == "" then "" else " -> ") + item }
+  plan.jsonErrors.push("Type \"" + typeName(receiver) + "\" does not support automatic JSON " + (if member.property == "toSerialObject" then "serialization" else "deserialization") + reason + ", required by '" + member.property + "' on a type parameter" + (if trace == "" then "" else " in " + trace))
 }
 
 function addJsonSerializationDemand(plan: CheckedInstantiations, type_: ResolvedType, analysis: AnalysisResult): none {

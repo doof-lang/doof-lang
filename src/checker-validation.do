@@ -45,6 +45,11 @@ export function validateStatement(statement: Statement, module: string, diagnost
         validateResolved(field.resolvedType, field.span, module, "interface field " + interface_.name, diagnostics)
       }
       for method of interface_.methods { validateFunction(method, module, diagnostics) }
+      for field of interface_.staticFields {
+        validateTypeAnnotation(field.type_, module, diagnostics)
+        validateResolved(field.resolvedType, field.span, module, "interface static field " + interface_.name, diagnostics)
+      }
+      for method of interface_.staticMethods { validateFunction(method, module, diagnostics) }
     }
     enum_: EnumDeclaration -> {
       for variant of enum_.variants {

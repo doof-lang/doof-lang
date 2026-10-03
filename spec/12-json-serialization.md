@@ -132,6 +132,15 @@ payload: SerialValue := { name: "Ada" }
 user := decode<User>{ json: payload }
 ```
 
+`value.toSerialObject()` is likewise available on a `Serializable` parameter's values.
+
+A type parameter bounded by an ordinary interface also gets `T.fromSerialValue(...)`
+and `value.toSerialObject()` implicitly; the interface need not declare them (they
+are reserved names). Each concrete argument must then be a class or struct eligible
+for that direction (`fromSerialValue` also accepts enums and interfaces); otherwise
+compilation reports an error naming the argument type. The generated JSON code is
+emitted for the concrete arguments, exactly as for direct calls.
+
 `Serializable` is a constraint-only intrinsic. It is not a normal value type,
 and each concrete type argument must be a class or struct whose fields are JSON-serializable.
 The concrete nominal-object JSON methods are still generated on demand when the generic is

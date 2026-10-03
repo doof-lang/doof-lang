@@ -71,8 +71,8 @@ export function testInterfaceBoundReadonlyArray(): none {
   Assert.isTrue(found)
 }
 
-export function testInterfaceBoundDoesNotGrantJsonIntrinsic(): none {
-  result := checked("interface Reader<V> { read(): V }\nfunction bad<T: Reader<int>>(value: T): none { T.fromSerialValue(value) }")
+export function testInterfaceBoundDoesNotGrantReflectionIntrinsic(): none {
+  result := checked("interface Reader<V> { read(): V }\nfunction bad<T: Reader<int>>(value: T): none { T.metadata }")
   let found = false
   for diagnostic of result.diagnostics { if diagnostic.message.contains("has no member") { found = true } }
   for diagnostic of result.diagnostics { println(diagnostic.message) }

@@ -405,19 +405,21 @@ class Largest<T: Measurable> {
 }
 ```
 
-Static interface requirements are also available through the type parameter:
+Static interface requirements are available through the type parameter
+(implemented; see spec chapter 7). The `Self` form below remains a proposal; the
+implemented form names the produced type with an interface type parameter:
 
 ```doof
-interface Zero {
-    static zero(): Self
+interface Zero<V> {
+    static zero(): V
 }
 
-function origin<T: Zero>(): T => T.zero()
+function origin<V, T: Zero<V>>(): V => T.zero()
 ```
 
-`Self` in an interface constraint denotes the concrete type argument. Its first
-use should be restricted to method return types and parameter types; it does not
-introduce associated types.
+A proposed `Self` in an interface constraint would denote the concrete type
+argument. Its first use should be restricted to method return types and
+parameter types; it does not introduce associated types.
 
 ### Constraint categories
 

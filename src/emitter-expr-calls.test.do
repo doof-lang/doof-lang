@@ -242,3 +242,49 @@ export function testStandaloneResultArmsEmitTheirOwnStructs(): none {
   Assert.stringContains(output, "doof::Failure<void>{}")
   Assert.stringContains(output, "doof::Success<int32_t>{ 2 }")
 }
+
+export function testTypeParameterStaticMembersLowerToConcreteOwners(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "interface Shape { static sides: int\nstatic unit(scale: int = 2): string }\n" +
+    "class Square { static sides = 4\nstatic unit(scale: int = 2): string => \"sq\" }\n" +
+    "struct Tri { static sides = 3\nstatic unit(scale: int = 2): string => \"tri\" }\n" +
+    "function describe<T: Shape>(): string => T.unit() + string(T.sides)\n" +
+    "function main(): none { a := describe<Square>()\nb := describe<Tri>() }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "Square::unit(2)")
+  Assert.stringContains(source, "Square::sides")
+  Assert.stringContains(source, "Tri::unit(2)")
+  Assert.stringContains(source, "Tri::sides")
+}
+
+export function testInterfaceBoundImpliedJsonMembersTriggerGeneration(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "interface Named { name: string }\nclass User { name: string }\nstruct Tag { name: string }\n" +
+    "function encode<T: Named>(value: T): SerialValue => value.toSerialObject()\n" +
+    "function decode<T: Named>(json: SerialValue): Result<T, string> => T.fromSerialValue(json)\n" +
+    "function main(): none { a := encode(User { name: \"a\" })\nb := encode(Tag { name: \"t\" })\nc := decode<User>({ name: \"a\" })\nd := decode<Tag>({ name: \"t\" }) }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "toSerialObject() const")
+  Assert.stringContains(source, "fromSerialValue(")
+  Assert.stringContains(source, "value.toSerialObject()")
+  Assert.stringContains(source, "value->toSerialObject()")
+  Assert.stringContains(source, "User::fromSerialValue(json, false)")
+  Assert.stringContains(source, "Tag::fromSerialValue(json, false)")
+}
+
+export function testInterfaceBoundImpliedJsonMembersRejectUnsupportedArguments(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "interface Named { name: string }\nclass Bad { name: string\nhandler: (): int }\n" +
+    "function encode<T: Named>(value: T): SerialValue => value.toSerialObject()\n" +
+    "function main(): none { a := encode(Bad { name: \"a\", handler: => 1 }) }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "does not support automatic JSON serialization")
+  Assert.stringContains(result.diagnostics[0].message, "toSerialObject")
+}

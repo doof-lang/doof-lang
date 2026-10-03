@@ -1759,3 +1759,31 @@ export function testParsesExponentLiteralValues(): none {
     _ -> { panic("expected expression statement") }
   }
 }
+
+export function testParsesStaticInterfaceMembersSeparatelyFromInstanceMembers(): none {
+  program := parse("interface Shape { static sides: int\nstatic readonly label: string\nstatic unit(scale: int = 2): string\narea(): int\nname: string }")
+  case program.statements[0] {
+    interface_: InterfaceDeclaration -> {
+      Assert.equal(interface_.fields.length, 1)
+      Assert.equal(interface_.methods.length, 1)
+      Assert.equal(interface_.staticFields.length, 2)
+      Assert.equal(interface_.staticFields[0].name, "sides")
+      Assert.equal(interface_.staticFields[1].readonly_, true)
+      Assert.equal(interface_.staticMethods.length, 1)
+      Assert.equal(interface_.staticMethods[0].name, "unit")
+      Assert.equal(interface_.staticMethods[0].static_, true)
+      Assert.equal(interface_.staticMethods[0].bodyless, true)
+    }
+    _ -> { panic("expected interface declaration") }
+  }
+}
+
+export function testRejectsMutableStaticInterfaceFields(): none {
+  parser := Parser { source: "interface Shape { static let sides: int }" }
+  result := catchPanic(=> parser.parse())
+  case result {
+    _: Failure<string> -> { }
+    _ -> { panic("expected parse failure") }
+  }
+  Assert.equal(parser.errorMessage, "Static interface fields are read-only; 'let' is not allowed")
+}

@@ -743,6 +743,10 @@ export class InterfaceDeclaration {
   typeParamConstraints: TypeParameterConstraint[] = []
   fields: InterfaceField[]
   methods: FunctionDeclaration[]
+  // Static members form a contract for type-parameter bounds (`T.zero()`); they
+  // never take part in structural instance matching.
+  staticFields: InterfaceField[] = []
+  staticMethods: FunctionDeclaration[] = []
   exported: bool
   let resolvedSymbol: Symbol | none = none
   let needsJson: bool = false

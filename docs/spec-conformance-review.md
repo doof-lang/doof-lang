@@ -155,10 +155,9 @@ Treating the arms as structs exposed two general gaps, fixed with it:
 Statics are accessed only through the class name (`Rectangle.kind`). Neither
 `.` nor `::` reaches them through an instance, and the diagnostic for
 `rect.kind` now says "use 'Rectangle.kind'" instead of recommending `::`.
-Ch. 7 drops the `::` syntax. Interfaces declare instance members only; static
-interface members, and static access through a type parameter (`T.zero()`),
-are reserved for future support, since without instance access they would
-have no call site.
+Ch. 7 drops the `::` syntax. Interfaces may declare static members as a
+contract for generic bounds, and a type parameter reaches them through `T.name`
+(`T.zero()`); statics remain unreachable through instances or interface values.
 
 ### A11. Implicit numeric widening isn't transitive — **Implement**
 

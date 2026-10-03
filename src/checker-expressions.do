@@ -2,7 +2,7 @@ import { retainEditorScope } from "./checker-common"
 // Expression dispatch, operators, narrowing, and assignment checking.
 
 import { checkArguments, positionalArguments } from "./checker-arguments"
-import { jsonPrograms, resolveMember } from "./checker-resolution"
+import { jsonPrograms, resolveMember, resolveBoundStaticMember } from "./checker-resolution"
 import { unionAliasJsonDiscriminator } from "./json-semantics"
 import type { Symbol } from "./semantic"
 import type { TypeAliasDeclaration } from "./ast"
@@ -504,7 +504,8 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         _ -> { }
       }
       diagnosticCount := state.diagnostics.length
-      selected := resolveMember(state, objectType, member.property, member.span)
+      boundStatic := if isTypeParameterName(member.object) then resolveBoundStaticMember(state, objectType, member.property) else none
+      selected := if boundStatic != none then boundStatic! else resolveMember(state, objectType, member.property, member.span)
       member.resolvedMember = selected
       memberValue := selected.type_!
       if memberValue.kind == "unknown" && objectType.kind != "unknown" && state.diagnostics.length == diagnosticCount {
@@ -777,6 +778,13 @@ function weakAccessTarget(type_: ResolvedType): ResolvedType {
     _ -> { }
   }
   return type_
+}
+
+function isTypeParameterName(expression: Expression): bool {
+  case expression {
+    identifier: Identifier -> { return identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "type-parameter" }
+    _ -> { return false }
+  }
 }
 
 function isNamedStaticReceiver(expression: Expression): bool {

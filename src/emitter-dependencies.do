@@ -270,7 +270,16 @@ export function collectDependencySurface(
         if field.resolvedType != none { collectDependencyType(field.resolvedType!, index) }
         collectAnnotationAliases(field.type_, index)
       }
+      for field of interface_.staticFields {
+        if field.resolvedType != none { collectDependencyType(field.resolvedType!, index) }
+        collectAnnotationAliases(field.type_, index)
+      }
       for method of interface_.methods {
+        if method.resolvedType != none { collectDependencyType(method.resolvedType!, index) }
+        if method.returnType != none { collectAnnotationAliases(method.returnType!, index) }
+        for parameter of method.params { if parameter.type_ != none { collectAnnotationAliases(parameter.type_!, index) } }
+      }
+      for method of interface_.staticMethods {
         if method.resolvedType != none { collectDependencyType(method.resolvedType!, index) }
         if method.returnType != none { collectAnnotationAliases(method.returnType!, index) }
         for parameter of method.params { if parameter.type_ != none { collectAnnotationAliases(parameter.type_!, index) } }

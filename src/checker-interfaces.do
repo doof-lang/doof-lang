@@ -14,7 +14,7 @@ import {
   DotShorthand, EnumDeclaration, ExportDeclaration, ExportList, Expression, ExpressionStatement,
   FloatLiteral, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType,
   IfExpression, IfStatement, ImmutableBinding, Identifier, ImportDeclaration,
-  IndexExpression, IntLiteral, InterfaceDeclaration, LetDeclaration,
+  IndexExpression, IntLiteral, InterfaceDeclaration, InterfaceField, LetDeclaration,
   LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral,
   NamedImport, ObjectLiteral, ObjectProperty, Program,
   ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral,
@@ -203,6 +203,11 @@ export function isAssignableWithInterfaces(result: AnalysisResult, value: Resolv
  * specialization keeps the concrete struct type.
  */
 export function satisfiesInterfaceBound(result: AnalysisResult, argument: ResolvedType, bound: ResolvedType): bool {
+  if !satisfiesInterfaceInstanceBound(result, argument, bound) { return false }
+  return providesInterfaceStatics(result, argument, bound)
+}
+
+export function satisfiesInterfaceInstanceBound(result: AnalysisResult, argument: ResolvedType, bound: ResolvedType): bool {
   case argument {
     struct_: ClassType -> {
       case bound {
@@ -221,6 +226,103 @@ export function satisfiesInterfaceBound(result: AnalysisResult, argument: Resolv
     _ -> { }
   }
   return isAssignableWithInterfaces(result, argument, bound)
+}
+
+/**
+ * Static interface members are a contract only for generic bounds: the
+ * argument must be a class or struct (or a parameter bounded by the same
+ * statics) because interface values and primitives have no static owner.
+ * Static fields must be read-only on the provider so `T.name` never exposes
+ * mutable shared state.
+ */
+function providesInterfaceStatics(result: AnalysisResult, argument: ResolvedType, bound: ResolvedType): bool {
+  case bound {
+    interfaceType_: InterfaceType -> {
+      declaration := declarationFor(result, interfaceType_.symbol)
+      if declaration == none { return true }
+      case declaration! {
+        interface_: InterfaceDeclaration -> {
+          if interface_.staticFields.length == 0 && interface_.staticMethods.length == 0 { return true }
+          case argument {
+            class_: ClassType -> {
+              provider := declarationFor(result, class_.symbol)
+              if provider == none { return false }
+              case provider! {
+                owner: ClassDeclaration -> { return classProvidesStatics(result, owner, class_, interface_, interfaceType_) }
+                _ -> { return false }
+              }
+            }
+            parameter: TypeParameterType -> {
+              parameterBound := interfaceBoundReceiver(parameter)
+              case parameterBound {
+                boundType: InterfaceType -> { return parameterBoundProvidesStatics(result, boundType, interface_, interfaceType_) }
+                _ -> { return false }
+              }
+            }
+            _ -> { return false }
+          }
+        }
+        _ -> { return true }
+      }
+    }
+    _ -> { return true }
+  }
+  return true
+}
+
+function interfaceStaticFieldType(result: AnalysisResult, interface_: InterfaceDeclaration, interfaceType_: InterfaceType, field: InterfaceField): ResolvedType {
+  base := field.resolvedType ?? resolveAnnotation(field.type_, classModuleFor(result, interfaceType_.symbol), result, interface_.typeParams)
+  return substituteTypeParams(if field.readonly_ && field.resolvedType == none then applyDeepReadonly(base) else base, interface_.typeParams, interfaceType_.typeArgs)
+}
+
+function interfaceStaticMethodType(result: AnalysisResult, interface_: InterfaceDeclaration, interfaceType_: InterfaceType, method: FunctionDeclaration): ResolvedType {
+  base := method.resolvedType ?? methodSignature(method, classModuleFor(result, interfaceType_.symbol), result, interface_.typeParams)
+  return substituteTypeParams(base, interface_.typeParams, interfaceType_.typeArgs)
+}
+
+function classProvidesStatics(result: AnalysisResult, class_: ClassDeclaration, classType_: ClassType, interface_: InterfaceDeclaration, interfaceType_: InterfaceType): bool {
+  for required of interface_.staticFields {
+    actualField := findClassField(class_.fields, required.name)
+    if actualField == none || !actualField!.static_ || actualField!.private_ || actualField!.let_ { return false }
+    actualBase := resolvedClassFieldType(result, actualField!, classType_.symbol, class_.typeParams)
+    if actualBase == none { return false }
+    actual := substituteTypeParams(actualBase!, class_.typeParams, classType_.typeArgs)
+    if !isAssignableWithInterfaces(result, actual, interfaceStaticFieldType(result, interface_, interfaceType_, required)) { return false }
+  }
+  for requiredMethod of interface_.staticMethods {
+    actualMethod := findClassMethod(class_.methods, requiredMethod.name, true)
+    if actualMethod == none || actualMethod!.private_ { return false }
+    actualBase := if actualMethod!.resolvedType == none then methodSignature(actualMethod!, classModuleFor(result, classType_.symbol), result, class_.typeParams) else actualMethod!.resolvedType!
+    actual := substituteTypeParams(actualBase, class_.typeParams, classType_.typeArgs)
+    if !compatibleConcreteMethodType(result, actual, interfaceStaticMethodType(result, interface_, interfaceType_, requiredMethod), []) { return false }
+  }
+  return true
+}
+
+function parameterBoundProvidesStatics(result: AnalysisResult, held: InterfaceType, interface_: InterfaceDeclaration, interfaceType_: InterfaceType): bool {
+  heldDeclaration := declarationFor(result, held.symbol)
+  if heldDeclaration == none { return false }
+  case heldDeclaration! {
+    heldInterface: InterfaceDeclaration -> {
+      for required of interface_.staticFields {
+        let found = false
+        for candidate of heldInterface.staticFields {
+          if candidate.name == required.name && sameType(interfaceStaticFieldType(result, heldInterface, held, candidate), interfaceStaticFieldType(result, interface_, interfaceType_, required)) { found = true }
+        }
+        if !found { return false }
+      }
+      for requiredMethod of interface_.staticMethods {
+        let found = false
+        for candidate of heldInterface.staticMethods {
+          if candidate.name == requiredMethod.name && sameType(interfaceStaticMethodType(result, heldInterface, held, candidate), interfaceStaticMethodType(result, interface_, interfaceType_, requiredMethod)) { found = true }
+        }
+        if !found { return false }
+      }
+      return true
+    }
+    _ -> { return false }
+  }
+  return false
 }
 
 function isAssignableWithInterfacesSeen(result: AnalysisResult, value: ResolvedType, target: ResolvedType, seen: string[]): bool {

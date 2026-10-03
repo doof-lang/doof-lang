@@ -434,11 +434,19 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
       parameter: TypeParameterType -> {
         specialized := specializeEmitType(parameter, context)
         if parameter.constraintName == "Reflectable" && expression.property == "metadata" { return "doof::metadata_for_type<" + emitType(specialized, context.modulePath, context.names) + ">()" }
-        if parameter.constraintName == "Serializable" && expression.property == "fromSerialValue" {
+        if parameter.constraintName != "Reflectable" && expression.property == "fromSerialValue" {
           case specialized {
             concrete: ClassType -> { return emitClassInnerType(concrete, context.modulePath, context.names) + "::fromSerialValue" }
             enum_: EnumType -> { return emitContextType(enum_, context) + "_fromSerialValue" }
             unresolved: TypeParameterType -> { return cppIdentifier(unresolved.name) + "::element_type::fromSerialValue" }
+            _ -> { }
+          }
+        }
+        // `T.name` through an interface bound's static members lowers to the
+        // concrete argument's own static member.
+        if isTypeParameterName(expression.object) {
+          case specialized {
+            concrete: ClassType -> { return emitClassInnerType(concrete, context.modulePath, context.names) + "::" + (if concrete.symbol.native_ then expression.property else cppIdentifier(expression.property)) }
             _ -> { }
           }
         }
@@ -572,4 +580,11 @@ export function emitIndex(expression: IndexExpression, context: EmitContext): st
     }
   }
   return object + "[" + index + "]"
+}
+
+function isTypeParameterName(expression: Expression): bool {
+  case expression {
+    identifier: Identifier -> { return identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "type-parameter" }
+    _ -> { return false }
+  }
 }

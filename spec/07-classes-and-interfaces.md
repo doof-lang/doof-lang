@@ -370,8 +370,48 @@ class MyCounter {
 let c: Countable = MyCounter.zero()  // ✅
 ```
 
-Static interface members are reserved for future support, together with
-static access through a type parameter (`T.zero()`).
+An interface may also declare **static members**. They never take part in
+instance matching or in interface values; they form a contract only for generic
+bounds, where `T.name` reaches them:
+
+```doof
+interface Shape {
+    static sides: int                      // read-only static field
+    static readonly label: string
+    static unit(scale: int = 2): string    // static method (no body)
+    area(): int
+}
+
+class Square {
+    static sides = 4
+    static readonly label = "square"
+    static unit(scale: int = 2): string => "sq" + string(scale)
+    side: int
+    area(): int => side * side
+}
+
+function describe<T: Shape>(shape: T): string =>
+    T.label + " " + string(T.sides) + " " + T.unit() + " " + string(shape.area())
+
+describe(Square { side: 3 })   // ✅
+```
+
+- Static fields are declared `static name: Type` or `static readonly name: Type`;
+  `static let` is an error because `T.name` is read-only.
+- An argument satisfies the bound only when it is a class or struct that declares
+  a matching non-private static member for every requirement, in addition to the
+  usual instance members. Static fields must be non-`let` (`static` implicit
+  immutable or `static readonly`) with an assignable type; static method
+  signatures must match as for instance methods. Interface values, primitives,
+  and enums have no static owner and never satisfy such a bound. A type parameter
+  bounded by an interface with the same statics can be forwarded.
+- `T.name` is valid wherever `T` is in scope, including generic classes and
+  methods. It lowers to the concrete argument's own static member after
+  monomorphization. Instance members are reached through values, never `T`, and
+  statics are never reached through values.
+- Interface type arguments are substituted, so `interface Source<V> { static make(): V }`
+  with `T: Source<V>` gives `T.make()` the type `V`. There is no `Self` type;
+  use a type parameter on the interface to name the produced type.
 
 ---
 

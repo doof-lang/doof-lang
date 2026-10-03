@@ -419,13 +419,17 @@ export function parseInterface(parser: Parser, exported: bool): Statement {
   parser.expect(TokenType.LeftBrace)
   let fields: InterfaceField[] = []
   let methods: FunctionDeclaration[] = []
+  let staticFields: InterfaceField[] = []
+  let staticMethods: FunctionDeclaration[] = []
   while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
     memberStart := parser.location()
+    static_ := parser.match(TokenType.Static)
     let_ := parser.match(TokenType.Let)
     readonly_ := parser.match(TokenType.Readonly)
     if parser.check(TokenType.Let) || parser.check(TokenType.Readonly) {
       parser.fail("Interface fields accept only one of 'let' or 'readonly'")
     }
+    if static_ && let_ { parser.fail("Static interface fields are read-only; 'let' is not allowed") }
     memberName := parser.text(parser.expect(TokenType.Identifier))
     memberDescription := parseDescription(parser)
     if parser.check(TokenType.LeftParen) {
@@ -434,22 +438,24 @@ export function parseInterface(parser: Parser, exported: bool): Statement {
       parser.expect(TokenType.RightParen)
       returnType := parser.parseOptionalType()
       parser.consumeSemicolon()
-      methods.push(FunctionDeclaration {
+      declaration := FunctionDeclaration {
         kind: "function-declaration", name: memberName, description: memberDescription, typeParams: [], params,
         returnType, body: Block { kind: "block", statements: [], span: parser.span(memberStart) },
-        exported: false, static_: false, isolated_: false, private_: false,
+        exported: false, static_, isolated_: false, private_: false,
         bodyless: true,
         span: parser.span(memberStart),
-      })
+      }
+      if static_ { staticMethods.push(declaration) } else { methods.push(declaration) }
     } else {
       parser.expect(TokenType.Colon)
       typeValue := parser.parseTypeAnnotation()
       parser.consumeSemicolon()
-      fields.push(InterfaceField { kind: "interface-field", name: memberName, description: memberDescription, type_: typeValue, let_, readonly_, span: parser.span(memberStart) })
+      field := InterfaceField { kind: "interface-field", name: memberName, description: memberDescription, type_: typeValue, let_, readonly_, span: parser.span(memberStart) }
+      if static_ { staticFields.push(field) } else { fields.push(field) }
     }
   }
   parser.expect(TokenType.RightBrace)
-  return InterfaceDeclaration { kind: "interface-declaration", name, description, typeParams, typeParamConstraints: parsedTypeParams.constraints, fields, methods, exported, span: parser.span(start) }
+  return InterfaceDeclaration { kind: "interface-declaration", name, description, typeParams, typeParamConstraints: parsedTypeParams.constraints, fields, methods, staticFields, staticMethods, exported, span: parser.span(start) }
 }
 
 export function parseEnum(parser: Parser, exported: bool): Statement {

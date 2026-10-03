@@ -596,6 +596,12 @@ export function checkInterface(state: CheckerState, interface_: InterfaceDeclara
     field.resolvedType = optionalResolvedType(fieldType)
   }
   for method of interface_.methods { checkFunction(state, method, interfaceScope, none) }
+  for field of interface_.staticFields {
+    let fieldType = resolveType(state, field.type_, state.info!, interfaceScope)
+    if field.readonly_ { fieldType = applyDeepReadonly(fieldType) }
+    field.resolvedType = optionalResolvedType(fieldType)
+  }
+  for method of interface_.staticMethods { checkFunction(state, method, interfaceScope, none) }
 }
 
 function validateUniqueInterfaceMembers(state: CheckerState, interface_: InterfaceDeclaration): none {
@@ -607,6 +613,15 @@ function validateUniqueInterfaceMembers(state: CheckerState, interface_: Interfa
   for method of interface_.methods {
     if containsString(names, method.name) { typeError(state, "Member \"" + method.name + "\" is already declared in interface \"" + interface_.name + "\"", method.span) }
     else { names.push(method.name) }
+  }
+  let staticNames: string[] = []
+  for field of interface_.staticFields {
+    if containsString(staticNames, field.name) { typeError(state, "Static member \"" + field.name + "\" is already declared in interface \"" + interface_.name + "\"", field.span) }
+    else { staticNames.push(field.name) }
+  }
+  for method of interface_.staticMethods {
+    if containsString(staticNames, method.name) { typeError(state, "Static member \"" + method.name + "\" is already declared in interface \"" + interface_.name + "\"", method.span) }
+    else { staticNames.push(method.name) }
   }
 }
 
