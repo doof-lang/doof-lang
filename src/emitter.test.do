@@ -1593,6 +1593,10 @@ export function testEmitsCanonicalStringAndArrayHelpers(): none {
   Assert.equal(result.source.contains("doof::string_trim("), true)
   Assert.equal(result.source.contains("doof::string_replaceAll("), true)
   Assert.equal(result.source.contains("doof::string_startsWith("), true)
+
+  first := emit("function first(text: string): string => text.replace(\"a\", \"b\")")
+  Assert.equal(first.source.contains("doof::string_replace("), true)
+  Assert.equal(first.source.contains("doof::string_replaceAll("), false)
   Assert.equal(result.source.contains("doof::string_endsWith("), true)
   Assert.equal(result.source.contains("doof::array_pop("), true)
   Assert.equal(result.source.contains("doof::trim("), false)

@@ -16,6 +16,10 @@ export function testEmissionFailuresSubstringNative(): none {
   runNativeFixture("substring-default")
 }
 
+export function testStringReplaceNative(): none {
+  runNativeFixture("string-replace")
+}
+
 export function testEmissionFailuresCatchPanicNative(): none {
   runNativeFixture("catch-panic-never")
 }

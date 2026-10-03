@@ -183,9 +183,9 @@ The spec was right. `let q = { x: 1.0 }` is now an error ("Cannot infer the type
 
 `print` is dropped from the spec. `println` now accepts every type string interpolation accepts (chars, enums, collections of them, and so on) and rejects the rest with "cannot be passed to println".
 
-### A17. `string.replace` is missing — **Implement**
+### A17. `string.replace` is missing — **Done**
 
-`replaceAll` exists. Ch. 2 documents `replace` as replacing the first occurrence.
+`text.replace(search, replacement)` replaces the first occurrence, as Ch. 2 documents, and lowers to `doof::string_replace`. As with `replaceAll`, an empty search string returns the receiver unchanged.
 
 ### A18. Traditional `for` with two variables — **Implement or Spec**
 

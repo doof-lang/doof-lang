@@ -1892,6 +1892,15 @@ inline std::string string_toLowerCase(const std::string& s) {
     return result;
 }
 
+inline std::string string_replace(const std::string& s, const std::string& search, const std::string& replacement) {
+    if (search.empty()) return s;
+    size_t pos = s.find(search);
+    if (pos == std::string::npos) return s;
+    std::string result = s;
+    result.replace(pos, search.size(), replacement);
+    return result;
+}
+
 inline std::string string_replaceAll(const std::string& s, const std::string& search, const std::string& replacement) {
     if (search.empty()) return s;
     std::string result = s;

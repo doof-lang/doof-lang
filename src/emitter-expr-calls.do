@@ -212,6 +212,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
         helper := if expression.args.length == 1 then "doof::string_slice" else "doof::string_substring"
         return helper + "(" + emitExpression(member.object, context) + ", " + emitDispatchCallArguments(expression, context) + ")"
       }
+      if !nominalReceiver && member.property == "replace" { return emitBuiltinCall("doof::string_replace", member.object, expression, context) }
       if !nominalReceiver && member.property == "replaceAll" { return emitBuiltinCall("doof::string_replaceAll", member.object, expression, context) }
       if !nominalReceiver && member.property == "contains" { return emitBuiltinCall("doof::string_contains", member.object, expression, context) }
       if !nominalReceiver && member.property == "indexOf" { return emitBuiltinCall("doof::string_indexOf", member.object, expression, context) }

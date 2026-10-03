@@ -184,3 +184,14 @@ export function testIndexingReportsNonIndexableReceivers(): none {
     Assert.equal(result.diagnostics[0].message, messages[index])
   }
 }
+
+export function testStringReplaceReturnsString(): none {
+  valid := checked("function first(text: string): string => text.replace(\"a\", \"b\")")
+  Assert.equal(valid.diagnostics.length, 0)
+
+  wrongArgument := checked("function first(text: string): string => text.replace(1, \"b\")")
+  Assert.isTrue(wrongArgument.diagnostics.length > 0)
+
+  missingArgument := checked("function first(text: string): string => text.replace(\"a\")")
+  Assert.isTrue(missingArgument.diagnostics.length > 0)
+}
