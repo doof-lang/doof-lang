@@ -271,11 +271,9 @@ specialized callee also no longer assumes a shared-pointer class: struct
 arguments use the value type, and enum arguments call the generated enum
 decoder (previously both produced invalid C++).
 
-### A29. Deprecated module `const` gives no warning — **Implement**
+### A29. Deprecated module `const` gives no warning — **Done**
 
-`const X = 1` at module scope is accepted silently. Ch. 3 says legacy `const`
-declarations emit a warning with a replacement. (Class-field `const` now warns;
-see A1.)
+Every `const` declaration (module-level, exported, local and `try const`) now warns "'const' declarations are deprecated; replace it with 'readonly'". The warning covers the `const` keyword and offers `readonly` as its replacement. Both are deeply immutable, so the meaning doesn't change. Class-field `const` keeps its own warning (see A1).
 
 ### A30. Namespace-qualified enums and types — **Removed with A21**
 
@@ -321,5 +319,5 @@ declarations supplied where the spec uses partial snippets.
 
 1. **The remaining checker test helpers** (section C), now that A1, A2, A27 and A28 are done.
 2. **Chapter B doc fixes — completed.** The misleading examples and contradictory text are corrected.
-3. **Common gaps: A29.** A10, A12 and A13 are done.
+3. **Common gaps — completed.** A10, A12, A13 and A29 are done.
 4. **No remaining decisions.**

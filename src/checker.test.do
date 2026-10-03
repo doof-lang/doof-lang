@@ -2047,7 +2047,9 @@ export function testChecksNativeResultMethodsThroughTryBindings(): none {
 
 export function testChecksTryValueDeclarations(): none {
   result := checked("function load(): Result<int, string> => Success { value: 1 }\nfunction run(): Result<int, string> { try const first = load()\ntry readonly second = load()\ntry let third = load()\nthird = third + first\nreturn Success { value: third + second } }")
-  Assert.equal(result.diagnostics.length, 0)
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].severity, "warning")
+  Assert.stringContains(result.diagnostics[0].message, "'const' declarations are deprecated")
 }
 
 export function testChecksTypedTryBindings(): none {

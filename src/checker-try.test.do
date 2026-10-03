@@ -53,7 +53,13 @@ export function testCheckerReviewTryDeclarations(): none {
   for kind of ["let", "readonly", "const"] {
     rejects(load + "function bad(): Result<int, string> { try " + kind + " x: string = load()\nreturn Success { value: 1 } }", "Cannot assign int to string")
     valid := checked(load + "function good(): Result<long, string> { try " + kind + " x: long = load()\nreturn Success { value: x } }")
-    Assert.equal(valid.diagnostics.length, 0)
+    if kind == "const" {
+      Assert.equal(valid.diagnostics.length, 1)
+      Assert.equal(valid.diagnostics[0].severity, "warning")
+      Assert.stringContains(valid.diagnostics[0].message, "'const' declarations are deprecated")
+    } else {
+      Assert.equal(valid.diagnostics.length, 0)
+    }
   }
   save := "function save(): Result<none, string> => Success()\n"
   rejects(save + "function bad(): Result<int, string> { try x := save()\nreturn Success { value: 1 } }", "Cannot bind a none success value")

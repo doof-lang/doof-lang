@@ -43,7 +43,7 @@ import { validateStructLayout } from "./checker-struct-layout"
 import { checkedCaseSubjectType, casePatternsExhaustive, checkCasePatterns, checkExpression, addClassMethods } from "./checker-expressions"
 import { checkOmittedCollectionLiteral } from "./checker-literals"
 import { resolveType, memberType } from "./checker-resolution"
-import { deprecatedClassMethodFunction, deprecatedConstField, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
+import { deprecatedClassMethodFunction, deprecatedConstDeclaration, deprecatedConstField, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
 import { decorateAnnotationWithResolved, blockContainsLoopExit, containsString, optionalResolvedType, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
 import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterface, isAssignableWithInterfaces } from "./checker-interfaces"
 import { absenceErrorType, canBeAbsent, presentType } from "./absence-types"
@@ -52,7 +52,7 @@ import { checkerSemanticSpan } from "./checker-validation"
 export function checkStatement(state: CheckerState, statement: Statement, scope: Scope, inLoop: bool = false): bool {
   retainEditorScope(state, scope, statement.span)
   case statement {
-    const_: ConstDeclaration -> { return checkValueDeclaration(state, const_, scope, "const", false, inLoop) }
+    const_: ConstDeclaration -> { deprecatedConstDeclaration(state, const_); return checkValueDeclaration(state, const_, scope, "const", false, inLoop) }
     readonly_: ReadonlyDeclaration -> { return checkValueDeclaration(state, readonly_, scope, "readonly", false, inLoop) }
     binding: ImmutableBinding -> { return checkValueDeclaration(state, binding, scope, "immutable-binding", false, inLoop) }
     let_: LetDeclaration -> { return checkValueDeclaration(state, let_, scope, "let", true, inLoop) }

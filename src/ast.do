@@ -459,6 +459,7 @@ export class ConstDeclaration {
   type_: TypeAnnotation | none
   value: Expression
   exported: bool
+  keywordSpan: SourceSpan
   let resolvedType: ResolvedType | none = none
   let moduleInitializerChecked: bool = false
   span: SourceSpan

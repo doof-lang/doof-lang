@@ -4,7 +4,7 @@ import { EditorScope, Scope } from "./semantic"
 import {
   Binding, Diagnostic, NeverType, ResolvedType,
 } from "./semantic"
-import { ClassField, Expression, FunctionDeclaration, SourceSpan } from "./ast"
+import { ClassField, ConstDeclaration, Expression, FunctionDeclaration, SourceSpan } from "./ast"
 import { typeName } from "./checker-types"
 import { CheckerState } from "./checker-state"
 import { optionalResolvedType } from "./checker-symbols"
@@ -38,6 +38,15 @@ export function deprecatedClassMethodFunction(state: CheckerState, fn: FunctionD
     span: checkerSemanticSpan(fn.legacyMethodFunctionSpan!),
     module: state.info!.path,
     replacement: fn.name,
+  })
+}
+export function deprecatedConstDeclaration(state: CheckerState, declaration: ConstDeclaration): none {
+  state.diagnostics.push(Diagnostic {
+    severity: "warning",
+    message: "'const' declarations are deprecated; replace it with 'readonly'",
+    span: checkerSemanticSpan(declaration.keywordSpan),
+    module: state.info!.path,
+    replacement: "readonly",
   })
 }
 export function deprecatedConstField(state: CheckerState, field: ClassField): none {

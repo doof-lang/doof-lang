@@ -1,4 +1,4 @@
-const EPSILON = 1e-10
+readonly EPSILON = 1e-10
 function main(): int {
   avogadro := 6.02E23
   small: float := 2.5e-3f

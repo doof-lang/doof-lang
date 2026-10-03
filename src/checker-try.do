@@ -13,7 +13,7 @@ import { applyDeepReadonly, typeName } from "./checker-types"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
 import { resolveType } from "./checker-resolution"
 import { optionalResolvedType } from "./checker-symbols"
-import { typeError } from "./checker-common"
+import { deprecatedConstDeclaration, typeError } from "./checker-common"
 import { checkerSemanticSpan } from "./checker-validation"
 
 export function checkTry(state: CheckerState, statement: TryStatement, scope: Scope): bool {
@@ -22,7 +22,7 @@ export function checkTry(state: CheckerState, statement: TryStatement, scope: Sc
   let name = ""
   let kind = ""
   case statement.binding {
-    declaration: ConstDeclaration -> { value = declaration.value; annotation = declaration.type_; name = declaration.name; kind = "const" }
+    declaration: ConstDeclaration -> { deprecatedConstDeclaration(state, declaration); value = declaration.value; annotation = declaration.type_; name = declaration.name; kind = "const" }
     declaration: ReadonlyDeclaration -> { value = declaration.value; annotation = declaration.type_; name = declaration.name; kind = "readonly" }
     binding: ImmutableBinding -> { value = binding.value; annotation = binding.type_; name = binding.name; kind = "immutable-binding" }
     declaration: LetDeclaration -> { value = declaration.value; annotation = declaration.type_; name = declaration.name; kind = "let" }

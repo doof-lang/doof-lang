@@ -63,12 +63,13 @@ export function parseExport(parser: Parser): Statement {
 export function parseConst(parser: Parser, exported: bool): Statement {
   start := parser.location()
   parser.expect(TokenType.Const)
+  keywordSpan := parser.span(start)
   name := parser.text(parser.expect(TokenType.Identifier))
   description := parseDescription(parser)
   typeValue := parser.parseOptionalType()
   value := parseInitializer(parser)
   parser.consumeSemicolon()
-  return ConstDeclaration { kind: "const-declaration", name, description, type_: typeValue, value, exported, span: parser.span(start) }
+  return ConstDeclaration { kind: "const-declaration", name, description, type_: typeValue, value, exported, keywordSpan, span: parser.span(start) }
 }
 
 export function parseReadonly(parser: Parser, exported: bool): Statement {

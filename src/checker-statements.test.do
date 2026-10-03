@@ -210,3 +210,27 @@ export function testAssignmentDiagnosticsSpellCallableSignatures(): none {
   Assert.equal(result.diagnostics.length, 1)
   Assert.equal(result.diagnostics[0].message, "Cannot assign (x: int): int to (x: int): string")
 }
+
+export function testWarnsOnDeprecatedConstDeclarations(): none {
+  result := checked("const LIMIT = 3\nexport const NAMES: string[] = [\"a\"]\nfunction main(): int {\n  const local = 2\n  return LIMIT + local + NAMES.length\n}")
+  Assert.equal(result.diagnostics.length, 3)
+  let lines: int[] = []
+  for diagnostic of result.diagnostics {
+    Assert.equal(diagnostic.severity, "warning")
+    Assert.equal(diagnostic.message, "'const' declarations are deprecated; replace it with 'readonly'")
+    Assert.equal(diagnostic.replacement, "readonly")
+    Assert.equal(diagnostic.span.end.offset - diagnostic.span.start.offset, 5)
+    lines.push(diagnostic.span.start.line)
+    if diagnostic.span.start.line == 2 { Assert.equal(diagnostic.span.start.column, 8) }
+  }
+  lines.sort((a: int, b: int): int => a - b)
+  Assert.equal(lines.length, 3)
+  Assert.equal(lines[0], 1)
+  Assert.equal(lines[1], 2)
+  Assert.equal(lines[2], 4)
+}
+
+export function testReadonlyReplacementForConstHasNoWarning(): none {
+  result := checked("readonly LIMIT = 3\nfunction main(): int {\n  readonly local = 2\n  return LIMIT + local\n}")
+  Assert.equal(result.diagnostics.length, 0)
+}
