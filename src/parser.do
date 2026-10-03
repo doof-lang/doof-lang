@@ -100,6 +100,9 @@ export class Parser {
 
   // Recovery is opt-in. Strict callers retain the fail-fast parser contract.
   appendStatement(statements: Statement[], inBlock: bool = false): none {
+    // A semicolon may follow any statement, including block-ended ones that
+    // do not consume their own terminator (`if c { };`, `class A {};`).
+    if match(TokenType.Semicolon) { return }
     if !editorMode {
       statement := parseStatement()
       statements.push(if inBlock then normalizeLocalFunction(this, statement) else statement)

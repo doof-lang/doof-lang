@@ -1787,3 +1787,21 @@ export function testRejectsMutableStaticInterfaceFields(): none {
   }
   Assert.equal(parser.errorMessage, "Static interface fields are read-only; 'let' is not allowed")
 }
+
+export function testSemicolonsMayFollowBlockEndedStatements(): none {
+  program := parse("class A {};\nenum E { X };\nfunction f(): none {};\nfunction main(): none {\n  if true { }; let y = 1\n  for i of 0..2 { };\n  while false { };\n  case y { _ -> { } };\n  let z = 2;;\n}")
+  Assert.equal(program.statements.length, 4)
+  case program.statements[3] {
+    main: FunctionDeclaration -> {
+      case main.body {
+        body: Block -> { Assert.equal(body.statements.length, 6) }
+        _ -> { panic("expected block body") }
+      }
+    }
+    _ -> { panic("expected main function") }
+  }
+}
+
+export function testLeadingAndRepeatedSemicolonsAreEmpty(): none {
+  Assert.equal(parse(";;\nlet x = 1;;; let y = 2;").statements.length, 2)
+}

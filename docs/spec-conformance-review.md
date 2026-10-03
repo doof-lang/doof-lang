@@ -163,16 +163,13 @@ contract for generic bounds, and a type parameter reaches them through `T.name`
 
 `byte` now widens to `int`, `long`, `float` and `double`, in addition to `int`→`long`, `int`→`double` and `float`→`double`. `int`→`float` stays rejected because it is lossy above 2^24; Ch. 2 says so.
 
-### A12. Semicolons after block statements — **Implement**
+### A12. Semicolons after block statements — **Done**
 
-`if x { }; y`, `for … { };` and `class A {};` fail with "Expected an
-expression". Ch. 1 says semicolons may follow any statement or declaration.
+A `;` where a statement may start is now an empty terminator, so `if x { }; y`, `for … { };`, `class A {};` and repeated `;;` parse. Ch. 1 already allowed this.
 
-### A13. Map key types aren't checked in declared types — **Implement**
+### A13. Map key types aren't checked in declared types — **Done**
 
-- `Map<float, int>`, `Map<Tuple<…>, int>` and `Map<Point, int>` are accepted, and `Map<float, int>` compiles and runs.
-- `{ 1.5: "v" }` reports an internal "Missing resolved type" error.
-- Set element restrictions are enforced correctly.
+`Map` and `ReadonlyMap` annotations now reject unsupported key types (`float`, `double`, tuples, classes and so on) wherever they appear, with the same "Map key type … is not supported" error as inferred map literals. Type-parameter keys are still accepted. Local `let` annotations used to report Set element errors twice; Set and Map errors are now reported once per site. The bare `{ 1.5: "v" }` case already reported A15's "Cannot infer the type of an object literal" error.
 
 ### A14. Empty array literal without an annotation — **Done**
 
@@ -324,5 +321,5 @@ declarations supplied where the spec uses partial snippets.
 
 1. **The remaining checker test helpers** (section C), now that A1, A2, A27 and A28 are done.
 2. **Chapter B doc fixes — completed.** The misleading examples and contradictory text are corrected.
-3. **Common gaps: A10, A12, A13, A29.**
+3. **Common gaps: A29.** A10, A12 and A13 are done.
 4. **No remaining decisions.**

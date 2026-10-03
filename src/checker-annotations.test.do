@@ -135,3 +135,40 @@ export function testResultArmAnnotationsResolveToArmTypes(): none {
   Assert.equal(arity.diagnostics.length, 1)
   Assert.equal(arity.diagnostics[0].message, "Success requires one type argument")
 }
+
+function mapKeyErrors(source: string): string[] {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  checked := createChecker(analysis, "/main.do").check("/main.do")
+  let messages: string[] = []
+  for diagnostic of checked.diagnostics {
+    if diagnostic.message.contains("Map key type") { messages.push(diagnostic.message) }
+  }
+  return messages
+}
+
+export function testRejectsUnsupportedMapKeyAnnotations(): none {
+  floating := mapKeyErrors("function main(): none { let m: Map<float, int> = {} }")
+  Assert.equal(floating.length, 1)
+  Assert.stringContains(floating[0], "Map key type \"float\" is not supported; map keys must be byte, string, int, long, char, bool, or enum")
+
+  tuple := mapKeyErrors("function use(m: ReadonlyMap<Tuple<int, string>, int>): none {}")
+  Assert.equal(tuple.length, 1)
+  Assert.stringContains(tuple[0], "is not supported")
+
+  nominal := mapKeyErrors("class Point { x: int }\nclass Holder { points: Map<Point, int> = {} }")
+  Assert.equal(nominal.length, 1)
+  Assert.stringContains(nominal[0], "Map key type \"Point\" is not supported")
+}
+
+export function testAcceptsSupportedMapKeyAnnotations(): none {
+  Assert.equal(mapKeyErrors("enum Suit { Spades, Hearts }\nfunction use(a: Map<string, int>, b: Map<int, int>, c: Map<long, int>, d: Map<char, int>, e: Map<bool, int>, f: Map<byte, int>, g: Map<Suit, int>): none {}").length, 0)
+  Assert.equal(mapKeyErrors("function count<K>(m: Map<K, int>): int => m.size").length, 0)
+}
+
+export function testReportsLocalSetElementAnnotationOnce(): none {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "class Holder { s: Set<float> = [] }\nfunction main(): none { let s: Set<float> = [] }" }]).analyze("/main.do")
+  checked := createChecker(analysis, "/main.do").check("/main.do")
+  let count = 0
+  for diagnostic of checked.diagnostics { if diagnostic.message.contains("Set element type \"float\"") { count += 1 } }
+  Assert.equal(count, 2)
+}
