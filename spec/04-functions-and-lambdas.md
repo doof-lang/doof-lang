@@ -662,3 +662,32 @@ returns `Promise<R>`, where `R` is the callback return type. Function-typed
 parameters in native imports also lower to `doof::callback`; native C++ must
 integrate with that callback type and choose the appropriate execution mode
 explicitly.
+
+### Functions and Methods as Values
+
+Naming a function or method without calling it produces a function value:
+
+```doof
+f := double                 // module function
+g := Matrix.identity        // static method
+h := counter.next           // bound method: `counter` is evaluated once, now
+apply(counter.next, 3)      // apply(f: (x: int): int, x: int)
+```
+
+A bound method captures its receiver when the reference is taken. Inside a
+class, a bare method name such as `apply(label)` binds `this`. Through `?.` the
+value is absent with its receiver: `user?.describe` has type
+`((): string) | none`, and `w?.describe` on a weak reference is `none` when the
+target has expired. A method bound through a weak reference holds its target
+strongly while the function value lives.
+
+A generic function or method used as a value is instantiated from the expected
+function type, which must fix every type parameter:
+
+```doof
+function identity<T>(value: T): T => value
+
+apply(identity, 3)                          // T = int from apply's parameter
+let shout: (text: string): string = identity
+f := identity                               // error: no expected function type
+```

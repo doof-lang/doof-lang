@@ -4,6 +4,7 @@ import { retainEditorScope } from "./checker-common"
 import { checkArguments, positionalArguments } from "./checker-arguments"
 import { jsonPrograms, resolveMember, resolveBoundStaticMember } from "./checker-resolution"
 import { isTypeParameterName } from "./ast-walk"
+import { instantiateGenericReference } from "./checker-generic-references"
 import { unionAliasJsonDiscriminator } from "./json-semantics"
 import type { Symbol } from "./semantic"
 import type { TypeAliasDeclaration } from "./ast"
@@ -328,6 +329,8 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
 }
 
 export function checkExpression(state: CheckerState, expression: Expression, scope: Scope, expected: ResolvedType | none): ResolvedType {
+  calleePosition := state.checkingCallee
+  state.checkingCallee = false
   retainEditorScope(state, scope, expression.span)
   if state.editorMode { state.info!.editorExpressions.push(expression) }
   case expression {
@@ -421,7 +424,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       return finish(state, expression, builtinSourceLocationType())
     }
     dot: DotShorthand -> { return checkDotShorthand(state, dot, expected) }
-    identifier: Identifier -> { return checkIdentifier(state, identifier, scope) }
+    identifier: Identifier -> { return finish(state, identifier, instantiateGenericReference(state, identifier, checkIdentifier(state, identifier, scope), expected, scope, calleePosition)) }
     binary: BinaryExpression -> { return checkBinary(state, binary, scope, expected) }
     unary: UnaryExpression -> { return checkUnary(state, unary, scope) }
     as_: AsExpression -> { return checkAs(state, as_, scope) }
@@ -508,7 +511,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       boundStatic := if isTypeParameterName(member.object) then resolveBoundStaticMember(state, objectType, member.property) else none
       selected := if boundStatic != none then boundStatic! else resolveMember(state, objectType, member.property, member.span)
       member.resolvedMember = selected
-      memberValue := selected.type_!
+      let memberValue = selected.type_!
       if memberValue.kind == "unknown" && objectType.kind != "unknown" && state.diagnostics.length == diagnosticCount {
         typeError(state, "Type \"" + typeName(objectType) + "\" has no member \"" + member.property + "\"", member.span)
       }
@@ -545,6 +548,13 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         _ -> { }
       }
       member.resolvedCallableField = selected.field
+      memberValue = instantiateGenericReference(state, member, memberValue, expected, scope, calleePosition)
+      // A function-valued member reached through '?.' is absent with its
+      // receiver. Only a call may short-circuit it as a whole.
+      if !calleePosition && memberValue.kind == "function" && member.optional && (weakReceiver != none || nullableReceiver) {
+        member.resolvedOptionalValue = optionalResolvedType(memberValue)
+        return finish(state, expression, optionalAccessType(memberValue))
+      }
       if weakReceiver != none {
         case memberValue {
           _: FunctionType -> { return finish(state, expression, memberValue) }

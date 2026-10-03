@@ -226,6 +226,13 @@ bindings remain shared across escaping closures; uncaptured mutable locals keep
 ordinary local lifetime. Function values still use the actor-affine callback
 rules described in the concurrency reference.
 
+Functions and methods named without a call are function values: `f := double`,
+`g := Matrix.identity`, `h := counter.next` (binds `counter` once, now). Inside
+a class a bare method name binds `this`. `user?.describe` is an optional
+function value (`((): string) | none`). A generic function or method needs an
+expected function type to instantiate it: `apply(identity, 3)` or
+`let f: (x: int): int = identity` work, `f := identity` is an error.
+
 Collection shorthand parameter names are:
 
 - `it` for the current element

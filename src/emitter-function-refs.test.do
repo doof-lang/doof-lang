@@ -50,3 +50,31 @@ export function testInterfaceReceiverReferencesDispatchThroughTheVariant(): none
     "function main(): none { n: Named := A {}\nf := n.label\nprintln(f()) }")
   Assert.stringContains(source, "doof::callback<std::string()>([_self = n](auto&&... _args) -> std::string { return std::visit([&](auto&& _obj) -> std::string { return _obj->label(std::forward<decltype(_args)>(_args)...); }, _self); })")
 }
+
+export function testGenericReferencesNameTheirConcreteInstantiation(): none {
+  source := emitMain("function identity<T>(value: T): T => value\nfunction apply(g: (value: int): int): int => g(4)\n" +
+    "class Box { wrap<T>(value: T): T[] => [value]\nstatic make<T>(value: T): T[] => [value] }\n" +
+    "function main(): none { println(apply(identity))\nb := Box {}\nlet w: (value: int): int[] = b.wrap\nlet m: (value: string): string[] = Box.make\nprintln(w(1).length + m(\"x\").length) }")
+  Assert.stringContains(source, "apply(doof::callback<int32_t(int32_t)>(identity__int))")
+  Assert.stringContains(source, "return _self->wrap__int(std::forward<decltype(_args)>(_args)...); })")
+  Assert.stringContains(source, "(Box::make__string)")
+}
+
+export function testOptionalAndWeakReceiversBindTheUnwrappedReceiver(): none {
+  source := emitMain("class Sq { name(scale: int): string => \"s\" }\n" +
+    "function main(): none { s: Sq | none := Sq {}\nstrong := Sq {}\nw: weak Sq := strong\nm := s?.name\nk := w?.name\nf := w!.name\nprintln(m!(1) + k!(2) + f(3)) }")
+  Assert.stringContains(source, "[_self = _optional_receiver_")
+  Assert.stringContains(source, "[_self = _weak_value_")
+  Assert.stringNotContains(source, "->name;")
+}
+
+export function testUnionReceiverReferencesDispatchThroughTheVariant(): none {
+  source := emitMain("class A { label(): string => \"a\" }\nclass B { label(): string => \"b\" }\n" +
+    "function main(): none { u: A | B := B {}\nl := u.label\nprintln(l()) }")
+  Assert.stringContains(source, "[_self = u](auto&&... _args) -> std::string { return std::visit(")
+}
+
+export function testGenericReferenceInsideArrayMapUsesTheElementInstantiation(): none {
+  source := emitMain("function identity<T>(value: T): T => value\nfunction main(): none { items := [1, 2]\nout := items.map(identity)\nprintln(out[0]) }")
+  Assert.stringContains(source, "doof::array_map(items, doof::callback<int32_t(int32_t)>(identity__int)")
+}

@@ -282,6 +282,9 @@ name := loadUser(id)?.name      // string | none: none when loadUser fails
 `x?.m` is `(x?)?.m`. The receiver is evaluated once; when it is absent, field
 reads and value-returning calls produce `none`, and calls returning `none` are
 skipped. `?.` and `?[]` cannot be used as assignment targets.
+A method named through `?.` without a call is an optional function value
+(`user?.describe` is `((): string) | none`); see [Functions and Methods as
+Values](04-functions-and-lambdas.md#functions-and-methods-as-values).
 
 The receiver's absence becomes `none`. A member that itself returns a `Result`
 keeps its own `Failure`, and the `none` joins its success value:

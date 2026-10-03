@@ -133,6 +133,8 @@ export class Identifier {
   name: string
   let resolvedType: ResolvedType | none = none
   let resolvedBinding: Binding | none = none
+  // Set when this names a generic function or method used as a value.
+  let resolvedGenericReference: GenericReference | none = none
   span: SourceSpan
 }
 
@@ -174,6 +176,17 @@ export class AssignmentExpression {
 
 // The member resolver records type and target in the same lookup. Synthetic
 // members and callable fields have no declaration-backed function target.
+/**
+ * A generic function or method named without being called, instantiated from
+ * its expected function type. Discovery and lowering use the concrete
+ * instantiation exactly as for a generic call with these type arguments.
+ */
+export class GenericReference {
+  function_: FunctionDeclaration
+  modulePath: string
+  typeArgs: ResolvedType[]
+}
+
 export class CheckedMember {
   let type_: ResolvedType | none = none
   let function_: FunctionDeclaration | none = none
@@ -200,6 +213,8 @@ export class MemberExpression {
   // exported symbol so lowering can project its exact declaration.
   let resolvedMember: CheckedMember | none = none
   let resolvedCallableField: bool = false
+  // Set when this names a generic method used as a value.
+  let resolvedGenericReference: GenericReference | none = none
   // Set when '?.' short-circuits a nullable receiver: the receiver with its
   // none arm removed, and a field's value before it is widened with none.
   let resolvedOptionalReceiver: ResolvedType | none = none

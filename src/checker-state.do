@@ -26,4 +26,7 @@ export class CheckerState {
   let moduleScope: Scope | none = none
   let allowsCaller: bool = false
   let lambdaReturns: LambdaReturnInference | none = none
+  // Set by call checking for exactly the next checked expression: its callee.
+  // A generic callee is instantiated by the call, not as a function value.
+  let checkingCallee: bool = false
 }

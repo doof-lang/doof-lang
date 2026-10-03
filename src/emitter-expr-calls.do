@@ -4,7 +4,7 @@ import { emitClassCall } from "./emitter-construction"
 
 import { emitCallArguments, emitDispatchCallArguments } from "./emitter-call-arguments"
 import { weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
-import { CallExpression, Expression, Identifier, MemberExpression } from "./ast"
+import { CallExpression, Expression, FunctionDeclaration, Identifier, MemberExpression } from "./ast"
 import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, NoneType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { substituteTypeParams } from "./checker-types"
@@ -304,52 +304,15 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   functionDeclaration := expression.resolvedFunction
   let usesConcreteInstantiation = false
   if functionDeclaration != none && functionDeclaration!.typeParams.length > 0 {
-    let targetModule = expression.resolvedFunctionModule
-    let concreteMethodName = ""
-    case expression.callee {
-      identifier: Identifier -> {
-        if identifier.resolvedBinding != none {
-          if identifier.resolvedBinding!.kind == "method" && identifier.resolvedBinding!.symbol != none {
-            symbol := identifier.resolvedBinding!.symbol!
-            let ownerArgs: ResolvedType[] = []
-            for typeParam of symbol.typeParams {
-              ownerArgs.push(specializeEmitType(TypeParameterType { name: typeParam }, context))
-            }
-            ownerKey := classInstantiationKey(symbol.module, symbol.name, ownerArgs)
-            methodKey := methodInstantiationKey(ownerKey, functionDeclaration!.name, concreteGenericArgs)
-            concreteMethodName = concreteMethodNameFor(context, methodKey)
-          } else if identifier.resolvedBinding!.symbol != none { targetModule = identifier.resolvedBinding!.symbol!.module }
-          else if identifier.resolvedBinding!.module != "" { targetModule = identifier.resolvedBinding!.module }
-        }
-      }
-      member: MemberExpression -> {
-        if member.object.resolvedType != none {
-          case specializeEmitType(member.object.resolvedType!, context) {
-            class_: ClassType -> {
-              targetModule = class_.symbol.module
-              ownerKey := classInstantiationKey(class_.symbol.module, class_.name, class_.typeArgs)
-              methodKey := methodInstantiationKey(ownerKey, functionDeclaration!.name, concreteGenericArgs)
-              concreteMethodName = concreteMethodNameFor(context, methodKey)
-            }
-            _ -> { }
-          }
-        }
-      }
-      _ -> { }
-    }
-    if concreteMethodName != "" {
+    concrete := concreteGenericTarget(expression.callee, functionDeclaration!, expression.resolvedFunctionModule, concreteGenericArgs, context)
+    if concrete != none {
       usesConcreteInstantiation = true
-      case expression.callee {
-        _: Identifier -> { callee = concreteMethodName }
-        member: MemberExpression -> { callee = callee.substring(0, callee.length - member.property.length) + concreteMethodName }
-        _ -> { }
-      }
-    } else {
-      key := functionInstantiationKey(targetModule, functionDeclaration!.name, concreteGenericArgs)
-      concreteName := concreteFunctionName(context, key)
-      if concreteName != "" {
-        usesConcreteInstantiation = true
-        callee = if targetModule != "" && targetModule != context.modulePath then "::" + exprModuleNamespaceFor(targetModule, context.names) + "::" + concreteName else concreteName
+      if !concrete!.method { callee = concrete!.name }
+      else {
+        case expression.callee {
+          member: MemberExpression -> { callee = callee.substring(0, callee.length - member.property.length) + concrete!.name }
+          _ -> { callee = concrete!.name }
+        }
       }
     }
   }
@@ -487,6 +450,56 @@ function concreteFunctionName(context: EmitContext, key: string): string {
     if context.concreteFunctionKeys[i] == key { return context.concreteFunctionNames[i] }
   }
   return ""
+}
+
+/** A generic function's or method's emitted concrete instantiation name. */
+export class ConcreteGenericTarget {
+  name: string
+  // Methods are named bare; functions are namespace-qualified when imported.
+  method: bool
+}
+
+/** Selects the concrete instantiation a generic callee or value reference names. */
+export function concreteGenericTarget(reference: Expression, declaration: FunctionDeclaration, declarationModule: string, concreteArgs: ResolvedType[], context: EmitContext): ConcreteGenericTarget | none {
+  let targetModule = declarationModule
+  let concreteMethodName = ""
+  case reference {
+    identifier: Identifier -> {
+      if identifier.resolvedBinding != none {
+        if identifier.resolvedBinding!.kind == "method" && identifier.resolvedBinding!.symbol != none {
+          symbol := identifier.resolvedBinding!.symbol!
+          let ownerArgs: ResolvedType[] = []
+          for typeParam of symbol.typeParams {
+            ownerArgs.push(specializeEmitType(TypeParameterType { name: typeParam }, context))
+          }
+          ownerKey := classInstantiationKey(symbol.module, symbol.name, ownerArgs)
+          methodKey := methodInstantiationKey(ownerKey, declaration.name, concreteArgs)
+          concreteMethodName = concreteMethodNameFor(context, methodKey)
+        } else if identifier.resolvedBinding!.symbol != none { targetModule = identifier.resolvedBinding!.symbol!.module }
+        else if identifier.resolvedBinding!.module != "" { targetModule = identifier.resolvedBinding!.module }
+      }
+    }
+    member: MemberExpression -> {
+      if member.object.resolvedType != none {
+        case specializeEmitType(member.object.resolvedType!, context) {
+          class_: ClassType -> {
+            targetModule = class_.symbol.module
+            ownerKey := classInstantiationKey(class_.symbol.module, class_.name, class_.typeArgs)
+            methodKey := methodInstantiationKey(ownerKey, declaration.name, concreteArgs)
+            concreteMethodName = concreteMethodNameFor(context, methodKey)
+          }
+          _ -> { }
+        }
+      }
+    }
+    _ -> { }
+  }
+  if concreteMethodName != "" { return ConcreteGenericTarget { name: concreteMethodName, method: true } }
+  key := functionInstantiationKey(targetModule, declaration.name, concreteArgs)
+  concreteName := concreteFunctionName(context, key)
+  if concreteName == "" { return none }
+  qualified := if targetModule != "" && targetModule != context.modulePath then "::" + exprModuleNamespaceFor(targetModule, context.names) + "::" + concreteName else concreteName
+  return ConcreteGenericTarget { name: qualified, method: false }
 }
 
 function concreteMethodNameFor(context: EmitContext, key: string): string {

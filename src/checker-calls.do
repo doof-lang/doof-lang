@@ -72,6 +72,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
   }
   // `.identity()` names a static method on the class the call must produce,
   // so a dot-shorthand callee resolves against the call's expected type.
+  state.checkingCallee = true
   calleeType := checkExpression(state, expression.callee, scope, if expression.callee.kind == "dot-shorthand" then expected else none)
   target := resolveCalleeTarget(state, expression.callee, calleeType)
   expression.resolvedFunction = target.function_
@@ -259,7 +260,7 @@ function inferClassTypeArguments(state: CheckerState, expression: CallExpression
   return inferred
 }
 
-function applyTypeArgumentConstraints(state: CheckerState, declaration: FunctionDeclaration | none, arguments: ResolvedType[], span: SourceSpan, scope: Scope, modulePath: string, callee: Expression): none {
+export function applyTypeArgumentConstraints(state: CheckerState, declaration: FunctionDeclaration | none, arguments: ResolvedType[], span: SourceSpan, scope: Scope, modulePath: string, callee: Expression): none {
   if declaration == none { return }
   let module = state.info!
   for candidate of state.result.modules { if candidate.path == modulePath { module = candidate } }

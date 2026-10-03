@@ -18,7 +18,7 @@
 // Arguments are checked speculatively here and rechecked against the
 // substituted signature by the caller, so diagnostics from a successful
 // inference are discarded rather than reported twice.
-import { CallArgument, DotShorthand, LambdaExpression } from "./ast"
+import { CallArgument, DotShorthand, Expression, LambdaExpression } from "./ast"
 import { FunctionType, ResolvedType, Scope, TypeParameterType } from "./semantic"
 import { functionType, sameType, substituteTypeParams, typeParameter, unknownType } from "./checker-types"
 import { CheckerState } from "./checker-state"
@@ -63,6 +63,11 @@ export function inferCallTypeArguments(state: CheckerState, args: CallArgument[]
         _ -> {
           if stage != 1 { continue }
           argumentExpected = genericInferenceExpected(parameterType, signature.typeParams)
+          // A named function or method may itself be generic; like a lambda it
+          // instantiates from the callback parameters known so far.
+          if argumentExpected == none && parameterType.kind == "function" && namesCallable(args[i].value) {
+            argumentExpected = lambdaInferenceExpected(parameterType, evidence)
+          }
         }
       }
       actual := checkExpression(state, args[i].value, scope, argumentExpected)
@@ -90,6 +95,10 @@ export function inferCallTypeArguments(state: CheckerState, args: CallArgument[]
     }
   }
   return inferred
+}
+
+function namesCallable(expression: Expression): bool {
+  return expression.kind == "identifier" || expression.kind == "member-expression"
 }
 
 function callbackResultIsGeneric(signature: FunctionType, args: CallArgument[], argumentIndex: int): bool {

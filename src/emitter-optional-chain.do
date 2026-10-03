@@ -54,6 +54,7 @@ function unwrappedMember(member: MemberExpression, receiver: Expression, valueTy
   access.resolvedStaticOwner = member.resolvedStaticOwner
   access.resolvedMember = member.resolvedMember
   access.resolvedCallableField = member.resolvedCallableField
+  access.resolvedGenericReference = member.resolvedGenericReference
   access.resolvedType = valueType
   return access
 }

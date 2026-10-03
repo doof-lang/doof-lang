@@ -16,6 +16,7 @@ import { cppIdentifier as emittedCppIdentifier, moduleDiagnosticPath } from "./e
 import { isNumeric, isSerialBytesType, sameType } from "./checker-types"
 import { emitNoImplementationsAccess, implementationlessInterface } from "./emitter-no-implementations"
 import { isTypeParameterName } from "./ast-walk"
+import { emitBoundMethodValue } from "./emitter-function-refs"
 
 /** Lowers checked `as` conversion to a Result without evaluating its source twice. */
 export function emitAs(expression: AsExpression, context: EmitContext): string {
@@ -551,6 +552,14 @@ function emitWeakFieldAccess(expression: MemberExpression, object: string, conte
     }
     _ -> { }
   }
+  // A method named as a value binds the locked strong reference.
+  case decoratedExpressionType(expression.object)! {
+    weak_: WeakResolvedType -> {
+      bound := emitBoundMethodValue(expression, temporary, presentWeakTarget(weak_.inner), context)
+      if bound != none { access = bound! }
+    }
+    _ -> { }
+  }
   if expression.force {
     resultType := emitType(expression.resolvedType!, context.modulePath, context.names)
     noneCheck := if nullable then "if (!" + storage + ".has_value()) doof::panic(\"Weak reference is none\"); " else ""
@@ -582,4 +591,18 @@ export function emitIndex(expression: IndexExpression, context: EmitContext): st
     }
   }
   return object + "[" + index + "]"
+}
+
+// The type a locked weak reference holds: its target without the none arm.
+function presentWeakTarget(target: ResolvedType): ResolvedType {
+  case target {
+    union_: UnionResolvedType -> {
+      let present: ResolvedType[] = []
+      for member of union_.types { if member.kind != "none" { present.push(member) } }
+      if present.length == 1 { return present[0] }
+      return UnionResolvedType { types: present }
+    }
+    _ -> { return target }
+  }
+  return target
 }

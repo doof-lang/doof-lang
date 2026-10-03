@@ -238,52 +238,22 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
     member: MemberExpression -> {
       collectExpression(member.object, modulePath, analysis, plan, names, arguments)
       collectJsonMemberDemand(member, modulePath, analysis, plan, names, arguments)
+      if member.resolvedGenericReference != none {
+        reference := member.resolvedGenericReference!
+        collectGenericTarget(member, reference.function_, reference.modulePath, reference.typeArgs, analysis, plan, names, arguments)
+      }
+    }
+    identifier: Identifier -> {
+      if identifier.resolvedGenericReference != none {
+        reference := identifier.resolvedGenericReference!
+        collectGenericTarget(identifier, reference.function_, reference.modulePath, reference.typeArgs, analysis, plan, names, arguments)
+      }
     }
     index: IndexExpression -> { collectExpression(index.object, modulePath, analysis, plan, names, arguments); collectExpression(index.index, modulePath, analysis, plan, names, arguments) }
     call: CallExpression -> {
       collectExpression(call.callee, modulePath, analysis, plan, names, arguments)
       for argument of call.args { collectExpression(argument.value, modulePath, analysis, plan, names, arguments) }
-      if call.resolvedFunction != none && call.resolvedFunction!.typeParams.length > 0 {
-        let concreteArgs: ResolvedType[] = []
-        for argument of call.resolvedGenericTypeArgs { concreteArgs.push(specialize(argument, names, arguments)) }
-        if !containsTypeParameters(concreteArgs) {
-          let recordedMethod = false
-          case call.callee {
-            identifier: Identifier -> {
-              if identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "method" && identifier.resolvedBinding!.symbol != none {
-                symbol := identifier.resolvedBinding!.symbol!
-                owner := classDeclaration(analysis, symbol.module, symbol.name)
-                if owner != none && call.resolvedFunction!.typeParams.length > 0 {
-                  let ownerArgs: ResolvedType[] = []
-                  for typeParam of owner!.typeParams {
-                    ownerArgs.push(specialize(TypeParameterType { name: typeParam }, names, arguments))
-                  }
-                  addMethod(plan, ClassType { name: symbol.name, symbol, typeArgs: ownerArgs }, owner!, call.resolvedFunction!, concreteArgs)
-                  recordedMethod = true
-                }
-              }
-            }
-            member: MemberExpression -> {
-              if member.object.resolvedType != none {
-                case specialize(member.object.resolvedType!, names, arguments) {
-                  ownerType: ClassType -> {
-                    owner := classDeclaration(analysis, ownerType.symbol.module, ownerType.symbol.name)
-                    if owner != none && call.resolvedFunction!.typeParams.length > 0 {
-                      if !owner!.native_ { addMethod(plan, ownerType, owner!, call.resolvedFunction!, concreteArgs) }
-                      recordedMethod = true
-                    }
-                  }
-                  _ -> { }
-                }
-              }
-            }
-            _ -> { }
-          }
-          if !recordedMethod {
-            addFunction(plan, call.resolvedFunctionModule, call.resolvedFunction!, concreteArgs)
-          }
-        }
-      }
+      if call.resolvedFunction != none { collectGenericTarget(call.callee, call.resolvedFunction!, call.resolvedFunctionModule, call.resolvedGenericTypeArgs, analysis, plan, names, arguments) }
     }
     array: ArrayLiteral -> { for item of array.elements { collectExpression(item, modulePath, analysis, plan, names, arguments) } }
     object: ObjectLiteral -> {
@@ -328,6 +298,51 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
     catch_: CatchExpression -> { collectBlock(catch_.body, modulePath, analysis, plan, names, arguments) }
     as_: AsExpression -> { collectExpression(as_.expression, modulePath, analysis, plan, names, arguments) }
     _ -> { }
+  }
+}
+
+// Records the concrete instantiation a generic callee or generic value reference
+// needs: a method on its (specialized) owner, or otherwise a function.
+function collectGenericTarget(callee: Expression, function_: FunctionDeclaration, functionModule: string, typeArgs: ResolvedType[], analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
+  if function_.typeParams.length == 0 { return }
+  let concreteArgs: ResolvedType[] = []
+  for argument of typeArgs { concreteArgs.push(specialize(argument, names, arguments)) }
+  if !containsTypeParameters(concreteArgs) {
+    let recordedMethod = false
+    case callee {
+      identifier: Identifier -> {
+        if identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "method" && identifier.resolvedBinding!.symbol != none {
+          symbol := identifier.resolvedBinding!.symbol!
+          owner := classDeclaration(analysis, symbol.module, symbol.name)
+          if owner != none && function_.typeParams.length > 0 {
+            let ownerArgs: ResolvedType[] = []
+            for typeParam of owner!.typeParams {
+              ownerArgs.push(specialize(TypeParameterType { name: typeParam }, names, arguments))
+            }
+            addMethod(plan, ClassType { name: symbol.name, symbol, typeArgs: ownerArgs }, owner!, function_, concreteArgs)
+            recordedMethod = true
+          }
+        }
+      }
+      member: MemberExpression -> {
+        if member.object.resolvedType != none {
+          case specialize(member.object.resolvedType!, names, arguments) {
+            ownerType: ClassType -> {
+              owner := classDeclaration(analysis, ownerType.symbol.module, ownerType.symbol.name)
+              if owner != none && function_.typeParams.length > 0 {
+                if !owner!.native_ { addMethod(plan, ownerType, owner!, function_, concreteArgs) }
+                recordedMethod = true
+              }
+            }
+            _ -> { }
+          }
+        }
+      }
+      _ -> { }
+    }
+    if !recordedMethod {
+      addFunction(plan, functionModule, function_, concreteArgs)
+    }
   }
 }
 
