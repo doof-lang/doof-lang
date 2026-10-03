@@ -121,7 +121,11 @@ constant expressions may initialize storage directly; strings, collections,
 classes, and other constructed values are assigned by generated
 `__doof_initialize_module` functions. Only modules with deferred assignments
 emit such a function, and it contains assignments without a per-module state
-machine. Native entry boundaries call those functions dependency-first after
+machine. A generic class's static fields are assigned once per concrete
+instantiation by the declaring module's initializer, so a module declaring such
+a class always emits one. Script entries have no module initializer; their
+`__doof_run_script` assigns class statics before the first top-level statement.
+Native entry boundaries call those functions dependency-first after
 installing `ActiveActorScope`. WebAssembly exposes the same graph protocol
 through `doof_initialize`. Generated non-native structs have an internal
 default constructor, and their literal-valued backing fields remain mutable in

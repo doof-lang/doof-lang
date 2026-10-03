@@ -16,6 +16,7 @@ import { emitSyncActorCall } from "./emitter-expr-actor"
 import { emitOptionalAbsent, emitOptionalCall, emitOptionalPresent } from "./emitter-optional-chain"
 import { emitArrayMethodCall } from "./emitter-array-methods"
 import { emitNoImplementationsAccess, implementationlessInterface } from "./emitter-no-implementations"
+import { isTypeParameterName } from "./ast-walk"
 
 export function emitCall(expression: CallExpression, context: EmitContext, expected: ResolvedType | none = none): string {
   case expression.callee {
@@ -126,9 +127,9 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
         }
       }
       if member.resolvedJsonAlias != none { return emitInterfaceJsonCall(member, expression, context) }
-      // `T.fromSerialValue(json)` on a Serializable type parameter has no static
-      // owner; supply the defaulted `lenient` argument like concrete calls do.
-      if member.property == "fromSerialValue" && isSerializableTypeParameter(decoratedExpressionType(member.object)) {
+      // `T.fromSerialValue(json)` on a type parameter has no static owner; supply
+      // the defaulted `lenient` argument like concrete calls do.
+      if member.property == "fromSerialValue" && isTypeParameterName(member.object) {
         let args = ""
         for i of 0..<expression.args.length {
           if i > 0 { args = args + ", " }
@@ -493,14 +494,4 @@ function concreteMethodNameFor(context: EmitContext, key: string): string {
     if context.concreteMethodKeys[i] == key { return context.concreteMethodNames[i] }
   }
   return ""
-}
-
-// `fromSerialValue` is reserved, so on any type parameter it is the implied
-// JSON decoder (Serializable bounds and interface bounds alike).
-function isSerializableTypeParameter(resolvedType: ResolvedType | none): bool {
-  if resolvedType == none { return false }
-  case resolvedType! {
-    _: TypeParameterType -> { return true }
-    _ -> { return false }
-  }
 }

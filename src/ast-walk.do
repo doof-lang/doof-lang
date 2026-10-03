@@ -3,6 +3,9 @@
 // Statement collection descends through statement-owned blocks. Expression
 // collection returns direct expression children; consumers choose whether to
 // recurse, use a worklist, or stop at a semantic boundary.
+//
+// Shallow queries over checked AST decorations live here when both the checker
+// and emitter need them.
 
 import {
   ActorCreationExpression, ArrayLiteral, AssignmentExpression, AsyncExpression, BinaryExpression, Block, CallExpression,
@@ -11,8 +14,16 @@ import {
   ImmutableBinding, IndexExpression, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral, RangePattern,
   ReadonlyDeclaration, RetireExpression, ReturnStatement, Statement, StringLiteral, TryStatement, TupleLiteral,
   UnaryExpression, ValuePattern, WhileStatement, WithStatement, YieldBlockAssignmentStatement, YieldBlockExpression,
-  YieldStatement, AsExpression, ClassDeclaration, FunctionDeclaration, InterfaceDeclaration,
+  YieldStatement, AsExpression, ClassDeclaration, FunctionDeclaration, InterfaceDeclaration, Identifier,
 } from "./ast"
+
+/** Whether an expression names a type parameter itself (`T` in `T.zero()`), not a value of that type. */
+export function isTypeParameterName(expression: Expression): bool {
+  case expression {
+    identifier: Identifier -> { return identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "type-parameter" }
+    _ -> { return false }
+  }
+}
 
 export function collectStatementExpressions(statement: Statement, result: Expression[]): none {
   case statement {

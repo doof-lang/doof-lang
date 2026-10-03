@@ -117,3 +117,13 @@ export function testInterfaceBoundImpliesJsonMembers(): none {
   nonSerialized := checked("interface Named { name: string }\nfunction bad<T: Named>(value: T): SerialValue => value.other()\nfunction main(): none { }")
   Assert.stringContains(diagnosticMessages(nonSerialized), "has no member \"other\"")
 }
+
+export function testImpliedJsonMembersKeepStaticAndInstanceReceivers(): none {
+  for bound of ["Named", "Serializable"] {
+    prelude := "interface Named { name: string }\nclass User { name: string }\n"
+    typeReceiver := checked(prelude + "function bad<T: " + bound + ">(value: T): none { f := T.toSerialObject }\nfunction main(): none { }")
+    Assert.stringContains(diagnosticMessages(typeReceiver), "Instance member 'toSerialObject' cannot be accessed through type parameter \"T\"; call it on a value")
+    valueReceiver := checked(prelude + "function bad<T: " + bound + ">(value: T, json: SerialValue): none { r := value.fromSerialValue(json) }\nfunction main(): none { }")
+    Assert.stringContains(diagnosticMessages(valueReceiver), "Static member 'fromSerialValue' cannot be accessed through a value; use 'T.fromSerialValue'")
+  }
+}

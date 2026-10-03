@@ -288,3 +288,55 @@ export function testInterfaceBoundImpliedJsonMembersRejectUnsupportedArguments()
   Assert.stringContains(result.diagnostics[0].message, "does not support automatic JSON serialization")
   Assert.stringContains(result.diagnostics[0].message, "toSerialObject")
 }
+
+export function testTypeParameterStaticMembersLowerToGenericClassInstantiations(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "interface Shape { static sides: int\nstatic unit(scale: int = 2): string }\n" +
+    "class Box<V> { static sides = 9\nstatic unit(scale: int = 2): string => \"box\" }\n" +
+    "function describe<T: Shape>(): string => T.unit() + string(T.sides)\n" +
+    "function main(): none { a := describe<Box<int>>() }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "Box__int::unit(2)")
+  Assert.stringContains(source, "Box__int::sides")
+}
+
+export function testInterfaceArgumentDecodesThroughImpliedFromSerialValue(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "interface Named { name: string }\n" +
+    "class User { kind: \"user\"\nname: string }\nclass Team { kind: \"team\"\nname: string }\n" +
+    "function decode<T: Named>(json: SerialValue): Result<T, string> => T.fromSerialValue(json)\n" +
+    "function main(): none { r := decode<Named>({ kind: \"user\", name: \"a\" }) }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  module := result.emission!.modules[0]
+  Assert.stringContains(module.source, "Named_fromSerialValue(json, false)")
+  Assert.stringContains(module.header + module.source, "Named_fromSerialValue(const doof::SerialValue& _json, bool _lenient)")
+}
+
+export function testImpliedJsonErrorsPointAtTheMemberOnce(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "interface Named { name: string }\nclass Bad { name: string\nhandler: (): int }\n" +
+    "function encode<T: Named>(value: T): SerialValue => value.toSerialObject()\n" +
+    "function main(): none { a := encode(Bad { name: \"a\", handler: => 1 })\nb := encode(Bad { name: \"b\", handler: => 2 }) }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 1)
+  diagnostic := result.diagnostics[0]
+  Assert.equal(diagnostic.message, "Type \"Bad\" does not support automatic JSON serialization, required by 'toSerialObject' on type parameter \"T\"")
+  Assert.equal(diagnostic.module, "/main.do")
+  Assert.equal(diagnostic.span.start.line, 4)
+  Assert.isTrue(diagnostic.span.start.column > 0)
+}
+
+export function testImpliedInterfaceDecodingRejectsUndiscriminatedArguments(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "interface Named { name: string }\nclass User { name: string }\nclass Team { name: string }\n" +
+    "function decode<T: Named>(json: SerialValue): Result<T, string> => T.fromSerialValue(json)\n" +
+    "function main(): none { r := decode<Named>({ name: \"a\" }) }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "Type \"Named\" does not support automatic JSON deserialization (implementing classes must share")
+}

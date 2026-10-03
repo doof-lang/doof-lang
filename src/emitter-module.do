@@ -264,8 +264,8 @@ class CxxModuleEmitter {
       }
     }
     sourceBuilder.append(generatedLineDirective())
-    sourceBuilder.append(emitModuleInitializer(programs, context, !context.scriptEntry))
-    if context.scriptEntry { sourceBuilder.append(emitScriptRunner(programs, context)) }
+    sourceBuilder.append(emitModuleInitializer(programs, context, instantiations, !context.scriptEntry))
+    if context.scriptEntry { sourceBuilder.append(emitScriptRunner(programs, context, instantiations)) }
     if instantiations != none {
       sourceBuilder.append(emitConcreteClassDefinitions(context, instantiations!))
       sourceBuilder.append(emitConcreteMethodDefinitions(context, instantiations!))
@@ -391,10 +391,14 @@ function emitScriptStorage(programs: Program[], context: EmitContext): string {
   return source + "\n"
 }
 
-function emitScriptRunner(programs: Program[], context: EmitContext): string {
+function emitScriptRunner(programs: Program[], context: EmitContext, instantiations: InstantiationPlan | none): string {
   previousTryPanics := context.tryPanics
   context.tryPanics = true
   let source = "\nvoid __doof_run_script(std::shared_ptr<std::vector<std::string>> arguments) {\n"
+  // Script entries have no module initializer, so class statics are assigned
+  // before the first top-level statement runs.
+  for program of programs { for statement of program.statements { source = source + emitScriptClassStatics(statement, context) } }
+  source = source + emitConcreteStaticFieldAssignments(context, instantiations)
   for program of programs { for statement of program.statements {
     declaration := scriptGlobalDeclaration(statement)
     if declaration != none {
@@ -407,6 +411,18 @@ function emitScriptRunner(programs: Program[], context: EmitContext): string {
   } }
   context.tryPanics = previousTryPanics
   return source + "}\n"
+}
+
+function emitScriptClassStatics(statement: Statement, context: EmitContext): string {
+  case statement {
+    class_: ClassDeclaration -> {
+      if class_.native_ || class_.typeParams.length > 0 { return "" }
+      return emitStaticFieldAssignments(class_, class_.name, context)
+    }
+    export_: ExportDeclaration -> { return emitScriptClassStatics(export_.declaration, context) }
+    _ -> { return "" }
+  }
+  return ""
 }
 
 function containsString(values: string[], value: string): bool {
@@ -1032,8 +1048,10 @@ function statementHasDeferredInitialization(statement: Statement): bool {
     value: ReadonlyDeclaration -> { return !isCxxConstantInitializer(value.value) }
     value: ImmutableBinding -> { return !isCxxConstantInitializer(value.value) }
     value: LetDeclaration -> { return !isCxxConstantInitializer(value.value) }
+    // Generic classes count too: each concrete instantiation's statics are
+    // assigned by this module's initializer.
     class_: ClassDeclaration -> {
-      if class_.native_ || class_.typeParams.length > 0 { return false }
+      if class_.native_ { return false }
       for field of class_.fields { if field.static_ && field.defaultValue != none { return true } }
       return false
     }
@@ -1043,17 +1061,45 @@ function statementHasDeferredInitialization(statement: Statement): bool {
   return false
 }
 
-function emitModuleInitializer(programs: Program[], context: EmitContext, includeValues: bool = true): string {
+function emitModuleInitializer(programs: Program[], context: EmitContext, instantiations: InstantiationPlan | none, includeValues: bool = true): string {
+  if !includeValues { return "" }
   let assignments = ""
-  if includeValues {
-    for program of programs {
-      for statement of program.statements {
-        assignments = assignments + emitModuleInitializerStatement(statement, context)
-      }
+  let deferred = false
+  for program of programs {
+    if moduleHasDeferredInitialization(program) { deferred = true }
+    for statement of program.statements {
+      assignments = assignments + emitModuleInitializerStatement(statement, context)
     }
   }
-  if assignments == "" { return "" }
+  assignments = assignments + emitConcreteStaticFieldAssignments(context, instantiations)
+  // The entry module calls this initializer whenever the module has deferred
+  // statics, even when no generic owner was instantiated.
+  if assignments == "" && !deferred { return "" }
   return "\nvoid __doof_initialize_module() {\n" + assignments + "}\n"
+}
+
+function emitStaticFieldAssignments(owner: ClassDeclaration, ownerName: string, context: EmitContext): string {
+  let result = ""
+  for field of owner.fields {
+    if !field.static_ || field.defaultValue == none { continue }
+    for name of field.names {
+      result = result + "        " + ownerName + "::" + cppIdentifier(name) + " = " +
+        emitExpression(field.defaultValue!, context, field.resolvedType) + ";\n"
+    }
+  }
+  return result
+}
+
+function emitConcreteStaticFieldAssignments(context: EmitContext, instantiations: InstantiationPlan | none): string {
+  if instantiations == none { return "" }
+  let result = ""
+  for instantiation of instantiations!.classes {
+    if instantiation.modulePath != context.modulePath || instantiation.declaration.native_ { continue }
+    context.substitution = instantiation.substitution
+    result = result + emitStaticFieldAssignments(instantiation.declaration, instantiation.emittedName, context)
+    clearInstantiation(context)
+  }
+  return result
 }
 
 function emitModuleInitializerStatement(statement: Statement, context: EmitContext): string {
@@ -1063,16 +1109,8 @@ function emitModuleInitializerStatement(statement: Statement, context: EmitConte
     value: ImmutableBinding -> { return emitModuleValueAssignment(value, value.value, context) }
     value: LetDeclaration -> { return emitModuleValueAssignment(value, value.value, context) }
     class_: ClassDeclaration -> {
-      let result = ""
-      if class_.native_ || class_.typeParams.length > 0 { return result }
-      for field of class_.fields {
-        if !field.static_ || field.defaultValue == none { continue }
-        for name of field.names {
-          result = result + "        " + class_.name + "::" + cppIdentifier(name) + " = " +
-            emitExpression(field.defaultValue!, context, field.resolvedType) + ";\n"
-        }
-      }
-      return result
+      if class_.native_ || class_.typeParams.length > 0 { return "" }
+      return emitStaticFieldAssignments(class_, class_.name, context)
     }
     export_: ExportDeclaration -> { return emitModuleInitializerStatement(export_.declaration, context) }
     _ -> { return "" }

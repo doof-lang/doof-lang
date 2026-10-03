@@ -68,6 +68,12 @@ user := decode<User>{ json: payload }
 `Serializable` is constraint-only, not a normal value type. Concrete
 instantiations may use eligible JSON-serializable classes, structs, or enums.
 
+A parameter bounded by an ordinary interface (`T: Named`) also gets
+`T.fromSerialValue(...)` and `value.toSerialObject()` without declaring them.
+Each concrete argument is checked at instantiation, and an ineligible one is
+reported at the member access. Keep the receivers straight: `T.toSerialObject`
+and `value.fromSerialValue(...)` are errors.
+
 Enums also expose `.toSerialValue()` and static `.fromSerialValue(...)` directly.
 Enum decoding requires the exact scalar kind even in lenient mode; lenient mode
 does not coerce enum values. Unknown values report the enum, received backing

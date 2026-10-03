@@ -3,6 +3,7 @@ import { retainEditorScope } from "./checker-common"
 
 import { checkArguments, positionalArguments } from "./checker-arguments"
 import { jsonPrograms, resolveMember, resolveBoundStaticMember } from "./checker-resolution"
+import { isTypeParameterName } from "./ast-walk"
 import { unionAliasJsonDiscriminator } from "./json-semantics"
 import type { Symbol } from "./semantic"
 import type { TypeAliasDeclaration } from "./ast"
@@ -518,6 +519,16 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       if member.resolvedStaticOwner == none && isNamedStaticReceiver(member.object) && selected.instance {
         typeError(state, "Instance member '" + member.property + "' cannot be accessed through a class", member.span)
       }
+      // The implied JSON members on a type parameter keep their static/instance
+      // split: `T.fromSerialValue(...)` but `value.toSerialObject()`.
+      if objectType.kind == "type-parameter" {
+        typeReceiver := isTypeParameterName(member.object)
+        if typeReceiver && member.property == "toSerialObject" {
+          typeError(state, "Instance member 'toSerialObject' cannot be accessed through type parameter \"" + typeName(objectType) + "\"; call it on a value", member.span)
+        } else if !typeReceiver && member.property == "fromSerialValue" {
+          typeError(state, "Static member 'fromSerialValue' cannot be accessed through a value; use '" + typeName(objectType) + ".fromSerialValue'", member.span)
+        }
+      }
       case objectType {
         _: EnumType -> {
           namedReceiver := isNamedStaticReceiver(member.object)
@@ -778,13 +789,6 @@ function weakAccessTarget(type_: ResolvedType): ResolvedType {
     _ -> { }
   }
   return type_
-}
-
-function isTypeParameterName(expression: Expression): bool {
-  case expression {
-    identifier: Identifier -> { return identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "type-parameter" }
-    _ -> { return false }
-  }
 }
 
 function isNamedStaticReceiver(expression: Expression): bool {

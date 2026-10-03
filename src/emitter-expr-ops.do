@@ -11,10 +11,11 @@ import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { emitStringConstant, quote } from "./emitter-expr-literals"
 import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
-import { emitClassInnerType, emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
+import { emitContextClassInnerType, emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { cppIdentifier as emittedCppIdentifier, moduleDiagnosticPath } from "./emitter-names"
 import { isNumeric, isSerialBytesType, sameType } from "./checker-types"
 import { emitNoImplementationsAccess, implementationlessInterface } from "./emitter-no-implementations"
+import { isTypeParameterName } from "./ast-walk"
 
 /** Lowers checked `as` conversion to a Result without evaluating its source twice. */
 export function emitAs(expression: AsExpression, context: EmitContext): string {
@@ -434,10 +435,11 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
       parameter: TypeParameterType -> {
         specialized := specializeEmitType(parameter, context)
         if parameter.constraintName == "Reflectable" && expression.property == "metadata" { return "doof::metadata_for_type<" + emitType(specialized, context.modulePath, context.names) + ">()" }
-        if parameter.constraintName != "Reflectable" && expression.property == "fromSerialValue" {
+        if isTypeParameterName(expression.object) && expression.property == "fromSerialValue" {
           case specialized {
-            concrete: ClassType -> { return emitClassInnerType(concrete, context.modulePath, context.names) + "::fromSerialValue" }
+            concrete: ClassType -> { return emitContextClassInnerType(concrete, context) + "::fromSerialValue" }
             enum_: EnumType -> { return emitContextType(enum_, context) + "_fromSerialValue" }
+            interface_: InterfaceType -> { return emitContextType(interface_, context) + "_fromSerialValue" }
             unresolved: TypeParameterType -> { return cppIdentifier(unresolved.name) + "::element_type::fromSerialValue" }
             _ -> { }
           }
@@ -446,7 +448,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
         // concrete argument's own static member.
         if isTypeParameterName(expression.object) {
           case specialized {
-            concrete: ClassType -> { return emitClassInnerType(concrete, context.modulePath, context.names) + "::" + (if concrete.symbol.native_ then expression.property else cppIdentifier(expression.property)) }
+            concrete: ClassType -> { return emitContextClassInnerType(concrete, context) + "::" + (if concrete.symbol.native_ then expression.property else cppIdentifier(expression.property)) }
             _ -> { }
           }
         }
@@ -580,11 +582,4 @@ export function emitIndex(expression: IndexExpression, context: EmitContext): st
     }
   }
   return object + "[" + index + "]"
-}
-
-function isTypeParameterName(expression: Expression): bool {
-  case expression {
-    identifier: Identifier -> { return identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "type-parameter" }
-    _ -> { return false }
-  }
 }

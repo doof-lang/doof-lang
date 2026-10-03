@@ -14,13 +14,14 @@ import {
   RangePattern, ReadonlyDeclaration, RetireExpression, ReturnStatement, Statement, StringLiteral, TryStatement, TupleLiteral, TypePattern, UnaryExpression, ValuePattern,
   WhileStatement, WithStatement, YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression, Program,
 } from "./ast"
-import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
+import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator } from "./json-semantics"
 import { AnalysisResult } from "./analyzer"
 import { sameType, substituteTypeParams, typeName } from "./checker-types"
 import { classSatisfiesConcreteInterface } from "./checker-interfaces"
 import {
   ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType,
   StreamResolvedType, TupleResolvedType, TypeParameterType, TypeSubstitution, UnionResolvedType, WeakResolvedType,
+  Diagnostic, SemanticLocation, SemanticSpan,
 } from "./semantic"
 
 export class DiscoveredFunction {
@@ -76,8 +77,9 @@ export class CheckedInstantiations {
   jsonSerializationKeys: string[] = []
   jsonDeserializationKeys: string[] = []
   // Implied JSON members used through a type parameter whose concrete argument
-  // cannot provide them. Serializable bounds are rejected at the call site.
-  jsonErrors: string[] = []
+  // cannot provide them, reported at the member access. Serializable bounds are
+  // rejected at the call site instead.
+  jsonErrors: Diagnostic[] = []
 }
 
 export function discoverInstantiations(result: AnalysisResult): CheckedInstantiations {
@@ -235,7 +237,7 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
     assignment: AssignmentExpression -> { collectExpression(assignment.target, modulePath, analysis, plan, names, arguments); collectExpression(assignment.value, modulePath, analysis, plan, names, arguments) }
     member: MemberExpression -> {
       collectExpression(member.object, modulePath, analysis, plan, names, arguments)
-      collectJsonMemberDemand(member, analysis, plan, names, arguments)
+      collectJsonMemberDemand(member, modulePath, analysis, plan, names, arguments)
     }
     index: IndexExpression -> { collectExpression(index.object, modulePath, analysis, plan, names, arguments); collectExpression(index.index, modulePath, analysis, plan, names, arguments) }
     call: CallExpression -> {
@@ -341,10 +343,10 @@ function collectPattern(pattern: CasePattern, modulePath: string, analysis: Anal
   }
 }
 
-function collectJsonMemberDemand(member: MemberExpression, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
+function collectJsonMemberDemand(member: MemberExpression, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
   if member.object.resolvedType == none { return }
   receiver := specialize(member.object.resolvedType!, names, arguments)
-  if member.property == "toSerialObject" || member.property == "fromSerialValue" { validateImpliedJsonMember(member, receiver, analysis, plan) }
+  if member.property == "toSerialObject" || member.property == "fromSerialValue" { validateImpliedJsonMember(member, receiver, modulePath, analysis, plan) }
   if member.property == "toSerialObject" {
     addJsonSerializationDemand(plan, receiver, analysis)
     return
@@ -384,7 +386,7 @@ function collectJsonMemberDemand(member: MemberExpression, analysis: AnalysisRes
   }
 }
 
-function validateImpliedJsonMember(member: MemberExpression, receiver: ResolvedType, analysis: AnalysisResult, plan: CheckedInstantiations): none {
+function validateImpliedJsonMember(member: MemberExpression, receiver: ResolvedType, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations): none {
   case member.object.resolvedType! {
     parameter: TypeParameterType -> { if parameter.constraintName == "Serializable" { return } }
     _ -> { return }
@@ -404,13 +406,34 @@ function validateImpliedJsonMember(member: MemberExpression, receiver: ResolvedT
       supported = member.property == "fromSerialValue"
       reason = " (enums use toSerialValue)"
     }
-    _: InterfaceType -> { supported = member.property == "fromSerialValue" }
+    interfaceType_: InterfaceType -> {
+      // Mirrors the checker's rule for direct `Interface.fromSerialValue`: a
+      // non-generic interface whose implementations share a discriminator.
+      declaration := interfaceDeclaration(analysis, interfaceType_.symbol.module, interfaceType_.symbol.name)
+      if member.property != "fromSerialValue" || declaration == none {
+        supported = false
+      } else if declaration!.typeParams.length > 0 {
+        reason = " (generic interfaces cannot be decoded)"
+      } else if interfaceType_.symbol.implementations.length > 0 && interfaceJsonDiscriminator(declaration!, programs) == none {
+        reason = " (implementing classes must share a literal-valued string field with distinct values)"
+      } else {
+        supported = true
+        declaration!.needsJson = true
+      }
+    }
     _ -> { }
   }
   if supported { return }
-  let trace = ""
-  for item of plan.currentTrace { trace = trace + (if trace == "" then "" else " -> ") + item }
-  plan.jsonErrors.push("Type \"" + typeName(receiver) + "\" does not support automatic JSON " + (if member.property == "toSerialObject" then "serialization" else "deserialization") + reason + ", required by '" + member.property + "' on a type parameter" + (if trace == "" then "" else " in " + trace))
+  message := "Type \"" + typeName(receiver) + "\" does not support automatic JSON " + (if member.property == "toSerialObject" then "serialization" else "deserialization") + reason + ", required by '" + member.property + "' on type parameter \"" + typeName(member.object.resolvedType!) + "\""
+  span := SemanticSpan {
+    start: SemanticLocation { line: member.span.start.line, column: member.span.start.column, offset: member.span.start.offset },
+    end: SemanticLocation { line: member.span.end.line, column: member.span.end.column, offset: member.span.end.offset },
+  }
+  // A generic body instantiated repeatedly with the same argument reports once.
+  for existing of plan.jsonErrors {
+    if existing.module == modulePath && existing.span.start.offset == span.start.offset && existing.message == message { return }
+  }
+  plan.jsonErrors.push(Diagnostic { severity: "error", message, span, module: modulePath })
 }
 
 function addJsonSerializationDemand(plan: CheckedInstantiations, type_: ResolvedType, analysis: AnalysisResult): none {

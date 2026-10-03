@@ -137,9 +137,15 @@ user := decode<User>{ json: payload }
 A type parameter bounded by an ordinary interface also gets `T.fromSerialValue(...)`
 and `value.toSerialObject()` implicitly; the interface need not declare them (they
 are reserved names). Each concrete argument must then be a class or struct eligible
-for that direction (`fromSerialValue` also accepts enums and interfaces); otherwise
-compilation reports an error naming the argument type. The generated JSON code is
+for that direction (`fromSerialValue` also accepts enums, and interfaces that
+`Interface.fromSerialValue` could decode directly); otherwise compilation reports
+an error at the member access naming the argument type. The generated JSON code is
 emitted for the concrete arguments, exactly as for direct calls.
+
+These implied members keep their static/instance split for every type parameter:
+`T.fromSerialValue(...)` is reached only through the type, and
+`value.toSerialObject()` only through a value. `T.toSerialObject` and
+`value.fromSerialValue(...)` are errors.
 
 `Serializable` is a constraint-only intrinsic. It is not a normal value type,
 and each concrete type argument must be a class or struct whose fields are JSON-serializable.

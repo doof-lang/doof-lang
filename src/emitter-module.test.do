@@ -4,7 +4,7 @@ import { ImportBinding } from "./semantic"
 import { parse } from "./parser"
 import { InstantiationPlan } from "./emitter-monomorphize"
 import { ModuleGraphEmission } from "./emitter-module"
-import { compileWithLoader } from "./compiler"
+import { Compilation, compileWithLoader } from "./compiler"
 import { noSourceLoader } from "./resolver"
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
@@ -256,4 +256,44 @@ export function testObserveEmissionStartsServerAndInvalidatesReusableFingerprint
   Assert.stringNotContains(normal.emission!.modules[0].source, "doof::observe::start_server")
   Assert.stringContains(observed.emission!.modules[0].source, "doof::observe::start_server();")
   Assert.isTrue(normal.emission!.modules[0].fingerprint != observed.emission!.modules[0].fingerprint)
+}
+
+function moduleSource(result: Compilation, path: string): string {
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  for module of result.emission!.modules { if module.modulePath == path { return module.source } }
+  panic("module was not emitted: " + path)
+}
+
+export function testInitializesStaticsOfEachGenericClassInstantiation(): none {
+  result := compileWithLoader([
+    SourceFile { path: "/boxes.do", source: "export class Box<V> { static sides = 9\nstatic label = \"box\" }" },
+    SourceFile { path: "/main.do", source: "import { Box } from \"./boxes\"\nfunction main(): int { a := Box<int> {}\nb := Box<string> {}\nreturn 0 }" },
+  ], "/main.do", noSourceLoader)
+  boxes := moduleSource(result, "/boxes.do")
+  Assert.stringContains(boxes, "void __doof_initialize_module() {")
+  Assert.stringContains(boxes, "Box__int::sides = 9;")
+  Assert.stringContains(boxes, "Box__string::sides = 9;")
+  Assert.stringContains(moduleSource(result, "/main.do"), "::app_boxes_::__doof_initialize_module();")
+}
+
+export function testUninstantiatedGenericStaticsStillEmitCalledInitializer(): none {
+  result := compileWithLoader([
+    SourceFile { path: "/boxes.do", source: "export class Box<V> { static sides = 9 }\nexport readonly answer = 3" },
+    SourceFile { path: "/main.do", source: "import { answer } from \"./boxes\"\nfunction main(): int => answer" },
+  ], "/main.do", noSourceLoader)
+  Assert.stringContains(moduleSource(result, "/boxes.do"), "void __doof_initialize_module() {\n}")
+  Assert.stringContains(moduleSource(result, "/main.do"), "::app_boxes_::__doof_initialize_module();")
+}
+
+export function testScriptEntryAssignsClassStaticsBeforeTopLevelStatements(): none {
+  result := compileWithLoader([
+    SourceFile { path: "/main.do", source: "class Sq { static sides = 4 }\nclass Box<V> { static sides = 9 }\nb := Box<int> {}\nprintln(string(Sq.sides))" },
+  ], "/main.do", noSourceLoader)
+  source := moduleSource(result, "/main.do")
+  runner := source.indexOf("void __doof_run_script(")
+  Assert.isTrue(runner >= 0)
+  Assert.isTrue(runner < source.indexOf("Sq::sides = 4;"))
+  Assert.isTrue(runner < source.indexOf("Box__int::sides = 9;"))
+  Assert.isTrue(source.indexOf("Sq::sides = 4;") < source.indexOf("doof::println"))
 }
