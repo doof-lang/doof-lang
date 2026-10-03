@@ -233,10 +233,10 @@ fraction or exponent with a direct diagnostic, an `e` not followed by digits
 still starts the next token, and hex literals are unaffected. Ch. 2 documents
 the form; ch. 11's `1e-10` example now compiles.
 
-### A24. Accepted when the spec says it's an error — **Implement**
+### A24. Accepted when the spec says it's an error — **Fixed**
 
-- `export function main()` (ch. 11: `main` must not be exported).
-- `return Success()` in a function returning `Result<int, string>` (ch. 9: only valid for `Result<none, E>`).
+- ~~`export function main()` (ch. 11: `main` must not be exported).~~ Fixed: the checker rejects `export function main` and `export { main }` in any module.
+- ~~`return Success()` in a function returning `Result<int, string>` (ch. 9: only valid for `Result<none, E>`).~~ Fixed with A9: `Success()` and `Success {}` report that the Result needs a value.
 - ~~`(message) => …` where the contextual type names the parameter `msg`.~~ Resolved: ch. 4 no longer requires lambda parameter names to match the signature. Names from the signature bind by name; other names bind by position (see A7).
 
 ### A25. Minor contextual typing gaps — **Implement**

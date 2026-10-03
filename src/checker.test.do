@@ -405,6 +405,21 @@ export function testChecksNativeEntryTryAsPanicAndRejectsExports(): none {
   Assert.stringContains(exported.diagnostics[0].message, "cannot export")
 }
 
+export function testRejectsExportedMain(): none {
+  valid := checked("function main(): none {}\nexport function run(): int => 1")
+  Assert.equal(valid.diagnostics.length, 0)
+
+  direct := checked("export function main(): none {}")
+  Assert.equal(direct.diagnostics.length, 1)
+  Assert.stringContains(direct.diagnostics[0].message, "'main' must not be exported")
+  Assert.equal(direct.diagnostics[0].span.start.line, 1)
+
+  listed := checked("function main(args: string[]): int => 0\nexport { main }")
+  Assert.equal(listed.diagnostics.length, 1)
+  Assert.stringContains(listed.diagnostics[0].message, "'main' must not be exported")
+  Assert.equal(listed.diagnostics[0].span.start.line, 2)
+}
+
 export function testRejectsExecutableStatementsForWasmAndReferenceModules(): none {
   wasm := checkedEntry("export function add(a: int, b: int): int => a + b\nprintln(\"ready\")", "wasm")
   Assert.equal(wasm.diagnostics.length, 1)

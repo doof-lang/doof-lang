@@ -77,6 +77,7 @@ function checkModule(state: CheckerState, entry: string): CheckResult {
   }
   let retiredActors: Binding[] = []
   for statement of state.info!.program.statements {
+    rejectExportedMain(state, statement)
     if scriptEntry && isScriptGlobalDeclaration(statement) {
       checkStatement(state, statement, scriptScope)
       promoteScriptBinding(statement, scriptScope, state.moduleScope!)
@@ -146,6 +147,21 @@ function isModuleDeclaration(statement: Statement): bool {
     _ -> { return false }
   }
   return false
+}
+
+// `main()` is the program entry point, never part of a module's public API.
+function rejectExportedMain(state: CheckerState, statement: Statement): none {
+  message := "'main' must not be exported; remove 'export' from the entry point"
+  case statement {
+    fn: FunctionDeclaration -> { if fn.exported && fn.name == "main" { typeError(state, message, fn.span) } }
+    list: ExportList -> {
+      if list.source != none { return }
+      for specifier of list.specifiers {
+        if specifier.name == "main" { typeError(state, message, specifier.span) }
+      }
+    }
+    _ -> { }
+  }
 }
 
 function isExport(statement: Statement): bool {
