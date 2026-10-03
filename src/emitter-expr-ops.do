@@ -465,6 +465,11 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
       class_: ClassType -> {
         if expression.resolvedStaticOwner != none {
           owner := expression.resolvedStaticOwner!
+          // A generic class is monomorphized, so its statics live on the
+          // instantiation the checker inferred for this receiver.
+          if expression.resolvedStaticReceiver != none && !owner.native_ {
+            return emitContextClassInnerType(expression.resolvedStaticReceiver!, context) + "::" + (if expression.property == "metadata" then "_metadata" else cppIdentifier(expression.property))
+          }
           let ownerName = owner.name
           if owner.native_ {
             ownerName = "::" + (if owner.nativeCppName == "" then owner.name else owner.nativeCppName)

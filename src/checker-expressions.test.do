@@ -457,3 +457,30 @@ export function testBareGenericPatternsTakeTheSubjectMembersArguments(): none {
   Assert.isTrue(ambiguous.diagnostics.length > 0)
   Assert.stringContains(ambiguous.diagnostics[0].message, "Box requires 1 type argument")
 }
+
+export function testBareResultArmsOnUnknownSubjectDoNotCascade(): none {
+  result := checked("function main(): none { case missing { s: Success -> println(s.value), f: Failure -> println(f.error) } }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "missing")
+}
+
+export function testExplicitGenericStaticReceivers(): none {
+  source := "class Channel<T> { static tag(): string => \"channel\"\nname(): string => \"c\" }\nclass Plain { static tag(): string => \"plain\" }\n"
+  valid := checked(source + "function main(): none { println(Channel<string>.tag()) }")
+  Assert.equal(valid.diagnostics.length, 0)
+
+  arity := checked(source + "function main(): none { a := Channel<string, int>.tag() }")
+  Assert.equal(arity.diagnostics.length, 1)
+  Assert.equal(arity.diagnostics[0].message, "Generic class 'Channel' requires 1 type argument; received 2")
+
+  plain := checked(source + "function main(): none { a := Plain<int>.tag() }")
+  Assert.equal(plain.diagnostics.length, 1)
+  Assert.equal(plain.diagnostics[0].message, "Class 'Plain' is not generic and takes no type arguments")
+
+  instance := checked(source + "function main(): none { a := Channel<string>.name() }")
+  Assert.equal(instance.diagnostics.length, 1)
+  Assert.stringContains(instance.diagnostics[0].message, "Instance member 'name' cannot be accessed through a class")
+
+  bounded := checked("interface Shape { area(): double }\nclass Drawer<T: Shape> { static tag(): string => \"drawer\" }\nfunction main(): none { a := Drawer<int>.tag() }")
+  Assert.isTrue(bounded.diagnostics.length > 0)
+}

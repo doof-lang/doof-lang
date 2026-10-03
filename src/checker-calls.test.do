@@ -229,3 +229,28 @@ export function testPrintlnRejectsNonInterpolatableTypes(): none {
   Assert.equal(result.diagnostics.length, 1)
   Assert.stringContains(result.diagnostics[0].message, "cannot be passed to println")
 }
+
+export function testInfersGenericClassArgumentsForStaticCalls(): none {
+  channel := "function onString(value: string): none {}\nclass Channel<T> { handler: (value: T): none\nstatic constructor(handler: (value: T): none): Channel<T> => Channel<T> { handler }\nstatic tag(): string => \"channel\" }\n"
+  valid := compile([SourceFile { path: "/main.do", source: channel + "function main(): none { a := Channel.constructor(onString)\nb := Channel.constructor{ handler: onString }\na.handler(\"a\")\nb.handler(\"b\") }" }], "/main.do")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+  Assert.stringContains(valid.emission!.modules[0].source, "Channel__string::constructor(")
+
+  uninferable := checked(channel + "function main(): none { println(Channel.tag()) }")
+  Assert.equal(uninferable.diagnostics.length, 1)
+  Assert.equal(uninferable.diagnostics[0].message, "Cannot infer type arguments for generic class 'Channel' from this call to static method 'tag'; its arguments must determine T, or write Channel<T>.tag(...)")
+
+  explicit := compile([SourceFile { path: "/main.do", source: channel + "function main(): none { println(Channel<string>.tag())
+c := Channel<string>.constructor(onString)
+c.handler(\"c\") }" }], "/main.do")
+  for diagnostic of explicit.diagnostics { println(diagnostic.message) }
+  Assert.equal(explicit.diagnostics.length, 0)
+  Assert.stringContains(explicit.emission!.modules[0].source, "Channel__string::tag()")
+
+  explicitMismatch := checked(channel + "function onInt(value: int): none {}\nfunction main(): none { c := Channel<string>.constructor(onInt) }")
+  Assert.isTrue(explicitMismatch.diagnostics.length > 0)
+
+  mismatch := checked(channel + "function onInt(value: int): none {}\nfunction main(): none { c: Channel<string> := Channel.constructor(onInt) }")
+  Assert.isTrue(mismatch.diagnostics.length > 0)
+}

@@ -237,6 +237,7 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
     assignment: AssignmentExpression -> { collectExpression(assignment.target, modulePath, analysis, plan, names, arguments); collectExpression(assignment.value, modulePath, analysis, plan, names, arguments) }
     member: MemberExpression -> {
       collectExpression(member.object, modulePath, analysis, plan, names, arguments)
+      if member.resolvedStaticReceiver != none { collectType(specialize(member.resolvedStaticReceiver!, names, arguments), analysis, plan) }
       collectJsonMemberDemand(member, modulePath, analysis, plan, names, arguments)
       if member.resolvedGenericReference != none {
         reference := member.resolvedGenericReference!

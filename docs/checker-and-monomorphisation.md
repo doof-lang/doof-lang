@@ -105,7 +105,16 @@ For `Box<int>`:
    constraints, and creates a `ClassType` containing the concrete `typeArgs`.
 2. Construction checking records `resolvedClass`, `resolvedConstructor`, and
    `resolvedConstructedType` where applicable. Field values are checked against
-   owner-substituted field types.
+   owner-substituted field types. Construction written without type arguments
+   (`Box { value: 42 }`, `Box(42)`) infers them in `checker-construction.do` by
+   running call inference over the constructor signature with the class's own
+   type parameters. A static member's instantiation is either written
+   (`Channel<string>.tag`, parsed into `receiverTypeArgs` and resolved in
+   `checker-expressions.do`) or, for a call through a bare generic class name
+   (`Channel.constructor(onString)`), inferred together with the method's type
+   arguments in `checker-calls.do`. Either way it is recorded as the member's
+   `resolvedStaticReceiver`; collection and emission use that instantiation's
+   monomorphized name.
 3. Any checked occurrence of the concrete nominal type reaches `collectType`
    in `checked-instantiations.do`, which creates a `DiscoveredClass` for a
    Doof-owned generic declaration. Native-owned generic types stay native.

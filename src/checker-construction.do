@@ -3,13 +3,14 @@
 import { checkArguments, propertyArguments, SuppliedArgument } from "./checker-arguments"
 import { ClassType, InterfaceType, NoneType, UnknownType, FunctionParamType, FunctionType, ResolvedType, ResultResolvedType, Scope, TypeParameterType, UnionResolvedType } from "./semantic"
 
-import { CheckedConstruction, ConstructionDefault, ClassDeclaration, ConstructExpression, ObjectProperty, FunctionDeclaration, SourceSpan, TupleLiteral } from "./ast"
+import { CallArgument, CheckedConstruction, ConstructionDefault, ClassDeclaration, ConstructExpression, Identifier, ObjectProperty, FunctionDeclaration, SourceSpan, TupleLiteral } from "./ast"
 import { CheckerState } from "./checker-state"
 import { checkExpression } from "./checker-expressions"
 import { memberType, resolveType, validateTypeArgumentConstraints } from "./checker-resolution"
 import { classModuleFor, findClassField, isAssignableWithInterfaces } from "./checker-interfaces"
 import { containsString, declarationFor, hasObjectProperty, methodSignature, optionalResolvedType, valueSymbolFor, valueUseDiagnostic } from "./checker-symbols"
-import { classType, noneType, resultArmExpectation, resultArmType, resultType, substituteTypeParams, typeName, unknownType } from "./checker-types"
+import { classType, noneType, resultArmExpectation, resultArmType, resultType, substituteTypeParams, typeName, typeParameter, unknownType } from "./checker-types"
+import { inferCallTypeArguments } from "./checker-call-inference"
 import { finish, typeError } from "./checker-common"
 import { checkPropertyValue, checkAssignableProperty, sameFixedFieldValue } from "./checker-properties"
 
@@ -45,6 +46,46 @@ export function resolveConstructor(state: CheckerState, owner: ClassType, useFac
     }
   }
   return CheckedConstruction { owner, declaration, factory: none, signature: FunctionType { params, returnType: owner }, defaults }
+}
+
+/**
+ * Infers a generic class's type arguments from construction arguments, using
+ * the constructor or field signature over the class's own type parameters.
+ * Speculative diagnostics are discarded when inference fails, so the caller
+ * reports one actionable error.
+ */
+export function inferConstructionTypeArguments(state: CheckerState, args: CallArgument[], owner: ClassType, declaration: ClassDeclaration, scope: Scope, expected: ResolvedType | none): ResolvedType[] | none {
+  let parameters: ResolvedType[] = []
+  for name of declaration.typeParams { parameters.push(typeParameter(name)) }
+  generic := classType(owner.name, owner.symbol, parameters)
+  plan := resolveConstructor(state, generic, !insideConstructorFactory(scope, generic))
+  signature := FunctionType { params: plan.signature.params, returnType: plan.signature.returnType, typeParams: declaration.typeParams }
+  diagnosticMark := state.diagnostics.length
+  inferred := inferCallTypeArguments(state, args, signature, scope, expected)
+  if inferred == none { while state.diagnostics.length > diagnosticMark { ignored := state.diagnostics.pop()! } }
+  return inferred
+}
+
+/**
+ * Reports a construction whose type arguments cannot be inferred. Arguments
+ * are still checked for their own errors; the result is unknown so the failure
+ * does not cascade into diagnostics about unresolved members.
+ */
+export function cannotInferConstruction(state: CheckerState, declaration: ClassDeclaration, args: CallArgument[], scope: Scope, span: SourceSpan): none {
+  for argument of args { checkExpression(state, argument.value, scope, none) }
+  let names = ""
+  for i of 0..<declaration.typeParams.length { names = names + (if i > 0 then ", " else "") + declaration.typeParams[i] }
+  typeError(state, "Cannot infer type arguments for generic class '" + declaration.name + "'; provide them explicitly as " + declaration.name + "<" + names + ">", span)
+}
+
+function constructionArguments(properties: ObjectProperty[]): CallArgument[] {
+  let result: CallArgument[] = []
+  for property of properties {
+    // A shorthand property `{ handler }` reads the binding of the same name.
+    value := property.value ?? Identifier { kind: "identifier", name: property.name, span: property.span }
+    result.push(CallArgument { name: property.name, value, span: property.span })
+  }
+  return result
 }
 
 export function insideConstructorFactory(scope: Scope, class_: ClassType): bool {
@@ -106,6 +147,16 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
       }
       _ -> { }
     }
+  }
+  generic := expression.resolvedClass
+  if resolvedTypeArgs.length == 0 && generic != none && generic!.typeParams.length > 0 {
+    args := constructionArguments(expression.args)
+    inferred := inferConstructionTypeArguments(state, args, classType(expression.type_, symbol!, []), generic!, scope, expected)
+    if inferred == none {
+      cannotInferConstruction(state, generic!, args, scope, expression.span)
+      return finish(state, expression, unknownType())
+    }
+    for argument of inferred! { resolvedTypeArgs.push(argument) }
   }
   if expression.resolvedClass != none {
     validateTypeArgumentConstraints(state, expression.resolvedClass!.typeParams, expression.resolvedClass!.typeParamConstraints, resolvedTypeArgs, expression.span, classModuleFor(state.result, symbol!), scope)

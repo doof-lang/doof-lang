@@ -352,13 +352,19 @@ isolated function parsePrimary(parser: Parser): Expression {
       return MemberExpression { kind: "member-expression", object: Identifier { kind: "identifier", name, span: identifierSpan }, property, optional: false, force: false, completionPoint, span: parser.span(start) }
     }
     let typeArgs: TypeAnnotation[] = []
-    if startsWithUppercase(name) && parser.check(TokenType.Less) && looksLikeGenericTypeArguments(parser) {
+    if startsWithUppercase(name) && parser.check(TokenType.Less) && looksLikeGenericTypeArguments(parser, true) {
       parser.advance()
       while !parser.check(TokenType.Greater) && !parser.atEnd() {
         typeArgs.push(parser.parseTypeAnnotation())
         if !parser.match(TokenType.Comma) { break }
       }
       parser.expect(TokenType.Greater)
+    }
+    // `Channel<string>.tag()` names a static member of one instantiation.
+    if typeArgs.length > 0 && parser.check(TokenType.Dot) {
+      parser.advance()
+      property := parser.text(parser.expect(TokenType.Identifier, "Expected member name"))
+      return MemberExpression { kind: "member-expression", object: Identifier { kind: "identifier", name, span: identifierSpan }, receiverTypeArgs: typeArgs, property, optional: false, force: false, span: parser.span(start) }
     }
     // Adjacent braces are named calls regardless of the callee's capitalization.
     // Resolve the callable (and its return type) in the checker.
@@ -734,7 +740,9 @@ function looksLikeConstruction(parser: Parser): bool {
   return parser.peek(1).kind == TokenType.RightBrace
 }
 
-function looksLikeGenericTypeArguments(parser: Parser): bool {
+// `allowMember` also accepts `Name<T>.member`, the explicit receiver of a
+// generic class's static member; only a class-name primary allows it.
+function looksLikeGenericTypeArguments(parser: Parser, allowMember: bool = false): bool {
   let depth = 0
   let index = 0
   while index < 64 {
@@ -745,6 +753,7 @@ function looksLikeGenericTypeArguments(parser: Parser): bool {
       if depth < 0 { return false }
       if depth == 0 {
         next := parser.peek(index + 1).kind
+        if allowMember && next == TokenType.Dot && parser.peek(index + 2).kind == TokenType.Identifier { return true }
         return next == TokenType.LeftBrace || next == TokenType.LeftParen
       }
     }

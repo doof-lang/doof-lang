@@ -1,7 +1,7 @@
 // Call, construction, generic-call, and actor-boundary checking.
 
 import { checkArguments, callArguments } from "./checker-arguments"
-import { insideConstructorFactory, resolveConstructor, validateConstructorVisibility, validateFieldArguments } from "./checker-construction"
+import { cannotInferConstruction, inferConstructionTypeArguments, insideConstructorFactory, resolveConstructor, validateConstructorVisibility, validateFieldArguments } from "./checker-construction"
 
 import { ActorType, Binding, ClassType, EnumType, FunctionParamType, FunctionType, PrimitiveType, ResolvedType, Scope, UnionResolvedType, UnknownType, WeakResolvedType } from "./semantic"
 
@@ -15,7 +15,6 @@ import { checkExpression } from "./checker-expressions"
 import { resolveType, resolveCalleeTarget, validateTypeArgumentConstraints } from "./checker-resolution"
 import { finish, typeError } from "./checker-common"
 import { optionalResolvedType, functionParameterIndex, lookup, isBuiltinPrintlnCall, declarationFor } from "./checker-symbols"
-import { inferTypeArgument } from "./checker-generics"
 import { inferCallTypeArguments } from "./checker-call-inference"
 import { withCallbackArity } from "./checker-array-methods"
 import { classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
@@ -86,7 +85,51 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
       resolvedFunction := adaptArrayCallbackArity(state, expression, declaredFunction, scope)
       let effectiveFunction: FunctionType = resolvedFunction
       let genericInferenceFailed = false
-      if expression.typeArgs.length > 0 {
+      staticOwner := genericStaticOwner(expression.callee)
+      if staticOwner != none && expression.typeArgs.length == 0 {
+        // `Channel.constructor(handler)` reaches a static method through a
+        // generic class written without type arguments. The class's type
+        // parameters are inferred together with the method's own, and the
+        // receiver is decorated with the concrete class it names.
+        owner := staticOwner!
+        let combinedParams: string[] = []
+        for name of owner.typeParams { combinedParams.push(name) }
+        for name of resolvedFunction.typeParams { combinedParams.push(name) }
+        combined := FunctionType { params: resolvedFunction.params, returnType: resolvedFunction.returnType, typeParams: combinedParams }
+        inferred := inferCallTypeArguments(state, expression.args, combined, scope, expected)
+        if inferred == none {
+          genericInferenceFailed = true
+          let names = ""
+          for i of 0..<owner.typeParams.length { names = names + (if i > 0 then ", " else "") + owner.typeParams[i] }
+          typeError(state, "Cannot infer type arguments for generic class '" + owner.name + "' from this call to static method '" + staticReceiver(expression.callee)!.property + "'; its arguments must determine " + names + ", or write " + owner.name + "<" + names + ">." + staticReceiver(expression.callee)!.property + "(...)", expression.span)
+        } else {
+          let classArgs: ResolvedType[] = []
+          let methodArgs: ResolvedType[] = []
+          for i of 0..<inferred!.length {
+            if i < owner.typeParams.length { classArgs.push(inferred![i]) } else { methodArgs.push(inferred![i]) }
+          }
+          member := staticReceiver(expression.callee)!
+          case member.object.resolvedType! {
+            receiver: ClassType -> {
+              validateTypeArgumentConstraints(state, owner.typeParams, owner.typeParamConstraints, classArgs, expression.span, classModuleFor(state.result, receiver.symbol), scope)
+              member.resolvedStaticReceiver = ClassType { name: receiver.name, symbol: receiver.symbol, typeArgs: classArgs }
+            }
+            _ -> { }
+          }
+          if methodArgs.length > 0 {
+            expression.resolvedGenericTypeArgs = methodArgs
+            applyTypeArgumentConstraints(state, expression.resolvedFunction, methodArgs, expression.span, scope, expression.resolvedFunctionModule, expression.callee)
+          }
+          substituted := substituteTypeParams(combined, combinedParams, inferred!)
+          case substituted {
+            function_: FunctionType -> {
+              effectiveFunction = FunctionType { params: function_.params, returnType: function_.returnType }
+              member.resolvedType = optionalResolvedType(effectiveFunction)
+            }
+            _ -> { }
+          }
+        }
+      } else if expression.typeArgs.length > 0 {
         if expression.typeArgs.length != resolvedFunction.typeParams.length {
           typeError(state, 
             "Generic call requires " + string(resolvedFunction.typeParams.length) + " type argument" + (if resolvedFunction.typeParams.length == 1 then "" else "s") + "; received " + string(expression.typeArgs.length),
@@ -144,11 +187,16 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
       } else if declaration != none && class_.typeArgs.length == 0 {
         case declaration! {
           classDeclaration: ClassDeclaration -> {
-            inferred := inferClassTypeArguments(state, expression, scope, class_, classDeclaration)
-            if inferred.length == classDeclaration.typeParams.length && inferred.length > 0 {
-              effectiveClass = classType(class_.name, class_.symbol, inferred)
-              expression.resolvedGenericTypeArgs = inferred
-              validateTypeArgumentConstraints(state, classDeclaration.typeParams, classDeclaration.typeParamConstraints, inferred, expression.span, classModuleFor(state.result, class_.symbol), scope)
+            if classDeclaration.typeParams.length > 0 {
+              inferred := inferConstructionTypeArguments(state, expression.args, class_, classDeclaration, scope, expected)
+              if inferred != none {
+                effectiveClass = classType(class_.name, class_.symbol, inferred!)
+                expression.resolvedGenericTypeArgs = inferred!
+                validateTypeArgumentConstraints(state, classDeclaration.typeParams, classDeclaration.typeParamConstraints, inferred!, expression.span, classModuleFor(state.result, class_.symbol), scope)
+              } else {
+                cannotInferConstruction(state, classDeclaration, expression.args, scope, expression.span)
+                return finish(state, expression, unknownType())
+              }
             }
           }
           _ -> { }
@@ -235,29 +283,30 @@ function checkedMemberCallReturnType(expression: CallExpression, returnType: Res
   return returnType
 }
 
+function staticReceiver(callee: Expression): MemberExpression | none {
+  case callee {
+    member: MemberExpression -> { if member.resolvedStaticOwner != none { return member } }
+    _ -> { }
+  }
+  return none
+}
+
+/** The generic class named by a static call written without type arguments, such as `Channel.constructor`. */
+function genericStaticOwner(callee: Expression): ClassDeclaration | none {
+  member := staticReceiver(callee)
+  if member == none || member!.resolvedStaticReceiver != none || member!.resolvedStaticOwner!.typeParams.length == 0 || member!.object.resolvedType == none { return none }
+  case member!.object.resolvedType! {
+    receiver: ClassType -> { if receiver.typeArgs.length == 0 { return member!.resolvedStaticOwner } }
+    _ -> { }
+  }
+  return none
+}
+
 function callArgumentsDiverge(expression: CallExpression): bool {
   for argument of expression.args {
     if argument.value.resolvedType != none && argument.value.resolvedType!.kind == "never" { return true }
   }
   return false
-}
-
-function inferClassTypeArguments(state: CheckerState, expression: CallExpression, scope: Scope, class_: ClassType, declaration: ClassDeclaration): ResolvedType[] {
-  patterns := resolveConstructor(state, class_).signature.params
-  let inferred: ResolvedType[] = []
-  for typeParam of declaration.typeParams {
-    let candidate: ResolvedType | none = none
-    for index of 0..<expression.args.length {
-      parameterIndex := if expression.args[index].name == none then index else functionParameterIndex(patterns, expression.args[index].name!)
-      if parameterIndex < 0 || parameterIndex >= patterns.length { continue }
-      actual := checkExpression(state, expression.args[index].value, scope, optionalResolvedType(patterns[parameterIndex].type_))
-      next := inferTypeArgument(patterns[parameterIndex].type_, actual, typeParam)
-      if next != none { candidate = next }
-    }
-    if candidate == none { return [] }
-    inferred.push(candidate!)
-  }
-  return inferred
 }
 
 export function applyTypeArgumentConstraints(state: CheckerState, declaration: FunctionDeclaration | none, arguments: ResolvedType[], span: SourceSpan, scope: Scope, modulePath: string, callee: Expression): none {

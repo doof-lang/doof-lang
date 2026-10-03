@@ -225,7 +225,7 @@ class Container<T, E> {
     result: Result<T, E>
 }
 
-readonly container = Container { result: Success { value: 42 } }
+readonly container = Container<int, string> { result: Success { value: 42 } }
 
 case container.result {
     s: Success -> println(s.value),    // 's' is immutable Success<T>

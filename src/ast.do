@@ -206,7 +206,12 @@ export class MemberExpression {
   property: string
   optional: bool
   let force: bool
+  // Explicit class type arguments on a static receiver: `Channel<string>.tag`.
+  receiverTypeArgs: TypeAnnotation[] = []
   let resolvedStaticOwner: ClassDeclaration | none = none
+  // The instantiation a static call through a bare generic class name
+  // inferred, such as Channel<string> for `Channel.constructor(onString)`.
+  let resolvedStaticReceiver: ClassType | none = none
   // `Alias.fromSerialValue` on a class-union alias; lowered to the alias decoder.
   let resolvedJsonAlias: TypeAliasDeclaration | none = none
   // Namespace imports have no runtime value. Retain the checker-selected

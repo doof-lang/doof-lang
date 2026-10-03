@@ -1830,3 +1830,33 @@ export function testParsesMultipleForInitializers(): none {
     _ -> { panic("expected for statement") }
   }
 }
+
+export function testParsesExplicitGenericStaticReceivers(): none {
+  case firstExpression("Channel<string>.tag()") {
+    call: CallExpression -> {
+      case call.callee {
+        member: MemberExpression -> {
+          Assert.equal(member.property, "tag")
+          Assert.equal(member.receiverTypeArgs.length, 1)
+        }
+        _ -> { panic("expected static member callee") }
+      }
+    }
+    _ -> { panic("expected call") }
+  }
+  case firstExpression("Pair<int, Box<string>>.empty") {
+    member: MemberExpression -> { Assert.equal(member.receiverTypeArgs.length, 2) }
+    _ -> { panic("expected static member") }
+  }
+  // Comparisons and generic method calls keep their existing parse.
+  case firstExpression("a < b") {
+    _: BinaryExpression -> { }
+    _ -> { panic("expected comparison") }
+  }
+  // As with `A<b>(c)` and `A<b> { }`, an uppercase name followed by type
+  // arguments and a member is a static receiver.
+  case firstExpression("A < b > .c") {
+    member: MemberExpression -> { Assert.equal(member.receiverTypeArgs.length, 1) }
+    _ -> { panic("expected static member") }
+  }
+}

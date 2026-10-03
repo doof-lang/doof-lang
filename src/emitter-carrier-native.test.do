@@ -24,6 +24,10 @@ export function testForMultipleInitializersNative(): none {
   runNativeFixture("for-multiple-initializers")
 }
 
+export function testGenericClassInferenceNative(): none {
+  runNativeFixture("generic-class-inference")
+}
+
 export function testEmissionFailuresCatchPanicNative(): none {
   runNativeFixture("catch-panic-never")
 }

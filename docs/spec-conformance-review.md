@@ -205,11 +205,12 @@ the field or method may also produce `T | none`
 diagnostic. Module-level and static `T | none` values are now accepted as
 direct storage, so optional static fields can be shorthand sources.
 
-### A20. Generic class inference — **Implement**
+### A20. Generic class inference — **Done**
 
-- `Channel { handler: onString }` and `Channel.constructor{ handler: onString }` fail with "type function; expected function".
-- `Container { result: Success { value: 42 } }` fails with "Cannot assign int to T".
-- `each([1, 2], => println(it))` against `f: (it: T): none` leaves `it` typed as the unsubstituted `T`. This affects parameterless and trailing lambdas passed to generic functions.
+- Named construction now infers class type arguments: `Channel { handler: onString }` and `Box { value: 42 }` work, including shorthand fields and the expected type. Call-style construction (`Box(42)`) uses the same inference, which also handles callbacks and conflicting arguments.
+- `Channel.constructor{ handler: onString }` and `Channel.constructor(onString)` infer the class arguments from the static call and lower to the monomorphized class (`Channel__string::constructor`). This also fixed static calls on generic classes, which used to emit `Channel::...` and fail in C++. Statics can also name their instantiation explicitly (`Channel<string>.tag()`, `Channel<int>.count`), which statics whose arguments can't determine `T` require; `Channel.tag()` reports an error pointing to that form. Static fields exist separately for each instantiation.
+- `Container { result: Success { value: 42 } }` can't be inferred, because nothing determines `E`. It now gets one clear error asking for `Container<T, E>` instead of "Cannot assign int to T" plus follow-on errors. Ch. 8's example now writes `Container<int, string>`, and Ch. 7 documents the rule.
+- `each([1, 2], => println(it))` was already fixed by the generic callback work and needed no change.
 
 ### A21. Namespace named construction — **Removed: no namespace imports**
 

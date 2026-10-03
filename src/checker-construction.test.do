@@ -80,3 +80,40 @@ export function testPositionalLiteralsConstructExpectedClasses(): none {
   Assert.equal(ambiguous.diagnostics.length, 1)
   Assert.stringContains(ambiguous.diagnostics[0].message, "Cannot assign (int, int) to A | B")
 }
+
+function constructionErrors(source: string): string[] {
+  result := compile([SourceFile { path: "/main.do", source }], "/main.do")
+  let messages: string[] = []
+  for diagnostic of result.diagnostics { if diagnostic.severity == "error" { messages.push(diagnostic.message) } }
+  return messages
+}
+
+export function testInfersGenericClassArgumentsFromNamedConstruction(): none {
+  channel := "function onString(value: string): none {}\nclass Channel<T> { handler: (value: T): none\nstatic constructor(handler: (value: T): none): Channel<T> => Channel<T> { handler } }\n"
+  Assert.equal(constructionErrors(channel + "function main(): none { c := Channel { handler: onString }\nc.handler(\"x\") }").length, 0)
+  Assert.equal(constructionErrors(channel + "function main(): none { handler := onString\nc := Channel { handler }\nc.handler(\"x\") }").length, 0)
+
+  box := "class Box<T> { value: T }\n"
+  Assert.equal(constructionErrors(box + "function main(): none { b := Box { value: 42 }\nlet n: int = b.value }").length, 0)
+  Assert.equal(constructionErrors(box + "function main(): none { b := Box(\"s\")\nlet n: string = b.value }").length, 0)
+  Assert.equal(constructionErrors(box + "function wrap<T>(x: T): T { b := Box { value: x }\nreturn b.value }").length, 0)
+  Assert.equal(constructionErrors(box + "function main(): none { let b: Box<long> = Box { value: 1 } }").length, 0)
+
+  mismatch := constructionErrors(box + "function main(): none { b := Box { value: 42 }\nlet s: string = b.value }")
+  Assert.equal(mismatch.length, 1)
+  Assert.stringContains(mismatch[0], "Cannot assign int to string")
+}
+
+export function testReportsUninferableGenericConstructionOnce(): none {
+  container := "class Container<T, E> { result: Result<T, E> }\n"
+  named := constructionErrors(container + "function main(): none { c := Container { result: Success { value: 42 } }\ncase c.result { s: Success -> println(s.value), f: Failure -> println(f.error) } }")
+  Assert.equal(named.length, 1)
+  Assert.equal(named[0], "Cannot infer type arguments for generic class 'Container'; provide them explicitly as Container<T, E>")
+
+  called := constructionErrors("class Empty<T> { items: T[] = [] }\nfunction main(): none { e := Empty() }")
+  Assert.equal(called.length, 1)
+  Assert.stringContains(called[0], "provide them explicitly as Empty<T>")
+
+  explicit := constructionErrors(container + "function main(): none { c := Container<int, string> { result: Success { value: 42 } } }")
+  Assert.equal(explicit.length, 0)
+}

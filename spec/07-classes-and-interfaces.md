@@ -261,6 +261,8 @@ and explicit static constructor calls:
 
 ```doof
 class Channel<T> {
+    handler: (value: T): none
+
     static constructor(handler: (value: T): none): Channel<T> {
         return Channel<T> { handler }
     }
@@ -270,6 +272,36 @@ let a = Channel<string> { handler: onString }
 let b = Channel { handler: onString }
 let c = Channel.constructor{ handler: onString }
 ```
+
+Inference uses the constructor's parameters, or the fields when there is no
+`constructor` method, together with an expected type such as
+`let box: Box<long> = Box { value: 1 }`. Every class type parameter must be
+determined; otherwise construction is an error that asks for explicit type
+arguments:
+
+```doof
+class Container<T, E> {
+    result: Result<T, E>
+}
+
+Container { result: Success { value: 42 } }
+// ❌ Error: Cannot infer type arguments for generic class 'Container'; provide them explicitly as Container<T, E>
+Container<int, string> { result: Success { value: 42 } }   // ✅
+```
+
+A static member of a generic class belongs to one instantiation: each
+instantiation has its own static fields. The instantiation can be written
+explicitly before the member, or inferred from a static call's arguments:
+
+```doof
+Channel<string>.tag()                  // explicit instantiation
+Channel<string>.constructor(onString)  // explicit instantiation
+Channel.constructor(onString)          // infers Channel<string>
+Channel.tag()                          // ❌ Error: arguments cannot determine T; write Channel<T>.tag(...)
+```
+
+Static fields and static methods whose arguments do not determine the class
+type parameters need the explicit form.
 
 Classes and structs may also use typed tag-call syntax. Attributes are named
 constructor arguments, so dedicated `constructor` methods, defaults, generic

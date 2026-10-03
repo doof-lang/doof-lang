@@ -96,6 +96,10 @@ Rules:
 - Classes and structs with a dedicated `constructor` method are not eligible for automatic
   JSON serialization/deserialization.
 - Name-value shorthand such as `{ name }` expands to `{ name: name }`.
+- Generic class type arguments are inferred from named, positional, and tag
+  construction arguments and the expected type: `Box { value: 42 }` is
+  `Box<int>`. Every type parameter must be determined; `Container { result:
+  Success { value: 42 } }` is an error until written `Container<int, string> { ... }`.
 - Spread fields work in named construction.
 - Typed tags are named calls: classes and structs construct normally, while
   functions, callbacks, and callable members are invoked normally. Scalar
@@ -163,6 +167,11 @@ Rules:
 - Static methods cannot access instance state.
 - Access statics only through the class name: `Rectangle.kind`.
 - Instances never reach statics; `rect.kind` is an error that names `Rectangle.kind`.
+- Statics of a generic class belong to one instantiation, with separate static
+  fields per instantiation. Write it explicitly as `Channel<string>.tag()` or
+  `Channel<int>.count`, or let a static call infer it from its arguments:
+  `Channel.constructor(onString)` calls it on `Channel<string>`. Static fields
+  and statics whose arguments don't determine `T` need the explicit form.
 - Interfaces may declare `static name: T`, `static readonly name: T`, and bodyless
   `static method(...)` members as a contract for generic bounds. With `T: Iface`,
   `T.name` / `T.method()` reach the concrete argument's statics (classes and structs

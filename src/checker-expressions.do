@@ -11,7 +11,7 @@ import type { TypeAliasDeclaration } from "./ast"
 
 import { ActorType, ArrayResolvedType, Binding, ClassType, EnumType, InterfaceType, Diagnostic, FunctionParamType, FunctionType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, Scope, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType } from "./semantic"
 
-import { CheckedMember, ArrayLiteral, AsExpression, AssignmentExpression, BinaryExpression, Block, BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ConstructExpression, DoubleLiteral, DotShorthand, EnumDeclaration, Expression, FloatLiteral, FunctionDeclaration, IfExpression, Identifier, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral, ObjectLiteral, SourceSpan, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression, CatchExpression, CaseExpression, CasePattern, RangePattern, TypePattern, ValuePattern, WildcardPattern, AsyncExpression, RetireExpression, ActorCreationExpression } from "./ast"
+import { CheckedMember, ArrayLiteral, AsExpression, AssignmentExpression, BinaryExpression, Block, BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ConstructExpression, DoubleLiteral, DotShorthand, EnumDeclaration, Expression, FloatLiteral, FunctionDeclaration, IfExpression, Identifier, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral, ObjectLiteral, SourceSpan, StringLiteral, ThisExpression, TupleLiteral, TypeAnnotation, UnaryExpression, YieldBlockExpression, CatchExpression, CaseExpression, CasePattern, RangePattern, TypePattern, ValuePattern, WildcardPattern, AsyncExpression, RetireExpression, ActorCreationExpression } from "./ast"
 import { actorType, classType, functionType, jsonValueType, isNumeric, isJsonValueType, isSerialBytesType, resultType, successType, failureType, neverType, noneType, primitive, promiseType, rangeType, sameType, tupleType, displayTypeName, typeName, unionType, isStringInterpolatable, typeParameter, unknownType, weakReferenceErrorType } from "./checker-types"
 
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
@@ -23,12 +23,12 @@ import { isNumericOperand, isIntegerOperand, numericOperatorAllowed, numericOper
 import { checkFunction, checkBlock } from "./checker-statements"
 import { checkCall, checkLambda } from "./checker-calls"
 import { checkArray, checkObject } from "./checker-literals"
-import { fieldAssignmentBinding, resolveType, memberType, indexType } from "./checker-resolution"
+import { fieldAssignmentBinding, resolveType, memberType, indexType, validateTypeArgumentConstraints } from "./checker-resolution"
 import { deprecatedNoneAlias, finish, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
 import { builtinSourceLocationType, casePatternName, optionalResolvedType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, valueUseDiagnostic, declarationFor } from "./checker-symbols"
 import { checkPositionalLiteralConstruction, positionalLiteralClass, resolveConstructor, validateConstructorVisibility, validateFieldArguments, checkConstruct } from "./checker-construction"
 import { checkerSemanticSpan } from "./checker-validation"
-import { isAssignableWithInterfaces } from "./checker-interfaces"
+import { classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
 import { forcedValue, optionalAccessType, optionalConversion, optionalType } from "./checker-absence"
 import { absenceLayers, canBeAbsent, hasFailureLayer, hasPresentValue, presentType } from "./absence-types"
 
@@ -273,6 +273,52 @@ function genericPatternMember(pattern: ResolvedType, subjectType: ResolvedType):
   return none
 }
 
+/**
+ * Specializes `Channel<string>.member` to the named instantiation. Explicit
+ * type arguments are only meaningful on a generic class name, whose statics
+ * exist once per instantiation.
+ */
+function explicitStaticReceiver(state: CheckerState, member: MemberExpression, objectType: ResolvedType, scope: Scope): ResolvedType {
+  let resolvedArgs: ResolvedType[] = []
+  for argument of member.receiverTypeArgs { resolvedArgs.push(resolveType(state, argument, state.info!, scope)) }
+  case objectType {
+    class_: ClassType -> {
+      declaration := declarationFor(state.result, class_.symbol)
+      if declaration != none && class_.typeArgs.length == 0 && isNamedStaticReceiver(member.object) {
+        case declaration! {
+          generic: ClassDeclaration -> {
+            if generic.typeParams.length == 0 {
+              typeError(state, "Class '" + generic.name + "' is not generic and takes no type arguments", member.span)
+              return objectType
+            }
+            if resolvedArgs.length != generic.typeParams.length {
+              typeError(state, "Generic class '" + generic.name + "' requires " + string(generic.typeParams.length) + " type argument" + (if generic.typeParams.length == 1 then "" else "s") + "; received " + string(resolvedArgs.length), member.span)
+              return unknownType()
+            }
+            validateTypeArgumentConstraints(state, generic.typeParams, generic.typeParamConstraints, resolvedArgs, member.span, classModuleFor(state.result, class_.symbol), scope)
+            receiver := ClassType { name: class_.name, symbol: class_.symbol, typeArgs: resolvedArgs }
+            member.resolvedStaticReceiver = receiver
+            return receiver
+          }
+          _ -> { }
+        }
+      }
+    }
+    _ -> { }
+  }
+  if objectType.kind != "unknown" {
+    typeError(state, "Type arguments are only allowed on a generic class name before a static member", member.span)
+  }
+  return objectType
+}
+
+function hasNoTypeArguments(annotation: TypeAnnotation): bool {
+  case annotation {
+    named: NamedType -> { return named.typeArgs.length == 0 }
+    _ -> { return false }
+  }
+}
+
 export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], subjectType: ResolvedType, scope: Scope): none {
   for pattern of patterns {
     case pattern {
@@ -283,8 +329,11 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
           named: NamedType -> { inferred = inferredGenericPattern(named, subjectType) }
           _ -> { }
         }
+        // A bare Success/Failure arm takes its payload from the subject; an
+        // unknown subject has already been reported, so the arm stays unknown.
+        bareResultArm := subjectType.kind == "unknown" && casePatternName(type_) != "" && hasNoTypeArguments(type_.type_)
         if inferred != none { resolved = inferred! }
-        else {
+        else if !bareResultArm {
           resolved = resolveType(state, type_.type_, state.info!, scope)
           // An explicit generic pattern must name the subject member exactly;
           // a different instantiation is never stored in the subject.
@@ -507,6 +556,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         }
         _ -> { }
       }
+      if member.receiverTypeArgs.length > 0 { objectType = explicitStaticReceiver(state, member, objectType, scope) }
       diagnosticCount := state.diagnostics.length
       boundStatic := if isTypeParameterName(member.object) then resolveBoundStaticMember(state, objectType, member.property) else none
       selected := if boundStatic != none then boundStatic! else resolveMember(state, objectType, member.property, member.span)
