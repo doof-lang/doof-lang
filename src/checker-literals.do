@@ -3,7 +3,7 @@
 import { resolveConstructor, checkClassProperties } from "./checker-construction"
 import { checkPropertyValue, checkAssignableProperty } from "./checker-properties"
 
-import { ArrayResolvedType, ClassType, SerialValueResolvedType, MapResolvedType, NoneType, ResolvedType, ResultResolvedType, Scope, SetResolvedType, UnionResolvedType, UnknownType } from "./semantic"
+import { ArrayResolvedType, ClassType, InterfaceType, SerialValueResolvedType, MapResolvedType, NoneType, ResolvedType, ResultResolvedType, Scope, SetResolvedType, UnionResolvedType, UnknownType } from "./semantic"
 
 import { ArrayLiteral, ClassDeclaration, Expression, NamedType, ObjectLiteral, TypeAnnotation } from "./ast"
 import { arrayType, joinTypes, isJsonValueType, isSupportedHashCollectionType, jsonValueType, mapType, setType, primitive, sameType, typeName, unknownType } from "./checker-types"
@@ -47,8 +47,8 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
             }
           }
           _ -> {
-            checkExpression(state, expression, scope, none)
             typeError(state, "Omitted type arguments for " + named.name + " require a same-site non-empty set literal", expression.span)
+            checkExpression(state, expression, scope, none)
             return setType(unknownType(), named.name == "ReadonlySet")
           }
         }
@@ -222,8 +222,18 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
       _: SerialValueResolvedType -> { return finish(state, expression, expected!) }
       union_: UnionResolvedType -> { if containsJsonValue(state, union_) { return finish(state, expression, jsonValueType()) } }
       _: MapResolvedType -> { return finish(state, expression, expected!) }
+      interface_: InterfaceType -> {
+        let names: string[] = []
+        for implementation of interface_.symbol.implementations { names.push(implementation.name) }
+        if names.length > 1 { typeError(state, "Ambiguous object literal for " + typeName(interface_) + "; multiple candidates: " + joinNames(names) + ". Use explicit Type { ... } construction", expression.span) }
+        else { typeError(state, "Object literal cannot construct interface " + typeName(interface_) + ". Use explicit Type { ... } construction", expression.span) }
+        return finish(state, expression, expected!)
+      }
       _ -> { }
     }
+  }
+  if expected == none {
+    typeError(state, "Cannot infer the type of an object literal without context; add a type annotation or use explicit Type { ... } construction", expression.span)
   }
   return finish(state, expression, mapType(primitive("string"), jsonValueType()))
 }

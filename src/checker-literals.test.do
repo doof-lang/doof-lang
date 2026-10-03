@@ -56,3 +56,20 @@ export function testEmptyArrayLiteralAllowedWithExpectedType(): none {
   for diagnostic of valid.diagnostics { println(diagnostic.message) }
   Assert.equal(valid.diagnostics.length, 0)
 }
+
+export function testObjectLiteralWithoutContextIsError(): none {
+  bare := compile([SourceFile { path: "/main.do", source: "function main(): none { q := { x: 1.0 }\n}" }], "/main.do")
+  Assert.isTrue(hasErrorDiagnostics(bare.diagnostics))
+  Assert.stringContains(bare.diagnostics[0].message, "object literal without context")
+  contextual := compile([SourceFile { path: "/main.do", source: "class Point { x: float }\nfunction main(): none { p: Point := { x: 1.0 }\nm: Map<string, int> := { \"a\": 1 }\n}" }], "/main.do")
+  for diagnostic of contextual.diagnostics { println(diagnostic.message) }
+  Assert.equal(contextual.diagnostics.length, 0)
+}
+
+export function testObjectLiteralForInterfaceReportsCandidates(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "interface Positioned { readonly x: float\nreadonly y: float }\nclass Point implements Positioned { readonly x: float\nreadonly y: float }\nclass Vector implements Positioned { readonly x: float\nreadonly y: float }\nfunction main(): none { p: Positioned := { x: 1.0, y: 2.0 }\n}",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "multiple candidates: Point, Vector")
+}

@@ -184,18 +184,13 @@ expression". Ch. 1 says semicolons may follow any statement or declaration.
 - `{ 1.5: "v" }` reports an internal "Missing resolved type" error.
 - Set element restrictions are enforced correctly.
 
-### A14. Empty array literal without an annotation — **Decide**
+### A14. Empty array literal without an annotation — **Done**
 
-`let empty = []` reports internal "Unknown resolved type" errors. Ch. 2 says
-it's currently accepted. The simplest fix is to reject it with a proper
-diagnostic and update the spec.
+An empty array literal now needs an expected type (annotation, parameter, return type, field, nullable context) and otherwise reports "Cannot infer the element type of an empty array literal". Ch. 2 is updated.
 
-### A15. Object literal without context — **Spec or Implement**
+### A15. Object literal without context — **Done**
 
-- `let q = { x: 1.0 }` is accepted as `Map<string, SerialValue>`; ch. 2 says it's an error.
-- An ambiguous interface literal reports "Cannot assign Map<string, SerialValue> to Positioned" instead of "multiple candidates".
-
-**Recommendation**: document the SerialValue-map fallback, and improve the interface diagnostic.
+The spec was right. `let q = { x: 1.0 }` is now an error ("Cannot infer the type of an object literal without context"), and an object literal assigned to an interface reports "Ambiguous object literal for Positioned; multiple candidates: ..." instead of a Map-to-interface assignment error.
 
 ### A16. `println` and `print` — **Decide**
 
@@ -344,4 +339,4 @@ declarations supplied where the spec uses partial snippets.
 1. **The remaining checker test helpers** (section C), now that A1, A2, A27 and A28 are done.
 2. **Chapter B doc fixes — completed.** The misleading examples and contradictory text are corrected.
 3. **Common gaps: A10, A12, A13, A29.**
-4. **Needs a decision first: A14, A16.**
+4. **Needs a decision first: A16.**
