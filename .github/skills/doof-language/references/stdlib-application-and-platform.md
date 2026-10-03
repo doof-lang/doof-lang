@@ -164,9 +164,27 @@ import { LayoutEdges, LayoutNode, LayoutRect, LayoutStyle, layout } from "std/la
 
 A renderer-independent, flex-inspired layout engine. Build a `LayoutNode` tree
 with `LayoutStyle` (row/column direction, grow/shrink, gap, padding, absolute
-positioning, constraints, alignment, overflow), call `layout(root, viewport)`
+positioning, constraints, alignment, overflow, `flexWrap`), call `layout(root, viewport)`
 whenever styles, content, or the viewport change, then read `bounds()` for
 painting and hit-testing. `measureLayout(root, constraints)` reports preferred
 size without assigning rectangles; `scrollTo`/`scrollBy` update scroll placement
 without rerunning flex sizing. It draws nothing and borrows Flexbox concepts
 without promising browser-identical CSS behavior.
+
+`LayoutStyle { flexWrap: .Wrap }` enables row or column wrapping; the default is
+`.NoWrap`. `FlexWrap` exports those two values. Line breaks use initial sizes,
+min/max constraints, margins, and `gap` before grow/shrink; flex distribution
+and justification then apply per line. `gap` also separates lines. Lines use
+natural cross sizes and start at the top/left, with children aligned or stretched
+within each line. Reverse directions reverse the main axis within each line.
+Flex factors are relative weights; tiny positive totals still participate.
+`measureLayout` reports wrapped cross sizes under a bounded main axis; an
+unbounded main axis forms one line. Measured children and nested wrapping
+containers resolve cross sizes at their assigned main sizes, so callbacks may
+run more than once and should return stable results for identical constraints.
+Use a nonzero basis or preferred main size for useful wrapping breakpoints;
+zero bases fit before growth. Column wrapping needs a bounded height. The
+standard-library workspace provides `layout/samples/wrapping` for printed
+geometry and `game/samples/layout` for a resizable wrapping card grid. Set
+`DOOF_STDLIB_ROOT` to the workspace when running samples against local changes.
+Wrap-reverse, align-content, and separate row/column gaps are not supported.

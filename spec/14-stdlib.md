@@ -14,11 +14,52 @@ The standard library ships as a set of first-party packages, each available unde
 | fs      | `std/fs`     | File system I/O (POSIX) |
 | http    | `std/http`   | HTTP client (libcurl) |
 | json    | `std/json`   | JSON parse and format |
+| layout  | `std/layout` | Renderer-independent flex-style layout and measurement |
 | os      | `std/os`     | Process and environment utilities |
 | path    | `std/path`   | POSIX path manipulation |
 | regex   | `std/regex`  | Regular expression matching |
 | stream  | `std/stream` | Stream combinators |
 | time    | `std/time`   | Dates, times, durations, and time zones |
+
+---
+
+## `std/layout`
+
+`LayoutNode`, `LayoutStyle`, `layout`, and `measureLayout` provide a
+renderer-independent flex-inspired layout engine. `LayoutStyle.flexWrap`
+uses `FlexWrap { NoWrap, Wrap }` and defaults to `.NoWrap`.
+
+With `.Wrap`, children form lines in source order using their initial main-axis
+sizes (flex basis, preferred size, and min/max clamping), margins, and `gap`,
+before grow/shrink. Exact fits remain on the line, with a tolerance of 0.000001
+layout units. An oversized child forms a line by itself. Absolute children are
+excluded. Growth, shrinkage, and justification apply independently per line.
+Zero bases can fit on one line before growth; use a nonzero basis or preferred
+main size to define useful wrapping breakpoints.
+Flex factors are relative weights: any positive total participates in
+distribution, independently of the tolerance used for layout distances.
+
+Line cross sizes use the largest resolved child cross size including cross
+margins. Alignment and stretch apply within each line. Lines advance from top
+to bottom for rows, or left to right for columns, separated by `gap`; unused
+cross-axis space remains after the last line. Reverse directions reverse child
+placement within lines, preserving line order.
+
+`measureLayout` forms lines under bounded main-axis constraints, including
+explicit dimensions and style maxima. An unbounded main axis forms one line.
+Measured children and nested wrapping containers resolve cross sizes against
+their final assigned main sizes. Measurement assigns no frames and invokes no
+placement callbacks; measurement callbacks may run multiple times. Overflow
+from wrapped content contributes to clipping and scrolling in the usual way.
+
+This API does not promise CSS Flexbox parity. Wrap-reverse, align-content, and
+independent row/column gaps are not supported.
+
+The standard-library workspace includes `layout/samples/wrapping` for printed
+measurement, reflow, reverse-column, and scrolling examples, and
+`game/samples/layout` for a rendered wrapping card grid. Run them with
+`doof run <sample-path>`; set `DOOF_STDLIB_ROOT` to that workspace to use local
+package sources during development.
 
 ---
 
