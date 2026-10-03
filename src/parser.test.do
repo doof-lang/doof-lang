@@ -9,7 +9,7 @@ import {
   IfStatement, ExpressionStatement, ConstDeclaration, ReadonlyDeclaration, ImmutableBinding, LetDeclaration, TryStatement,
   StringLiteral, CharLiteral, LambdaExpression, TupleLiteral, AsyncExpression, RetireExpression, AsExpression, ConstructExpression,
   ActorCreationExpression, CaseExpression, EnumDeclaration, InterfaceDeclaration, NamedType, NoneLiteral, ObjectLiteral, RangePattern, TypeAliasDeclaration, UnionType, ValuePattern, YieldStatement,
-  MockImportDirective, WeakType, CatchExpression, YieldBlockExpression, YieldBlockAssignmentStatement, DestructuringStatement, DotShorthand, ForOfStatement, WhileStatement, BreakStatement, ContinueStatement, WithStatement,
+  MockImportDirective, WeakType, CatchExpression, YieldBlockExpression, YieldBlockAssignmentStatement, DestructuringStatement, DotShorthand, ForOfStatement, ForStatement, WhileStatement, BreakStatement, ContinueStatement, WithStatement,
 } from "./ast"
 import type { Statement, Expression } from "./ast"
 
@@ -1804,4 +1804,29 @@ export function testSemicolonsMayFollowBlockEndedStatements(): none {
 
 export function testLeadingAndRepeatedSemicolonsAreEmpty(): none {
   Assert.equal(parse(";;\nlet x = 1;;; let y = 2;").statements.length, 2)
+}
+
+export function testParsesMultipleForInitializers(): none {
+  case first("for let i = 0, j: long = 10; i < j; i += 1, j -= 1 { }") {
+    loop: ForStatement -> {
+      Assert.equal(loop.init.length, 2)
+      case loop.init[1] {
+        second: LetDeclaration -> {
+          Assert.equal(second.name, "j")
+          Assert.isTrue(second.type_ != none)
+        }
+        _ -> { panic("expected let declarator") }
+      }
+      Assert.equal(loop.update.length, 2)
+    }
+    _ -> { panic("expected for statement") }
+  }
+  case first("for i = 0, j = 10; i < j; i += 1 { }") {
+    loop: ForStatement -> { Assert.equal(loop.init.length, 2) }
+    _ -> { panic("expected for statement") }
+  }
+  case first("for ; ; { break }") {
+    loop: ForStatement -> { Assert.equal(loop.init.length, 0) }
+    _ -> { panic("expected for statement") }
+  }
 }

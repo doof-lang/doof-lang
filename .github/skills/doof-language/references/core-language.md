@@ -323,7 +323,11 @@ for suit, pile of foundations {
 
 while condition { doWork() }
 for let i = 0; i < 10; i += 1 { println(i) }
+for let i = 0, j = 10; i < j; i += 1, j -= 1 { println(i + j) }
 ```
+
+Traditional `for` header variables are scoped to the loop, so later loops can
+reuse their names.
 
 `for-of` evaluates its iterable expression once and retains a returned
 collection or stream temporary for the whole loop.

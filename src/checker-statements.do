@@ -103,13 +103,15 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
       return true
     }
     for_: ForStatement -> {
-      if for_.init != none { checkStatement(state, for_.init!, scope) }
+      // Header bindings are visible to the condition, update and body only.
+      headerScope := Scope { parent: scope }
+      for init of for_.init { checkStatement(state, init, headerScope) }
       if for_.condition != none {
         condition := for_.condition!
-        requireBool(state, checkExpression(state, condition, scope, none), condition.span)
+        requireBool(state, checkExpression(state, condition, headerScope, none), condition.span)
       }
-      for update of for_.update { checkExpression(state, update, scope, none) }
-      loopScope := createLoopScope(state, scope, for_.label, for_.span)
+      for update of for_.update { checkExpression(state, update, headerScope, none) }
+      loopScope := createLoopScope(state, headerScope, for_.label, for_.span)
       checkBlock(state, for_.body, loopScope, true)
       if for_.then_ != none { checkBlock(state, for_.then_!, scope) }
       return true

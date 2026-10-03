@@ -301,10 +301,18 @@ function parseFor(parser: Parser, label: string | none, start: AstLocation): Sta
     if parser.match(TokenType.Then) { then_ = parseBlock(parser) }
     return ForOfStatement { kind: "for-of-statement", bindings, iterable, body, label, then_, span: parser.span(start) }
   }
-  let init: Statement | none = none
+  // One `let` covers every comma-separated declarator: `let i = 0, j = 10`.
+  let init: Statement[] = []
   if !parser.check(TokenType.Semicolon) {
-    if parser.check(TokenType.Let) { init = parseLetNoSemicolon(parser) }
-    else { init = parseExpressionStatementNoSemicolon(parser) }
+    if parser.check(TokenType.Let) {
+      declaratorStart := parser.location()
+      parser.expect(TokenType.Let)
+      init.push(parseLetDeclarator(parser, declaratorStart))
+      while parser.match(TokenType.Comma) { init.push(parseLetDeclarator(parser, parser.location())) }
+    } else {
+      init.push(parseExpressionStatementNoSemicolon(parser))
+      while parser.match(TokenType.Comma) { init.push(parseExpressionStatementNoSemicolon(parser)) }
+    }
   }
   parser.expect(TokenType.Semicolon)
   let condition: Expression | none = none
@@ -321,9 +329,7 @@ function parseFor(parser: Parser, label: string | none, start: AstLocation): Sta
   return ForStatement { kind: "for-statement", init, condition, update, body, label, then_, span: parser.span(start) }
 }
 
-function parseLetNoSemicolon(parser: Parser): Statement {
-  start := parser.location()
-  parser.expect(TokenType.Let)
+function parseLetDeclarator(parser: Parser, start: AstLocation): Statement {
   name := parser.text(parser.expect(TokenType.Identifier))
   typeValue := parser.parseOptionalType()
   value := parseInitializer(parser)

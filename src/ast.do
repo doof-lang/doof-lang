@@ -637,7 +637,7 @@ export class WhileStatement {
 
 export class ForStatement {
   kind: string
-  init: Statement | none
+  init: Statement[]
   condition: Expression | none
   update: Expression[]
   body: Block

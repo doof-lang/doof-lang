@@ -45,7 +45,7 @@ export function collectStatementExpressions(statement: Statement, result: Expres
       if while_.then_ != none { collectBlockExpressions(while_.then_!, result) }
     }
     for_: ForStatement -> {
-      if for_.init != none { collectStatementExpressions(for_.init!, result) }
+      for init of for_.init { collectStatementExpressions(init, result) }
       if for_.condition != none { result.push(for_.condition!) }
       for update of for_.update { result.push(update) }
       collectBlockExpressions(for_.body, result)

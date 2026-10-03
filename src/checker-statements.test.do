@@ -234,3 +234,19 @@ export function testReadonlyReplacementForConstHasNoWarning(): none {
   result := checked("readonly LIMIT = 3\nfunction main(): int {\n  readonly local = 2\n  return LIMIT + local\n}")
   Assert.equal(result.diagnostics.length, 0)
 }
+
+export function testForInitializersShareTheLoopScope(): none {
+  valid := checked("function main(): none {\n  for let i = 0, j = 10; i < j; i += 1, j -= 1 { println(i + j) }\n  for let i = 5; i < 7; i += 1 { println(i) }\n}")
+  Assert.equal(valid.diagnostics.length, 0)
+
+  leaked := checked("function main(): none {\n  for let i = 0, j = 1; i < 2; i += 1 { }\n  println(j)\n}")
+  Assert.equal(leaked.diagnostics.length, 1)
+  Assert.stringContains(leaked.diagnostics[0].message, "j")
+
+  duplicate := checked("function main(): none { for let i = 0, i = 1; i < 2; i += 1 { } }")
+  Assert.equal(duplicate.diagnostics.length, 1)
+  Assert.stringContains(duplicate.diagnostics[0].message, "already declared")
+
+  mismatched := checked("function main(): none { for let i = 0, j: string = 1; i < 2; i += 1 { } }")
+  Assert.isTrue(mismatched.diagnostics.length > 0)
+}

@@ -84,7 +84,7 @@ export function validateStatement(statement: Statement, module: string, diagnost
     }
     while_: WhileStatement -> { validateExpression(while_.condition, module, diagnostics); validateBlock(while_.body, module, diagnostics); if while_.then_ != none { validateBlock(while_.then_!, module, diagnostics) } }
     for_: ForStatement -> {
-      if for_.init != none { validateStatement(for_.init!, module, diagnostics) }
+      for init of for_.init { validateStatement(init, module, diagnostics) }
       if for_.condition != none { validateExpression(for_.condition!, module, diagnostics) }
       for update of for_.update { validateExpression(update, module, diagnostics) }
       validateBlock(for_.body, module, diagnostics); if for_.then_ != none { validateBlock(for_.then_!, module, diagnostics) }

@@ -20,6 +20,10 @@ export function testStringReplaceNative(): none {
   runNativeFixture("string-replace")
 }
 
+export function testForMultipleInitializersNative(): none {
+  runNativeFixture("for-multiple-initializers")
+}
+
 export function testEmissionFailuresCatchPanicNative(): none {
   runNativeFixture("catch-panic-never")
 }

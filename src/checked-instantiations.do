@@ -193,7 +193,7 @@ function collectStatement(statement: Statement, modulePath: string, analysis: An
     }
     while_: WhileStatement -> { collectExpression(while_.condition, modulePath, analysis, plan, names, arguments); collectBlock(while_.body, modulePath, analysis, plan, names, arguments); if while_.then_ != none { collectBlock(while_.then_!, modulePath, analysis, plan, names, arguments) } }
     for_: ForStatement -> {
-      if for_.init != none { collectStatement(for_.init!, modulePath, analysis, plan, names, arguments) }
+      for init of for_.init { collectStatement(init, modulePath, analysis, plan, names, arguments) }
       if for_.condition != none { collectExpression(for_.condition!, modulePath, analysis, plan, names, arguments) }
       for update of for_.update { collectExpression(update, modulePath, analysis, plan, names, arguments) }
       collectBlock(for_.body, modulePath, analysis, plan, names, arguments); if for_.then_ != none { collectBlock(for_.then_!, modulePath, analysis, plan, names, arguments) }

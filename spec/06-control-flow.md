@@ -177,6 +177,10 @@ for let i = 9; i >= 0; i -= 1 {
 }
 ```
 
+The initializer is either one `let` followed by comma-separated declarators (`let i = 0, j: long = 10`) or comma-separated expressions (`i = 0, j = 10`). The update clause also takes comma-separated expressions. Each declarator may have its own type annotation.
+
+Variables declared in the initializer are mutable and are scoped to the loop: they are visible in the condition, the update clause and the body, but not in a `then` block or after the loop. A later loop in the same block may reuse the same names.
+
 ### For-Of Loop
 
 Iterates over the values of any iterable. Loop variables are **immutable** bindings (no keyword needed):

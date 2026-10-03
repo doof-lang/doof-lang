@@ -252,3 +252,19 @@ export function testTryAssignmentStoresTheConvertedSuccessValue(): none {
   Assert.stringContains(source, "wide = doof::variant_promote<std::variant<int64_t, std::string>>(std::move(doof::success_value(_try_value_")
   Assert.stringContains(source, "box->value = std::move(doof::success_value(_try_value_")
 }
+
+export function testMultipleForInitializersAreHoistedIntoALoopBlock(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function main(): none { for let i = 0, j = 10; i < j; i += 1, j -= 1 { println(i) } }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "for (; i < j; ")
+  Assert.isTrue(source.indexOf("j = 10") < source.indexOf("for (; "))
+
+  single := compile([SourceFile { path: "/main.do", source:
+    "function main(): none { for let i = 0; i < 2; i += 1 { println(i) } }",
+  }], "/main.do")
+  Assert.equal(single.diagnostics.length, 0)
+  Assert.isFalse(single.emission!.modules[0].source.contains("for (; "))
+}

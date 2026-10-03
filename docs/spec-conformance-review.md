@@ -187,10 +187,11 @@ The spec was right. `let q = { x: 1.0 }` is now an error ("Cannot infer the type
 
 `text.replace(search, replacement)` replaces the first occurrence, as Ch. 2 documents, and lowers to `doof::string_replace`. As with `replaceAll`, an empty search string returns the receiver unchanged.
 
-### A18. Traditional `for` with two variables — **Implement or Spec**
+### A18. Traditional `for` with two variables — **Done**
 
-`for let i = 0, j = 10; …` doesn't parse, though a two-part update clause does
-(ch. 6).
+`for let i = 0, j = 10; i < j; i += 1, j -= 1` now works as Ch. 6 shows. One `let` covers every comma-separated declarator, and a non-`let` initializer takes comma-separated expressions. Several initializers are emitted in an enclosing C++ block, because a `for` header holds only one declaration.
+
+Header variables used to be declared in the enclosing scope. Two `for let i` loops in the same block failed with "already declared", and `i` stayed visible after the loop but then failed in C++. They are now scoped to the loop, and Ch. 6 says so.
 
 ### A19. Static-method shorthand in defaults — **Fixed**
 

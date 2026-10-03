@@ -598,13 +598,21 @@ function discardableCppName(name: string, scopeId: int, position: int): string {
 }
 
 function emitFor(statement: ForStatement, level: int, context: EmitContext): string {
-  ind := indent(level)
+  // C++ allows only one declaration in a for header, so several initializers
+  // are hoisted into an enclosing block that limits them to the loop.
+  hoist := statement.init.length > 1
+  outer := indent(level)
+  loopLevel := if hoist then level + 1 else level
+  ind := indent(loopLevel)
   loopId := beginLabeledLoop(statement.label, statement.then_ != none, context)
-  body := emitLabeledLoopBody(statement.body, level + 1, loopId, context)
+  body := emitLabeledLoopBody(statement.body, loopLevel + 1, loopId, context)
   endLabeledLoop(loopId, context)
   let init = ""
-  if statement.init != none {
-    init = emitStatement(statement.init!, 0, context).trim()
+  let hoisted = ""
+  if hoist {
+    for initializer of statement.init { hoisted = hoisted + emitStatement(initializer, loopLevel, context) }
+  } else if statement.init.length == 1 {
+    init = emitStatement(statement.init[0], 0, context).trim()
     if init.endsWith(";") { init = init.substring(0, init.length - 1) }
   }
   let condition = "true"
@@ -614,8 +622,10 @@ function emitFor(statement: ForStatement, level: int, context: EmitContext): str
     if i > 0 { update = update + ", " }
     update = update + emitDiscardedExpression(statement.update[i], context)
   }
-  return ind + "for (" + init + "; " + condition + "; " + update + ") {\n" +
-    body + ind + "}\n" + loopCompletion(statement.then_, loopId, level, context)
+  loop := ind + "for (" + init + "; " + condition + "; " + update + ") {\n" +
+    body + ind + "}\n" + loopCompletion(statement.then_, loopId, loopLevel, context)
+  if !hoist { return loop }
+  return outer + "{\n" + hoisted + loop + outer + "}\n"
 }
 
 /**

@@ -222,7 +222,7 @@ function scanStatementForLambdas(statement: Statement, result: string[]): none {
       if while_.then_ != none { scanBlockForLambdas(while_.then_!, result) }
     }
     for_: ForStatement -> {
-      if for_.init != none { scanStatementForLambdas(for_.init!, result) }
+      for init of for_.init { scanStatementForLambdas(init, result) }
       if for_.condition != none { scanExpressionForLambdas(for_.condition!, result) }
       for update of for_.update { scanExpressionForLambdas(update, result) }
       scanBlockForLambdas(for_.body, result)
@@ -352,7 +352,7 @@ function collectStatementCaptures(statement: Statement, bodyStart: int, bodyEnd:
       if while_.then_ != none { collectBlockCaptures(while_.then_!, bodyStart, bodyEnd, result, mutableOnly) }
     }
     for_: ForStatement -> {
-      if for_.init != none { collectStatementCaptures(for_.init!, bodyStart, bodyEnd, result, mutableOnly) }
+      for init of for_.init { collectStatementCaptures(init, bodyStart, bodyEnd, result, mutableOnly) }
       if for_.condition != none { collectExpressionCaptures(for_.condition!, bodyStart, bodyEnd, result, mutableOnly) }
       for update of for_.update { collectExpressionCaptures(update, bodyStart, bodyEnd, result, mutableOnly) }
       collectBlockCaptures(for_.body, bodyStart, bodyEnd, result, mutableOnly)

@@ -10,7 +10,7 @@ import { arrayType, functionType, noneType, primitive, resultType, typeParameter
 import { CheckerState } from "./checker-state"
 import { deprecatedBuildReadonly, typeError } from "./checker-common"
 
-const mutatingMethods: string[] = ["push", "reserve", "pop", "takeFirstCompleted", "sort"]
+readonly mutatingMethods: string[] = ["push", "reserve", "pop", "takeFirstCompleted", "sort"]
 
 export function arrayMemberType(state: CheckerState, array: ArrayResolvedType, property: string, span: SourceSpan): ResolvedType {
   element := array.elementType
