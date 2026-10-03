@@ -1,12 +1,21 @@
 import { Assert } from "std/assert"
-import { createAnalyzer } from "./analyzer"
+import { AnalysisResult, createAnalyzer } from "./analyzer"
 import { ClassDeclaration } from "./ast"
 import { SourceFile, FunctionType } from "./semantic"
 import { builtinCallable, isBuiltinCallable, methodSignature } from "./checker-symbols"
 import { typeName } from "./checker-types"
 
+// Fails on parse or analysis diagnostics so a malformed fixture cannot pass
+// unnoticed through a test that only inspects checker output.
+function analyzed(source: string): AnalysisResult {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  for diagnostic of analysis.diagnostics { println(diagnostic.message) }
+  Assert.equal(analysis.diagnostics.length, 0)
+  return analysis
+}
+
 export function testSecondConsolidationOwnerAndMethodSignatureParameters(): none {
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "class Box<T> { pair<U>(first: T, second: U): T => first }" }]).analyze("/main.do")
+  analysis := analyzed("class Box<T> { pair<U>(first: T, second: U): T => first }")
   module := analysis.modules[0]
   case module.program.statements[0] {
     class_: ClassDeclaration -> {

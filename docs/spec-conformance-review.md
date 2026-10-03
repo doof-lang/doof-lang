@@ -313,13 +313,13 @@ declarations supplied where the spec uses partial snippets.
 
 ## C. Test infrastructure
 
-- **Parse errors can hide.** The `checked()` helpers in several `checker*.test.do` files build through `createAnalyzer(...).analyze(...)`, and some don't assert on parse diagnostics. `checker.test.do:188` passed even though its source didn't parse. `checker.test.do` now includes analysis diagnostics; `checker-async.test.do`, `checker-symbols.test.do` and `checker-validation.test.do` still don't, and should get the same treatment.
+- **Parse errors can hide — Fixed.** `checker.test.do:188` once passed even though its source didn't parse. Every `checker*.test.do` file now either asserts that analysis produced no diagnostics, using an `analyzed(...)` helper, or includes analysis diagnostics in its results, as `checked`, `checkedEntry` and `checkedSources` do. This covers `checker-async`, `checker-symbols` and `checker-validation`, plus inline analyses in `checker.test.do` and `checker-annotations.test.do` that had been missed.
 - **Emitter bugs need native builds to show up.** The fixed emitter bugs were only visible when the generated C++ was compiled. The `runNativeFixture` harness in `emitter-carrier-native.test.do` catches this class of bug; adding a native fixture per statement and expression family would reduce future regressions.
 - **Spec examples aren't compile-checked.** A `tools/` check that extracts fenced `doof` examples marked as valid and compile-checks them would stop the spec and compiler drifting apart. Many spec blocks are deliberately partial, so this needs an opt-in marker such as `doof check` fences.
 
 ## Suggested order
 
-1. **The remaining checker test helpers** (section C), now that A1, A2, A27 and A28 are done.
+1. **The remaining checker test helpers — completed** (section C).
 2. **Chapter B doc fixes — completed.** The misleading examples and contradictory text are corrected.
 3. **Common gaps — completed.** A10, A12, A13 and A29 are done.
 4. **No remaining decisions.**

@@ -1,16 +1,23 @@
 import { compile } from "./compiler"
 import { arrayType, classType, primitive, unionType } from "./checker-types"
 import { Assert } from "std/assert"
-import { createAnalyzer } from "./analyzer"
+import { AnalysisResult, createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
 import { validateCheckedTypes, validateResolved } from "./checker-validation"
 import { CallExpression, FunctionDeclaration, MemberExpression } from "./ast"
 import { Diagnostic, SourceFile, Symbol } from "./semantic"
 
+// Fails on parse or analysis diagnostics so a malformed fixture cannot pass
+// unnoticed through a test that only inspects checker output.
+function analyzed(source: string): AnalysisResult {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  for diagnostic of analysis.diagnostics { println(diagnostic.message) }
+  Assert.equal(analysis.diagnostics.length, 0)
+  return analysis
+}
+
 export function testCheckerConsolidationRequiresMemberTargetDecoration(): none {
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source:
-    "class C { read(value: int = 9): int => value }\nfunction call(value: weak C): int => value!.read()",
-  }]).analyze("/main.do")
+  analysis := analyzed("class C { read(value: int = 9): int => value }\nfunction call(value: weak C): int => value!.read()")
   checked := createChecker(analysis, "/main.do").check("/main.do")
   Assert.equal(checked.diagnostics.length, 0)
   Assert.equal(validateCheckedTypes(analysis).length, 0)
@@ -41,7 +48,7 @@ export function testCheckerConsolidationRequiresMemberTargetDecoration(): none {
 }
 
 export function testSecondConsolidationRequiresConstructionPlan(): none {
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "class C { value: int }\nfunction make(): C => C(3)" }]).analyze("/main.do")
+  analysis := analyzed("class C { value: int }\nfunction make(): C => C(3)")
   Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
   case analysis.modules[0].program.statements[1] {
     fn: FunctionDeclaration -> { case fn.body {
@@ -57,7 +64,7 @@ export function testSecondConsolidationRequiresConstructionPlan(): none {
 }
 
 export function testUnionMutabilityValidation(): none {
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "function good(value: int[] | readonly string[]): none {}" }]).analyze("/main.do")
+  analysis := analyzed("function good(value: int[] | readonly string[]): none {}")
   Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
   Assert.equal(validateCheckedTypes(analysis).length, 0)
   let diagnostics: Diagnostic[] = []
@@ -87,7 +94,7 @@ export function testUnionMutabilityNominalGuardPreservesNestedDiagnostics(): non
     "class Mutable { values: int[] }\nclass Frozen { values: readonly int[] }\n" +
     "function keep(value: Mutable | Frozen): Mutable | Frozen => value" }], "/main.do")
   Assert.equal(valid.diagnostics.length, 0)
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "class Node {}\nfunction main(): int => 0" }]).analyze("/main.do")
+  analysis := analyzed("class Node {}\nfunction main(): int => 0")
   Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
   span := analysis.modules[0].program.statements[1].span
   nested := arrayType(unionType([arrayType(primitive("int")), arrayType(primitive("int"), true)]))
@@ -103,7 +110,7 @@ export function testUnionMutabilityNominalGuardPreservesNestedDiagnostics(): non
 }
 
 export function testPositionalLiteralConstructionIsValidated(): none {
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "class Point { x, y: float }\nfunction main(): none { let p: Point = (1.0, 2.0) }" }]).analyze("/main.do")
+  analysis := analyzed("class Point { x, y: float }\nfunction main(): none { let p: Point = (1.0, 2.0) }")
   checked := createChecker(analysis, "/main.do").check("/main.do")
   Assert.equal(checked.diagnostics.length, 0)
   Assert.equal(validateCheckedTypes(analysis).length, 0)

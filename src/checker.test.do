@@ -1,10 +1,23 @@
 import { Assert } from "std/assert"
 import isolated function codePointToUtf8(value: int): string from "doof_runtime.hpp" as doof::char_to_utf8
-import { createAnalyzer } from "./analyzer"
+import { AnalysisResult, createAnalyzer } from "./analyzer"
 import { createChecker, validateCheckedTypes, validateDeepReadonlyFields, validateIsolationEffects } from "./checker"
 import { CheckResult, Diagnostic, FunctionType, SourceFile } from "./semantic"
 import { AsExpression, AssignmentExpression, BinaryExpression, Block, CallExpression, CaseStatement, ClassDeclaration, ConstructExpression, Expression, ExpressionStatement, Identifier, IfStatement, FunctionDeclaration, ImmutableBinding, LetDeclaration, MemberExpression, ObjectLiteral, ReadonlyDeclaration, ReturnStatement, WithStatement } from "./ast"
 import { typeName, unknownType } from "./checker-types"
+
+// Fail on parse or analysis diagnostics so a malformed fixture cannot pass
+// unnoticed through a test that only inspects checker output.
+function analyzed(source: string): AnalysisResult {
+  return analyzedSources([SourceFile { path: "/main.do", source }], "/main.do")
+}
+
+function analyzedSources(sources: SourceFile[], entry: string): AnalysisResult {
+  analysis := createAnalyzer(sources).analyze(entry)
+  for diagnostic of analysis.diagnostics { println(diagnostic.message) }
+  Assert.equal(analysis.diagnostics.length, 0)
+  return analysis
+}
 
 function checkedIncludingDeprecations(source: string): CheckResult {
   sources := [SourceFile { path: "/main.do", source }]
@@ -36,7 +49,11 @@ function checked(source: string): CheckResult {
 
 function checkedEntry(source: string, entryMode: string = "executable"): CheckResult {
   analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
-  return createChecker(analysis, "/main.do", entryMode).check("/main.do")
+  result := createChecker(analysis, "/main.do", entryMode).check("/main.do")
+  let diagnostics: Diagnostic[] = []
+  for diagnostic of analysis.diagnostics { diagnostics.push(diagnostic) }
+  for diagnostic of result.diagnostics { diagnostics.push(diagnostic) }
+  return CheckResult { diagnostics }
 }
 
 function assertRejected(source: string): none {
@@ -429,7 +446,7 @@ export function testRejectsExecutableStatementsForWasmAndReferenceModules(): non
     SourceFile { path: "/main.do", source: "import { value } from \"./lib\"\nfunction main(): int => value" },
     SourceFile { path: "/lib.do", source: "export readonly value = 1\nprintln(\"bad\")" },
   ]
-  analysis := createAnalyzer(sources).analyze("/main.do")
+  analysis := analyzedSources(sources, "/main.do")
   checker := createChecker(analysis, "/main.do", "executable")
   dependency := checker.check("/lib.do")
   Assert.equal(dependency.diagnostics.length, 1)
@@ -544,6 +561,7 @@ function checkedSources(sources: SourceFile[], entry: string): CheckResult {
   analysis := createAnalyzer(sources).analyze(entry)
   checker := createChecker(analysis, entry)
   let diagnostics: Diagnostic[] = []
+  for diagnostic of analysis.diagnostics { diagnostics.push(diagnostic) }
   for i of 0..<analysis.modules.length {
     module := analysis.modules[analysis.modules.length - 1 - i]
     checkedModule := checker.check(module.path)
@@ -631,7 +649,7 @@ export function testWarnsForLegacyNoneAliasesWithReplacementAndExactSpans(): non
 export function testInfersExpressionsAndCalls(): none {
   source := "values: int[] := [1, 2, 3]\nfunction main(): int { total := values.length\nreturn total }"
   sources := [SourceFile { path: "/main.do", source }]
-  analysis := createAnalyzer(sources).analyze("/main.do")
+  analysis := analyzedSources(sources, "/main.do")
   semantic := createChecker(analysis).check("/main.do")
   Assert.equal(semantic.diagnostics.length, 0)
   case analysis.modules[0].program.statements[0] {
@@ -663,7 +681,7 @@ export function testChecksNoneComparisonOperands(): none {
 
 export function testPreservesCallableFieldDecorationThroughNullableReceiver(): none {
   source := "struct Handler { callback: (value: int): int }\nfunction findHandler(): Handler | none => Handler { callback: (value: int): int => value + 1 }\nfunction invoke(): int { handler := findHandler()\nif handler != none { return handler!.callback(41) }\nreturn 0 }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   semantic := createChecker(analysis).check("/main.do")
   Assert.equal(semantic.diagnostics.length, 0)
   case analysis.modules[0].program.statements[2] {
@@ -689,7 +707,7 @@ export function testPreservesCallableFieldDecorationThroughNullableReceiver(): n
 
 export function testChecksWeakTypesAndStructRestrictions(): none {
   source := "class Node { weak parent: Node\nancestor: weak Node }\nfunction keep(value: weak Node): weak Node => value"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   semantic := createChecker(analysis).check("/main.do")
   Assert.equal(semantic.diagnostics.length, 0)
   case analysis.modules[0].program.statements[0] {
@@ -767,10 +785,10 @@ export function testReportsUnknownMembersAcrossResolvedTypes(): none {
 }
 
 export function testDecoratesImportedGenericCallWithDefiningModule(): none {
-  analysis := createAnalyzer([
+  analysis := analyzedSources([
     SourceFile { path: "/main.do", source: "import { identity } from \"./tools\"\nfunction value(): int => identity<int>(1)" },
     SourceFile { path: "/tools.do", source: "export function identity<T>(value: T): T => value" },
-  ]).analyze("/main.do")
+  ], "/main.do")
   checker := createChecker(analysis)
   Assert.equal(checker.check("/tools.do").diagnostics.length, 0)
   Assert.equal(checker.check("/main.do").diagnostics.length, 0)
@@ -872,7 +890,7 @@ export function testArrayPopReturnsResult(): none {
 
 export function testDecoratesArrayCloneMutableAndEnumLookupHelpers(): none {
   source := "enum Suit { Spades = 0, Hearts = 1 }\nclass Pile { cardIndices: int[] = [] }\nfunction clonePile(pile: Pile): Pile { return Pile { cardIndices: pile.cardIndices.cloneMutable() } }\nfunction foundationSuit(index: int): Suit { return Suit.fromValue(index) ?? .Spades }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
   diagnostics := validateCheckedTypes(analysis)
   for diagnostic of diagnostics { println(diagnostic.message) }
@@ -881,7 +899,7 @@ export function testDecoratesArrayCloneMutableAndEnumLookupHelpers(): none {
 
 export function testDecoratesReadonlyMapConstructionAndSizeMember(): none {
   source := "class RouteMatch { params: readonly Map<string, string> }\nfunction equal<T>(actual: T, expected: T): none {}\nfunction match(params: Map<string, string>): RouteMatch { return RouteMatch { params: params.drainToReadonly() } }\nfunction verify(matched: RouteMatch | none): none { equal(matched!.params.size, 0) }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
   diagnostics := validateCheckedTypes(analysis)
   for diagnostic of diagnostics { println(diagnostic.message) }
@@ -890,7 +908,7 @@ export function testDecoratesReadonlyMapConstructionAndSizeMember(): none {
 
 export function testCompleteDecorationGateRejectsMissingWithBindingType(): none {
   source := "function main(): int { with base := 20 { return base }\nreturn 0 }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
   case analysis.modules[0].program.statements[0] {
     fn: FunctionDeclaration -> {
@@ -913,7 +931,7 @@ export function testCompleteDecorationGateRejectsMissingWithBindingType(): none 
 
 export function testCompleteDecorationGateTraversesAsSourceAndTarget(): none {
   source := "function narrow(raw: SerialValue): Result<string, string> => raw as string"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
   case analysis.modules[0].program.statements[0] {
     fn: FunctionDeclaration -> {
@@ -940,7 +958,7 @@ export function testCompleteDecorationGateTraversesAsSourceAndTarget(): none {
 
 export function testCompleteDecorationGateRequiresConstructionAttachments(): none {
   source := "class Widget { value: int\nstatic constructor(value: int): Widget => Widget { value } }\nwidget := Widget { value: 1 }\nprintln(\"\")"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
   case analysis.modules[0].program.statements[1] {
     binding: ImmutableBinding -> {
@@ -974,7 +992,7 @@ export function testCompleteDecorationGateRequiresConstructionAttachments(): non
 
 export function testCompleteDecorationGateRequiresClassObjectLiteralAttachment(): none {
   source := "class Widget { value: int }\nfunction make(): Widget => { value: 1 }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
   case analysis.modules[0].program.statements[1] {
     fn: FunctionDeclaration -> {
@@ -997,7 +1015,7 @@ export function testCompleteDecorationGateRequiresClassObjectLiteralAttachment()
 
 export function testDefaultsUnannotatedBlockFunctionReturnToNone(): none {
   source := "export function testAll() { println(\"ok\") }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
   Assert.equal(validateCheckedTypes(analysis).length, 0)
   case analysis.modules[0].program.statements[0] {
@@ -1011,7 +1029,7 @@ export function testDefaultsUnannotatedBlockFunctionReturnToNone(): none {
 
 export function testResolvesForwardNoneReturningMethodFromInferredMethod(): none {
   source := "class Bucket { record() { insertSorted() }\nprivate insertSorted() {} }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
   Assert.equal(validateCheckedTypes(analysis).length, 0)
 }
@@ -1023,10 +1041,10 @@ export function testRejectsValueReturnFromUnannotatedFunction(): none {
 }
 
 export function testImportedUnannotatedFunctionReturnsNone(): none {
-  analysis := createAnalyzer([
+  analysis := analyzedSources([
     SourceFile { path: "/main.do", source: "import { finish } from \"./worker\"\nfunction main(): none { finish() }" },
     SourceFile { path: "/worker.do", source: "export function finish() {}" },
-  ]).analyze("/main.do")
+  ], "/main.do")
   checker := createChecker(analysis)
   Assert.equal(checker.check("/worker.do").diagnostics.length, 0)
   Assert.equal(checker.check("/main.do").diagnostics.length, 0)
@@ -1035,7 +1053,7 @@ export function testImportedUnannotatedFunctionReturnsNone(): none {
 
 export function testChecksCanonicalNoneReturnsAndLegacyUnionNormalization(): none {
   source := "function fallthrough(): none { }\nfunction bare(): none { return }\nfunction explicit(): none { return none }\nfunction inferred() { return none }\nfunction mixed(value: string | null | void | none): string | none => value"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   diagnostics := createChecker(analysis).check("/main.do").diagnostics
   Assert.equal(diagnostics.length, 2)
   Assert.equal(diagnostics[0].replacement, "none")
@@ -1063,7 +1081,7 @@ export function testChecksPayloadlessNoneResultAndRejectsPostfixQuestion(): none
 
 export function testChecksNamedStaticConstructorAndEnumShorthand(): none {
   source := "enum Endian { LittleEndian, BigEndian }\nimport class BlobBuilder from \"native.hpp\" as native::BlobBuilder { static constructor(size: long = 0L, endianness: Endian = .LittleEndian): BlobBuilder }\nfunction build(): none { builder := BlobBuilder{endianness: .BigEndian} }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
   Assert.equal(validateCheckedTypes(analysis).length, 0)
 }
@@ -1137,7 +1155,7 @@ export function testChecksBuiltinSourceLocationAndCallerDefaults(): none {
 
 export function testValidatesStaticGenericMethodsWithCallerDefaults(): none {
   source := "class Assert { static equal<T>(actual: T, expected: T, source: SourceLocation = @caller): void { assert(actual == expected, \"equal\") } }\nfunction test(): void { Assert.equal(1, 1) }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   createChecker(analysis).check("/main.do")
   diagnostics := validateCheckedTypes(analysis)
   for diagnostic of diagnostics { println(diagnostic.message) }
@@ -1238,7 +1256,7 @@ export function testAllowsJsonCollectionsAndLenientGeneratedDecode(): none {
 
 export function testDecoratesPrivateMethodParameterMembers(): none {
   source := "class Option { readonly name: string\nreadonly multiple: bool }\nclass Spec { option(): none {}\nprivate add(option: Option, values: Map<string, SerialValue>): none { if option.multiple { raw := values.get(option.name) else { values[option.name] = []\nreturn }\nvalues[option.name] = raw } } }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
   diagnostics := validateCheckedTypes(analysis)
   for diagnostic of diagnostics { println(diagnostic.message) }
@@ -1679,7 +1697,7 @@ export function testAllowsStableStaticValuesButRejectsMutableStaticInteriorsInAc
 
 export function testPropagatesIsolationThroughInterfaceDispatch(): none {
   source := "shared := [0]\ninterface Job { run(): void }\nclass UnsafeJob implements Job { function run(): void { shared.push(1) } }\nclass Worker { job: Job = UnsafeJob {}\nfunction execute(): void { this.job.run() } }\nfunction main(): void { worker := Actor<Worker>()\nworker.execute() }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   semantic := createChecker(analysis).check("/main.do")
   diagnostics := semantic.diagnostics
   for diagnostic of validateIsolationEffects(analysis) { diagnostics.push(diagnostic) }
@@ -1871,7 +1889,7 @@ export function testAcceptsReturnsFromExhaustiveResultCase(): none {
 
 export function testDecoratesCaseStatementControlFlowCompletion(): none {
   source := "function load(): Result<int, string> => Success { value: 1 }\nfunction answer(): int { case load() { value: Success -> { return value.value }, error: Failure -> { return 0 } } }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
   case analysis.modules[0].program.statements[1] {
     fn: FunctionDeclaration -> { case fn.body {
@@ -1911,7 +1929,7 @@ export function testAcceptsDivergentExhaustiveEnumAndUnionCases(): none {
 
 export function testDecoratesTypedResultArmPatterns(): none {
   source := "function load(): Result<int, string> => Failure { error: \"no\" }\nfunction inspect(): void { case load() { _: Failure<string> -> { } _ -> { } } }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   createChecker(analysis).check("/main.do")
   Assert.equal(validateCheckedTypes(analysis).length, 0)
 }
@@ -1932,7 +1950,7 @@ export function testChecksResultUnwrapOrFallback(): none {
 }
 
 export function testChecksResultCoalescingAsSuccessPayload(): none {
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "function load(): Result<int, string> => Success(7)\nfunction value(): int => load() ?? 0" }]).analyze("/main.do")
+  analysis := analyzed("function load(): Result<int, string> => Success(7)\nfunction value(): int => load() ?? 0")
   semantic := createChecker(analysis).check("/main.do")
   Assert.equal(semantic.diagnostics.length, 0)
   case analysis.modules[0].program.statements[1] {
@@ -1987,14 +2005,14 @@ export function testResolvesClassAndMethodTypeParameters(): none {
   source := "class Box<T> { map<U>(transform: (it: T): U): Box<U> => Box<U> {} }"
   result := checked(source)
   Assert.equal(result.diagnostics.length, 0)
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   createChecker(analysis).check("/main.do")
   Assert.equal(validateCheckedTypes(analysis).length, 0)
 }
 
 export function testValidatesGenericStreamMembers(): none {
   source := "class FilteredStream<T> implements Stream<T> { source: Stream<T>\npred: (it: T): bool\nnext(): bool => source.next()\nvalue(): T => source.value() }\nclass MappedStream<T, U> implements Stream<U> { source: Stream<T>\ntransform: (it: T): U\nnext(): bool => source.next()\nvalue(): U => transform(source.value()) }\nclass Chain<T> implements Stream<T> { source: Stream<T>\nnext(): bool => source.next()\nvalue(): T => source.value()\nmap<U>(transform: (it: T): U): Chain<U> => Chain<U> { source: MappedStream<T, U> { source, transform } } }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
   Assert.equal(validateCheckedTypes(analysis).length, 0)
 }
@@ -2007,7 +2025,7 @@ export function testInfersNullableImplicitMethodResults(): none {
 export function testDecoratesNestedNullableAssignmentTargets(): none {
   source := "class Left { value: int }\nclass Right { value: int }\ntype Expression = Left | Right\nclass ParserLike { parse(): none { let value: Expression | none = none\nif true { value = Left { value: 1 } } else { value = Right { value: 2 } } } }"
   sources := [SourceFile { path: "/main.do", source }]
-  analysis := createAnalyzer(sources).analyze("/main.do")
+  analysis := analyzedSources(sources, "/main.do")
   semantic := createChecker(analysis).check("/main.do")
   Assert.equal(semantic.diagnostics.length, 0)
   case analysis.modules[0].program.statements[3] {
@@ -2283,7 +2301,7 @@ export function testWarnsForDeprecatedBuildReadonly(): none {
 
 export function testInfersOmittedCollectionTypeArgumentsFromLiterals(): none {
   source := "numbers: Set := [1, 2, 3]\nfrozen: ReadonlySet := [1, 2, 3]\nqualified: readonly Set := [1, 2, 3]\nlet reboundable: readonly Set = [1, 2, 3]\nreadonly deep: Set = [1, 2, 3]\nscores: Map := { \"Ada\": 10, \"Grace\": 20 }\nfrozenScores: readonly Map := { \"Ada\": 10 }\nreadonly deepScores: Map = { \"Ada\": 10 }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   semantic := createChecker(analysis).check("/main.do")
   for diagnostic of semantic.diagnostics { println(diagnostic.message) }
   Assert.equal(semantic.diagnostics.length, 0)
@@ -2332,7 +2350,7 @@ export function testChecksAndInfersIntegerMapKeys(): none {
   Assert.equal(annotated.diagnostics.length, 0)
 
   source := "inferred: Map := { 1: \"one\", 2: \"two\" }"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   semantic := createChecker(analysis).check("/main.do")
   Assert.equal(semantic.diagnostics.length, 0)
   case analysis.modules[0].program.statements[0] {

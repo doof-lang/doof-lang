@@ -2,15 +2,24 @@ import { Assert as EditorAssert } from "std/assert"
 import { analyzeEditor as editorAnalysis } from "./editor-incremental"
 import { SourceFile as EditorSource } from "./semantic"
 import { Assert } from "std/assert"
-import { createAnalyzer } from "./analyzer"
+import { AnalysisResult, createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
 import { FunctionDeclaration, NamedType } from "./ast"
 import { SourceFile } from "./semantic"
 import { resolveProvisionalAnnotation } from "./checker-annotations"
 import { typeName } from "./checker-types"
 
+// Fails on parse or analysis diagnostics so a malformed fixture cannot pass
+// unnoticed through a test that only inspects checker output.
+function analyzed(source: string): AnalysisResult {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  for diagnostic of analysis.diagnostics { println(diagnostic.message) }
+  Assert.equal(analysis.diagnostics.length, 0)
+  return analysis
+}
+
 export function testSecondConsolidationProvisionalAnnotationsDoNotCommit(): none {
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "function legacy(): void {}" }]).analyze("/main.do")
+  analysis := analyzed("function legacy(): void {}")
   module := analysis.modules[0]
   case module.program.statements[0] {
     fn: FunctionDeclaration -> {
@@ -26,7 +35,7 @@ export function testSecondConsolidationProvisionalAnnotationsDoNotCommit(): none
 }
 
 export function testSecondConsolidationProvisionalArityMatchesChecking(): none {
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "function bad(): Map<string, int, bool> => {}" }]).analyze("/main.do")
+  analysis := analyzed("function bad(): Map<string, int, bool> => {}")
   module := analysis.modules[0]
   case module.program.statements[0] {
     fn: FunctionDeclaration -> { Assert.equal(typeName(resolveProvisionalAnnotation(fn.returnType!, module, analysis)), "unknown") }
@@ -111,16 +120,16 @@ export function testEditorCheckedCasePatternRetainsResolvedTypeSymbol(): none {
 export function testStructsSatisfyInterfaceBoundsButNotInterfaceValues(): none {
   source := "interface Reader { read(): int }\nstruct Total { value: int\nread(): int => value }\nclass Fixed { read(): int => 1 }\n" +
     "function readOne<T: Reader>(reader: T): int => reader.read()\n"
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source: source + "function main(): int => readOne(Total { value: 3 })" }]).analyze("/main.do")
+  analysis := analyzed(source + "function main(): int => readOne(Total { value: 3 })")
   Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
-  asValue := createAnalyzer([SourceFile { path: "/main.do", source: source + "function main(): none { let reader: Reader = Total { value: 3 } }" }]).analyze("/main.do")
+  asValue := analyzed(source + "function main(): none { let reader: Reader = Total { value: 3 } }")
   diagnostics := createChecker(asValue, "/main.do").check("/main.do").diagnostics
   Assert.equal(diagnostics.length, 1)
   Assert.stringContains(diagnostics[0].message, "Cannot assign Total to Reader")
 }
 
 export function testResultArmAnnotationsResolveToArmTypes(): none {
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "function f(a: Success<int>, b: Failure<none>, c: Success<int> | Failure<string>): none {}" }]).analyze("/main.do")
+  analysis := analyzed("function f(a: Success<int>, b: Failure<none>, c: Success<int> | Failure<string>): none {}")
   result := createChecker(analysis, "/main.do").check("/main.do")
   Assert.equal(result.diagnostics.length, 0)
   case analysis.modules[0].program.statements[0] {
@@ -131,13 +140,13 @@ export function testResultArmAnnotationsResolveToArmTypes(): none {
     }
     _ -> { panic("expected function") }
   }
-  arity := createChecker(createAnalyzer([SourceFile { path: "/main.do", source: "function f(a: Success<int, string>): none {}" }]).analyze("/main.do"), "/main.do").check("/main.do")
+  arity := createChecker(analyzed("function f(a: Success<int, string>): none {}"), "/main.do").check("/main.do")
   Assert.equal(arity.diagnostics.length, 1)
   Assert.equal(arity.diagnostics[0].message, "Success requires one type argument")
 }
 
 function mapKeyErrors(source: string): string[] {
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  analysis := analyzed(source)
   checked := createChecker(analysis, "/main.do").check("/main.do")
   let messages: string[] = []
   for diagnostic of checked.diagnostics {
@@ -166,7 +175,7 @@ export function testAcceptsSupportedMapKeyAnnotations(): none {
 }
 
 export function testReportsLocalSetElementAnnotationOnce(): none {
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "class Holder { s: Set<float> = [] }\nfunction main(): none { let s: Set<float> = [] }" }]).analyze("/main.do")
+  analysis := analyzed("class Holder { s: Set<float> = [] }\nfunction main(): none { let s: Set<float> = [] }")
   checked := createChecker(analysis, "/main.do").check("/main.do")
   let count = 0
   for diagnostic of checked.diagnostics { if diagnostic.message.contains("Set element type \"float\"") { count += 1 } }
