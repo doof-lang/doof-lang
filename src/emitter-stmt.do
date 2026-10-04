@@ -16,7 +16,7 @@ import {
 } from "./ast"
 import { emitTriedAssignment } from "./emitter-expr-ops"
 import type { TypeAnnotation } from "./ast"
-import { ArrayResolvedType, ClassType, InterfaceType, PrimitiveType, RangeResolvedType, ResolvedType, ResultResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassType, InterfaceType, MapResolvedType, PrimitiveType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable, recordCoverageLine, sourceLineDirective } from "./emitter-context"
 import { emitExpressionReturn } from "./emitter-expr-utils"
 import { emitCaseSubjectValue, emitCaseTypePattern, emitCaseValuePattern } from "./emitter-case-pattern"
@@ -579,17 +579,36 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
       _ -> { }
     }
   }
+  // Mutable collections iterate a snapshot taken at loop entry, so the body
+  // may mutate or reassign the collection without skipping or revisiting
+  // elements. Readonly collections cannot change, so owning a reference is
+  // enough to survive reassignment of the source binding.
+  frozen := statement.iterable.resolvedType != none && isReadonlyCollection(statement.iterable.resolvedType!)
+  ownedBinding := if frozen
+    then ind + "const auto " + iterableName + " = " + iterable + ";\n"
+    else ind + "const auto " + iterableName + " = doof::iteration_snapshot(" + iterable + ");\n"
+  loopSource := if frozen then "*" + iterableName else iterableName
   if statement.bindings.length > 1 {
     let names = ""
     for i of 0..<statement.bindings.length {
       if i > 0 { names = names + ", " }
       names = names + discardableCppName(statement.bindings[i], loopId, i)
     }
-    return iterableBinding + ind + "for (const auto& [" + names + "] : *" + iterableName + ") {\n" +
+    return ownedBinding + ind + "for (const auto& [" + names + "] : " + loopSource + ") {\n" +
       body + ind + "}\n" + breakTarget
   }
-  return iterableBinding + ind + "for (const auto& " + name + " : *" + iterableName + ") {\n" +
+  return ownedBinding + ind + "for (const auto& " + name + " : " + loopSource + ") {\n" +
     body + ind + "}\n" + breakTarget
+}
+
+function isReadonlyCollection(type_: ResolvedType): bool {
+  case type_ {
+    array: ArrayResolvedType -> { return array.readonly_ }
+    map: MapResolvedType -> { return map.readonly_ }
+    set_: SetResolvedType -> { return set_.readonly_ }
+    _ -> { return false }
+  }
+  return false
 }
 
 function discardableCppName(name: string, scopeId: int, position: int): string {

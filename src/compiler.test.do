@@ -809,7 +809,7 @@ export function testEmitsComputedForOfLifetimeOwner(): none {
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
   Assert.equal(result.emission != none, true)
-  Assert.equal(result.emission!.modules[0].source.contains("const auto& _iterable_"), true)
+  Assert.equal(result.emission!.modules[0].source.contains("= doof::iteration_snapshot(values());"), true)
 }
 
 export function testEmitsImmutableLambdaCaptureByValue(): none {

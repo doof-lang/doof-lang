@@ -332,6 +332,12 @@ reuse their names.
 `for-of` evaluates its iterable expression once and retains a returned
 collection or stream temporary for the whole loop.
 
+`for-of` over an array, map, or set visits exactly the elements present at
+loop entry. Mutating or reassigning the collection in the body never skips or
+revisits elements; appended items are not visited by that loop. Mutable
+collections are shallow-copied once at entry; `readonly` collections are not
+copied.
+
 Other supported forms:
 
 - `loop then` blocks for natural completion

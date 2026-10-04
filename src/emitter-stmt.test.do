@@ -268,3 +268,136 @@ export function testMultipleForInitializersAreHoistedIntoALoopBlock(): none {
   Assert.equal(single.diagnostics.length, 0)
   Assert.isFalse(single.emission!.modules[0].source.contains("for (; "))
 }
+
+export function testForOfOverReadonlyCollectionOwnsWithoutCopying(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function main(): int { let values: readonly int[] = [1, 2]\nlet total = 0\nfor item of values { total = total + item }\nreturn total }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.equal(source.contains("iteration_snapshot"), false)
+  Assert.stringContains(source, "const auto _iterable_")
+  Assert.stringContains(source, "for (const auto& item : *_iterable_")
+}
+
+export function testForOfOverReadonlyMapAndSetOwnsWithoutCopying(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function main(): int { scores: ReadonlyMap<string, int> := { \"a\": 1 }\nunique: ReadonlySet<int> := [1, 2]\nlet total = 0\nfor key, value of scores { total = total + value }\nfor n of unique { total = total + n }\nreturn total }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.equal(source.contains("iteration_snapshot"), false)
+  Assert.stringContains(source, "for (const auto& [key, value] : *_iterable_")
+  Assert.stringContains(source, "for (const auto& n : *_iterable_")
+}
+
+// These run through the compiled for-of lowering itself: each loop visits
+// exactly the elements present at loop entry, whatever the body mutates.
+// Elements are heap-allocated strings so that reading a freed or destroyed
+// element fails visibly instead of returning stale inline values.
+function label(n: int): string => "element-label-long-enough-to-allocate-" + string(n)
+
+export function testForOfArrayIgnoresAppendsDuringIteration(): none {
+  let items = [label(1), label(2), label(3)]
+  let visited = ""
+  for item of items {
+    visited = visited + item + ","
+    for i of 0..<8 { items.push(item + "-appended") }
+  }
+  Assert.equal(visited, label(1) + "," + label(2) + "," + label(3) + ",")
+  Assert.equal(items.length, 27)
+}
+
+export function testForOfArrayVisitsOriginalElementsAfterShrinking(): none {
+  let items = [label(1), label(2), label(3), label(4)]
+  let visited = ""
+  for item of items {
+    visited = visited + item + ","
+    ignored := items.pop()!
+  }
+  Assert.equal(visited, label(1) + "," + label(2) + "," + label(3) + "," + label(4) + ",")
+  Assert.equal(items.length, 0)
+}
+
+export function testForOfArraySurvivesReassigningTheSource(): none {
+  let items = [label(1), label(2), label(3)]
+  let visited = ""
+  for item of items {
+    visited = visited + item + ","
+    items = [label(9), label(9), label(9)]
+  }
+  Assert.equal(visited, label(1) + "," + label(2) + "," + label(3) + ",")
+}
+
+export function testForOfReadonlyArraySurvivesReassigningTheSource(): none {
+  let items: readonly string[] = [label(1), label(2), label(3)]
+  let visited = ""
+  for item of items {
+    visited = visited + item + ","
+    items = [label(9), label(9), label(9)]
+  }
+  Assert.equal(visited, label(1) + "," + label(2) + "," + label(3) + ",")
+}
+
+export function testForOfReadonlyMapAndSetSurviveReassigningTheSource(): none {
+  let scores: ReadonlyMap<string, int> = { "a": 1, "b": 2 }
+  let unique: ReadonlySet<string> = [label(1), label(2)]
+  let visited = ""
+  for key, value of scores {
+    visited = visited + key + string(value) + ","
+    scores = { "z": 26 }
+  }
+  for value of unique {
+    visited = visited + value + ","
+    unique = [label(9)]
+  }
+  Assert.equal(visited, "a1,b2," + label(1) + "," + label(2) + ",")
+}
+
+export function testForOfMapVisitsEntriesPresentAtEntry(): none {
+  scores: Map<string, int> := { "a": 1, "b": 2, "c": 3 }
+  let visited = ""
+  for key, value of scores {
+    visited = visited + key + string(value) + ","
+    scores.delete("b")
+    scores.set("z", 26)
+  }
+  Assert.equal(visited, "a1,b2,c3,")
+  Assert.equal(scores.has("b"), false)
+}
+
+export function testForOfMapSeesValuesAsTheyWereAtEntry(): none {
+  scores: Map<string, int> := { "a": 1, "b": 2 }
+  let visited = ""
+  for key, value of scores {
+    visited = visited + key + string(value) + ","
+    scores.set("b", 99)
+  }
+  Assert.equal(visited, "a1,b2,")
+  Assert.equal(scores.get("b")!, 99)
+}
+
+export function testForOfSetVisitsValuesPresentAtEntry(): none {
+  unique: Set<int> := [1, 2, 3]
+  let visited = ""
+  for n of unique {
+    visited = visited + string(n) + ","
+    unique.delete(n + 1)
+    unique.add(n + 100)
+  }
+  Assert.equal(visited, "1,2,3,")
+}
+
+class ForOfCounter {
+  let count: int
+}
+
+export function testForOfSnapshotIsShallow(): none {
+  counters := [ForOfCounter { count: 1 }, ForOfCounter { count: 2 }]
+  let visited = ""
+  for counter of counters {
+    visited = visited + string(counter.count) + ","
+    counters[1].count = 20
+  }
+  Assert.equal(visited, "1,20,")
+}

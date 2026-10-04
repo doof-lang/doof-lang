@@ -209,6 +209,23 @@ until it returns `false`, then reading the current element with `value()`.
 The iterable expression is evaluated exactly once, and a collection or stream
 temporary returned by that expression remains alive until the loop completes.
 
+A loop over an array, map, or set visits exactly the elements present when the
+loop starts, in their order at that moment. The body may add, remove, or
+reorder elements, or reassign the variable holding the collection; none of
+this changes which elements the loop visits, so no element is skipped or
+visited twice. The snapshot is shallow: elements are not copied, so changes to
+an element object's fields are visible through the loop binding. A mutable
+collection is copied once at loop entry. A `readonly` collection cannot
+change, so it is iterated in place without a copy.
+
+```doof
+let queue = [1, 2, 3]
+for item of queue {
+    queue.push(item * 10)    // appended items are not visited by this loop
+}
+// visited 1, 2, 3; queue is now [1, 2, 3, 10, 20, 30]
+```
+
 ```doof
 class Counter implements Stream<int> {
     let current: int

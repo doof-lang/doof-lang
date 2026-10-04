@@ -1141,6 +1141,25 @@ private:
 template <typename T>
 ordered_set(std::initializer_list<T>) -> ordered_set<T>;
 
+// For-of iterates a private copy of the elements present at loop entry, so
+// mutating or reassigning the collection in the body cannot invalidate the
+// loop or cause elements to be skipped or revisited. Ordered collections copy
+// only their storage; the loop never needs their lookup index.
+template <typename T>
+std::vector<T> iteration_snapshot(const std::shared_ptr<std::vector<T>>& values) {
+    return *values;
+}
+
+template <typename K, typename V>
+std::vector<std::pair<K, V>> iteration_snapshot(const std::shared_ptr<ordered_map<K, V>>& entries) {
+    return std::vector<std::pair<K, V>>(entries->begin(), entries->end());
+}
+
+template <typename T>
+std::vector<T> iteration_snapshot(const std::shared_ptr<ordered_set<T>>& values) {
+    return std::vector<T>(values->begin(), values->end());
+}
+
 // ============================================================================
 // Intrinsic Result arms and their ordinary variant alias
 // ============================================================================

@@ -1774,8 +1774,9 @@ export function testEmitsEnumsAndTypeAliases(): none {
 export function testEmitsAssignmentsAndArrayLoops(): none {
   result := emit("function main(): int { let values: int[] = [1, 2]\nvalues[0] = 4\nlet total = 0\nfor item of values { total = total + item }\nreturn total }")
   Assert.stringContains(result.source, "doof::array_at(values, 0, \"main\", 2) = 4")
-  Assert.equal(result.source.contains("const auto& _iterable_"), true)
-  Assert.equal(result.source.contains("for (const auto& item : *_iterable_"), true)
+  Assert.stringContains(result.source, "const auto _iterable_")
+  Assert.stringContains(result.source, "= doof::iteration_snapshot(values);")
+  Assert.stringContains(result.source, "for (const auto& item : _iterable_")
 }
 
 export function testEmitsLabeledBreakAndContinueTargets(): none {
@@ -1788,10 +1789,21 @@ export function testEmitsLabeledBreakAndContinueTargets(): none {
 
 export function testKeepsComputedForOfCollectionAlive(): none {
   result := emit("function values(): int[] => [1, 2, 3]\nfunction main(): int { let total = 0\nfor item of values() { total = total + item }\nreturn total }")
-  Assert.equal(result.source.contains("const auto& _iterable_"), true)
-  Assert.equal(result.source.contains(" = values();"), true)
-  Assert.equal(result.source.contains("for (const auto& item : *_iterable_"), true)
+  Assert.stringContains(result.source, "= doof::iteration_snapshot(values());")
+  Assert.stringContains(result.source, "for (const auto& item : _iterable_")
   Assert.equal(result.source.contains("for (const auto& item : *values())"), false)
+}
+
+export function testSnapshotsMapAndSetForOfCollections(): none {
+  result := emit("function main(): int { scores: Map<string, int> := { \"a\": 1 }\nunique: Set<int> := [1, 2]\nlet total = 0\nfor key, value of scores { total = total + value }\nfor n of unique { total = total + n }\nreturn total }")
+  Assert.stringContains(result.source, "= doof::iteration_snapshot(scores);")
+  Assert.stringContains(result.source, "= doof::iteration_snapshot(unique);")
+  Assert.stringContains(result.source, "for (const auto& [key, value] : _iterable_")
+}
+
+export function testIteratesRangesWithoutSnapshot(): none {
+  result := emit("function main(): int { let total = 0\nr := 1..<4\nfor i of r { total = total + i }\nreturn total }")
+  Assert.equal(result.source.contains("iteration_snapshot"), false)
 }
 
 export function testEmitsStringCaseAndCallbackCallMembers(): none {
