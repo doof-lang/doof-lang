@@ -13,7 +13,7 @@ import { planClassDeclaration, emitDescriptionComment, planFunctionDeclaration, 
 import { cppIdentifier } from "./emitter-expr"
 import { quote } from "./emitter-expr-literals"
 import { emitInterfaceJsonDeclaration, emitUnionAliasJsonDeclaration } from "./emitter-json"
-import { emitContextType, emitType } from "./emitter-types"
+import { emitContextType, emitType, specializeEmitType } from "./emitter-types"
 import {
   ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType,
   MapResolvedType, PrimitiveType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType,
@@ -24,7 +24,7 @@ import { StringBuilder } from "./string-builder"
 import { ClassInstantiation, classInstantiationKey, MethodInstantiation } from "./emitter-monomorphize"
 
 export { HeaderPlan, HeaderSection } from "./emitter-header-plan"
-import { HeaderPlanBuilder } from "./emitter-header-plan"
+import { addClassDefinition, HeaderPlanBuilder } from "./emitter-header-plan"
 import { CppDeclaration, CppDeclarationBuilder, textDeclaration } from "./cpp-declaration"
 import { CppTypeRegistry, isReferenceVariant } from "./cpp-type"
 import { lowerContextCppType } from "./emitter-types"
@@ -85,7 +85,7 @@ function collect(statement: Statement, plan: HeaderPlanBuilder, context: EmitCon
         for method of methods { if method.ownerKey == ownerKey { concreteMethods.push(method) } }
         definition := planClassDeclaration(class_, context, "", concreteMethods)
         if classCanEmitBeforeModuleIncludes(class_) { plan.earlyClassDefinitions.push(definition) }
-        else { plan.classDefinitions.push(definition) }
+        else { addClassDefinition(plan, class_.name, classDefinitionDependencies(class_, context), definition) }
       }
     }
     interface_: InterfaceDeclaration -> {
@@ -180,6 +180,46 @@ function classCanEmitBeforeModuleIncludes(class_: ClassDeclaration): bool {
     if !field.static_ && field.resolvedType != none && typeNeedsCompleteNominalDefinition(field.resolvedType!) { return false }
   }
   return true
+}
+
+// Emitted names of same-module structs a class stores by value, under the
+// active instantiation substitution. Containment matches struct layout
+// validation: unions, tuples, and Result payloads are inline; classes,
+// collections, callbacks, and weak references are indirections.
+export function classDefinitionDependencies(class_: ClassDeclaration, context: EmitContext): string[] {
+  let dependencies: string[] = []
+  for field of class_.fields {
+    if field.static_ || field.weak_ || field.resolvedType == none { continue }
+    collectByValueStructNames(specializeEmitType(field.resolvedType!, context), context, dependencies)
+  }
+  return dependencies
+}
+
+function collectByValueStructNames(type_: ResolvedType, context: EmitContext, names: string[]): none {
+  case type_ {
+    class_: ClassType -> {
+      if class_.symbol.kind != "struct" || class_.symbol.native_ || class_.symbol.module != context.modulePath { return }
+      addUnique(names, concreteStructName(class_, context))
+    }
+    union_: UnionResolvedType -> { for member of union_.types { collectByValueStructNames(member, context, names) } }
+    tuple: TupleResolvedType -> { for element of tuple.elements { collectByValueStructNames(element, context, names) } }
+    result: ResultResolvedType -> {
+      collectByValueStructNames(result.valueType, context, names)
+      collectByValueStructNames(result.errorType, context, names)
+    }
+    success: SuccessResolvedType -> { collectByValueStructNames(success.valueType, context, names) }
+    failure: FailureResolvedType -> { collectByValueStructNames(failure.errorType, context, names) }
+    _ -> { }
+  }
+}
+
+function concreteStructName(class_: ClassType, context: EmitContext): string {
+  if class_.typeArgs.length == 0 { return class_.name }
+  key := classInstantiationKey(class_.symbol.module, class_.name, class_.typeArgs)
+  for index of 0..<context.concreteClassKeys.length {
+    if context.concreteClassKeys[index] == key { return context.concreteClassNames[index] }
+  }
+  return ""
 }
 
 function typeNeedsCompleteNominalDefinition(type_: ResolvedType): bool {

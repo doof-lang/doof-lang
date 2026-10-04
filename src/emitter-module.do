@@ -9,7 +9,7 @@ import { TypeLoweringGraph, TypeLoweringSession } from "./emitter-type-cache"
 
 import { CppType, CppTypeRegistry, CppTypeSnapshot } from "./cpp-type"
 import { CppDeclarationBuilder } from "./cpp-declaration"
-import { HeaderPlanBuilder, freezeHeaderPlan } from "./emitter-header-plan"
+import { addClassDefinition, HeaderPlanBuilder, freezeHeaderPlan } from "./emitter-header-plan"
 import { planClassDeclaration, planFunctionDeclaration } from "./emitter-decl"
 import { typeNamespace } from "./emitter-types"
 import { HeaderPlanCache, projectedHeaderKey } from "./emitter-header-cache"
@@ -27,7 +27,7 @@ import { emitMetadataDefinition } from "./emitter-metadata"
 import { emitStatement } from "./emitter-stmt"
 import { emitContextType } from "./emitter-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
-import { HeaderPlan, HeaderSection, HeaderRenderCache, renderProjectedHeader, planHeader, reserveHeaderNamespaceName } from "./emitter-header"
+import { classDefinitionDependencies, HeaderPlan, HeaderSection, HeaderRenderCache, renderProjectedHeader, planHeader, reserveHeaderNamespaceName } from "./emitter-header"
 import { indexWorldviewGraph, planWorldview, WorldviewModule } from "./emitter-worldview"
 import { buildInstantiationPlan, classInstantiationKey, InstantiationPlan, MethodInstantiation } from "./emitter-monomorphize"
 import { moduleHeaderName, moduleNamespace, moduleSourceName } from "./emitter-names"
@@ -762,7 +762,12 @@ function addConcreteHeaderDeclarations(
     context.substitution = instantiation.substitution
     let methods: MethodInstantiation[] = []
     for method of instantiations.methods { if method.ownerKey == instantiation.key { methods.push(method) } }
-    plan.classDefinitions.push(planClassDeclaration(instantiation.declaration, context, instantiation.emittedName, methods))
+    addClassDefinition(
+      plan,
+      instantiation.emittedName,
+      classDefinitionDependencies(instantiation.declaration, context),
+      planClassDeclaration(instantiation.declaration, context, instantiation.emittedName, methods),
+    )
     clearInstantiation(context)
   }
   for instantiation of instantiations.functions {

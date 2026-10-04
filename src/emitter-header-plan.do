@@ -34,6 +34,10 @@ export class HeaderPlanBuilder {
   moduleValueDeclarations: CppDeclaration[] = []
   earlyClassDefinitions: CppDeclaration[] = []
   classDefinitions: CppDeclaration[] = []
+  // Parallel to classDefinitions: each definition's emitted name and the
+  // same-section names it stores by value. Freezing orders them dependency-first.
+  classDefinitionNames: string[] = []
+  classDefinitionDependencies: string[][] = []
   interfaceAliases: CppDeclaration[] = []
   enumDefinitions: CppDeclaration[] = []
   earlyTypeAliases: CppDeclaration[] = []
@@ -51,6 +55,12 @@ export class HeaderPlanBuilder {
   let mainAcceptsArgs: bool = false
 }
 
+export function addClassDefinition(plan: HeaderPlanBuilder, name: string, dependencies: string[], definition: CppDeclaration): none {
+  plan.classDefinitions.push(definition)
+  plan.classDefinitionNames.push(name)
+  plan.classDefinitionDependencies.push(dependencies)
+}
+
 export function freezeHeaderPlan(plan: HeaderPlanBuilder, identity: string = ""): HeaderPlan {
   return HeaderPlan {
     identity,
@@ -59,7 +69,7 @@ export function freezeHeaderPlan(plan: HeaderPlanBuilder, identity: string = "")
     earlyModuleValueDeclarations: plan.earlyModuleValueDeclarations.drainToReadonly(),
     moduleValueDeclarations: plan.moduleValueDeclarations.drainToReadonly(),
     earlyClassDefinitions: plan.earlyClassDefinitions.drainToReadonly(),
-    classDefinitions: plan.classDefinitions.drainToReadonly(),
+    classDefinitions: orderClassDefinitions(plan).drainToReadonly(),
     interfaceAliases: plan.interfaceAliases.drainToReadonly(),
     enumDefinitions: plan.enumDefinitions.drainToReadonly(),
     earlyTypeAliases: plan.earlyTypeAliases.drainToReadonly(),
@@ -76,6 +86,32 @@ export function freezeHeaderPlan(plan: HeaderPlanBuilder, identity: string = "")
     mainReturnsInt: plan.mainReturnsInt,
     mainAcceptsArgs: plan.mainAcceptsArgs,
   }
+}
+
+// C++ requires a complete type for every by-value field, so a definition must
+// follow the definitions it stores. Source and instantiation order is kept
+// otherwise; by-value cycles are rejected before emission, so a back edge
+// leaves the remaining order unchanged.
+function orderClassDefinitions(plan: HeaderPlanBuilder): CppDeclaration[] {
+  let ordered: CppDeclaration[] = []
+  let states: int[] = []
+  for _ of plan.classDefinitions { states.push(0) }
+  for index of 0..<plan.classDefinitions.length { visitClassDefinition(plan, index, states, ordered) }
+  return ordered
+}
+
+function visitClassDefinition(plan: HeaderPlanBuilder, index: int, states: int[], ordered: CppDeclaration[]): none {
+  if states[index] != 0 { return }
+  states[index] = 1
+  if index < plan.classDefinitionDependencies.length {
+    for dependency of plan.classDefinitionDependencies[index] {
+      for candidate of 0..<plan.classDefinitionNames.length {
+        if plan.classDefinitionNames[candidate] == dependency { visitClassDefinition(plan, candidate, states, ordered) }
+      }
+    }
+  }
+  states[index] = 2
+  ordered.push(plan.classDefinitions[index])
 }
 
 export class HeaderSection {

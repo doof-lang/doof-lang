@@ -110,6 +110,12 @@ including user declarations, concrete specializations, and namespace sections. T
 reference-only `std::variant` carriers single-spelled without hoisting variants
 that require complete by-value nominal definitions.
 
+Within a header section, class definitions and concrete class specializations
+are ordered so each follows the same-module structs it stores by value, using
+the containment rule from struct layout validation (optional, union, tuple, and
+`Result` arms are inline; classes, collections, callbacks, and weak references
+are indirections). Otherwise source and instantiation order is preserved.
+
 Actors, promises, escaping mutable captures, `Result`, checked narrowing,
 destructuring, JSON serialization, metadata/invoke, and WebAssembly wrappers
 have dedicated lowering modules. Representation changes require focused emitter

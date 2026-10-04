@@ -34,3 +34,16 @@ export function testIntBackedEnumDecodingRequiresWholeIntValues(): none {
   Assert.isTrue(result.emission != none)
   Assert.stringContains(result.emission!.modules[0].header, "if (!(doof::serial_fits_int(value)))")
 }
+
+export function testClassDefinitionsFollowLaterByValueStructs(): none {
+  source := "enum Mode { A, B }\nclass Owner { inner = Inner {}\nmaybe: Wrapped | none = none\npair: Tuple<Paired, int> | none = none }\nstruct Inner { mode: Mode = .A }\nstruct Wrapped { mode: Mode = .B }\nstruct Paired { mode: Mode = .A }"
+  result := compile([SourceFile { path: "/main.do", source }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  header := result.emission!.modules[0].header
+  owner := header.indexOf("struct Owner :")
+  Assert.isTrue(owner > 0)
+  Assert.isTrue(header.indexOf("struct Inner {") < owner)
+  Assert.isTrue(header.indexOf("struct Wrapped {") < owner)
+  Assert.isTrue(header.indexOf("struct Paired {") < owner)
+}

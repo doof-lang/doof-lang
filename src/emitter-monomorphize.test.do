@@ -150,3 +150,16 @@ export function testInstantiationDiscoveryNamingPreservesCollisionOrder(): none 
   Assert.isFalse(plan.functions[0].key == plan.functions[1].key)
   Assert.equal(plan.functions[1].emittedName, plan.functions[0].emittedName + "_2")
 }
+
+export function testGenericStructSpecializationPrecedesItsGenericOwner(): none {
+  modules := emitSources([
+    SourceFile { path: "/hooks.do", source: "export struct Hooks<Context> { turn: (state: Context): bool = (state): bool => false }\nexport class Lifecycle<Context> { hooks = Hooks<Context> {} }" },
+    SourceFile { path: "/main.do", source: "import { Lifecycle } from \"./hooks\"\nclass Probe {}\nfunction main(): none { lifecycle := Lifecycle<Probe> {} }" },
+  ], "/main.do")
+  let header = ""
+  for module of modules { if module.modulePath == "/hooks.do" { header = module.header } }
+  owner := header.indexOf("struct Lifecycle__app_main__Probe_ :")
+  hooks := header.indexOf("struct Hooks__app_main__Probe_ {")
+  Assert.isTrue(owner > 0 && hooks > 0)
+  Assert.isTrue(hooks < owner)
+}
