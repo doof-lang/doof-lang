@@ -187,3 +187,29 @@ export function testCoalescingPromotesThePresentValueIntoANullableResult(): none
   Assert.stringContains(source, "return doof::variant_promote<std::variant<std::monostate, std::shared_ptr<A>, std::shared_ptr<B>>>(std::move(doof::success_value(_coalesce_")
   Assert.stringContains(source, "if (doof::is_null(_coalesce_3)) return b; return doof::unwrap_optional(_coalesce_3);")
 }
+
+interface AsNestedShape { area(): int }
+class AsNestedCircle { r: int; area(): int => r * 3 }
+class AsNestedSquare { s: int; area(): int => s * s }
+
+function asNestedCircleRadius(shape: AsNestedShape | none): int {
+  circle := shape as AsNestedCircle else { return -1 }
+  return circle.r
+}
+function asNestedShapeArea(value: AsNestedShape | int): int {
+  shape := value as AsNestedShape else { return -1 }
+  return shape.area()
+}
+
+export function testAsNarrowsClassInsideNullableInterfaceArm(): none {
+  Assert.equal(asNestedCircleRadius(AsNestedCircle { r: 2 }), 2)
+  Assert.equal(asNestedCircleRadius(AsNestedSquare { s: 3 }), -1)
+  Assert.equal(asNestedCircleRadius(none), -1)
+  let square: AsNestedShape | none = AsNestedSquare { s: 3 }
+  case square as AsNestedSquare {
+    s: Success -> { Assert.equal(s.value.s, 3) }
+    _: Failure -> { Assert.isTrue(false) }
+  }
+  Assert.equal(asNestedShapeArea(AsNestedSquare { s: 4 }), 16)
+  Assert.equal(asNestedShapeArea(7), -1)
+}

@@ -7,7 +7,7 @@ import { EmitContext } from "./emitter-context"
 import { TypePattern, ValuePattern } from "./ast"
 import {
   ArrayResolvedType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType,
-  ResolvedType, ResultResolvedType, WeakResolvedType,
+  ResolvedType, ResultResolvedType, UnionResolvedType, WeakResolvedType,
 } from "./semantic"
 import { emitContextType, emitType, usesNullableSingleValueRepresentation, usesVariantRepresentation } from "./emitter-types"
 import { isSerialBytesType, sameType } from "./checker-types"
@@ -84,7 +84,7 @@ function emitCaseTypeTest(
   }
   if usesVariantRepresentation(subjectType) || subjectType.kind == "result" {
     patternCpp := if context == none then emitType(patternType, currentModulePath, names) else emitContextType(patternType, context!)
-    if usesVariantRepresentation(patternType) {
+    if usesVariantRepresentation(patternType) || !isDirectVariantArm(patternType, subjectType) {
       return CaseTypePatternEmission {
         condition: "doof::variant_is<" + patternCpp + ">(" + subject + ")",
         binding: if bindingName == "" then "" else "const auto " + bindingName + " = doof::variant_narrow<" + patternCpp + ">(" + subject + ");\n",
@@ -140,5 +140,17 @@ function emitJsonValuePattern(patternType: ResolvedType, subject: string, bindin
   return CaseTypePatternEmission {
     condition,
     binding: if bindingName == "" then "" else "const auto " + bindingName + " = " + value + ";\n",
+  }
+}
+
+// A class pattern may match inside a nested variant arm, such as an interface
+// carrier within `Shape | none`; only direct arms support `std::get`.
+function isDirectVariantArm(patternType: ResolvedType, subjectType: ResolvedType): bool {
+  case subjectType {
+    union_: UnionResolvedType -> {
+      for member of union_.types { if sameType(member, patternType) { return true } }
+      return false
+    }
+    _ -> { return true }
   }
 }

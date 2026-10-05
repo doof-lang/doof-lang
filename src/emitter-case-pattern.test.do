@@ -240,3 +240,39 @@ export function testResultArmPatternsUseTheCheckedArmTypes(): none {
   Assert.stringContains(source, "std::holds_alternative<doof::Failure<std::string>>(")
   Assert.stringNotContains(source, "holds_alternative<doof::Result")
 }
+
+interface NestedShape { area(): int }
+class NestedCircle { r: int; area(): int => r * r * 3 }
+class NestedSquare { s: int; area(): int => s * s }
+
+function nestedNullableShape(shape: NestedShape | none): string => case shape {
+  c: NestedCircle -> "circle " + string(c.r)
+  s: NestedSquare -> "square " + string(s.s)
+  _ -> "none"
+}
+function nestedWideShape(value: NestedShape | int): string => case value {
+  c: NestedCircle -> "circle " + string(c.r)
+  shape: NestedShape -> "shape " + string(shape.area())
+  n: int -> "int " + string(n)
+}
+
+export function testClassPatternMatchesInsideNullableInterfaceArm(): none {
+  Assert.equal(nestedNullableShape(NestedCircle { r: 2 }), "circle 2")
+  Assert.equal(nestedNullableShape(NestedSquare { s: 3 }), "square 3")
+  Assert.equal(nestedNullableShape(none), "none")
+  Assert.equal(nestedWideShape(NestedCircle { r: 1 }), "circle 1")
+  Assert.equal(nestedWideShape(NestedSquare { s: 4 }), "shape 16")
+  Assert.equal(nestedWideShape(5), "int 5")
+}
+
+export function testClassPatternInsideInterfaceArmUsesNestedVariantTest(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "interface Shape { area(): int }\n" +
+    "class Circle { r: int; area(): int => r }\n" +
+    "function check(shape: Shape | none): bool => case shape { _: Circle -> true, _ -> false }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::variant_is<std::shared_ptr<Circle>>")
+  Assert.stringNotContains(source, "std::holds_alternative<std::shared_ptr<Circle>>")
+}

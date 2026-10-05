@@ -2004,11 +2004,25 @@ template <typename Candidate, typename... Alternatives>
 struct is_variant_alternative<Candidate, std::variant<Alternatives...>>
     : std::bool_constant<(std::is_same_v<Candidate, Alternatives> || ...)> {};
 
+template <typename T>
+struct is_std_variant : std::false_type {};
+
+template <typename... T>
+struct is_std_variant<std::variant<T...>> : std::true_type {};
+
+// A union arm may itself be a variant carrier (an interface inside a nullable
+// or wider union), so checked narrowing descends into nested arms.
 template <typename Target, typename... Source>
 bool variant_is(const std::variant<Source...>& value) {
-    return std::visit([](const auto& item) {
+    return std::visit([](const auto& item) -> bool {
         using Item = std::decay_t<decltype(item)>;
-        return is_variant_alternative<Item, Target>::value;
+        if constexpr (std::is_same_v<Item, Target> || is_variant_alternative<Item, Target>::value) {
+            return true;
+        } else if constexpr (is_std_variant<Item>::value) {
+            return variant_is<Target>(item);
+        } else {
+            return false;
+        }
     }, value);
 }
 
@@ -2016,8 +2030,10 @@ template <typename Target, typename... Source>
 Target variant_narrow(const std::variant<Source...>& value) {
     return std::visit([](const auto& item) -> Target {
         using Item = std::decay_t<decltype(item)>;
-        if constexpr (is_variant_alternative<Item, Target>::value) {
+        if constexpr (std::is_same_v<Item, Target> || is_variant_alternative<Item, Target>::value) {
             return item;
+        } else if constexpr (is_std_variant<Item>::value) {
+            return variant_narrow<Target>(item);
         } else {
             throw std::runtime_error("variant does not hold a requested alternative");
         }
