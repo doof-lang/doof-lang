@@ -14,6 +14,33 @@ import { PhaseTimings } from "./phase-timings"
 import { EmissionConfiguration } from "./emitter-context"
 import { SourceFile } from "./semantic"
 
+export function testPromiseOnCompleteEmitsCallbackAndDrainsExecutableMailbox(): none {
+  for source of [
+    `function main(): none { p := async { yield [1] }; p.onComplete((result) => { values := result!; values.push(2) }) }`,
+    `function main(): int { p := async { yield none }; p.onComplete((result) => { result! }); return 7 }`,
+    `p := async { yield 1 }; p.onComplete((result) => println(result!))`,
+  ] {
+    result := compileWithLoader([SourceFile { path: "/main.do", source }], "/main.do", noSourceLoader)
+    for diagnostic of result.diagnostics { println(diagnostic.message) }
+    Assert.equal(result.diagnostics.length, 0)
+    output := result.emission!.modules[0].source
+    Assert.stringContains(output, ".onComplete(")
+    Assert.stringContains(output, "while (__doof_application_domain.dispatch_pending_completion()) {}")
+    if source.contains("return 7") {
+      Assert.stringContains(output, "auto __doof_exit_code = ")
+      Assert.stringContains(output, "return __doof_exit_code;")
+    }
+  }
+}
+
+export function testPromiseOnCompleteLeavesAppMailboxToHost(): none {
+  result := compileWithLoader([SourceFile { path: "/main.do", source: "function main(): none {}" }], "/main.do", noSourceLoader, [], "ios-app")
+  Assert.equal(result.diagnostics.length, 0)
+  output := result.emission!.modules[0].source
+  Assert.stringContains(output, "doof_entry_main")
+  Assert.stringNotContains(output, "dispatch_pending_completion")
+}
+
 export function testExplicitlyImportedClassUsedOnlyAsSharedPointerGetsCompleteDefinition(): none {
   result := compileWithLoader([
     SourceFile { path: "/types.do", source: "export class Foo { value: int\nlabel(): string => string(value) }" },

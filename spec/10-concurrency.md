@@ -216,7 +216,8 @@ Retirement behavior:
 1. A retirement request is enqueued.
 2. The actor enters the retiring state and stops accepting new calls.
 3. Already queued calls continue in order.
-4. When the retirement request is reached, the actor stops.
+4. Completions registered to this actor before the request are also drained;
+   retirement waits for their producers and queued callbacks before stopping.
 5. The actor's inner `T` is returned to the retiring domain.
 6. Calls through aliases after retirement has been requested are logic errors
    and panic at runtime.
@@ -241,12 +242,75 @@ async-block completion:
 ```doof
 class Promise<T> {
     get(): Result<T, string>
+    onComplete(callback: (result: Result<T, string>) => none): none
 }
 ```
 
 `get()` blocks until the queued actor method completes. On a runtime worker the
 wait relinquishes its CPU token; application and other non-worker threads are
-unaffected. Runtime failures are reported as `Failure<string>`.
+unaffected. Native runtime exceptions are reported as `Failure<string>`; Doof
+panics remain panics.
+
+A promise has exactly one consumer across all copies and aliases. Calling
+`get()` claims the result before waiting. Calling `onComplete()` claims it when
+the callback is registered. A second `get()` or valid `onComplete()` registration
+panics with `promise result already claimed`.
+This rule also applies to promises of `none` and failed operations. Dropping an
+unconsumed promise does not cancel the operation.
+
+### Completion callbacks
+
+`onComplete` registers terminal delivery and returns immediately:
+
+```doof
+promise := async { yield [1, 2, 3] }
+promise.onComplete((result) => {
+    values := result else error { println(error); return }
+    values.push(4)
+    println(values.length)
+})
+```
+
+The callback receives `Result<T, string>` and returns `none`; `onComplete`
+returns `none`, with no successor promise. If `T` is itself a `Result`, the
+outer result is preserved rather than flattened. `Promise<none>` delivers
+`Success()` or `Failure<string>` through the same callback shape.
+
+Delivery is always queued on the callback's owning actor domain, including when
+the promise has already settled or registration occurs in that domain. It never
+runs inline on the registering or completing stack. The callback runs after the
+current message in its domain finishes. Registration and completion may race;
+an accepted callback is queued exactly once. Queue ordering follows enqueue
+order, not registration order among different promises.
+
+An owned mutable async result transfers to the callback domain as its sole
+receiver. This is a dedicated promise transfer, not a relaxation of ordinary
+callback-post or actor-call payload restrictions.
+
+Registration retains the destination actor until delivery completes. An actor
+that is already retiring or retired rejects registration; rejection leaves an
+otherwise unclaimed promise available. Retirement waits for registrations
+already accepted, then transfers the actor state. As with other blocking actor
+operations, callers must avoid dependency cycles (for example, blocking a
+domain that a reserved completion needs to make progress).
+
+Root callbacks execute through the application mailbox. Generated native
+command-line entrypoints pump that mailbox after normal `main` or script
+completion until every registered completion has been delivered, preserving
+the integer exit code. Other keep-alive sources, such as event channels and
+timers, do not hold the process open after `main`; they still require an
+explicit event loop. Application/UI hosts retain responsibility for pumping
+their mailbox. Callbacks created inside isolated async work belong to a
+temporary domain and cannot be registered for deferred completion; create the
+callback in the receiving actor or root domain instead.
+
+An operation's Doof panic remains a panic rather than being delivered as a
+`Failure`. Because terminal delivery has no successor promise, an unhandled
+producer panic or callback panic is reported through `unhandled_panic` in the
+destination domain and terminates the process. Use explicit Results for
+recoverable failures; a callback can use `catchPanic` locally when appropriate.
+
+### Completion-order waiting
 
 A mutable array of promises can consume whichever operation completes first:
 
@@ -259,6 +323,10 @@ from `pending`, and returns the same result that its `get()` method would
 produce. Calling it on an empty array returns `Failure<string>`. Completion
 waiting does not poll and relinquishes a runtime-worker CPU token in the same
 way as `get()`.
+
+The selected promise is consumed across all aliases. Arrays containing a
+promise already claimed through another alias cause a logic-error panic when
+that entry is inspected; do not mix registered completions into a pending array.
 
 ---
 
@@ -353,4 +421,5 @@ isolated work outside the current actor domain.
   hard-capped.
 - `retire actor` drains accepted work and returns the actor state.
 - Immutable values may cross domains.
-- Mutable state crosses domains only by retiring its owning actor.
+- Mutable state transfers through actor retirement or a single-consumer owned
+  async result, including delivery through `onComplete`.

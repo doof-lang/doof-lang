@@ -617,7 +617,8 @@ export function testKeepsHeaderAndSourceSeparate(): none {
   Assert.equal(result.source.contains("int32_t add(int32_t a, int32_t b)"), true)
   Assert.equal(result.source.contains("doof::detail::ApplicationDomain::shared()"), true)
   Assert.equal(result.source.contains("doof::detail::ActiveActorScope __doof_application_scope"), true)
-  Assert.equal(result.source.contains("return app_main_::doof_main();"), true)
+  Assert.equal(result.source.contains("auto __doof_exit_code = app_main_::doof_main();"), true)
+  Assert.stringContains(result.source, "return __doof_exit_code;")
 }
 
 export function testEmitsNamedNativeConstructionThroughStaticConstructor(): none {

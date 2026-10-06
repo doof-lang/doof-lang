@@ -234,10 +234,16 @@ std::optional<std::variant<std::shared_ptr<T>...>> lock_weak(const std::variant<
 }
 
 namespace detail {
-class CallbackDomain {
+class CallbackDomain : public std::enable_shared_from_this<CallbackDomain> {
 public:
     virtual ~CallbackDomain() = default;
     virtual void enqueue_callback(std::function<void()> task) = 0;
+    // Accepted completions reserve a future mailbox delivery across retirement.
+    virtual void reserve_completion() {}
+    virtual void cancel_completion() {}
+    virtual void enqueue_completion(std::function<void()> task) {
+        enqueue_callback(std::move(task));
+    }
 };
 
 inline thread_local CallbackDomain* active_actor_domain = nullptr;
@@ -252,6 +258,23 @@ public:
 
     ~ActiveActorScope() {
         active_actor_domain = previous_;
+    }
+};
+
+// Isolated jobs have no owning domain. Callbacks created there keep their
+// existing unowned behavior, but are marked so they cannot be registered as
+// deferred completion receivers that would outlive the job.
+inline thread_local bool active_isolated_task = false;
+
+class IsolatedTaskScope {
+    bool previous_;
+public:
+    IsolatedTaskScope() : previous_(active_isolated_task) {
+        active_isolated_task = true;
+    }
+
+    ~IsolatedTaskScope() {
+        active_isolated_task = previous_;
     }
 };
 
@@ -312,6 +335,43 @@ public:
         return true;
     }
 
+    // Native command-line entrypoints drain only registered promise
+    // completions after main; other keep-alive sources (channels, timers)
+    // still require the host or `runMainEventLoop` to pump the mailbox.
+    bool dispatch_pending_completion() {
+        std::function<void()> task;
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
+            ready_.wait(lock, [this] {
+                return !mailbox_.empty() || pending_completion_count_ == 0;
+            });
+            if (pending_completion_count_ == 0) {
+                return false;
+            }
+            task = std::move(mailbox_.front());
+            mailbox_.pop();
+        }
+
+        ActiveActorScope active(this);
+        task();
+        return true;
+    }
+
+    void add_pending_completion() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        ++pending_completion_count_;
+        ++keep_alive_count_;
+    }
+
+    void remove_pending_completion() {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            --pending_completion_count_;
+            --keep_alive_count_;
+        }
+        notify_ready();
+    }
+
     void add_keep_alive_source(bool keeps_alive) {
         if (!keeps_alive) {
             return;
@@ -358,6 +418,7 @@ private:
     std::condition_variable ready_;
     std::queue<std::function<void()>> mailbox_;
     int64_t keep_alive_count_ = 0;
+    int64_t pending_completion_count_ = 0;
     std::function<void()> wake_handler_;
 };
 } // namespace detail
@@ -677,6 +738,8 @@ class callback<R(Args...)> {
     // Copies retain the same callable identity and mutable closure state.
     std::shared_ptr<std::function<R(Args...)>> fn_;
     detail::CallbackDomain* owner_ = nullptr;
+    std::weak_ptr<detail::CallbackDomain> owner_lifetime_;
+    bool isolated_ = false;
 
 public:
     callback() = default;
@@ -687,7 +750,9 @@ public:
     >
     callback(F&& f)
         : fn_(std::make_shared<std::function<R(Args...)>>(std::forward<F>(f))),
-          owner_(doof::current_actor_domain()) {}
+          owner_(doof::current_actor_domain()),
+          owner_lifetime_(owner_ ? owner_->weak_from_this() : std::weak_ptr<detail::CallbackDomain>{}),
+          isolated_(!owner_ && detail::active_isolated_task) {}
 
     explicit operator bool() const {
         return fn_ && static_cast<bool>(*fn_);
@@ -745,6 +810,7 @@ public:
     }
 
 private:
+    template <typename T> friend class Promise;
     template <typename CR, typename... CArgs>
     friend CR detail::call_callback_unchecked(const doof::callback<CR(CArgs...)>& cb, CArgs... args);
 
@@ -2565,55 +2631,174 @@ inline Range range_exclusive(int32_t start, int32_t end) {
 // Promise<T> — async result wrapper
 // ============================================================================
 
-template <typename T>
-class Promise {
-    std::shared_future<T> future_;
-public:
-    explicit Promise(std::future<T>&& f) : future_(f.share()) {}
-    explicit Promise(std::shared_future<T> f) : future_(std::move(f)) {}
+namespace detail {
 
-    bool ready() const {
-        return future_.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
+// A reservation keeps both the destination and the application loop alive.
+// Its destructor rolls back registration failures, or releases keep-alive only
+// after the queued invocation (and its captured values) has finished.
+class CompletionReservation {
+    CallbackDomain* domain_;
+    std::shared_ptr<CallbackDomain> lifetime_;
+    bool posted_ = false;
+
+public:
+    CompletionReservation(CallbackDomain* domain, std::shared_ptr<CallbackDomain> lifetime)
+        : domain_(domain), lifetime_(std::move(lifetime)) {
+        domain_->reserve_completion();
+        ApplicationDomain::shared().add_pending_completion();
+    }
+    ~CompletionReservation() {
+        if (!posted_) domain_->cancel_completion();
+        ApplicationDomain::shared().remove_pending_completion();
+    }
+    void post(std::function<void()> task) {
+        domain_->enqueue_completion(std::move(task));
+        posted_ = true;
+    }
+};
+
+// All copies of a Promise share this claim and completion state. Producers
+// publish directly: registration needs neither polling nor a waiting worker.
+template <typename T>
+class PromiseState {
+    std::mutex mutex_;
+    std::condition_variable ready_;
+    bool settled_ = false;
+    bool claimed_ = false;
+    std::optional<doof::Success<T>> value_;
+    std::exception_ptr error_;
+    std::function<void()> continuation_;
+
+    void check_unclaimed() const {
+        if (claimed_) doof::panic("promise result already claimed");
     }
 
-    doof::Result<T, std::string> get() const {
+    void wait() {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (settled_) return;
+        }
+        CpuTokenRelease release;
+        std::unique_lock<std::mutex> lock(mutex_);
+        ready_.wait(lock, [this] { return settled_; });
+        // The lock is destroyed before the CPU token is reacquired.
+    }
+
+public:
+    bool ready() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        check_unclaimed();
+        return settled_;
+    }
+
+    void claim(std::function<void()> continuation = {}) {
+        std::function<void()> dispatch;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            check_unclaimed();
+            claimed_ = true;
+            if (settled_) dispatch = std::move(continuation);
+            else continuation_ = std::move(continuation);
+        }
+        if (dispatch) dispatch();
+    }
+
+    template <typename F>
+    void complete(F&& produce) {
+        std::optional<doof::Success<T>> value;
+        std::exception_ptr error;
         try {
-            doof::wait_with_cpu_token_released(future_);
-            return doof::Success<T>{future_.get()};
+            if constexpr (std::is_void_v<T>) {
+                produce();
+                value.emplace();
+            } else {
+                value.emplace(doof::Success<T>{produce()});
+            }
+        } catch (...) {
+            error = std::current_exception();
+        }
+        std::function<void()> dispatch;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (settled_) doof::panic("promise completed more than once");
+            try {
+                if (value) value_.emplace(std::move(*value));
+            } catch (...) {
+                error = std::current_exception();
+            }
+            error_ = std::move(error);
+            settled_ = true;
+            dispatch = std::move(continuation_);
+        }
+        ready_.notify_all();
+        PromiseCompletionNotifier::shared().notify();
+        if (dispatch) dispatch();
+    }
+
+    doof::Result<T, std::string> take() {
+        wait();
+        // Only the claimant can take the payload. Clear retained storage so an
+        // alias of the consumed promise cannot keep the mutable result alive.
+        auto error = std::move(error_);
+        try {
+            if (error) std::rethrow_exception(error);
+            auto value = std::move(*value_);
+            value_.reset();
+            return value;
         } catch (const doof::Panic&) {
+            value_.reset();
             throw;
         } catch (const std::exception& e) {
-            return doof::Failure<std::string>{std::string(e.what())};
+            value_.reset();
+            return doof::Failure<std::string>{e.what()};
         } catch (...) {
-            return doof::Failure<std::string>{std::string("unknown error")};
+            value_.reset();
+            return doof::Failure<std::string>{"unknown error"};
         }
     }
 };
 
-// Specialization for void
-template <>
-class Promise<void> {
-    std::shared_future<void> future_;
-public:
-    explicit Promise(std::future<void>&& f) : future_(f.share()) {}
-    explicit Promise(std::shared_future<void> f) : future_(std::move(f)) {}
+} // namespace detail
 
-    bool ready() const {
-        return future_.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
+template <typename T>
+class Promise {
+    std::shared_ptr<detail::PromiseState<T>> state_;
+public:
+    explicit Promise(std::shared_ptr<detail::PromiseState<T>> state) : state_(std::move(state)) {}
+
+    bool ready() const { return state_->ready(); }
+
+    doof::Result<T, std::string> get() const {
+        state_->claim();
+        return state_->take();
     }
 
-    doof::Result<void, std::string> get() const {
-        try {
-            doof::wait_with_cpu_token_released(future_);
-            future_.get();
-            return doof::Success<void>{};
-        } catch (const doof::Panic&) {
-            throw;
-        } catch (const std::exception& e) {
-            return doof::Failure<std::string>{std::string(e.what())};
-        } catch (...) {
-            return doof::Failure<std::string>{std::string("unknown error")};
+    void onComplete(const doof::callback<void(doof::Result<T, std::string>)>& cb) const {
+        if (!cb) doof::panic("completion callback invoked before initialization");
+        if (cb.isolated_) doof::panic("completion callbacks created in isolated async work cannot receive deferred delivery");
+        auto domain = cb.owner_ ? cb.owner_ : &detail::ApplicationDomain::shared();
+        std::shared_ptr<detail::CallbackDomain> lifetime;
+        if (!detail::ApplicationDomain::is_application_domain(domain)) {
+            lifetime = cb.owner_lifetime_.lock();
+            if (!lifetime) doof::panic("completion callback requires a live actor domain");
         }
+        auto reservation = std::make_shared<detail::CompletionReservation>(domain, std::move(lifetime));
+        auto state = state_;
+        state->claim([state, cb, reservation] {
+            reservation->post([state, cb, reservation] {
+                try {
+                    detail::call_callback_unchecked(cb, state->take());
+                } catch (const doof::Panic& panic) {
+                    // Terminal delivery has no successor promise to receive a
+                    // panic. Report it at the process boundary in this domain.
+                    doof::unhandled_panic(panic);
+                } catch (const std::exception& error) {
+                    doof::unhandled_panic(doof::Panic(error.what()));
+                } catch (...) {
+                    doof::unhandled_panic(doof::Panic("unknown completion callback error"));
+                }
+            });
+        });
     }
 };
 
@@ -2642,23 +2827,13 @@ doof::Result<T, std::string> promise_take_first_completed(
 // cannot starve.
 template <typename R, typename F>
 doof::Promise<R> submit_async(F&& f) {
-    auto prom = std::make_shared<std::promise<R>>();
-    auto fut = prom->get_future();
+    auto state = std::make_shared<doof::detail::PromiseState<R>>();
     auto task = std::make_shared<std::decay_t<F>>(std::forward<F>(f));
-    doof::detail::RuntimeScheduler::shared().submit([prom, task]() mutable {
-        try {
-            if constexpr (std::is_void_v<R>) {
-                (*task)();
-                prom->set_value();
-            } else {
-                prom->set_value((*task)());
-            }
-        } catch (...) {
-            prom->set_exception(std::current_exception());
-        }
-        doof::detail::PromiseCompletionNotifier::shared().notify();
+    doof::detail::RuntimeScheduler::shared().submit([state, task]() mutable {
+        doof::detail::IsolatedTaskScope isolated;
+        state->complete([&]() -> R { return (*task)(); });
     });
-    return doof::Promise<R>(std::move(fut));
+    return doof::Promise<R>(std::move(state));
 }
 
 template <typename R, typename... Args>
@@ -2668,28 +2843,17 @@ doof::Promise<R> callback<R(Args...)>::post(Args... args) const {
     }
     auto owner = owner_ ? owner_ : &doof::detail::ApplicationDomain::shared();
 
-    auto prom = std::make_shared<std::promise<R>>();
-    auto fut = prom->get_future();
+    auto state = std::make_shared<doof::detail::PromiseState<R>>();
     auto self = *this;
     auto packedArgs = std::make_tuple(std::forward<Args>(args)...);
-    owner->enqueue_callback([self, prom, packedArgs = std::move(packedArgs)]() mutable {
-        try {
-            if constexpr (std::is_void_v<R>) {
-                std::apply([&](auto&&... unpacked) {
-                    doof::detail::call_callback_unchecked(self, std::forward<decltype(unpacked)>(unpacked)...);
-                }, std::move(packedArgs));
-                prom->set_value();
-            } else {
-                prom->set_value(std::apply([&](auto&&... unpacked) -> R {
-                    return doof::detail::call_callback_unchecked(self, std::forward<decltype(unpacked)>(unpacked)...);
-                }, std::move(packedArgs)));
-            }
-        } catch (...) {
-            prom->set_exception(std::current_exception());
-        }
-        doof::detail::PromiseCompletionNotifier::shared().notify();
+    owner->enqueue_callback([self, state, packedArgs = std::move(packedArgs)]() mutable {
+        state->complete([&]() -> R {
+            return std::apply([&](auto&&... unpacked) -> R {
+                return doof::detail::call_callback_unchecked(self, std::forward<decltype(unpacked)>(unpacked)...);
+            }, std::move(packedArgs));
+        });
     });
-    return doof::Promise<R>(std::move(fut));
+    return doof::Promise<R>(std::move(state));
 }
 
 // ============================================================================
@@ -2697,7 +2861,7 @@ doof::Promise<R> callback<R(Args...)>::post(Args... args) const {
 // ============================================================================
 
 template <typename T>
-class Actor : public std::enable_shared_from_this<Actor<T>>, public detail::CallbackDomain {
+class Actor : public detail::CallbackDomain {
     // Actor state remains reachable only through this actor until retirement,
     // but class methods require shared ownership for Doof's `this` lowering.
     std::shared_ptr<T> instance_;
@@ -2705,13 +2869,23 @@ class Actor : public std::enable_shared_from_this<Actor<T>>, public detail::Call
     std::mutex mutex_;
     bool accepting_ = true;
     bool scheduled_ = false;
+    std::size_t pending_completions_ = 0;
+    std::function<void()> retirement_;
+
+    void finish_retirement_locked() {
+        if (pending_completions_ == 0 && retirement_) {
+            mailbox_.push(std::move(retirement_));
+            retirement_ = {};
+            schedule_locked();
+        }
+    }
 
     void schedule_locked() {
         if (scheduled_ || mailbox_.empty()) {
             return;
         }
         scheduled_ = true;
-        auto self = this->shared_from_this();
+        auto self = std::static_pointer_cast<Actor<T>>(this->shared_from_this());
         doof::detail::RuntimeScheduler::shared().submit([self] {
             self->run_one();
         });
@@ -2791,34 +2965,36 @@ public:
     // Asynchronous call — enqueue and return a Promise
     template <typename R, typename F>
     doof::Promise<R> call_async(F&& f) {
-        auto prom = std::make_shared<std::promise<R>>();
-        auto fut = prom->get_future();
+        auto state = std::make_shared<doof::detail::PromiseState<R>>();
         {
             std::lock_guard<std::mutex> lock(mutex_);
             if (!accepting_) doof::panic("actor is retiring or retired");
-            if constexpr (std::is_void_v<R>) {
-                mailbox_.push([this, f = std::forward<F>(f), prom]() {
-                    try {
-                        f(*instance_);
-                        prom->set_value();
-                    } catch (...) {
-                        prom->set_exception(std::current_exception());
-                    }
-                    doof::detail::PromiseCompletionNotifier::shared().notify();
-                });
-            } else {
-                mailbox_.push([this, f = std::forward<F>(f), prom]() {
-                    try {
-                        prom->set_value(f(*instance_));
-                    } catch (...) {
-                        prom->set_exception(std::current_exception());
-                    }
-                    doof::detail::PromiseCompletionNotifier::shared().notify();
-                });
-            }
+            mailbox_.push([this, f = std::forward<F>(f), state]() mutable {
+                state->complete([&]() -> R { return f(*instance_); });
+            });
             schedule_locked();
         }
-        return doof::Promise<R>(std::move(fut));
+        return doof::Promise<R>(std::move(state));
+    }
+
+    void reserve_completion() override {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!accepting_) doof::panic("actor is retiring or retired");
+        ++pending_completions_;
+    }
+
+    void cancel_completion() override {
+        std::lock_guard<std::mutex> lock(mutex_);
+        --pending_completions_;
+        finish_retirement_locked();
+    }
+
+    void enqueue_completion(std::function<void()> task) override {
+        std::lock_guard<std::mutex> lock(mutex_);
+        mailbox_.push(std::move(task));
+        --pending_completions_;
+        finish_retirement_locked();
+        schedule_locked();
     }
 
     void enqueue_callback(std::function<void()> task) override {
@@ -2838,15 +3014,15 @@ public:
             std::lock_guard<std::mutex> lock(mutex_);
             if (!accepting_) doof::panic("actor is already retiring or retired");
             accepting_ = false;
-            mailbox_.push([this, prom]() {
+            retirement_ = [this, prom]() {
                 try {
                     if (!instance_) doof::panic("actor is already retired");
                     prom->set_value(std::move(instance_));
                 } catch (...) {
                     prom->set_exception(std::current_exception());
                 }
-            });
-            schedule_locked();
+            };
+            finish_retirement_locked();
         }
         doof::wait_with_cpu_token_released(fut);
         std::shared_ptr<T> value = fut.get();
@@ -2863,10 +3039,10 @@ public:
                 return;
             }
             accepting_ = false;
-            mailbox_.push([prom] {
+            retirement_ = [prom] {
                 prom->set_value();
-            });
-            schedule_locked();
+            };
+            finish_retirement_locked();
         }
         doof::wait_with_cpu_token_released(fut);
         fut.get();

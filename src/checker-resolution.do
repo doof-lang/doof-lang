@@ -257,6 +257,10 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
     }
     promise: PromiseType -> {
       if property == "get" { return functionType([], resultType(promise.valueType, primitive("string"))) }
+      if property == "onComplete" {
+        callback := functionType([FunctionParamType { name: "result", type_: resultType(promise.valueType, primitive("string")), hasDefault: false }], noneType())
+        return functionType([FunctionParamType { name: "callback", type_: callback, hasDefault: false }], noneType())
+      }
       return unknownType()
     }
     parameter: TypeParameterType -> {

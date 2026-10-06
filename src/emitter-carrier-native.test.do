@@ -56,7 +56,11 @@ export function testResultUnwrappingNative(): none {
   runNativeFixture("result-unwrapping")
 }
 
-function runNativeFixture(fixture: string): none {
+export function testPromiseOnCompleteNative(): none {
+  runNativeFixture("promise-on-complete", "onComplete delivered", 7)
+}
+
+function runNativeFixture(fixture: string, expectedOutput: string = "", expectedExitCode: int = 0): none {
   root := join([tempDirectory(), "doof-native-" + fixture])
   clearNativeMatrix(root)
   mkdir(root)!
@@ -79,8 +83,9 @@ function runNativeFixture(fixture: string): none {
   if built.exitCode != 0 { println(BlobReader(built.stdout).readString(long(built.stdout.length))) }
   Assert.equal(built.exitCode, 0)
   executed := run(executable, [], ExecOptions { withStdin: false, mergeStderrIntoStdout: true })!
-  if executed.exitCode != 0 { println(BlobReader(executed.stdout).readString(long(executed.stdout.length))) }
-  Assert.equal(executed.exitCode, 0)
+  if executed.exitCode != expectedExitCode { println(BlobReader(executed.stdout).readString(long(executed.stdout.length))) }
+  Assert.equal(executed.exitCode, expectedExitCode)
+  if expectedOutput != "" { Assert.stringContains(BlobReader(executed.stdout).readString(long(executed.stdout.length)), expectedOutput) }
   clearNativeMatrix(root)
 }
 

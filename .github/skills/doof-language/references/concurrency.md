@@ -151,6 +151,7 @@ defines `stop`, `actor.stop()` is an ordinary actor method call. Use
 ```doof
 class Promise<T> {
     function get(): Result<T, string>
+    function onComplete(callback: (result: Result<T, string>) => none): none
 }
 ```
 
@@ -158,6 +159,35 @@ class Promise<T> {
 async blocks. `get()` blocks until the queued work completes, relinquishing a
 runtime worker's CPU token during the wait, and reports thrown runtime failures
 as `Result<T, string>`.
+
+Promises have a single consumer across all aliases: choose `get()`,
+`onComplete(callback)`, or `takeFirstCompleted()`. The claim happens before
+waiting or when registering; reuse panics, even for `none` or failed results.
+
+Use `onComplete` for nonblocking terminal delivery:
+
+```doof
+promise := async { yield [1, 2, 3] }
+promise.onComplete((result) => {
+    values := result else error { println(error); return }
+    values.push(4)
+})
+```
+
+The callback takes the full `Result<T, string>`, returns `none`, and is always
+queued on its creation domain, even for an already completed promise. The
+method returns `none`; nested Results are not flattened. Owned mutable async
+results transfer to that domain. Registration retains the actor; retirement
+drains previously registered completions and rejects new registrations.
+Avoid blocking dependency cycles while retiring actors.
+
+Native command-line entrypoints deliver pending completions after normal
+main/script completion, preserving the exit code. Event channels and timers
+do not keep the process alive past `main` without an explicit event loop. UI/application hosts pump their own
+mailboxes. Callbacks created in temporary isolated async work cannot be used as
+completion receivers; create them in a persistent actor or root domain.
+Doof panics are not Failure values: an unhandled producer or terminal callback
+panic terminates through the runtime's process panic boundary.
 
 A mutable promise array can drive completion-order work:
 

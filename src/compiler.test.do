@@ -231,7 +231,7 @@ export function testLowersNativeEntryScriptBeforeOptionalMain(): none {
   Assert.stringContains(source, "int32_t& __doof_script_get_count()")
   Assert.stringContains(source, "void __doof_run_script(std::shared_ptr<std::vector<std::string>> arguments)")
   Assert.stringContains(source, "__doof_script_storage_count.emplace(count)")
-  Assert.stringContains(source, "__doof_run_script(arguments); return app_main_::doof_main(arguments)")
+  Assert.stringContains(source, "__doof_run_script(arguments); auto __doof_exit_code = app_main_::doof_main(arguments)")
 }
 
 export function testLowersTopLevelTryFailureToPanic(): none {

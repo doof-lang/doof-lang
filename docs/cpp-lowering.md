@@ -1,5 +1,29 @@
 # C++ Lowering Notes
 
+`Promise<T>.onComplete` resolves in `checker-resolution.do` to a single
+`(Result<T, string>) => none` callback and lowers as a direct runtime member
+call. `Promise<T>` aliases share a `detail::PromiseState<T>`: `get`, completion
+registration, and completion-order array extraction compete for one claim.
+Async, actor, and callback-post producers settle that state directly, moving
+the payload to its sole consumer without a polling or waiting task per callback.
+Native producers must use the shared completion state (or `submit_async`);
+the old constructors accepting `std::future`/`std::shared_future` are removed.
+
+Completion reservations retain the destination domain and application-loop
+keep-alive until invocation finishes. Actor retirement delays its final state
+transfer until reserved deliveries have entered and drained through its mailbox.
+Callbacks retain weak domain identities to validate completion registration
+without introducing actor/closure ownership cycles. Isolated jobs mark
+callbacks created without an owning domain so they cannot be registered for
+deferred delivery; their ordinary call, dispatch, and post behavior is unchanged.
+
+Native executable wrappers emitted by `emitter-module.do` pump the application
+mailbox after normal main/script return until pending completion reservations
+reach zero (`dispatch_pending_completion`), preserving the integer exit code.
+Other keep-alive sources do not extend the process past `main`.
+Host-owned app entrypoints leave mailbox pumping to the host. Terminal
+completion panics use `unhandled_panic` in the receiving domain.
+
 Callback instantiation keys and emitted names include recursively resolved
 parameter and return types, including nominal module identities in checked
 keys. Runtime callbacks share callable storage across copies, preserving

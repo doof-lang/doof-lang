@@ -70,3 +70,19 @@ export function testEditorCompletionBuiltinCatalogTracksResolver(): none {
     }
   }
 }
+
+export function testPromiseOnCompleteEditorCompletion(): none {
+  source := "function use(task: Promise<int>): none {\n task.\n}"
+  offset := source.indexOf("task.\n") + 5
+  index := createEditorIndex(analyzeEditor([SourceFile { path: "/main.do", source }], "/main.do"))
+  let items: EditorItem[] = []
+  Assert.isTrue(memberCompletions(index, "/main.do", offset, items))
+  let found = false
+  for item of items {
+    if item.label == "onComplete" {
+      found = true
+      Assert.stringContains(item.detail, "Result<int, string>")
+    }
+  }
+  Assert.isTrue(found)
+}

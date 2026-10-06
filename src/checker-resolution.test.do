@@ -12,6 +12,38 @@ function checked(source: string): CheckResult {
   return createChecker(analysis, "/main.do").check("/main.do")
 }
 
+export function testPromiseOnCompleteAcceptsTypedAndInferredCallbacks(): none {
+  for source of [
+    `function use(p: Promise<int>, callback: (result: Result<int, string>): none): none { p.onComplete(callback) }`,
+    `function use(p: Promise<int>): none { p.onComplete((result) => { case result { value: Success -> println(value.value), error: Failure -> println(error.error) } }) }`,
+    `function use(p: Promise<none>): none { p.onComplete((result) => { case result { _: Success -> println("done"), error: Failure -> println(error.error) } }) }`,
+    `function use(p: Promise<int[]>): none { p.onComplete((result) => { values := result!; values.push(42) }) }`,
+    `function use<T>(p: Promise<T>, callback: (result: Result<T, string>): none): none { p.onComplete(callback) }`,
+  ] {
+    result := checked(source)
+    for diagnostic of result.diagnostics { println(diagnostic.message) }
+    Assert.isFalse(hasErrorDiagnostics(result.diagnostics))
+  }
+}
+
+export function testPromiseOnCompleteRejectsInvalidCallbackSignatures(): none {
+  for source of [
+    `function use(p: Promise<int>): none { p.onComplete() }`,
+    `function use(p: Promise<int>): none { p.onComplete(42) }`,
+    `function use(p: Promise<int>, callback: (value: int): none): none { p.onComplete(callback) }`,
+    `function use(p: Promise<int>, callback: (result: Result<int, bool>): none): none { p.onComplete(callback) }`,
+    `function use(p: Promise<int>, callback: (result: Result<int, string>): int): none { p.onComplete(callback) }`,
+    `function use(p: Promise<int>, callback: (): none): none { p.onComplete(callback) }`,
+  ] {
+    result := checked(source)
+    Assert.isTrue(hasErrorDiagnostics(result.diagnostics))
+    for diagnostic of result.diagnostics {
+      Assert.equal(diagnostic.module, "/main.do")
+      Assert.isTrue(diagnostic.span.start.line > 0)
+    }
+  }
+}
+
 export function testInterfaceBoundMembers(): none {
   result := checked("interface Reader<V> { read(): V }\nclass IntReader { read(): int => 7 }\nfunction readOne<T: Reader<int>>(reader: T): int => reader.read()\nfunction main(): int => readOne(IntReader {})")
   for diagnostic of result.diagnostics { println(diagnostic.message) }

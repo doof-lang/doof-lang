@@ -11,6 +11,13 @@ export function runtimeChecks(root: string): Result<none, string> {
   binary := path(work, "scheduler")
   try command("c++", ["-std=c++17", "-O0", "-pthread", path(root, "runtime/doof_runtime.test.cpp"), "-o", binary])
   for mode of ["limit", "nested", "first-completed", "actor", "actor-waits", "failures", "application", "release", "priority", "configuration", "collections", "nulls", "serial-integers", "string-builder", "string-padding", "metrics"] { try command(binary, [mode]) }
+  completionBinary := path(work, "promise-completion")
+  try command("c++", ["-std=c++17", "-O0", "-pthread", path(root, "runtime/doof_promise.test.cpp"), "-o", completionBinary])
+  try command(completionBinary, [])
+  for mode of ["producer-panic", "callback-panic"] {
+    try result := execute(completionBinary, [mode])
+    try require(result.exitCode != 0 && text(result.stdout).contains("panic: " + mode.replace("-", " ")), "Completion panic was silently discarded: " + mode)
+  }
   observerBinary := path(work, "observer")
   try command("c++", ["-std=c++17", "-O0", "-pthread", "-DDOOF_OBSERVE=1", path(root, "runtime/doof_runtime.test.cpp"), "-o", observerBinary])
   environment: Map<string, string> := { DOOF_OBSERVE_NO_OPEN: "1", DOOF_OBSERVE_RETAIN_EVENTS: "2" }

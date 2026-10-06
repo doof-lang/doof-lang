@@ -220,6 +220,13 @@ the process-wide bounded scheduler, CPU-token release around blocking waits,
 and per-actor serial mailbox admission; compiler lowering does not select
 threads or reconstruct scheduling policy.
 
+`checker-resolution.do` supplies the `Promise.onComplete` callback signature.
+The runtime owns shared single-consumer promise state, producer notification,
+and completion reservations across actor retirement. `emitter-module.do` drains
+pending root completions after native command-line main/script completion; application
+entrypoints leave that loop to the host. `runtime/doof_promise.test.cpp` covers
+completion races, ownership transfer, consumption aliases, and domain lifetime.
+
 ## Packages, native builds, and command boundaries
 
 | File | Responsibility |
