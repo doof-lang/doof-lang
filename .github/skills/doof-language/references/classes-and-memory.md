@@ -272,7 +272,9 @@ class TreeNode {
 ```
 
 - Use `weak` to break reference cycles.
-- `weak` qualifies the whole type expression.
+- `weak` starts a type and qualifies all of it: `weak A | B` is `weak (A | B)`. `A | weak B` is an error.
+- `weak A | none`, `(weak A) | none`, and `weak (A | none)` are one type. Other weak/strong union mixes are errors.
+- Collections need grouping: `(weak A)[]` is an array of weak references, `Map<K, weak V>` holds weak values, `weak (A[])` weakly references the array. Bare `weak A[]` or `weak Map<...>` is rejected as ambiguous.
 - Accessing a weak reference yields `Result<T, WeakReferenceError>`.
 - A `case` weak subject is read once: `Success` retains a live target and `Failure` reports expiration. An absent nullable weak reference is `Success(none)`.
 - `weak` is class-only; structs are value types and cannot be weak targets.

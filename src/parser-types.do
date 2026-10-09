@@ -2,37 +2,60 @@
 
 import type { Parser } from "./parser"
 import { TokenType } from "./lexer"
-import { AstFunctionType, ArrayType, FunctionTypeParam, NamedType, SourceSpan, UnionType, WeakType } from "./ast"
+import { AstFunctionType, ArrayType, AstLocation, FunctionTypeParam, NamedType, SourceSpan, UnionType, WeakType } from "./ast"
 import type { TypeAnnotation } from "./ast"
 
-export function parseOptionalType(parser: Parser): TypeAnnotation | none {
+// A `weak name: T` field qualifies its whole type, so `T` follows the same
+// rules as the operand of a `weak` type prefix.
+export function parseOptionalType(parser: Parser, weakField: bool = false): TypeAnnotation | none {
   if !parser.match(TokenType.Colon) { return none }
+  if weakField { return parseUnionMembers(parser, true) }
   return parseTypeAnnotation(parser)
 }
 
+// `weak` prefixes a complete type and covers all of it: `weak A | none` is
+// `weak (A | none)`. It cannot follow `|`, and a collection directly under it
+// must be parenthesized to say which side is weak.
 export function parseTypeAnnotation(parser: Parser): TypeAnnotation {
-  first := parseTypeMember(parser)
+  start := parser.location()
+  if !parser.match(TokenType.Weak) { return parseUnionMembers(parser, false) }
+  if parser.check(TokenType.Weak) { parser.fail("'weak' qualifies a type at most once") }
+  inner := parseUnionMembers(parser, true)
+  return WeakType { type_: inner, span: SourceSpan { start, end: inner.span.end } }
+}
+
+function parseUnionMembers(parser: Parser, weakOperand: bool): TypeAnnotation {
+  let operandStart: AstLocation | none = none
+  if weakOperand { operandStart = parser.location() }
+  first := parseTypeMember(parser, operandStart)
   let types: TypeAnnotation[] = [first]
-  while parser.match(TokenType.Pipe) { types.push(parseTypeMember(parser)) }
+  while parser.match(TokenType.Pipe) {
+    if parser.check(TokenType.Weak) {
+      parser.fail("'weak' must start the type and qualifies the whole union, as in 'weak (A | B)'")
+    }
+    types.push(parseTypeMember(parser, operandStart))
+  }
   let result: TypeAnnotation = first
   if types.length > 1 { result = UnionType { kind: "union-type", types, span: SourceSpan { start: first.span.start, end: types[types.length - 1].span.end } } }
   return result
 }
 
-function parseTypeMember(parser: Parser): TypeAnnotation {
-  start := parser.location()
-  if parser.match(TokenType.Weak) {
-    inner := parseTypeAnnotation(parser)
-    return WeakType { type_: inner, span: SourceSpan { start, end: inner.span.end } }
+function parseTypeMember(parser: Parser, weakOperandStart: AstLocation | none): TypeAnnotation {
+  memberStart := parser.location()
+  parenthesized := parser.check(TokenType.LeftParen)
+  if parser.check(TokenType.Readonly) && parser.peek(1).kind == TokenType.Weak {
+    parser.fail("'readonly' cannot qualify a weak reference; write 'readonly (weak A)[]' for a readonly array of weak references")
   }
   let readonlyPrefix = parser.match(TokenType.Readonly)
   let result = parsePrimaryType(parser)
+  let arraySuffix = false
   while parser.check(TokenType.LeftBracket) && parser.peek(1).kind == TokenType.RightBracket {
     start := result.span.start
     parser.advance()
     parser.advance()
     result = ArrayType { kind: "array-type", elementType: result, readonly_: readonlyPrefix, span: SourceSpan { start, end: parser.previousEnd() } }
     readonlyPrefix = false
+    arraySuffix = true
   }
   if readonlyPrefix {
     case result {
@@ -49,7 +72,29 @@ function parseTypeMember(parser: Parser): TypeAnnotation {
     }
   }
   if readonlyPrefix { parser.fail("Unexpected readonly type modifier; expected an array, Map<K, V>, or Set<T> type") }
+  if weakOperandStart != none && (arraySuffix || !parenthesized) { rejectBareWeakCollection(parser, result, weakOperandStart!, memberStart) }
   return result
+}
+
+// `weak A[]` reads as either an array of weak references or a weak reference
+// to an array, so a collection directly under `weak` must be parenthesized.
+function rejectBareWeakCollection(parser: Parser, member: TypeAnnotation, operandStart: AstLocation, start: AstLocation): none {
+  text := parser.source.substring(operandStart.offset, member.span.end.offset)
+  case member {
+    array: ArrayType -> {
+      element := parser.source.substring(array.elementType.span.start.offset, array.elementType.span.end.offset)
+      prefix := if array.readonly_ then "readonly " else ""
+      parser.failAt(start, "'weak " + text + "' is ambiguous; write '" + prefix + "(weak " + element + ")[]' for an array of weak references or 'weak (" + text + ")' for a weak reference to the array")
+    }
+    named: NamedType -> {
+      if named.name == "Map" || named.name == "ReadonlyMap" {
+        parser.failAt(start, "'weak " + text + "' is ambiguous; write 'Map<K, weak V>' for weak values or 'weak (" + text + ")' for a weak reference to the map")
+      } else if named.name == "Set" || named.name == "ReadonlySet" {
+        parser.failAt(start, "'weak " + text + "' is ambiguous; write 'weak (" + text + ")' for a weak reference to the set")
+      }
+    }
+    _ -> { }
+  }
 }
 
 function parsePrimaryType(parser: Parser): TypeAnnotation {

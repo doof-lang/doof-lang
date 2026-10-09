@@ -138,9 +138,49 @@ export function unionType(types: ResolvedType[]): ResolvedType {
     }
   }
   members = canonicalResultArms(members)
+  optionalWeak := optionalWeakReference(members)
+  if optionalWeak != none { return optionalWeak! }
   if members.length == 0 { return neverType() }
   if members.length == 1 { return members[0] }
   return UnionResolvedType { types: members }
+}
+
+// `(weak T) | none` is exactly `weak (T | none)`: both are absent, live, or
+// expired. Absence always lives inside the weak reference.
+function optionalWeakReference(members: ResolvedType[]): ResolvedType | none {
+  let weakMember: WeakResolvedType | none = none
+  let hasNone = false
+  for member of members {
+    case member {
+      weak_: WeakResolvedType -> {
+        if weakMember != none { return none }
+        weakMember = weak_
+      }
+      _: NoneType -> { hasNone = true }
+      _ -> { return none }
+    }
+  }
+  if weakMember == none || !hasNone { return none }
+  return weakType(unionType([weakMember!.inner, noneType()]))
+}
+
+// A weak reference qualifies a whole union; it cannot sit beside strong arms.
+export function mixedWeakUnionMessage(type_: ResolvedType): string | none {
+  case type_ {
+    union_: UnionResolvedType -> {
+      let inner: ResolvedType[] = []
+      let mixed = false
+      for member of union_.types {
+        case member {
+          weak_: WeakResolvedType -> { mixed = true; inner.push(weak_.inner) }
+          _ -> { inner.push(member) }
+        }
+      }
+      if !mixed { return none }
+      return "Union \"" + typeName(type_) + "\" mixes weak and strong references; 'weak' qualifies the whole union, as in \"" + typeName(weakType(unionType(inner))) + "\""
+    }
+    _ -> { return none }
+  }
 }
 
 // `Success<T> | Failure<E>` is exactly `Result<T, E>`, in either order.
@@ -350,7 +390,7 @@ export function typeName(resolvedType: ResolvedType): string {
       return result + ">"
     }
     function_: FunctionType -> { return "function" }
-    array: ArrayResolvedType -> { return (if array.readonly_ then "readonly " else "") + typeName(array.elementType) + "[]" }
+    array: ArrayResolvedType -> { return (if array.readonly_ then "readonly " else "") + groupedTypeName(array.elementType) + "[]" }
     map: MapResolvedType -> { return (if map.readonly_ then "readonly " else "") + "Map<" + typeName(map.keyType) + ", " + typeName(map.valueType) + ">" }
     set: SetResolvedType -> { return (if set.readonly_ then "ReadonlySet" else "Set") + "<" + typeName(set.elementType) + ">" }
     stream: StreamResolvedType -> { return "Stream<" + typeName(stream.elementType) + ">" }
@@ -359,7 +399,11 @@ export function typeName(resolvedType: ResolvedType): string {
     result: ResultResolvedType -> { return "Result<" + typeName(result.valueType) + ", " + typeName(result.errorType) + ">" }
     success: SuccessResolvedType -> { return "Success<" + typeName(success.valueType) + ">" }
     failure: FailureResolvedType -> { return "Failure<" + typeName(failure.errorType) + ">" }
-    weak_: WeakResolvedType -> { return "weak " + typeName(weak_.inner) }
+    weak_: WeakResolvedType -> {
+      // A bare collection under `weak` is ambiguous source; spell the parsed form.
+      if hasCollectionArm(weak_.inner) { return "weak (" + typeName(weak_.inner) + ")" }
+      return "weak " + typeName(weak_.inner)
+    }
     actor: ActorType -> { return "Actor<" + typeName(actor.innerClass) + ">" }
     promise: PromiseType -> { return "Promise<" + typeName(promise.valueType) + ">" }
     tuple: TupleResolvedType -> {
@@ -374,7 +418,7 @@ export function typeName(resolvedType: ResolvedType): string {
       let result = ""
       for i of 0..<union.types.length {
         if i > 0 { result = result + " | " }
-        result = result + typeName(union.types[i])
+        result = result + groupedUnionArmName(union.types[i])
       }
       return result
     }
@@ -386,6 +430,36 @@ export function typeName(resolvedType: ResolvedType): string {
     reflection: MethodReflectionResolvedType -> { return "MethodReflection<" + typeName(reflection.classType) + ">" }
   }
   return "unknown"
+}
+
+function hasCollectionArm(type_: ResolvedType): bool {
+  case type_ {
+    _: ArrayResolvedType -> { return true }
+    _: MapResolvedType -> { return true }
+    _: SetResolvedType -> { return true }
+    union_: UnionResolvedType -> {
+      for member of union_.types { if hasCollectionArm(member) { return true } }
+    }
+    _ -> { }
+  }
+  return false
+}
+
+// A weak arm groups so a mixed union never reads as one weak union.
+function groupedUnionArmName(type_: ResolvedType): string {
+  case type_ {
+    _: WeakResolvedType -> { return "(" + typeName(type_) + ")" }
+    _ -> { return typeName(type_) }
+  }
+}
+
+// Array elements bind tighter than `|` and `weak`, so those need grouping.
+function groupedTypeName(type_: ResolvedType): string {
+  case type_ {
+    _: UnionResolvedType -> { return "(" + typeName(type_) + ")" }
+    _: WeakResolvedType -> { return "(" + typeName(type_) + ")" }
+    _ -> { return typeName(type_) }
+  }
 }
 
 /**
@@ -664,7 +738,8 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
     }
     valueWeak: WeakResolvedType -> {
       case target {
-        targetWeak: WeakResolvedType -> { return sameType(valueWeak.inner, targetWeak.inner) }
+        // Absence widens: `weak T` fits an optional `weak (T | none)` slot.
+        targetWeak: WeakResolvedType -> { return sameType(valueWeak.inner, targetWeak.inner) || sameType(unionType([valueWeak.inner, noneType()]), targetWeak.inner) }
         _ -> { }
       }
     }

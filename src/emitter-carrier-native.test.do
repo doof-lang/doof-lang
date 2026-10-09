@@ -60,6 +60,10 @@ export function testPromiseOnCompleteNative(): none {
   runNativeFixture("promise-on-complete", "onComplete delivered", 7)
 }
 
+export function testWeakPrecedenceNative(): none {
+  runNativeFixture("weak-precedence", "weak precedence ok")
+}
+
 function runNativeFixture(fixture: string, expectedOutput: string = "", expectedExitCode: int = 0): none {
   root := join([tempDirectory(), "doof-native-" + fixture])
   clearNativeMatrix(root)

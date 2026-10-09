@@ -214,11 +214,15 @@ export class Parser {
 
   fail(message: string): none {
     token := current()
+    failAt(AstLocation { line: token.line, column: token.column, offset: token.offset }, message)
+  }
+
+  failAt(location: AstLocation, message: string): none {
     errorMessage = message
-    errorLine = token.line
-    errorColumn = token.column
-    errorOffset = token.offset
-    panic("Parse error at " + string(token.line) + ":" + string(token.column) + ": " + message)
+    errorLine = location.line
+    errorColumn = location.column
+    errorOffset = location.offset
+    panic("Parse error at " + string(location.line) + ":" + string(location.column) + ": " + message)
   }
 
   private expectedLabel(kind: TokenType): string {
@@ -300,7 +304,7 @@ export class Parser {
     return parseDestructuringImpl(this, shape, bindingKind, separator)
   }
 
-  parseOptionalType(): TypeAnnotation | none { return parseOptionalTypeImpl(this) }
+  parseOptionalType(weakField: bool = false): TypeAnnotation | none { return parseOptionalTypeImpl(this, weakField) }
   parseTypeAnnotation(): TypeAnnotation { return parseTypeAnnotationImpl(this) }
 
   parseExpression(): Expression { return parseExpressionImpl(this) }

@@ -1711,7 +1711,7 @@ Doof uses reference counting for memory management (see [Classes and Interfaces]
 
 ### Syntax
 
-`weak` is a **reference qualifier**, not a type modifier. It applies to the entire type expression:
+`weak` is a **reference qualifier**, not a type modifier. It prefixes a complete type expression and covers all of it:
 
 ```doof
 class TreeNode {
@@ -1727,6 +1727,31 @@ class Observer {
     target: weak Widget | Panel  // weak (Widget | Panel)
 }
 ```
+
+### Precedence
+
+`weak` binds more loosely than `|` and `[]`, and it may appear only where a complete type starts: an annotation, a return type, a type argument, or inside parentheses. A field written `weak name: T` qualifies `T` under the same rules.
+
+| Spelling | Meaning |
+|----------|---------|
+| `weak A \| B` | Weak reference to `A \| B` |
+| `weak A \| none`, `(weak A) \| none`, `weak (A \| none)` | One type: an optional weak reference, displayed `weak A \| none` |
+| `(weak A)[]` | Array of weak references |
+| `Map<K, weak V>` | Map whose values are weak references |
+| `weak (A[])` | Weak reference to an array |
+| `readonly (weak A)[]` | Readonly array of weak references |
+
+These spellings are errors:
+
+| Spelling | Diagnostic |
+|----------|------------|
+| `A \| weak B` | `weak` must start the type; write `weak (A \| B)` |
+| `weak A[]`, `weak Map<K, V>`, `weak Set<T>` | Ambiguous; write `(weak A)[]` / `Map<K, weak V>` for weak elements, or `weak (A[])` for a weak reference to the collection |
+| `weak A \| B[]` | Ambiguous for the same reason; group the array arm |
+| `A \| (weak B)`, `(weak A) \| (weak B)` | A union may not mix weak and strong arms; write `weak (A \| B)` |
+| `weak weak A`, `readonly weak A[]` | `weak` qualifies a type once and cannot be qualified by `readonly` |
+
+Absence never sits beside a weak arm: `(weak A) | none` is normalized to `weak (A | none)`, including when the weak arm comes from a type alias.
 
 ### Access Semantics
 

@@ -181,3 +181,35 @@ export function testReportsLocalSetElementAnnotationOnce(): none {
   for diagnostic of checked.diagnostics { if diagnostic.message.contains("Set element type \"float\"") { count += 1 } }
   Assert.equal(count, 2)
 }
+
+function checkedMessages(source: string): string[] {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  let messages: string[] = []
+  for diagnostic of analysis.diagnostics { messages.push(diagnostic.message) }
+  checked := createChecker(analysis, "/main.do").check("/main.do")
+  for diagnostic of checked.diagnostics { messages.push(diagnostic.message) }
+  return messages
+}
+
+export function testOptionalWeakSpellingsAreOneType(): none {
+  messages := checkedMessages("class Node { x: int = 0 }\nclass Holder { let a: weak Node | none = none\nlet b: (weak Node) | none = none\nlet c: weak (Node | none) = none\nlet weak d: Node | none = none }\nfunction main(): none { h := Holder {}\nh.a = h.b\nh.b = h.c\nh.c = h.a\nh.d = h.b\nprintln(h.b?.x) }")
+  for message of messages { println(message) }
+  Assert.equal(messages.length, 0)
+}
+
+export function testRejectsMixedWeakUnionsFromGroupsAndAliases(): none {
+  grouped := checkedMessages("class Node {}\nclass Other {}\nfunction use(value: Other | (weak Node) | none): none {}")
+  Assert.equal(grouped.length, 1)
+  Assert.equal(grouped[0], "Union \"Other | (weak Node) | none\" mixes weak and strong references; 'weak' qualifies the whole union, as in \"weak Other | Node | none\"")
+  aliased := checkedMessages("class Node {}\ntype WeakNode = weak Node\nfunction use(value: WeakNode | int): none {}")
+  Assert.equal(aliased.length, 1)
+  Assert.stringContains(aliased[0], "mixes weak and strong references")
+  Assert.equal(checkedMessages("class Node {}\ntype WeakNode = weak Node\nfunction use(value: WeakNode | none): none {}").length, 0)
+}
+
+export function testOptionalWeakReferencesCompareWithNone(): none {
+  Assert.equal(checkedMessages("class Node {}\nfunction absent(value: weak Node | none): bool => value == none\nfunction grouped(value: (weak Node) | none): bool => value != none").length, 0)
+  messages := checkedMessages("class Node {}\nfunction bad(value: weak Node): bool => value == none")
+  Assert.equal(messages.length, 1)
+  Assert.stringContains(messages[0], "Operator '==' is not defined for weak Node and none")
+}

@@ -4,14 +4,14 @@ import { Parser, parse } from "./parser"
 import { Lexer, TokenType } from "./lexer"
 import isolated function codePointToUtf8(value: int): string from "doof_runtime.hpp" as doof::char_to_utf8
 import {
-  IntLiteral, LongLiteral, DoubleLiteral, BinaryExpression, CallExpression, Identifier,
+  ArrayType, IntLiteral, LongLiteral, DoubleLiteral, BinaryExpression, CallExpression, Identifier,
   MemberExpression, IndexExpression, UnaryExpression, FunctionDeclaration, ClassDeclaration, ArrayLiteral, Block,
   IfStatement, ExpressionStatement, ConstDeclaration, ReadonlyDeclaration, ImmutableBinding, LetDeclaration, TryStatement,
   StringLiteral, CharLiteral, LambdaExpression, TupleLiteral, AsyncExpression, RetireExpression, AsExpression, ConstructExpression,
   ActorCreationExpression, CaseExpression, EnumDeclaration, InterfaceDeclaration, NamedType, NoneLiteral, ObjectLiteral, RangePattern, TypeAliasDeclaration, UnionType, ValuePattern, YieldStatement,
   MockImportDirective, WeakType, CatchExpression, YieldBlockExpression, YieldBlockAssignmentStatement, DestructuringStatement, DotShorthand, ForOfStatement, ForStatement, WhileStatement, BreakStatement, ContinueStatement, WithStatement,
 } from "./ast"
-import type { Statement, Expression } from "./ast"
+import type { Statement, Expression, TypeAnnotation } from "./ast"
 
 function first(source: string): Statement {
   return parse(source).statements[0]
@@ -204,6 +204,58 @@ export function testParsesWeakFieldAndTypeQualifiers(): none {
     }
     _ -> { panic("expected class declaration") }
   }
+}
+
+export function testWeakPrefixesCompleteTypesAndGroupsCollections(): none {
+  program := parse("class Node { a: weak Node | none\nb: (weak Node)[]\nc: weak (Node[])\nd: Map<string, weak Node>\ne: (weak Node) | none\nf: weak (Node | none)\nweak g: Node | none }")
+  case program.statements[0] {
+    class_: ClassDeclaration -> {
+      Assert.equal(weakOperandKind(class_.fields[0].type_!), "union-type")
+      case class_.fields[1].type_! {
+        array: ArrayType -> { Assert.equal(array.elementType.kind, "weak-type") }
+        _ -> { panic("expected an array of weak references") }
+      }
+      Assert.equal(weakOperandKind(class_.fields[2].type_!), "array-type")
+      case class_.fields[3].type_! {
+        named: NamedType -> { Assert.equal(named.typeArgs[1].kind, "weak-type") }
+        _ -> { panic("expected a map with weak values") }
+      }
+      case class_.fields[4].type_! {
+        union_: UnionType -> { Assert.equal(union_.types[0].kind, "weak-type") }
+        _ -> { panic("expected a parenthesized weak union arm") }
+      }
+      Assert.equal(weakOperandKind(class_.fields[5].type_!), "union-type")
+      Assert.equal(class_.fields[6].weak_, true)
+    }
+    _ -> { panic("expected class declaration") }
+  }
+}
+
+function weakOperandKind(type_: TypeAnnotation): string {
+  case type_ {
+    weak_: WeakType -> { return weak_.type_.kind }
+    _ -> { panic("expected weak type") }
+  }
+  return ""
+}
+
+export function testRejectsWeakUnionArmsAndBareWeakCollections(): none {
+  assertFieldParseError("class Bad { f: A | weak B }", "'weak' must start the type and qualifies the whole union, as in 'weak (A | B)'")
+  assertFieldParseError("class Bad { f: weak A | weak B }", "'weak' must start the type and qualifies the whole union, as in 'weak (A | B)'")
+  assertFieldParseError("class Bad { f: weak weak A }", "'weak' qualifies a type at most once")
+  assertFieldParseError("class Bad { f: readonly weak A[] }", "'readonly' cannot qualify a weak reference; write 'readonly (weak A)[]' for a readonly array of weak references")
+  assertFieldParseError("class Bad { f: weak A[] }", "'weak A[]' is ambiguous; write '(weak A)[]' for an array of weak references or 'weak (A[])' for a weak reference to the array")
+  assertFieldParseError("class Bad { weak f: A[] }", "'weak A[]' is ambiguous; write '(weak A)[]' for an array of weak references or 'weak (A[])' for a weak reference to the array")
+  assertFieldParseError("class Bad { f: weak (A)[] }", "'weak (A)[]' is ambiguous; write '(weak A)[]' for an array of weak references or 'weak ((A)[])' for a weak reference to the array")
+  assertFieldParseError("class Bad { f: weak readonly A[] }", "'weak readonly A[]' is ambiguous; write 'readonly (weak A)[]' for an array of weak references or 'weak (readonly A[])' for a weak reference to the array")
+  assertFieldParseError("class Bad { f: weak A | B[] }", "'weak A | B[]' is ambiguous; write '(weak B)[]' for an array of weak references or 'weak (A | B[])' for a weak reference to the array")
+  assertFieldParseError("class Bad { f: weak Map<string, A> }", "'weak Map<string, A>' is ambiguous; write 'Map<K, weak V>' for weak values or 'weak (Map<string, A>)' for a weak reference to the map")
+  assertFieldParseError("class Bad { f: weak Set<int> }", "'weak Set<int>' is ambiguous; write 'weak (Set<int>)' for a weak reference to the set")
+
+  parser := Parser { source: "class Bad { f: weak A | B[] }" }
+  parsed := catchPanic(=> parser.parse())
+  case parsed { _: Failure<string> -> { } _ -> { panic("expected parse failure") } }
+  Assert.equal(parser.errorColumn, 25)
 }
 
 export function testParsesFixedConstClassFields(): none {

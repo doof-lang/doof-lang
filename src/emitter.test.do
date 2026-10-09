@@ -201,7 +201,7 @@ export function testEmitsDependencyFirstInitializationCallsInsideActorScope(): n
 }
 
 export function testEmitsWeakFieldsAsWeakPointers(): none {
-  result := emit("class Node { weak parent: Node\nancestor: weak Node }\nclass Registry { weak nodes: Node[]\nweak optional: Node | none = none }")
+  result := emit("class Node { weak parent: Node\nancestor: weak Node }\nclass Registry { weak nodes: (Node[])\nweak optional: Node | none = none }")
   Assert.equal(result.header.contains("std::weak_ptr<Node> parent"), true)
   Assert.equal(result.header.contains("std::weak_ptr<Node> ancestor"), true)
   Assert.equal(result.header.contains("Node(std::weak_ptr<Node> parent, std::weak_ptr<Node> ancestor)"), true)

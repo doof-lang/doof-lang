@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import { FunctionParamType, Symbol } from "./semantic"
-import { applyDeepReadonly, interfaceBoundReceiver, arrayType, classType, displayTypeName, failureType, functionType, isAssignable, mapType, noneType, primitive, promiseType, resultArmExpectation, resultType, sameType, streamType, substituteTypeParams, successType, typeParameter, unionMutabilityConflict, unionType, weakType } from "./checker-types"
+import { applyDeepReadonly, interfaceBoundReceiver, arrayType, classType, displayTypeName, failureType, functionType, isAssignable, mapType, noneType, primitive, promiseType, resultArmExpectation, resultType, sameType, streamType, substituteTypeParams, successType, typeName, typeParameter, mixedWeakUnionMessage, unionMutabilityConflict, unionType, weakType } from "./checker-types"
 
 export function testResultArmAssignabilityUsesOnlyItsPayloadChannel(): none {
   success := successType(primitive("int"))
@@ -229,4 +229,46 @@ export function testResultArmExpectationsComeFromResultsAndMatchingArms(): none 
   Assert.isTrue(sameType(nullable.payload!, primitive("int")))
   ambiguous := resultArmExpectation("Success", unionType([result, resultType(primitive("bool"), primitive("string"))]))
   Assert.equal(ambiguous.payload, none)
+}
+
+export function testOptionalWeakUnionsAreWeakOptionalReferences(): none {
+  node := classType("Node", symbol("Node", "/main.do"))
+  canonical := weakType(unionType([node, noneType()]))
+  Assert.isTrue(sameType(unionType([weakType(node), noneType()]), canonical))
+  Assert.isTrue(sameType(unionType([noneType(), weakType(node)]), canonical))
+  Assert.isTrue(sameType(unionType([canonical, noneType()]), canonical))
+  Assert.equal(typeName(canonical), "weak Node | none")
+  Assert.equal(mixedWeakUnionMessage(canonical), none)
+}
+
+export function testMixedWeakUnionsStayDistinctAndReportTheWholeUnionSpelling(): none {
+  node := classType("Node", symbol("Node", "/main.do"))
+  other := classType("Other", symbol("Other", "/main.do"))
+  mixed := unionType([other, weakType(node), noneType()])
+  Assert.equal(typeName(mixed), "Other | (weak Node) | none")
+  Assert.equal(mixedWeakUnionMessage(mixed)!, "Union \"Other | (weak Node) | none\" mixes weak and strong references; 'weak' qualifies the whole union, as in \"weak Other | Node | none\"")
+  twoWeak := unionType([weakType(node), weakType(other)])
+  Assert.stringContains(mixedWeakUnionMessage(twoWeak)!, "as in \"weak Node | Other\"")
+  Assert.equal(mixedWeakUnionMessage(unionType([node, noneType()])), none)
+}
+
+export function testTypeNamesGroupWeakAndUnionCollectionOperands(): none {
+  node := classType("Node", symbol("Node", "/main.do"))
+  Assert.equal(typeName(arrayType(weakType(node))), "(weak Node)[]")
+  Assert.equal(typeName(arrayType(weakType(node), true)), "readonly (weak Node)[]")
+  Assert.equal(typeName(arrayType(unionType([node, noneType()]))), "(Node | none)[]")
+  Assert.equal(typeName(weakType(arrayType(node))), "weak (Node[])")
+  Assert.equal(typeName(weakType(mapType(primitive("string"), node))), "weak (Map<string, Node>)")
+  Assert.equal(typeName(weakType(unionType([arrayType(node), noneType()]))), "weak (Node[] | none)")
+  Assert.equal(typeName(mapType(primitive("string"), weakType(node))), "Map<string, weak Node>")
+}
+
+export function testWeakReferencesWidenIntoOptionalWeakSlots(): none {
+  node := classType("Node", symbol("Node", "/main.do"))
+  other := classType("Other", symbol("Other", "/main.do"))
+  optional := unionType([weakType(node), noneType()])
+  Assert.isTrue(isAssignable(weakType(node), optional))
+  Assert.isTrue(isAssignable(optional, optional))
+  Assert.isFalse(isAssignable(optional, weakType(node)))
+  Assert.isFalse(isAssignable(weakType(other), optional))
 }

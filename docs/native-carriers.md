@@ -33,7 +33,7 @@ bindings and types, specializes generics, then chooses a native carrier.
 | `none` return or Result/Promise payload | `void` | no returned/payload value |
 | Class, array, map, or set plus `none` | shared pointer | null pointer |
 | Primitive, enum, or struct plus `none` | `std::optional<T>` | empty optional |
-| Weak pointer plus `none` | weak pointer | empty ownership identity |
+| Optional weak reference `weak (T \| none)`; `(weak T) \| none` normalizes to it | `std::optional<std::weak_ptr<T>>` | empty optional |
 | Tuple, callback, Result, or multi-arm union plus `none` | variant | monostate arm |
 | `SerialValue` | JSON storage | JSON null |
 

@@ -11,7 +11,7 @@ class QuarkWeakObserver { weak item: QuarkWeakItem }
 class QuarkWeakOptional { weak item: QuarkWeakItem | none = none }
 class QuarkWeakUnion { weak item: QuarkWeakItem | QuarkWeakOther }
 class QuarkWeakOptionalUnion { weak item: QuarkWeakItem | QuarkWeakOther | none = none }
-class QuarkWeakArray { weak items: int[] }
+class QuarkWeakArray { weak items: (int[]) }
 class QuarkWeakTracked {
   releases: int[]
   destructor { releases[0] += 1 }

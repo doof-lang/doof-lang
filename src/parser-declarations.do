@@ -347,7 +347,7 @@ function parseClassField(parser: Parser, static_: bool, private_: bool): ClassFi
   if parser.check(TokenType.Colon) && startsFieldLiteral(parser, 1) && !(modified && parser.peek(1).kind == TokenType.Identifier) {
     return parseLiteralValuedField(parser, start, names, descriptions, static_, private_, modified)
   }
-  typeValue := parser.parseOptionalType()
+  typeValue := parser.parseOptionalType(weak_)
   let defaultValue: Expression | none = none
   if parser.match(TokenType.Equal) { defaultValue = parser.parseExpression() }
   if const_ && defaultValue == none { parser.fail("Const class fields require a fixed value") }

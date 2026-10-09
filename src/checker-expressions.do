@@ -1154,6 +1154,8 @@ function validateNoneComparison(state: CheckerState, operator: string, left: Res
 function admitsNone(type_: ResolvedType): bool {
   case type_ {
     _: NoneType -> { return true }
+    // An optional weak reference compares with none on absence, not expiry.
+    weak_: WeakResolvedType -> { return admitsNone(weak_.inner) }
     _: UnknownType -> { return true }
     _: SerialValueResolvedType -> { return true }
     union_: UnionResolvedType -> {

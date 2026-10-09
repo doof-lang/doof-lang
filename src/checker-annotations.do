@@ -4,7 +4,7 @@ import { memberType } from "./checker-resolution"
 import { ClassType, FunctionParamType, ResolvedType, Scope, Symbol, TypeParameterType, ResolvedTypeConstraint } from "./semantic"
 import { AnalysisResult, ModuleInfo, unknownTypeMessage } from "./analyzer"
 import { ArrayType, ClassDeclaration, AstFunctionType, InterfaceDeclaration, NamedType, SourceSpan, TypeAliasDeclaration, TypeAnnotation, UnionType, WeakType, TypeParameterConstraint } from "./ast"
-import { actorType, arrayType, classType, enumType, failureType, functionType, successType, interfaceType, isSupportedHashCollectionType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType, neverType, noneType, primitive, promiseType, rangeType, tupleType, typeName, unionMutabilityConflict, unionType, isWeakReferenceTarget, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType } from "./checker-types"
+import { actorType, arrayType, classType, enumType, failureType, functionType, successType, interfaceType, isSupportedHashCollectionType, jsonObjectType, mixedWeakUnionMessage, jsonValueType, mapType, resultType, setType, streamType, neverType, noneType, primitive, promiseType, rangeType, tupleType, typeName, unionMutabilityConflict, unionType, isWeakReferenceTarget, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType } from "./checker-types"
 
 import { CheckerState } from "./checker-state"
 import { isNumericConstraint, satisfiesNumericConstraint } from "./checker-numeric"
@@ -232,7 +232,10 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
     union: UnionType -> {
       let members: ResolvedType[] = []
       for item of union.types { members.push(resolveAnnotationType(resolution, item, module, scope, validateConstraints)) }
-      return finishAnnotation(resolution, annotation, unionType(members))
+      resolved := unionType(members)
+      mixedWeak := mixedWeakUnionMessage(resolved)
+      if resolution.commit && mixedWeak != none { typeError(state, mixedWeak!, union.span) }
+      return finishAnnotation(resolution, annotation, resolved)
     }
     function_: AstFunctionType -> {
       let params: FunctionParamType[] = []

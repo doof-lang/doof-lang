@@ -9,7 +9,7 @@ function stored<V, E>(result: Result<V, E>): V => case result {
   s: Success -> s.value,
   _: Failure -> panic("missing key"),
 }
-function widen(value: (weak Item) | none): (weak Item) | string | none => value
+function widen(value: (weak Item) | none): weak Item | none => value
 function expired(): weak Item { item := Item {}
 return item }
 function main(): int {

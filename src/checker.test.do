@@ -729,7 +729,7 @@ export function testDoesNotExposeWeakFieldsAsStrongValues(): none {
   Assert.isTrue(result.diagnostics.length > 0)
   Assert.stringContains(result.diagnostics[0].message, "Cannot return weak Node from function returning Node")
 
-  construction := checked("class Node {}\nclass Link { weak parent: Node }\nclass Registry { weak nodes: Node[]\nweak optional: Node | none = none }\nfunction main(): none { parent := Node {}\nlink := Link(parent)\nregistry := Registry([parent]) }")
+  construction := checked("class Node {}\nclass Link { weak parent: Node }\nclass Registry { weak nodes: (Node[])\nweak optional: Node | none = none }\nfunction main(): none { parent := Node {}\nlink := Link(parent)\nregistry := Registry([parent]) }")
   Assert.equal(construction.diagnostics.length, 0)
 }
 

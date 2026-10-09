@@ -1117,6 +1117,7 @@ class Observer {
 - A `weak` reference does not prevent the referenced object from being destroyed
 - Accessing a `weak` reference yields `Result<T, WeakReferenceError>` — the referent may have been collected
 - `weak` qualifies the binding, not the type — `weak Foo | Bar` means a weak reference to a value of type `Foo | Bar`
+- Collections choose their weak side with grouping: `(weak Foo)[]` is an array of weak references, `Map<K, weak Foo>` holds weak values, and `weak (Foo[])` is a weak reference to the array; bare `weak Foo[]` is ambiguous and rejected (see [Weak Reference Precedence](02-type-system.md#precedence))
 - Use `?.` and `!.` operators for lightweight access (same syntax as Result/none handling)
 
 ```doof
@@ -1128,7 +1129,7 @@ class Node {
 
 // Observer pattern — observers shouldn't keep subjects alive
 class EventEmitter {
-    listeners: weak EventListener[] = []
+    listeners: (weak EventListener)[] = []  // Array of weak references
     
     notify(event: Event): none {
         for listener of listeners {
