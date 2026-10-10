@@ -255,7 +255,7 @@ the driver.
 Other maintained inputs:
 
 - `runtime/doof_runtime.hpp` — canonical generated-program runtime
-- `runtime/doof_wasm_test_runner_apple.swift` — bounded JavaScriptCore/WASI host for Wasm test commands
+- `runtime/doof_wasm_test_runner_apple.swift` — bounded JavaScriptCore/WASI host for Wasm test commands, including Apple Security-backed randomness
 - `tools/stdlib-bundle.do` — deterministic curated stdlib bundle builder and strict release verifier
 - `build/doof-stdlib.tar` — generated compiler resource, published beside `doof`
 - `tests/release-fixtures/` — native and platform acceptance packages

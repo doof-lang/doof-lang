@@ -55,7 +55,10 @@ builds the generated harness as a standalone Emscripten Wasm command. Each test
 runs in a fresh process, JavaScriptCore context, and WebAssembly instance, so
 the native runner's module-initialization and failure-isolation contract is
 preserved. The bundled Apple host implements command arguments, an empty
-environment, standard output/error, and process exit. Guest filesystem access
+environment, standard output/error, process exit, and cryptographically secure
+WASI `random_get` using Apple Security. Random requests validate guest memory
+bounds and transfer bytes in bounded chunks; invalid addresses and RNG failures
+return WASI errors. Guest filesystem access
 is not yet supported. This path requires `em++` and `xcrun swiftc` on the host.
 
 Test processes run through a bounded queue of at most four workers. Progress is shown

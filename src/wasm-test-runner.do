@@ -13,7 +13,7 @@ export class WasmTestRunnerPlan {
 export function planAppleWasmTestRunnerBuild(sourcePath: string, outputPath: string): WasmTestRunnerPlan {
   return WasmTestRunnerPlan {
     command: "xcrun",
-    arguments: ["swiftc", sourcePath, "-framework", "JavaScriptCore", "-o", outputPath],
+    arguments: ["swiftc", sourcePath, "-framework", "JavaScriptCore", "-framework", "Security", "-o", outputPath],
   }
 }
 

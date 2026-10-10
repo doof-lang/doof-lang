@@ -4,13 +4,15 @@ import { planAppleWasmTestRun, planAppleWasmTestRunnerBuild } from "./wasm-test-
 export function testPlansAppleJavaScriptCoreRunnerBuild(): none {
   plan := planAppleWasmTestRunnerBuild("/tmp/runner.swift", "/tmp/runner")
   Assert.equal(plan.command, "xcrun")
-  Assert.equal(plan.arguments.length, 6)
+  Assert.equal(plan.arguments.length, 8)
   Assert.equal(plan.arguments[0], "swiftc")
   Assert.equal(plan.arguments[1], "/tmp/runner.swift")
   Assert.equal(plan.arguments[2], "-framework")
   Assert.equal(plan.arguments[3], "JavaScriptCore")
-  Assert.equal(plan.arguments[4], "-o")
-  Assert.equal(plan.arguments[5], "/tmp/runner")
+  Assert.equal(plan.arguments[4], "-framework")
+  Assert.equal(plan.arguments[5], "Security")
+  Assert.equal(plan.arguments[6], "-o")
+  Assert.equal(plan.arguments[7], "/tmp/runner")
 }
 
 export function testPlansFreshAppleWasmTestInvocation(): none {

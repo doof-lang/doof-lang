@@ -146,8 +146,8 @@ failed cases print their captured output followed by the failing test id.
 On macOS, `--target wasm` compiles each generated test harness as a standalone
 Emscripten command and runs every selected test in a fresh JavaScriptCore
 process and WebAssembly instance. The bundled host supplies the bounded WASI
-surface needed for arguments, environment, standard output/error, and process
-exit; it does not currently expose a guest filesystem. Building requires
+surface needed for arguments, environment, standard output/error, process
+exit, and secure randomness; it does not currently expose a guest filesystem. Building requires
 `em++`, and materializing the Apple runner requires `xcrun swiftc`.
 
 For `check`, `emit`, `build`, `run`, and `profile`, successful exact source/configuration

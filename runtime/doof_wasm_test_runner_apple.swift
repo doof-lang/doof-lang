@@ -1,5 +1,6 @@
 import Foundation
 import JavaScriptCore
+import Security
 
 guard CommandLine.arguments.count == 3 else {
     FileHandle.standardError.write(Data("usage: doof-wasm-test-runner module.wasm test-id\n".utf8))
@@ -31,6 +32,18 @@ let hostWrite: @convention(block) (Int32, String) -> Void = { descriptor, text i
     handle.write(Data(text.utf8))
 }
 context.setObject(hostWrite, forKeyedSubscript: "__doofHostWrite" as NSString)
+// Keep the Swift/JavaScript transfer bounded even for large guest requests.
+// An empty result for a nonempty request signals a secure RNG failure.
+let hostRandom: @convention(block) (Int32) -> String = { length in
+    guard length > 0 && length <= 65536 else { return "" }
+    var bytes = Data(count: Int(length))
+    let status = bytes.withUnsafeMutableBytes { buffer in
+        SecRandomCopyBytes(kSecRandomDefault, buffer.count, buffer.baseAddress!)
+    }
+    guard status == errSecSuccess else { return "" }
+    return bytes.base64EncodedString()
+}
+context.setObject(hostRandom, forKeyedSubscript: "__doofHostRandom" as NSString)
 context.setObject(moduleData.base64EncodedString(), forKeyedSubscript: "__doofModuleBase64" as NSString)
 context.setObject(testID, forKeyedSubscript: "__doofTestID" as NSString)
 context.setObject(modulePath, forKeyedSubscript: "__doofModulePath" as NSString)
@@ -94,6 +107,21 @@ let source = #"""
   let exitCode = 0;
   const exited = {};
   const wasi = {
+    random_get(pointer, length) {
+      // Wasm i32 parameters arrive signed; interpret the WASI addresses as u32.
+      pointer >>>= 0;
+      length >>>= 0;
+      const bytes = new Uint8Array(memory.buffer);
+      if (pointer > bytes.length || length > bytes.length - pointer) return 21; // EFAULT
+      for (let offset = 0; offset < length;) {
+        const count = Math.min(length - offset, 65536);
+        const random = decodeBase64(__doofHostRandom(count));
+        if (random.length !== count) return 29; // EIO; never substitute a PRNG
+        bytes.set(random, pointer + offset);
+        offset += count;
+      }
+      return 0;
+    },
     args_sizes_get(argc, argvBufferSize) {
       const view = new DataView(memory.buffer);
       view.setUint32(argc, args.length, true);

@@ -1,6 +1,10 @@
 {
   "name": "doof-release-wasm-test-runner",
   "build": {
-    "target": "wasm"
+    "target": "wasm",
+    "native": {
+      "sourceFiles": ["random.cpp"],
+      "extraCopyPaths": ["random.hpp"]
+    }
   }
 }
