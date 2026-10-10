@@ -6,6 +6,7 @@
 
 import { ModuleEmission, ModuleGraphEmission } from "./emitter-module"
 import { NativeBuildPlan, PackageManifest } from "./package-manifest"
+import { OptionalPkgConfigPackage } from "./native-dependency-config"
 
 /** One package whose generated and native files participate in the project. */
 export class NativePackageInput {
@@ -118,6 +119,14 @@ function planPackageNativeBuild(project: ProjectEmission, package_: NativePackag
   for extraCopyPath of native.extraCopyPaths {
     relativePath := addNativeCopy(project.nativeCopies, package_, extraCopyPath)
     appendUnique(project.nativeBuild.includePaths, projectParentPath(relativePath))
+    copiedAny = true
+  }
+  for dependency of native.optionalPkgConfigPackages {
+    relativePath := addNativeCopy(project.nativeCopies, package_, dependency.probeSource)
+    project.nativeBuild.optionalPkgConfigPackages.push(OptionalPkgConfigPackage {
+      name: dependency.name, define: dependency.define, minimumVersion: dependency.minimumVersion,
+      probeSource: relativePath,
+    })
     copiedAny = true
   }
 

@@ -6,6 +6,7 @@
 
 import { parseJsonValue } from "std/json"
 import { join } from "std/path"
+import { OptionalPkgConfigPackage, parseOptionalPkgConfigPackages } from "./native-dependency-config"
 import { MacOSAppConfig, MacOSAppResource, MacOSEmbeddedLibrary, MacOSPackageConfig } from "./macos-app"
 import { IOSAppConfig, IOSAppResource, IOSEmbeddedLibrary, IOSPackageConfig } from "./ios-app"
 
@@ -22,6 +23,7 @@ export class NativeBuildPlan {
   linkLibraries: string[] = []
   frameworks: string[] = []
   pkgConfigPackages: string[] = []
+  optionalPkgConfigPackages: OptionalPkgConfigPackage[] = []
   defines: string[] = []
   compilerFlags: string[] = []
   linkerFlags: string[] = []
@@ -746,6 +748,8 @@ function appendNativeFragment(
   try appendStringArrayField(target.linkLibraries, fragment, "linkLibraries", manifestPath, fieldPath, "")
   try appendStringArrayField(target.frameworks, fragment, "frameworks", manifestPath, fieldPath, "")
   try appendStringArrayField(target.pkgConfigPackages, fragment, "pkgConfigPackages", manifestPath, fieldPath, "")
+  try optional := parseOptionalPkgConfigPackages(fragment, manifestPath, rootDirectory, fieldPath)
+  for dependency of optional { target.optionalPkgConfigPackages.push(dependency) }
   try appendStringArrayField(target.defines, fragment, "defines", manifestPath, fieldPath, "")
   try appendStringArrayField(target.compilerFlags, fragment, "compilerFlags", manifestPath, fieldPath, "")
   try appendStringArrayField(target.linkerFlags, fragment, "linkerFlags", manifestPath, fieldPath, "")
@@ -782,6 +786,7 @@ function appendNativeBuild(target: NativeBuildPlan, source: NativeBuildPlan): no
   appendUniqueValues(target.linkLibraries, source.linkLibraries)
   appendUniqueValues(target.frameworks, source.frameworks)
   appendUniqueValues(target.pkgConfigPackages, source.pkgConfigPackages)
+  for dependency of source.optionalPkgConfigPackages { target.optionalPkgConfigPackages.push(dependency) }
   appendUniqueValues(target.defines, source.defines)
   appendUniqueValues(target.compilerFlags, source.compilerFlags)
   appendUniqueValues(target.linkerFlags, source.linkerFlags)

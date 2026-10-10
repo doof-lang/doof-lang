@@ -232,6 +232,8 @@ threads or reconstruct scheduling policy.
 | `module-acquisition.do` | Logical module prefix → acquired disk root mapping |
 | `stdlib-preparation.do` | Bounded preparation commands for reached standard packages |
 | `pkg-config.do` | Pure interpretation of bounded `pkg-config` results |
+| `native-dependency-config.do` | Optional pkg-config manifest entries and package-local probe validation |
+| `native-dependencies.do` | Transactional optional metadata selection and target-toolchain compile/link probes |
 | `native-build.do` | Pure GCC-compatible/MSVC support-file, PCH, compile, and link task planning |
 | `native-build-state.do` | Versioned incremental state plus Make/MSVC dependency parsing |
 | `native-build-driver.do` | Native compiler processes, fingerprints, dependency signatures, PCH/object/link execution |

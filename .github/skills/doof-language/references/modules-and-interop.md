@@ -240,3 +240,21 @@ For `import function`, function-typed parameters also lower to
 | Exports | `export { foo as bar }` |
 | Destructuring | `{ foo as bar } := obj` |
 | Extern class C++ name | `import class Foo from "h" as ns::Foo { ... }` |
+
+### Optional native dependency capabilities
+
+`build.native.pkgConfigPackages` is mandatory. Use
+`optionalPkgConfigPackages: [{name, define, probeSource, minimumVersion?}]` in a
+native or platform fragment for a dependency that may be unavailable. `define`
+is a unique C identifier; `probeSource` is a package-local `.cpp` with a `main`
+that references the required APIs. The compiler copies the probe, resolves
+metadata, and compiles/links it using the application's target compiler and
+flags, without executing it. Available dependencies add their flags and
+`define=1`; missing/incompatible dependencies add only `define=0`. The package
+implements its unavailable-capability stub. Later application build errors remain
+fatal. Optional lookups honor `PKG_CONFIG` as one executable/wrapper and the usual
+pkg-config target/sysroot environment. Configure target metadata explicitly for
+cross-builds. `check`/`emit` do not detect these capabilities; native selection
+flags participate in object/PCH/link cache fingerprints. Probe files and target
+tools must exist; detection does not acquire dependencies or load runtime
+libraries optionally. See `spec/11-modules.md` for the authoritative contract.

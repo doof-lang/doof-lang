@@ -9,6 +9,7 @@ import {
   parseMakeDependencies, parseMsvcDependencies, parseNativeBuildState, renderNativeBuildState,
 } from "./native-build-state"
 import { PkgConfigCommandResult, applyPkgConfigResult } from "./pkg-config"
+import { resolveOptionalNativeDependencies } from "./native-dependencies"
 import { boundedWorkerCount, renderProgressBar } from "./progress"
 import { BlobReader } from "std/blob"
 import { sha256Hex, sha256HexString } from "std/crypto"
@@ -94,6 +95,7 @@ export function buildNativeProject(
   platform: string,
   outputMode: NativeBuildOutputMode,
   wasmCommand: bool = false,
+  pkgConfigCommand: string = "",
 ): int {
   for packageName of project.nativeBuild.pkgConfigPackages {
     for mode of ["cflags", "libs"] {
@@ -116,6 +118,11 @@ export function buildNativeProject(
     if configured != "" { compiler = configured }
   }
   if compiler == "" { compiler = if platform == "windows" then "cl.exe" else "c++" }
+  optional := resolveOptionalNativeDependencies(project.nativeBuild, compiler, outputDirectory, platform, wasm, pkgConfigCommand) else error {
+    println("error: " + error)
+    return 1
+  }
+  if outputMode == .Progress { for description of optional { println(description) } }
   plan := planNativeCompile(
     compiler, outputDirectory, outputPath, project.modules, project.nativeBuild,
     mode, platform, project.wasmExportNames, wasm, wasmCommand,

@@ -519,7 +519,7 @@ function usesClangPrecompiledHeader(compiler: string, platform: string): bool {
 }
 
 function resolveBuildPath(outputDirectory: string, path: string): string {
-  if path.startsWith("/") { return path }
+  if path.startsWith("/") || path.startsWith("\\\\") || (path.length > 1 && path[1] == ':') { return path }
   if outputDirectory.endsWith("/") { return outputDirectory + path }
   return outputDirectory + "/" + path
 }

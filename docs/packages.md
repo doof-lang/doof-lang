@@ -59,6 +59,19 @@ into an application bundle. `build.native` declares include paths, source
 files, libraries, frameworks, pkg-config packages, compiler/linker flags, and
 platform-specific fragments. Paths remain package-root relative.
 
+Optional pkg-config capabilities use `build.native.optionalPkgConfigPackages`
+(also allowed in platform fragments), with `name`, a unique `define`, a
+package-local `.cpp` `probeSource` and optional `minimumVersion`. The driver
+compiles and links the probe with the application target toolchain; it never
+runs it. Missing or incompatible dependencies select `define=0` without adding
+dependency flags; success selects `define=1`. Packages provide the zero-value
+stub. Probe files are copied, not compiled as application translation units.
+`PKG_CONFIG` selects a target metadata executable/wrapper for these optional
+lookups; standard pkg-config environment variables configure its target paths.
+See [the module specification](../spec/11-modules.md#optional-native-pkg-config-capabilities)
+for the complete contract and error behavior. Mandatory `pkgConfigPackages`
+retain their existing failure behavior.
+
 Normal builds use the debug build graph. `package` uses an independent release
 graph and writes final artifacts to `dist/` unless overridden. Native release
 builds optimize with link-time optimization (for non-Swift native builds) and

@@ -488,3 +488,13 @@ export function testInteractiveDebugBuildKeepsSymbolsAndDisablesOptimization(): 
   Assert.equal(plan.compileTasks[1].arguments.contains("-g"), true)
   Assert.equal(plan.compileTasks[1].arguments.contains("-Onone"), true)
 }
+export function testOptionalNativeWindowsAbsoluteSourceAndLibraryPaths(): none {
+  native := NativeBuildPlan {
+    sourceFiles: ["C:/package/probe.cpp"], includePaths: ["C:/sdk/include"],
+    libraryPaths: ["C:/sdk/lib"],
+  }
+  plan := planNativeCompile("cl.exe", "C:/build", "C:/build/probe.exe", [], native, .Debug, "windows")
+  Assert.equal(plan.compileTasks[0].sourcePath, "C:/package/probe.cpp")
+  Assert.equal(plan.compileTasks[0].arguments.contains("C:/sdk/include"), true)
+  Assert.equal(plan.linkArguments.contains("/LIBPATH:C:/sdk/lib"), true)
+}

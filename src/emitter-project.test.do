@@ -3,6 +3,19 @@ import { Assert } from "std/assert"
 import { ModuleEmission, ModuleGraphEmission } from "./emitter-module"
 import { NativePackageInput, planProjectEmission } from "./emitter-project"
 import { PackageManifest, NativeBuildPlan } from "./package-manifest"
+import { OptionalPkgConfigPackage } from "./native-dependency-config"
+
+export function testOptionalNativeProbeCopiesRemainPackageRelative(): none {
+  input := packageInput("/std/crypto", "/stdlib/crypto")
+  input.manifest.nativeBuild.optionalPkgConfigPackages.push(OptionalPkgConfigPackage {
+    name: "libcrypto", define: "RSA_EVP", probeSource: "/stdlib/crypto/probes/openssl.cpp", minimumVersion: "3.0",
+  })
+  project := planProjectEmission(ModuleGraphEmission {}, [input])
+  Assert.equal(project.nativeBuild.optionalPkgConfigPackages[0].probeSource, "std/crypto/probes/openssl.cpp")
+  Assert.equal(project.nativeBuild.optionalPkgConfigPackages[0].minimumVersion, "3.0")
+  Assert.equal(project.nativeCopies[2].relativePath, "std/crypto/probes/openssl.cpp")
+  Assert.equal(project.nativeBuild.sourceFiles.contains("std/crypto/probes/openssl.cpp"), false)
+}
 
 function packageInput(logicalPrefix: string, diskRoot: string): NativePackageInput {
   return NativePackageInput {

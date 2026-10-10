@@ -3,6 +3,21 @@ import { parsePackageSourceInputs } from "./package-manifest"
 import { Assert } from "std/assert"
 import { NativeBuildPlan, parsePackageManifest } from "./package-manifest"
 
+export function testOptionalNativeManifestSelectsOnlyLinuxFragment(): none {
+  source := `{"build":{"native":{"linux":{"optionalPkgConfigPackages":[{
+    "name":"libcrypto","define":"RSA_EVP","minimumVersion":"3.0","probeSource":"probe.cpp"
+  }]}}}}`
+  linux := parsePackageManifest(source, "/app/doof.json", "/app", "linux")!
+  Assert.equal(linux.nativeBuild.optionalPkgConfigPackages.length, 1)
+  Assert.equal(linux.nativeBuild.optionalPkgConfigPackages[0].probeSource, "/app/probe.cpp")
+  for platform of ["macos", "windows", "ios-device"] {
+    other := parsePackageManifest(source, "/app/doof.json", "/app", platform)!
+    Assert.equal(other.nativeBuild.optionalPkgConfigPackages.length, 0)
+  }
+  wasm := parsePackageManifest(source, "/app/doof.json", "/app", "linux", "wasm")!
+  Assert.equal(wasm.nativeBuild.optionalPkgConfigPackages.length, 0)
+}
+
 export function testParsesLocalPackageDependenciesAndStdlibPreparation(): none {
   manifest := parsePackageManifest(
     "{\"dependencies\":{\"local\":{\"path\":\"../local\"}},\"build\":{\"stdlib\":{\"prepare\":[{\"program\":\"sh\",\"args\":[\"\${packageRoot}/build.sh\",\"\${nativeTarget}\"],\"env\":{\"SDKROOT\":\"\${sdkPath}\"},\"workingDirectory\":\"vendor\"}]}}}",

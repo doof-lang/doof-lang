@@ -191,6 +191,57 @@ directory whose immediate children are standard-package folders. Standard
 packages alone may use `build.stdlib.prepare` for bounded target-specific
 preparation of already-present sources.
 
+### Optional native pkg-config capabilities
+
+`build.native.pkgConfigPackages` remains mandatory. A package can instead use
+`optionalPkgConfigPackages` in the base native fragment or a selected platform
+fragment:
+
+```json
+{
+  "build": { "native": { "linux": {
+    "optionalPkgConfigPackages": [{
+      "name": "libcrypto",
+      "minimumVersion": "3.0",
+      "define": "DOOF_CRYPTO_RSA_EVP",
+      "probeSource": "native/openssl-probe.cpp"
+    }]
+  } } }
+}
+```
+
+`name`, `define` and `probeSource` are required nonempty strings;
+`minimumVersion` is an optional dotted numeric version. A name denotes one
+pkg-config package, not a shell command or version expression. The define is a
+unique C identifier without a value. The probe is a `.cpp` file within the owning
+package, copied with its native inputs but not linked into the application.
+
+Native builds resolve metadata and compile/link the probe with the selected
+application compiler, native compiler/linker flags, SDK/sysroot arguments,
+include paths and libraries. Probes must have a `main` and reference the APIs
+whose presence is required; include-only probes do not establish link
+compatibility. Probes receive `define=1`. Their outputs are never executed.
+Checking and emission alone do not resolve these capabilities.
+
+For optional lookups, `PKG_CONFIG` can name one target pkg-config executable or
+wrapper; the default is `pkg-config`. The process inherits `PKG_CONFIG_LIBDIR`,
+`PKG_CONFIG_PATH` and `PKG_CONFIG_SYSROOT_DIR`. Cross-builds must configure these
+for the target; the compiler does not discover target metadata automatically.
+A target-toolchain compile/link probe is required even when metadata resolves.
+
+Missing pkg-config or metadata, a version below the specified minimum, and
+probe compile/link incompatibility select `define=0` with no optional flags or
+libraries committed. Successful detection selects `define=1` and commits the
+resolved inputs. Packages must implement their own capability-unavailable stub
+under the zero value. Missing probe files, conflicting capability defines,
+unstartable target tools and truncated command output are build errors. Later
+application compiler/linker failures are also build errors, never a reason to
+retry with a stub. Selection is repeated on native builds; resulting defines and
+flags participate in ordinary native object/PCH/link cache fingerprints.
+
+This mechanism acquires no dependencies and does not provide optional runtime
+loading. A detected shared library must remain present at executable startup.
+
 ### Generated C++ Namespaces
 
 For packaged builds, generated C++ namespaces are derived from the package
