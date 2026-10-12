@@ -1,4 +1,5 @@
 // Invalid: named construction must provide every non-defaulted instance field.
+// expect-error: 9:14 Missing required field 'y'
 class Point {
     x: int
     y: int

@@ -4,6 +4,7 @@ import { parseJsonObject } from "std/json"
 import { command, capture, copyInputs, erase, execute, installArtifacts, makeDirectory, path, read, require, setting, text, write } from "./common"
 import { commandOutputChecks, interactiveCheck, projectLockChecks, cacheChecks } from "./process-checks"
 import { observedReconnectCheck } from "./observe-checks"
+import { falseNegativeChecks, specExampleChecks } from "./corpus-checks"
 
 export function runtimeChecks(root: string): Result<none, string> {
   work := path(root, "build/runtime-tests")
@@ -53,6 +54,8 @@ export function testRepository(root: string, compiler: string, stdlib: string): 
   environment: Map<string, string> := { DOOF_STDLIB_ROOT: stdlib, DOOF_REPOSITORY_TEST_ROOT: root, DOOF_REPOSITORY_TEST_COMPILER: compiler }
   // All compiler test invocations are serial: they share native output roots.
   try command(compiler, ["test", path(root, "src")], environment, root)
+  try falseNegativeChecks(root, compiler, stdlib)
+  try specExampleChecks(root, compiler, stdlib)
   try command(compiler, ["test", path(root, "tools/repository")], environment, root)
   try runtimeChecks(root)
   try command(compiler, ["test", path(root, "tools/debugger")], environment, root)

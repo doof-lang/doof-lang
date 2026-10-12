@@ -137,7 +137,7 @@ When every exhaustive branch returns, yields, loops forever, or evaluates a
 
 ## While Loops
 
-```doof
+```doof check
 let count = 0
 while count < 10 {
     println(count)
@@ -161,7 +161,7 @@ while true {
 
 ### Traditional For Loop
 
-```doof
+```doof check
 for let i = 0; i < 10; i += 1 {
     println(i)
 }
@@ -185,7 +185,7 @@ Variables declared in the initializer are mutable and are scoped to the loop: th
 
 Iterates over the values of any iterable. Loop variables are **immutable** bindings (no keyword needed):
 
-```doof
+```doof check
 names := ["Alice", "Bob", "Charlie"]
 
 for name of names {
@@ -219,7 +219,7 @@ an element object's fields are visible through the loop binding. A mutable
 collection is copied once at loop entry. A `readonly` collection cannot
 change, so it is iterated in place without a copy.
 
-```doof
+```doof check
 let queue = [1, 2, 3]
 for item of queue {
     queue.push(item * 10)    // appended items are not visited by this loop
@@ -252,7 +252,7 @@ for value of Counter(0, 3) {
 
 ### For-Of with Maps
 
-```doof
+```doof check
 scores: Map<string, int> := { "Alice": 95, "Bob": 87 }
 
 // Destructured entries (MapEntry has key, value fields)
@@ -273,7 +273,7 @@ Map iteration follows insertion order. Updating an existing key keeps its curren
 
 ### For-Of with Sets
 
-```doof
+```doof check
 unique: Set<int> := [1, 2, 3]
 for n of unique {
     println(n)
@@ -294,7 +294,7 @@ than its upper bound is empty.
 
 ### Inclusive Range (`..`)
 
-```doof
+```doof check
 for i of 1..5 {
     println(i)  // 1, 2, 3, 4, 5
 }
@@ -307,7 +307,7 @@ for value of values {
 
 ### Exclusive Range (`..<`)
 
-```doof
+```doof check
 for i of 0..<5 {
     println(i)  // 0, 1, 2, 3, 4
 }
@@ -324,7 +324,7 @@ Open-ended ranges are not iterable `Range` values; they are only valid in
 
 ### Range Accessors
 
-```doof
+```doof check
 inclusive := 1..9
 exclusive := 1..<10
 
@@ -356,7 +356,7 @@ for i of indices {
 
 ### Basic
 
-```doof
+```doof check
 for i of 0..<100 {
     if i == 10 {
         break     // Exits innermost loop
@@ -430,7 +430,7 @@ while hasMoreData() {
 
 Traditional `for` loops support the same follow-up clause:
 
-```doof
+```doof check
 for let i = 0; i < 3; i += 1 {
     println(i)
 } then {
@@ -480,7 +480,7 @@ for let i = 0; i < items.length; i += 1 {
 
 ### Use Ranges for Numeric Iteration
 
-```doof
+```doof check
 // ✅ Clear and concise
 for i of 0..<10 {
     println(i)

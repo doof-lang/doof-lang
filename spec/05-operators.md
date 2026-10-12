@@ -46,7 +46,7 @@ longDiv := 100L \ 3L   // 33L
 
 The `%` operator requires both operands to be integer types (`int` or `long`):
 
-```doof
+```doof check
 remainder := 10 % 3    // 1
 negMod := -7 % 3       // -1 (C++ truncated division semantics)
 ```
@@ -105,7 +105,7 @@ a >= b     // Greater than or equal
 
 ### Reference vs Structural Equality
 
-```doof
+```doof check
 class Point { x, y: int; }
 
 p1 := Point { x: 1, y: 2 }
@@ -378,7 +378,7 @@ a >>> 2   // Unsigned right shift
 
 ### Compound Assignment
 
-```doof
+```doof check
 let x = 10
 x += 5    // x = x + 5
 x -= 3    // x = x - 3
@@ -404,7 +404,7 @@ x >>= 1
 
 Finite range operators produce a built-in `Range` value:
 
-```doof
+```doof check
 1..5      // Inclusive range: 1, 2, 3, 4, 5
 1..<5     // Exclusive upper bound: 1, 2, 3, 4
 ```

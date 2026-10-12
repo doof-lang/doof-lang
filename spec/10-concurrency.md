@@ -262,7 +262,7 @@ unconsumed promise does not cancel the operation.
 
 `onComplete` registers terminal delivery and returns immediately:
 
-```doof
+```doof check
 promise := async { yield [1, 2, 3] }
 promise.onComplete((result) => {
     values := result else error { println(error); return }

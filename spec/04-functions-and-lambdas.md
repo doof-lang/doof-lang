@@ -10,7 +10,7 @@ Doof treats functions as first-class values. Use `function <name>` for named cal
 
 ### Expression Form
 
-```doof
+```doof check
 function double(x: int): int => x * 2
 
 function greet(name: string): none => println("Hello, " + name)
@@ -18,7 +18,7 @@ function greet(name: string): none => println("Hello, " + name)
 
 ### Block Form
 
-```doof
+```doof check
 function factorial(n: int): int {
     if n <= 1 {
         return 1
@@ -50,7 +50,7 @@ A function declared with return type `never` must be unable to complete on
 every path. Calls to it terminate the current path and participate as bottom
 expressions in surrounding value contexts.
 
-```doof
+```doof check
 function unavailable(): never => panic("unavailable")
 function port(configured: bool): int => if configured then 8080 else unavailable()
 ```
@@ -61,7 +61,7 @@ Omitting a named function or method's return annotation makes its return type
 `none`. This rule also applies when the declaration is imported. A function
 that returns a value must declare its return type explicitly.
 
-```doof
+```doof check
 function logReady() { println("ready") } // Returns none
 
 function double(x: int): int => x * 2
@@ -111,7 +111,7 @@ parameter type is a class, a leading-dot shorthand may name a static field of
 that class's type, or call a static method returning it. When the expected type
 is `T | none`, the field or method may also produce `T | none`:
 
-```doof
+```doof check
 class Transform {
     x: int
     static identity(): Transform => Transform(0)
@@ -186,7 +186,7 @@ implicit boolean attributes, HTML entity decoding, or array flattening.
 
 Doof provides a built-in `SourceLocation` class and a special `@caller` default-expression intrinsic for call-site attribution.
 
-```doof
+```doof check
 function debug(message: string, source: SourceLocation = @caller): none {
     println(source.fileName + ":" + string(source.line) + ":" + source.functionName)
 }
@@ -194,7 +194,7 @@ function debug(message: string, source: SourceLocation = @caller): none {
 
 `SourceLocation` is always in scope and has this shape:
 
-```doof
+```doof check
 class SourceLocation {
     readonly fileName: string
     readonly line: int
@@ -212,7 +212,7 @@ Rules:
 
 This makes wrapper APIs straightforward:
 
-```doof
+```doof check
 function assert(condition: bool, message: string, source: SourceLocation = @caller): none {
     if !condition {
         panic("Assertion failed at " + source.fileName + ":" + string(source.line) + ": " + message)
@@ -243,7 +243,7 @@ explicit compile-time contract.
 
 #### `export`
 
-```doof
+```doof check
 export function add(a: int, b: int): int => a + b
 ```
 
@@ -377,7 +377,7 @@ When every parameter in an explicit list names a parameter of the contextual
 signature, the names bind to the signature, so you can specify **any subset in
 any order**:
 
-```doof
+```doof check
 // map signature: (it: T, index: int): U
 let nums = [1, 2, 3, 4, 5]
 
@@ -609,7 +609,7 @@ items.forEach()
 
 Function types record parameter names as part of the signature:
 
-```doof
+```doof check
 type Callback = (value: int, description: string): none
 type Predicate<T> = (item: T): bool
 type Transform = (input: int): int
@@ -646,13 +646,13 @@ default parameters; put those functions at module or class scope instead.
 First-class function values are actor-affine callbacks. Normal Doof call syntax
 still invokes them:
 
-```doof
+```doof check
 function apply(f: (x: int): int, x: int): int => f(x)
 ```
 
 The explicit local form is also available:
 
-```doof
+```doof check
 function apply(f: (x: int): int, x: int): int => f.call(x)
 ```
 

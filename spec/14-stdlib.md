@@ -67,7 +67,7 @@ package sources during development.
 
 Assertion helpers intended for test files.  Each method delegates to the built-in `assert(condition, message)` primitive and panics on failure.
 
-```doof
+```doof check
 import { Assert } from "std/assert"
 ```
 
@@ -101,13 +101,13 @@ export function testAdd(): none {
 
 Low-level binary buffer read/write with configurable byte order.
 
-```doof
+```doof check
 import { BlobBuilder, BlobReader, Endian } from "std/blob"
 ```
 
 ### `Endian`
 
-```doof
+```doof check
 enum Endian { BigEndian = 0, LittleEndian = 1 }
 ```
 
@@ -198,7 +198,7 @@ function decodeMessage(data: readonly byte[]): Tuple<int, string> {
 
 Cryptographic helpers for hashing, HMAC, binary/text encoding, randomness, and JWT parsing.
 
-```doof
+```doof check
 import { sha1, sha1String, sha1Hex, sha1HexString,
          sha256, sha256String, sha256Hex, sha256HexString,
          blobStreamToSha256,
@@ -254,7 +254,7 @@ enum JwtError {
 
 ### Example
 
-```doof
+```doof check
 import { parseJwt, sha256HexString, JwtError } from "std/crypto"
 
 function main(): none {
@@ -285,7 +285,7 @@ import { readText, writeText, readBlob, writeBlob, appendText, appendBlob,
 
 ### Types
 
-```doof
+```doof check
 enum EntryKind { File = 0, Directory = 1, Symlink = 2, Other = 3 }
 
 class DirEntry {
@@ -340,7 +340,7 @@ copy(sourcePath: string, destPath: string): Result<none, IoError>
 
 ### Example
 
-```doof
+```doof check
 import { readLineStream, writeText, IoError } from "std/fs"
 
 function countLines(path: string): Result<int, IoError> {
@@ -357,7 +357,7 @@ function countLines(path: string): Result<int, IoError> {
 
 Synchronous HTTP client backed by libcurl.
 
-```doof
+```doof check
 import { createClient, get, postJsonValue, send,
          HttpClient, HttpRequest, HttpResponse, HttpHeader, HttpError } from "std/http"
 ```
@@ -407,7 +407,7 @@ send(client: HttpClient, request: HttpRequest): Result<HttpResponse, HttpError>
 
 ### Example
 
-```doof
+```doof check
 import { createClient, get, send, HttpRequest, HttpHeader } from "std/http"
 
 function fetchJson(url: string): Result<SerialValue, string> {
@@ -441,7 +441,7 @@ function patchResource(url: string, data: readonly byte[]): Result<none, string>
 
 Parse and format `SerialValue` (the built-in JSON carrier type).
 
-```doof
+```doof check
 import { parseJsonValue, formatJsonValue } from "std/json"
 ```
 
@@ -458,7 +458,7 @@ JSON strings remain ordinary `string` values when parsed.
 
 ### Example
 
-```doof
+```doof check
 import { parseJsonValue, formatJsonValue } from "std/json"
 
 function prettyRoundTrip(input: string): Result<string, string> {
@@ -475,7 +475,7 @@ See [spec/12-json-serialization.md](12-json-serialization.md) for class-level au
 
 Environment and process utilities, including process spawning with streaming stdout/stderr.
 
-```doof
+```doof check
 import { env, pid, platform, architecture, ExecOptions, Exec, ExecResult, run } from "std/os"
 ```
 
@@ -525,7 +525,7 @@ run(command: string, args: string[] = [], options: ExecOptions = ExecOptions {})
 
 ### Example
 
-```doof
+```doof check
 import { run } from "std/os"
 import { BlobReader } from "std/blob"
 
@@ -548,7 +548,7 @@ through the corresponding `ExecResult` flags.
 
 POSIX path string manipulation.  No filesystem access; works on strings only.
 
-```doof
+```doof check
 import { absolute, homeDirectory, tempDirectory, currentWorkingDirectory, setCurrentWorkingDirectory,
          join, dirname, basename, stem, extension, isAbsolute } from "std/path"
 ```
@@ -607,7 +607,7 @@ source    := absolute("src/main.do")!
 
 POSIX extended regular expressions via a native bridge.
 
-```doof
+```doof check
 import { Regex, Match, RegexFlag, RegexError } from "std/regex"
 ```
 
@@ -680,7 +680,7 @@ Combinators for the built-in `Stream<T>` pull-iteration protocol.
 
 Any class with `next(): bool` and `value(): T` methods satisfies `Stream<T>`. `value()` is read after `next()` returns `true`. `std/stream` provides:
 
-```doof
+```doof check
 import { Chain, blobStreamToLineStream } from "std/stream"
 ```
 
@@ -711,7 +711,7 @@ Decodes a sequence of raw byte chunks as UTF-8 and splits on `\n`, `\r`, or `\r\
 
 ### Example
 
-```doof
+```doof check
 import { Chain, blobStreamToLineStream } from "std/stream"
 import { readBlockStream, IoError } from "std/fs"
 
@@ -732,7 +732,7 @@ function firstTenNonEmptyLines(path: string): Result<string[], IoError> {
 
 Comprehensive date, time, duration, and timezone support with nanosecond precision.
 
-```doof
+```doof check
 import { Duration, Instant, Date, Time, DateTime, TimeZone, ZonedDateTime,
          DayOfWeek, Month } from "std/time"
 ```
@@ -989,7 +989,7 @@ toISOString(): string   // "YYYY-MM-DDTHH:MM:SS±HH:MM" or "...Z"
 
 ### Enums
 
-```doof
+```doof check
 enum DayOfWeek { Monday = 1, Tuesday = 2, Wednesday = 3, Thursday = 4,
                  Friday = 5, Saturday = 6, Sunday = 7 }
 
@@ -1004,7 +1004,7 @@ enum Month { January = 1, February = 2, March = 3, April = 4,
 
 ### Count lines in a file
 
-```doof
+```doof check
 import { readLineStream, IoError } from "std/fs"
 
 function countLines(path: string): Result<int, IoError> {
@@ -1017,7 +1017,7 @@ function countLines(path: string): Result<int, IoError> {
 
 ### Fetch JSON from an API
 
-```doof
+```doof check
 import { createClient, get } from "std/http"
 
 function fetchUser(id: int): Result<SerialValue, string> {
@@ -1034,7 +1034,7 @@ function fetchUser(id: int): Result<SerialValue, string> {
 
 ### POST JSON and parse the response
 
-```doof
+```doof check
 import { createClient, postJsonValue } from "std/http"
 
 class CreateUserRequest { name: string; email: string }
@@ -1066,7 +1066,7 @@ println("Elapsed: ${string(elapsed.toMillis())}ms")
 
 ### Format a date in a custom pattern
 
-```doof
+```doof check
 import { Date, DayOfWeek } from "std/time"
 
 function formatFriendly(d: Date): string {
@@ -1079,7 +1079,7 @@ function formatFriendly(d: Date): string {
 
 ### Skip weekends when adding business days
 
-```doof
+```doof check
 import { Date, DayOfWeek } from "std/time"
 
 function addBusinessDays(date: Date, n: int): Date {
@@ -1098,7 +1098,7 @@ function addBusinessDays(date: Date, n: int): Date {
 
 ### Validate and extract an email with regex
 
-```doof
+```doof check
 import { Regex } from "std/regex"
 
 try emailRe := Regex.compile("([^@]+)@([^@]+\\.\\w+)")
@@ -1111,7 +1111,7 @@ function extractEmail(input: string): Tuple<string, string> | none {
 
 ### Parse and manipulate paths
 
-```doof
+```doof check
 import { join, dirname, basename, extension } from "std/path"
 
 function swapExtension(path: string, newExt: string): string {
@@ -1125,7 +1125,7 @@ function swapExtension(path: string, newExt: string): string {
 
 ### Build and parse a binary frame
 
-```doof
+```doof check
 import { BlobBuilder, BlobReader } from "std/blob"
 
 function encode(msgType: byte, payload: readonly byte[]): readonly byte[] {
@@ -1147,7 +1147,7 @@ function decode(data: readonly byte[]): Tuple<byte, readonly byte[]> {
 
 ### Filter and transform a large file with streams
 
-```doof
+```doof check
 import { readBlockStream, writeLineStream, IoError } from "std/fs"
 import { blobStreamToLineStream } from "std/stream"
 import { Chain } from "std/stream"
@@ -1162,7 +1162,7 @@ function extractNonEmpty(src: string, dst: string): Result<none, IoError> {
 
 ### Write a test using std/assert
 
-```doof
+```doof check
 import { Assert } from "std/assert"
 import { join, basename } from "std/path"
 

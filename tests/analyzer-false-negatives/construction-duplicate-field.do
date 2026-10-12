@@ -1,4 +1,5 @@
 // Invalid: a named construction field can only be supplied once.
+// expect-error: 9:34 Duplicate field 'x' in Point construction
 class Point {
     x: int
     y: int

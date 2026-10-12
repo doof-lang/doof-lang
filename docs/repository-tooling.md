@@ -35,7 +35,7 @@ or supply file-descriptor redirection; assertions and sequencing are Doof.
 | Editor extension build/service/verification and native-test TypeScript scripts | `extension.do` and `nativeEditorChecks`; npm commands invoke the shared Doof tool. |
 | Historical emission-model Python utility and its test | Removed; exploratory estimates are not a maintained workflow. |
 
-Use `tools/run.sh test`, `verify`, `debugger-test`, `process-test`, `preflight`,
+Use `tools/run.sh test`, `verify`, `debugger-test`, `process-test`, `corpus-test`, `preflight`,
 `snapshot-test` (after `build.sh`), or
 `cache-test <old-stamped-compiler> <new-stamped-compiler>` for the corresponding
 repository checks. `verify` is the full platform acceptance gate without signing

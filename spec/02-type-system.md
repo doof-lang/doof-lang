@@ -50,7 +50,7 @@ JSON-serializable and has no literal or constructor.
 It can be stored, passed to functions, returned, and iterated with `for of`.
 Iteration yields `int` values.
 
-```doof
+```doof check
 function sum(values: Range): int {
     let total = 0
     for value of values {
@@ -72,7 +72,7 @@ valid `Range` values.
 
 Doof provides a built-in `SerialValue` carrier for JSON-compatible data:
 
-```doof
+```doof check
 payload: SerialValue := { name: "Ada", scores: [1, 2, 3] }
 ```
 
@@ -240,7 +240,7 @@ ratio := parseDouble("3.14159")        // Result<double, ParsingError>
 The package also exports `parseBool` and `parseFloat`. Numeric parse functions
 return `Result<T, ParsingError>` with the following error cases:
 
-```doof
+```doof check
 enum ParsingError { InvalidFormat, Overflow, Underflow, EmptyInput }
 ```
 
@@ -281,7 +281,7 @@ length by the smallest possible amount (at most three bytes).
 Character literals contain one Unicode code point, including non-ASCII forms
 such as `'é'` and `'🙂'`.
 
-```doof
+```doof check
 s := "Hello, World!"
 s.length              // 13
 s.indexOf("World")    // 7
@@ -328,7 +328,7 @@ a named function may omit the trailing `index`. See
 [Standard Library Conventions](04-functions-and-lambdas.md#standard-library-conventions)
 for the parameter and result-type rules.
 
-```doof
+```doof check
 nums := [1, 2, 3, 4]
 nums.push(5)                         // nums is now [1, 2, 3, 4, 5]
 popped := nums.pop()                 // Result<int, string>
@@ -671,7 +671,7 @@ result types. A single class nullable such as `Box | none` uses ordinary pointer
 member access, while a single struct nullable such as `Point | none` uses an
 optional value representation. Both may still require explicit none handling for safety.
 
-```doof
+```doof check
 class Request { method: string; path: string }
 class RouterRequest { method: string; path: string }
 
@@ -719,7 +719,7 @@ When no values are assigned, variants receive integer ordinals beginning at
 zero. Reordering such an enum changes its backing values, so persistent
 protocols should prefer explicit values:
 
-```doof
+```doof check
 enum Color { Red, Green, Blue }
 
 enum Direction {
@@ -737,7 +737,7 @@ Here `Color.Red.value == 0`, `Color.Green.value == 1`, and
 
 Enum variants can have explicit integer values. If a variant omits a value, it is implicitly the previous variant's value + 1. The first variant defaults to 0 if unspecified:
 
-```doof
+```doof check
 enum Direction {
     North = 1,
     South = 2,
@@ -757,7 +757,7 @@ enum HttpStatus {
 
 Enum variants can have explicit string values. **Every variant must have a value** — auto-increment does not apply to strings:
 
-```doof
+```doof check
 enum Color { Red = "RED", Green = "GREEN", Blue = "BLUE" }
 
 enum LogLevel {
@@ -936,13 +936,13 @@ This provides stronger type safety than string-based discrimination — misspell
 
 Use **enums** for a fixed set of named values without associated data:
 
-```doof
+```doof check
 enum Status { Active, Inactive, Suspended }
 ```
 
 Use **discriminated unions** when variants carry different data:
 
-```doof
+```doof check
 class TextMessage {
     kind: "Text"
     content: string
@@ -986,7 +986,7 @@ Interfaces define **structural contracts**. In Doof's closed-world compilation m
 
 ### Automatic Structural Matching
 
-```doof
+```doof check
 interface Thing2D {
     readonly x: float
     readonly y: float
@@ -1057,7 +1057,7 @@ let v: Positioned = Vector { x: 1.0, y: 2.0 }
 
 ### Literal-Valued Fields Aid Variant Identification
 
-```doof
+```doof check
 enum OutcomeKind { Success, Failure }
 
 class SuccessOutcome {
@@ -1126,7 +1126,7 @@ valid type arguments. `Serializable` and `Reflectable` are compiler-known,
 constraint-only intrinsics used by generic JSON and metadata helpers; they are
 not normal type annotations:
 
-```doof
+```doof check
 function decode<T: Serializable>(json: SerialValue): Result<T, string> {
   return T.fromSerialValue(json)
 }
@@ -1145,7 +1145,7 @@ parameter name must be unique within its declaration. A nested generic
 declaration, including a method, must not redeclare a type parameter visible
 from an enclosing generic declaration.
 
-```doof
+```doof check
 function identity<T>(value: T): T => value
 
 class Box<T> {
@@ -1197,7 +1197,7 @@ Compound assignments must be able to store the promoted result in the target.
 Shift results use the promoted left operand type. Exponentiation returns
 `double` if either operand is integral; otherwise it uses float/double promotion.
 
-```doof
+```doof check
 function add<T: float | double>(a: T, b: T): T => a + b
 function quotient<T: float | double>(a: T, b: T): T => a / b
 function complement<T: int | long>(value: T): T => ~value
@@ -1208,7 +1208,7 @@ function complement<T: int | long>(value: T): T => ~value
 An interface bound exposes its declared instance fields and methods inside a
 generic body. Interface arguments are substituted into those member types:
 
-```doof
+```doof check
 interface Reader<V> {
   read(): V
 }
@@ -1271,7 +1271,7 @@ that survive at the ABI boundary are owned by a native header or the Doof
 runtime. A native C++ function template may accept a concrete monomorphized
 Doof type; the generated adapter invokes it with that concrete representation.
 
-```doof
+```doof check
 scores: Map := { "Alice": 100, "Bob": 95 }        // Map<string, int>
 readonlyScores: ReadonlyMap := { "Alice": 100 }    // ReadonlyMap<string, int>
 unique: Set := [1, 2, 3]                             // Set<int>
@@ -1334,7 +1334,7 @@ Replacing the value for an existing key does not move it. Deleting a key and the
 
 Integer literals are contextually widened when a `long` key type is expected, so this is valid:
 
-```doof
+```doof check
 let counts: Map<long, int> = { 1: 10, 2: 20 }
 ```
 
@@ -1410,7 +1410,7 @@ Adding a value that is already present does not move it. Deleting a value and th
 | `.cloneReadonly()` | mutable only | `ReadonlySet<T>` | Shallow-copy into a new readonly set without changing the source |
 | `.cloneMutable()` | both | `Set<T>` | Shallow-copy into a new mutable set |
 
-```doof
+```doof check
 let unique: Set<int> = [1, 2, 3]
 unique.add(4)
 println(unique.has(2))
@@ -1439,7 +1439,7 @@ The deprecated `buildReadonly()` spelling remains accepted on mutable sets with 
 | `.cloneReadonly()` | mutable only | `ReadonlyMap<K, V>` | Shallow-copy into a new readonly map without changing the source |
 | `.cloneMutable()` | both | `Map<K, V>` | Shallow-copy into a new mutable map |
 
-```doof
+```doof check
 let m: Map<string, int> = { "a": 1, "b": 2 }
 m.set("c", 3)
 case m.get("a") {
@@ -1465,7 +1465,7 @@ The deprecated `buildReadonly()` spelling remains accepted on mutable maps with 
 
 Maps support bracket-based index access, which is equivalent to direct key lookup:
 
-```doof
+```doof check
 let m: Map<string, int> = { "a": 1 }
 x := m["a"]   // returns 1
 m["b"] = 2    // inserts new entry
@@ -1481,7 +1481,7 @@ insert-or-update operation.
 
 A `Tuple<T1, T2, ..., Tn>` is equivalent to a class with fields `_1: T1`, `_2: T2`, ..., `_n: Tn`. All standard class construction and destructuring rules apply.
 
-```doof
+```doof check
 // Explicit type
 let pair: Tuple<int, string> = (1, "hello")
 let vec: Tuple<float, float, float> = (1.0f, 2.0f, 3.0f)
@@ -1513,7 +1513,7 @@ result := (200, "OK")                      // Tuple<int, string>
 
 Tuples support positional destructuring, just like classes:
 
-```doof
+```doof check
 function divmod(a: int, b: int): Tuple<int, int> {
     return (a \ b, a % b)
 }
@@ -1536,7 +1536,7 @@ q = 0  // ✅ OK
 
 Tuples are particularly useful for functions that return multiple values:
 
-```doof
+```doof check
 function minMax(items: int[]): Tuple<int, int> {
     let min = items[0]
     let max = items[0]
@@ -1561,7 +1561,7 @@ println(hi)  // 9
 
 ### Type Aliases
 
-```doof
+```doof check
 type UserId = int
 type Callback = (value: int): none
 type StringMap = Map<string, string>
@@ -1575,7 +1575,7 @@ type Pair<A, B> = Tuple<A, B>         // Alias for common tuple arities
 Functions are first-class values with explicit type signatures that record
 parameter names:
 
-```doof
+```doof check
 type Callback = (value: int, description: string): none
 type Predicate<T> = (item: T): bool
 type Transform = (input: int): int
@@ -1713,7 +1713,7 @@ Doof uses reference counting for memory management (see [Classes and Interfaces]
 
 `weak` is a **reference qualifier**, not a type modifier. It prefixes a complete type expression and covers all of it:
 
-```doof
+```doof check
 class TreeNode {
     children: TreeNode[] = []
     parent: weak TreeNode | none  // weak reference to (TreeNode | none)
@@ -1794,7 +1794,7 @@ Doof uses explicit narrowing forms. It does not perform implicit flow-sensitive 
 
 `if` conditions do not narrow types implicitly. A none check can still guard control flow, but the checked value keeps its original type unless you use an explicit form such as `!`, declaration-`else`, `case`, or `as`:
 
-```doof
+```doof check
 function process(value: int | none): none {
     if value != none {
         println(value!)  // explicit assertion still required
@@ -1871,7 +1871,7 @@ function describe(dir: Direction): string {
 
 Use `name := expr else { ... }` to unwrap nullable and `Result` values with an explicit bail-out path:
 
-```doof
+```doof check
 function loadName(): Result<string, string> => Success("Ada")
 
 function test(): int {

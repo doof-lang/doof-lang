@@ -59,7 +59,7 @@ Semicolons are **optional statement terminators**. They may appear after any sta
 
 The sole exception is the traditional `for` loop header, where semicolons are **required separators** between the init, condition, and update clauses:
 
-```doof
+```doof check
 for let i = 0; i < 10; i += 1 {
     println(i)
 }
@@ -67,7 +67,7 @@ for let i = 0; i < 10; i += 1 {
 
 Semicolons may be used to place multiple statements on a single line, though this is discouraged:
 
-```doof
+```doof check
 let x = 1; let y = 2; let z = 3    // legal but discouraged
 ```
 
@@ -80,7 +80,7 @@ and line numbering. A shebang marker anywhere else is invalid.
 
 The canonical executable-script form is:
 
-```doof
+```doof check
 #!/usr/bin/env doof
 
 function main(arguments: string[]): none {
@@ -92,7 +92,7 @@ function main(arguments: string[]): none {
 
 ## Hello World
 
-```doof
+```doof check
 function main(): none {
     println("Hello, Doof!")
 }
@@ -100,7 +100,7 @@ function main(): none {
 
 ## Quick Taste
 
-```doof
+```doof check
 class User {
     readonly id: int
     readonly name: string

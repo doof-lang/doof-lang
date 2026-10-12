@@ -70,7 +70,7 @@ count <- {
 
 `const` declarations are deprecated. The parser and checker still accept them temporarily and emit a warning. Use `readonly` for deeply immutable values, and use `:=` for immutable bindings with mutable interiors.
 
-```doof
+```doof check
 readonly PI = 3.14159
 readonly MAX_USERS = 1000
 readonly GREETING = "Hello"
@@ -129,7 +129,7 @@ view[0].x = 2                  // ✅ OK
 
 `let` creates a mutable binding. Type inference prefers mutable types:
 
-```doof
+```doof check
 let counter = 0            // int
 let buffer = [1, 2, 3]    // int[] — inferred mutable
 
@@ -179,7 +179,7 @@ frozen = [4, 5, 6]        // ✅ OK: binding is mutable
 `readonly` is permitted at global scope. In declarative modules, its initializer
 must be construction-only, as described in [Module-Level Initialization](11-modules.md#module-level-initialization):
 
-```doof
+```doof check
 readonly MAX_SIZE = 100                 // Module constant
 readonly PRIMES = readonly [2, 3, 5, 7] // Deeply immutable array
 ```
@@ -243,7 +243,7 @@ Mutation through the interior of a bare field remains valid; for example,
 
 `readonly` can modify collection literals to create readonly collections:
 
-```doof
+```doof check
 // Explicit readonly modifier
 items := readonly [1, 2, 3]           // readonly int[]
 let data = readonly ["a", "b"]        // readonly string[]

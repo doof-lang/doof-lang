@@ -1,23 +1,25 @@
 # Analyzer false-negative samples
 
 Each `.do` file in this directory is intentionally invalid according to the
-language specification and must be rejected by `doof check` with an error
-diagnostic. Keep the samples independent so a regression in one checker rule
-does not hide the status of the others.
+language specification and must be rejected by `doof check` with exactly the
+diagnostics it declares. Keep the samples independent so a regression in one
+checker rule does not hide the status of the others.
 
-These are command-level regression inputs; focused unit coverage lives beside
-the checker. To survey them:
+A sample starts with a comment describing the rule, followed by one
+`expect-error` comment per expected error, in reported order:
 
-```sh
-failed=0
-for sample in tests/analyzer-false-negatives/*.do; do
-  if build/doof check "$sample"; then
-    echo "unexpectedly accepted: $sample"
-    failed=1
-  fi
-done
-exit "$failed"
+```doof
+// Invalid: break is only valid inside a loop.
+// expect-error: 4:5 Break is only valid inside a loop
+function main(): none {
+    break
+}
 ```
 
-An accepted sample is a regression in the rule described by its leading
-comment.
+`./scripts/test.sh` (or `tools/run.sh corpus-test` on its own) fails when a
+sample is accepted, when its reported errors differ from the declared spans
+and messages (including extra cascading errors), or when `doof emit` writes
+output for it. Focused unit coverage still lives beside the checker.
+
+Line numbers count the comment lines, so add or remove `expect-error` comments
+before reading spans from `doof check` output.

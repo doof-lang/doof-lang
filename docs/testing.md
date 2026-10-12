@@ -74,6 +74,21 @@ performs static discovery only and never invokes the compiler toolchain.
 Coverage aggregates stable source-line markers and produces text, JSON,
 summary HTML, and annotated per-file HTML output.
 
+## Language corpora
+
+`./scripts/test.sh` also runs two command-level corpora (on their own,
+`tools/run.sh corpus-test`):
+
+- `tests/analyzer-false-negatives/` holds invalid programs. Each must be
+  rejected with exactly the `// expect-error: <line>:<column> <message>`
+  diagnostics it declares, and `doof emit` must write no output for it. See
+  that directory's README.
+- Spec code fences opened with ` ```doof check ` are written to standalone files
+  under `build/spec-examples/` and must pass `doof check`. Plain ` ```doof `
+  fences are not checked; use them for fragments, signatures, multi-file
+  examples, and deliberately invalid code. Mark a new spec example
+  `doof check` whenever it is a complete, valid single file.
+
 Focused semantic tests belong beside their source module. Native
 representation, runtime, resource, package, and Apple-platform behavior belongs
 in `tests/release-fixtures/` and `./scripts/release.sh`.

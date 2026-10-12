@@ -182,7 +182,7 @@ when iterated.
 
 Type patterns create immutable bindings with narrowed types:
 
-```doof
+```doof check
 let result: Result<int, string> = Success { value: 42 }
 
 case result {
@@ -229,7 +229,7 @@ always matches.
 
 Capture patterns solve the path-tracking problem for nested fields:
 
-```doof
+```doof check
 class Container<T, E> {
     result: Result<T, E>
 }
@@ -421,7 +421,7 @@ Else-narrow works only on **Result** and/or **nullable** types. Plain unions (e.
 
 ### Nullable Type Narrowing
 
-```doof
+```doof check
 function getValue(): string | none => "hello"
 function test(): int {
     x := getValue() else { return 0 }
@@ -432,7 +432,7 @@ function test(): int {
 
 ### Result Type Narrowing
 
-```doof
+```doof check
 class Config { name: string }
 class AppError { message: string }
 function loadConfig(): Result<Config, AppError> => Success { value: Config { name: "app" } }
@@ -508,7 +508,7 @@ x: string := getValue() else { return 0 }
 
 Else-narrow works with `break` and `continue` in loop contexts:
 
-```doof
+```doof check
 function getValue(): string | none => none
 function process(): none {
     while true {

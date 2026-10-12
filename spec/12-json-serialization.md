@@ -415,7 +415,7 @@ decoding, nullable fields, arrays, tuples, string-keyed maps, and generic
 
 Examples in this chapter that call `formatJsonValue(...)` assume:
 
-```doof
+```doof check
 import { formatJsonValue } from "std/json"
 ```
 

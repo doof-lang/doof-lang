@@ -394,7 +394,7 @@ export class B {
 
 A module becomes **executable** by defining a `main()` function:
 
-```doof
+```doof check
 function main(): none {
     println("Hello, Doof!")
 }
@@ -436,7 +436,7 @@ function main(): none {
 }
 ```
 
-```doof
+```doof check
 // lib.do — Library module (no main)
 export function processData(): string {
     return "processed"
@@ -560,7 +560,7 @@ Current conventions:
 
 Example:
 
-```doof
+```doof check
 // math.test.do
 export function testAdd(): none {
     assert(1 + 1 == 2, "expected addition to work")
@@ -731,7 +731,7 @@ Doof can import external C++ classes to enable interop with existing C++ librari
 
 ### Basic Syntax
 
-```doof
+```doof check
 // Import a C++ class — header inferred as "Logger.hpp"
 import class Logger {
     log(message: string): none
@@ -749,7 +749,7 @@ The body declares the fields and methods that Doof code may access. This serves 
 
 Extern methods may also be declared `static`, which emits a direct `ClassName::method(...)` call instead of an instance call:
 
-```doof
+```doof check
 import class MathBridge from "./math_bridge.hpp" as native::MathBridge {
     static cos(x: float): float
     static sin(x: float): float
@@ -762,7 +762,7 @@ Extern methods may optionally provide a Doof body. A signature without a body
 remains a native C++ member declaration; a method with a block or arrow body is
 emitted as an out-of-line C++ member definition for the imported class:
 
-```doof
+```doof check
 import class NativeWebSocketEvent from "./native_http_server.hpp" as doof_http_server::NativeWebSocketEvent {
     kind(): int
     text(): string
@@ -816,7 +816,7 @@ This ensures consistent memory management across Doof and C++ code — all class
 
 When the C++ class lives in a namespace, use `as` to provide the fully-qualified C++ name:
 
-```doof
+```doof check
 import class HttpClient from "<httplib.h>" as httplib::Client {
     get(path: string): Result<string, int>
 }
@@ -872,7 +872,7 @@ This avoids duplicate conversion tables and keeps the Doof and C++ views of the 
 
 Extern classes can declare fields:
 
-```doof
+```doof check
 import class Point from "./geometry.hpp" {
     x, y: float
 }
@@ -963,7 +963,7 @@ import isolated function monotonicNanos(): long from "native_time.hpp"
 Bodyless native functions and class methods that are safe to call from isolated
 code must declare that contract explicitly:
 
-```doof
+```doof check
 import isolated function poll(): int from "native_process.hpp" as native::poll
 
 import class NativeProcess from "native_process.hpp" {
@@ -994,7 +994,7 @@ callback immediately, store it, or schedule it.
 
 When the C++ function lives in a namespace, use `as` to provide the fully-qualified name:
 
-```doof
+```doof check
 import function sin(x: float): float from "<cmath>" as std::sin
 import function cos(x: float): float from "<cmath>" as std::cos
 

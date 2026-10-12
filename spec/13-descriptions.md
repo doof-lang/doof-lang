@@ -88,7 +88,7 @@ enum Status "Current status." {
 
 ## C++ Emission
 
-```doof
+```doof check
 class DevAssistant "AI assistant for development workflows." {
     rootPath "Path to the project root.": string
     createProject "Creates a new project scaffold."(
@@ -131,7 +131,7 @@ Accessing `TypeName.metadata` returns a `ClassMetadata` object with the followin
 | `.description` | `string` | The class or struct description (empty string if none) |
 | `.methods` | `MethodReflection[]` | Array of public, non-static method reflections |
 
-```doof
+```doof check
 class Calculator "A simple calculator." {
     add "Adds two numbers."(a "First number.": int, b "Second number.": int): int {
         return a + b

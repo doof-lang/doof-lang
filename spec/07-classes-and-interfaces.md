@@ -8,7 +8,7 @@ Classes define **nominal reference types** — two classes with identical struct
 
 Each field declaration must provide either a type annotation or a default value so the field's type is known at compile time.
 
-```doof
+```doof check
 class Point {
     x, y, z: float           // Multiple fields of same type
 }
@@ -38,7 +38,7 @@ a leading-dot shorthand may name a static field of that class's type, or call a
 static method returning it. For a `T | none` field, the source may also be
 `T | none`:
 
-```doof
+```doof check
 class Transform {
     x: int
     static readonly zero = Transform(0)
@@ -107,7 +107,7 @@ accepted temporarily with a warning and has the same meaning.
 
 ### Methods
 
-```doof
+```doof check
 class Counter {
     let count = 0
     
@@ -135,7 +135,7 @@ use `function`.
 
 Classes can explicitly implement `Stream<T>`. A class satisfies `Stream<T>` when it exposes zero-argument `next(): bool` and `value(): T` methods. `value()` is only valid after a successful `next()` call.
 
-```doof
+```doof check
 class Counter implements Stream<int> {
     let current = 0
     end: int
@@ -328,7 +328,7 @@ JSON fields should map onto custom construction invariants.
 
 Structs define **nominal value types**. They share the class surface syntax for fields, readonly fields, literal-valued fields, default values, methods, static members, type parameters, construction, imports, exports, type aliases, JSON, and metadata, but values are copied when assigned, passed, or returned.
 
-```doof
+```doof check
 struct Point {
     x: int
     y: int
@@ -406,7 +406,7 @@ An interface may also declare **static members**. They never take part in
 instance matching or in interface values; they form a contract only for generic
 bounds, where `T.name` reaches them:
 
-```doof
+```doof check
 interface Shape {
     static sides: int                      // read-only static field
     static readonly label: string
@@ -476,7 +476,7 @@ h := u.passwordHash   // ❌ Error: "passwordHash" is private
 
 #### Private Methods
 
-```doof
+```doof check
 class Parser {
     source: string
     private advance(): none { /* ... */ }
@@ -496,7 +496,7 @@ p.advance()   // ❌ Error: "advance" is private
 
 Top-level functions and classes can be marked `private` to make them file-local. They cannot be exported or imported.
 
-```doof
+```doof check
 private function helper(): int => 42         // file-local
 private class InternalState { x: int }       // file-local
 
@@ -511,7 +511,7 @@ export private function foo(): none {}  // ❌ Parse error: cannot export a priv
 
 Classes with private fields **that lack default values** cannot be constructed from outside their defining file, because the caller would need to supply values for fields it cannot see:
 
-```doof
+```doof check
 // lib.do
 export class Config {
     private secret: string       // no default → blocks external construction
@@ -532,7 +532,7 @@ c2 := Config { secret: "x", name: "test" }   // ❌ cannot construct
 
 If all private fields have defaults, external construction is allowed (the private fields simply use their defaults):
 
-```doof
+```doof check
 export class Counter {
     private count: int = 0     // has default → external construction OK
     name: string
@@ -557,7 +557,7 @@ export class Counter {
 
 Within instance methods, fields and other instance methods are accessed **implicitly** — no `this` prefix is required:
 
-```doof
+```doof check
 class Player {
     name: string
     let score = 0
@@ -577,7 +577,7 @@ class Player {
 
 `this` is available in all instance methods and **required** when a parameter or local variable shadows a field name:
 
-```doof
+```doof check
 class Point {
     let x, y: float
     
@@ -712,7 +712,7 @@ literal is a `Tuple`.
 
 ### Default Values
 
-```doof
+```doof check
 class Config {
     host: string
     port: int = 8080
@@ -916,7 +916,7 @@ An interface need not have an implementing class. A library may export an
 interface for its consumers to implement, along with helpers declared against
 it, and both check and compile on their own:
 
-```doof
+```doof check
 export interface Plugin {
     name: string
     run(input: string): string
@@ -1018,7 +1018,7 @@ let hex = "Color: ${255:x}"  // Not supported
 
 ## Complete Initialisation Example
 
-```doof
+```doof check
 class Point { x, y, z: float; }
 class Color { r, g, b: float; a: float = 1.0; }
 class Vertex { position: Point; color: Color; }

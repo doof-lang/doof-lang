@@ -72,7 +72,7 @@ to `Success { value: value }`, and `Failure { error }` to
 `Failure { error: error }`. The binding must exist and its type must be assignable
 to the contextual payload type.
 
-```doof
+```doof check
 function parseCount(text: string): Result<int, string> {
     if text == "" {
         return Failure("empty input")
@@ -458,7 +458,7 @@ To propagate the receiver's `Failure`, unwrap it with `try` first.
 
 `Result<T, E>` provides a small set of helper methods:
 
-```doof
+```doof check
 function countOrZero(input: Result<int, string>): int {
     return input.unwrapOr(0)
 }
@@ -478,7 +478,7 @@ or chain Results with statement-level `try` in a Result-returning function,
 convert to a nullable with postfix `?`, and branch on the error with `case` or a
 declaration `else`:
 
-```doof
+```doof check
 function describe(input: Result<int, string>): Result<string, string> {
     try value := input
     return Success("count=" + string(value))
@@ -598,7 +598,7 @@ case catch {
 errors, internal invariants, and states that should be impossible in correct
 code.
 
-```doof
+```doof check
 function getElement<T>(items: T[], index: int): T {
     if index < 0 || index >= items.length {
         panic("index out of bounds: ${index}")
@@ -626,7 +626,7 @@ not recoverable runtime failures.
 
 The `std/assert` module provides richer test helpers:
 
-```doof
+```doof check
 import { Assert } from "std/assert"
 
 export function testAdd(): none {

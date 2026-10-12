@@ -1,4 +1,5 @@
 // Invalid: Dog is not a possible type of the Cat subject.
+// expect-error: 7:5 Case type pattern "Dog" cannot match subject type "Cat"
 class Cat {}
 class Dog {}
 

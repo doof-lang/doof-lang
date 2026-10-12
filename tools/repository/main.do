@@ -5,6 +5,7 @@ import { testRepository, releaseVerification, debuggerChecks } from "./verify"
 import { prepareRelease, checkSourceSnapshot, signingPreflight, linuxEndToEnd, windowsEndToEnd } from "./release"
 import { cacheChecks, projectLockChecks, nativeEditorChecks } from "./process-checks"
 import { path, stdlibDirectory, setting } from "./common"
+import { falseNegativeChecks, specExampleChecks } from "./corpus-checks"
 import { require } from "./common"
 function dispatch(arguments: string[]): Result<int, string> {
   try require(arguments.length >= 1, "usage: repository <root> <dev|build|test|release|linux-test|windows-test> [version]")
@@ -21,12 +22,13 @@ function dispatch(arguments: string[]): Result<int, string> {
   else if arguments[1] == "release" { try require(arguments.length == 3, "release requires a version"); try prepareRelease(arguments[0], arguments[2]) }
   else if arguments[1] == "linux-test" { try require(arguments.length == 3, "linux-test requires a version"); try linuxEndToEnd(arguments[0], arguments[2]) }
   else if arguments[1] == "windows-test" { try require(arguments.length == 3, "windows-test requires a version"); try windowsEndToEnd(arguments[0], arguments[2]) }
-  else if arguments[1] == "test" || arguments[1] == "verify" || arguments[1] == "debugger-test" || arguments[1] == "process-test" {
+  else if arguments[1] == "test" || arguments[1] == "verify" || arguments[1] == "debugger-test" || arguments[1] == "process-test" || arguments[1] == "corpus-test" {
     try stdlib := stdlibDirectory(arguments[0])
     compiler := path(arguments[0], "dist/doof")
     if arguments[1] == "test" { try testRepository(arguments[0], compiler, stdlib) }
     else if arguments[1] == "verify" { try releaseVerification(arguments[0], compiler, stdlib) }
     else if arguments[1] == "process-test" { try projectLockChecks(arguments[0], compiler, stdlib) }
+    else if arguments[1] == "corpus-test" { try falseNegativeChecks(arguments[0], compiler, stdlib); try specExampleChecks(arguments[0], compiler, stdlib) }
     else { try debuggerChecks(arguments[0], compiler, stdlib) }
   }
   else if arguments[1] == "extension-native" { try nativeEditorChecks(arguments[0], path(arguments[0], "dist/doof")) }
