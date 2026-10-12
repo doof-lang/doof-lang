@@ -1807,6 +1807,13 @@ export function testIteratesRangesWithoutSnapshot(): none {
   Assert.equal(result.source.contains("iteration_snapshot"), false)
 }
 
+export function testOwnsForOfIterableReachedThroughTemporary(): none {
+  result := emit("class Board { cells: int[] }\nfunction board(): Board => Board { cells: [1, 2] }\nfunction main(): int { let total = 0\nfor cell of board().cells { total = total + cell }\nreturn total }")
+  Assert.stringContains(result.source, "const auto _iterable_")
+  Assert.stringContains(result.source, "= doof::iteration_snapshot(board()->cells);")
+  Assert.equal(result.source.contains("const auto& _iterable_"), false)
+}
+
 export function testEmitsStringCaseAndCallbackCallMembers(): none {
   result := emit("function invoke(handler: (): void): string { handler.call()\nreturn \"HTTP\".toLowerCase() }")
   Assert.equal(result.source.contains("handler.call()"), true)

@@ -223,6 +223,28 @@ function printNativeCommandOutput(result: NativeCommandResult, remainingLines: i
   return remaining
 }
 
+/**
+ * Describes a failed test process that printed nothing. The process runner
+ * reports a death by signal N as exit code 128 + N.
+ */
+export function silentTestFailureMessage(exitCode: int): string {
+  if exitCode > 128 && exitCode < 160 {
+    signal := exitCode - 128
+    name := case signal {
+      4 -> " (SIGILL)",
+      6 -> " (SIGABRT)",
+      8 -> " (SIGFPE)",
+      9 -> " (SIGKILL)",
+      11 -> " (SIGSEGV)",
+      13 -> " (SIGPIPE)",
+      15 -> " (SIGTERM)",
+      _ -> ""
+    }
+    return "test process terminated by signal " + string(signal) + name + " without output"
+  }
+  return "test process exited with code " + string(exitCode) + " without output"
+}
+
 function driverWithExtension(path: string): string {
   if path.endsWith(".do") { return path }
   return path + ".do"
@@ -1400,10 +1422,11 @@ function testRequest(request: CliRequest): int {
         mergeCoverageGroup(result.emission!.coverageModules, groupHits, coverageModules, coverageHits)
         if testResult.exitCode != 0 {
           visibleOutput := stripCoverageLines(output)
-          if visibleOutput != "" { println(visibleOutput) }
+          println(if visibleOutput != "" then visibleOutput else silentTestFailureMessage(testResult.exitCode))
         }
       } else if testResult.exitCode != 0 {
-        ignored := printNativeCommandOutput(testResult, MAX_PRINTED_DIAGNOSTICS)
+        remaining := printNativeCommandOutput(testResult, MAX_PRINTED_DIAGNOSTICS)
+        if remaining == MAX_PRINTED_DIAGNOSTICS { println(silentTestFailureMessage(testResult.exitCode)) }
         if testResult.truncated { println("... test output capture truncated after " + string(MAX_NATIVE_COMPILER_OUTPUT_BYTES) + " bytes") }
       }
       exitCode := testResult.exitCode

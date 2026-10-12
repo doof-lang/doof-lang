@@ -206,8 +206,9 @@ for _, _ of pairs { tick() }
 Current iterable forms are arrays, maps, sets, finite `Range` values, and
 `Stream<T>` values. A stream yields one element at a time by calling `next()`
 until it returns `false`, then reading the current element with `value()`.
-The iterable expression is evaluated exactly once, and a collection or stream
-temporary returned by that expression remains alive until the loop completes.
+The iterable expression is evaluated exactly once, and the collection or stream
+it produces remains alive until the loop completes, including one reached
+through a temporary (`board().cells`) or held by a variable the body reassigns.
 
 A loop over an array, map, or set visits exactly the elements present when the
 loop starts, in their order at that moment. The body may add, remove, or

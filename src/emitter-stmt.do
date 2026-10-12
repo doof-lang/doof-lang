@@ -564,7 +564,9 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
   iterable := emitExpression(statement.iterable, context)
   context.tryCounter = context.tryCounter + 1
   iterableName := "_iterable_" + string(context.tryCounter)
-  iterableBinding := ind + "const auto& " + iterableName + " = " + iterable + ";\n"
+  // Own the iterable by value: a reference would dangle for members reached
+  // through a temporary (`make()->items`) or a variable the body reassigns.
+  iterableBinding := ind + "const auto " + iterableName + " = " + iterable + ";\n"
   if statement.iterable.resolvedType != none {
     case statement.iterable.resolvedType! {
       _: RangeResolvedType -> {

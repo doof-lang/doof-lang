@@ -69,3 +69,17 @@ export function testDebugDriverExternalLaunchIntegration(): none {
     remove(descriptor)!
   }
 }
+
+import { silentTestFailureMessage } from "./driver"
+
+export function testDescribesSilentTestCrashSignal(): none {
+  Assert.equal(silentTestFailureMessage(139), "test process terminated by signal 11 (SIGSEGV) without output")
+  Assert.equal(silentTestFailureMessage(134), "test process terminated by signal 6 (SIGABRT) without output")
+  Assert.equal(silentTestFailureMessage(159), "test process terminated by signal 31 without output")
+}
+
+export function testDescribesSilentTestExitCode(): none {
+  Assert.equal(silentTestFailureMessage(1), "test process exited with code 1 without output")
+  Assert.equal(silentTestFailureMessage(128), "test process exited with code 128 without output")
+  Assert.equal(silentTestFailureMessage(-1), "test process exited with code -1 without output")
+}
