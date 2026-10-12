@@ -42,13 +42,13 @@ The important hand-offs are:
 | `emitter-worldview.do` / `emitter-module.do` | checked declaration closures and generated header/source pairs | `emitter-project.do` |
 | `emitter-project.do` | generated project plus normalized native inputs | native build planner and driver |
 | `native-build.do` | deterministic PCH/compile/link tasks | `native-build-driver.do` |
-| `frontend-cache.do` | exact source/configuration fingerprints and emitted-module names | `driver.do` cache validation and materialization |
+| `frontend-cache.do` | exact source/configuration fingerprints and emitted-module names | `frontend-cache-driver.do` cache validation and `materialize-driver.do` |
 
 `frontend.do` owns the shared analysis/checking pipeline and returns the
 semantic graph, diagnostics, loaded sources, and resolution probes. It imports
-no emitter or driver. `compiler.do` consumes that result and coordinates lowering. `driver.do` adapts CLI,
-filesystem, acquired-package, test, app, and process boundaries to it. It also
-selects the command-aware native-build output mode: successful `run`
+no emitter or driver. `compiler.do` consumes that result and coordinates lowering. `driver.do` and its
+focused `*-driver.do` modules adapt CLI, filesystem, acquired-package, test, app,
+and process boundaries to it. `launch-driver.do` selects the command-aware native-build output mode: successful `run`
 compilation is silent, while `build`, `test`, and `package` request concise
 progress. `native-build-driver.do` applies that policy while retaining captured
 output for failed compiler and linker commands. Source loading is inverted
@@ -70,7 +70,7 @@ the row from left to right.
 
 | Concept | Established or modeled | Checked or decorated | Consumed or executed |
 | --- | --- | --- | --- |
-| Source identity and diagnostics | token/AST spans in `lexer.do` and `ast.do`; diagnostic records in `semantic.do` | analyzer and focused checker module attach semantic spans | `driver.do` formats bounded diagnostic output |
+| Source identity and diagnostics | token/AST spans in `lexer.do` and `ast.do`; diagnostic records in `semantic.do` | analyzer and focused checker module attach semantic spans | `process-driver.do` formats bounded diagnostic output |
 | Modules and names | `resolver.do` resolves logical paths; `analyzer.do` owns imports, exports, symbols, and defining-module identity | `checker-symbols.do` resolves lexical, named-import, and namespace-member bindings | `emitter-names.do` derives stable C++ identity; the worldview planner projects referenced declarations into each module header |
 | Types and assignability | resolved type records in `semantic.do`; shared operations in `checker-types.do` | focused checker modules decorate annotations and expressions | `emitter-types.do` chooses representation; expression/declaration emitters require decorations. Absence values share `emitNoneLiteral`, which specializes the checked type and uses type lowering's flattened nullable-member classification; catch initialization uses the same path. |
 | Numeric constraints | resolved primitive alternatives | `checker-numeric.do` proves operator capabilities and promotion; `checker-annotations.do` validates exact numeric arguments | specialized expression emission consumes checked types; unsigned shifts and compound powers lower explicitly |
@@ -89,8 +89,8 @@ the row from left to right.
 | Module initialization | top-level checked declarations/statements and compiler entry mode | `checker-module-initialization.do` validates construction-only expressions and direct storage | `emitter-module.do`, `emitter-header.do`, and `emitter-decl.do` emit direct storage and graph-ordered execution |
 | Packages and standard inputs | local-path manifests in `package-manifest.do`; authoritative bundled stdlib index in `stdlib-bundle.do` | the driver registers reached local and standard packages | bundle materialization and std-only preparation feed `emitter-project.do` |
 | Incremental native builds | normalized native plan and emitted modules | `native-build.do` creates stable tasks; `pkg-config.do` normalizes flags; `native-dependencies.do` resolves optional capabilities with target compile/link probes | `native-build-driver.do` fingerprints selected arguments/dependencies, persists content fingerprints plus metadata, and runs dirty work |
-| Incremental frontend/emission | resolver probes, source hashes, configuration, and transitive module dependencies | `frontend-cache.do` persists pointer-free exact state; `emitter-module.do` fingerprints module inputs plus the global lowering plan | `driver.do` skips exact graph hits and retains matching generated files without changing timestamps |
-| Incremental executable resources | root-package resource declarations and recursive source trees | `resource-state.do` persists source/output metadata for copied files | `driver.do` skips unchanged blob reads and synchronizes edited, added, removed, or externally changed outputs before launch |
+| Incremental frontend/emission | resolver probes, source hashes, configuration, and transitive module dependencies | `frontend-cache.do` persists pointer-free exact state; `emitter-module.do` fingerprints module inputs plus the global lowering plan | `frontend-cache-driver.do` skips exact graph hits and retains matching generated files without changing timestamps |
+| Incremental executable resources | root-package resource declarations and recursive source trees | `resource-state.do` persists source/output metadata for copied files | `materialize-driver.do` skips unchanged blob reads and synchronizes edited, added, removed, or externally changed outputs before launch |
 | Tests, mocks, and coverage | `test-runner.do` discovers tests and generates harnesses | analyzer rewrites mock imports; emitter inserts stable coverage markers | driver groups, builds, isolates, runs, merges, and renders reports |
 | Runtime profiling | source loaders retain optional physical paths; CLI selects profile requests | emitter writes Doof `#line` mappings; native planner selects optimized symbol-rich profile flags | `profile-command.do` plans xctrace launch/open operations; driver records the trace |
 
@@ -167,8 +167,9 @@ tasks, app bundles, and run invocations. Environment-facing modules are:
 - `native-build-driver.do` for compiler/linker subprocesses and incremental
   build state;
 - Apple `*-driver.do` and `ios-device.do` modules for platform tools;
-- `driver.do` for top-level workflow, filesystem materialization, and command
-  routing.
+- `driver.do` for command routing and the compile workflow, with focused
+  `process-`, `source-loader-`, `frontend-cache-`, `materialize-`, `test-`,
+  `launch-`, and `package-driver.do` modules for each boundary.
 
 This separation keeps semantic tests in memory and planning tests
 deterministic.
@@ -577,7 +578,7 @@ Native-app presentation modules are not duplicated into TypeScript.
 
 `version.do` owns the embedded compiler version and stamp marker. Build scripts
 stage source inputs and replace only those constants plus package versions.
-`driver.do` uses a stamped version as the compiler contribution to frontend
+`frontend-cache-driver.do` uses a stamped version as the compiler contribution to frontend
 cache fingerprints. Unstamped builds disable reuse; semantic ABI, source,
 stdlib/resource, options, and native compiler identities remain independent.
 

@@ -1,48 +1,21 @@
 import { Assert } from "std/assert"
-import { structuredTestResult, stdlibPackageAcquisitionRoot } from "./driver"
-import { compilerCacheIdentity } from "./driver"
-import { nativeBuildOutputModeForCommand, takeObserveUrlFile } from "./driver"
-import { compilerVersion, compilerVersionStamped } from "./version"
+import { nativeBuildOutputName, phaseTimingsEnabled } from "./driver"
 
-export function testDriverUsesStampedCompilerIdentity(): none {
-  Assert.equal(compilerCacheIdentity(), if compilerVersionStamped then compilerVersion else "")
+export function testPhaseTimingsOnlyReportFrontendCommands(): none {
+  Assert.isTrue(phaseTimingsEnabled("emit", "1"))
+  Assert.isTrue(phaseTimingsEnabled("check", "1"))
+  Assert.isFalse(phaseTimingsEnabled("build", "1"))
+  Assert.isFalse(phaseTimingsEnabled("emit", ""))
 }
 
-export function testStandardPackageCacheFollowsSelectedBuildDirectory(): none {
-  Assert.equal(stdlibPackageAcquisitionRoot("/tmp/jigsaw/build"), "/tmp/jigsaw/build/.doof/packages")
-  Assert.equal(stdlibPackageAcquisitionRoot("/tmp/custom-output"), "/tmp/custom-output/.doof/packages")
-}
-
-export function testObserveAndRunSuppressSuccessfulNativeBuildProgress(): none {
-  Assert.equal(nativeBuildOutputModeForCommand("run"), .Silent)
-  Assert.equal(nativeBuildOutputModeForCommand("observe"), .Silent)
-  Assert.equal(nativeBuildOutputModeForCommand("build"), .Progress)
-}
-
-export function testDetachedObservedAppUrlFileIsConsumed(): none {
-  path := "/tmp/doof-observe-url-driver-test"
-  writeText(path, "http://127.0.0.1:4317/token/\n")!
-  Assert.equal(takeObserveUrlFile(path, 1), "http://127.0.0.1:4317/token/")
-  Assert.isFalse(exists(path))
-  Assert.equal(takeObserveUrlFile(path, 0), "")
-}
-
-export function testEditorDriverReportsExactIdentityAndExitStatus(): none {
-  value := structuredTestResult("example.test.do::testOne", 7, "failure\n")
-  Assert.equal(value.get("id")!, "example.test.do::testOne")
-  Assert.equal(value.get("exitCode")!, 7)
-  Assert.equal(value.get("output")!, "failure\n")
-}
-
-import { frontendEmissionCacheSupported } from "./driver"
-export function testBatchSelectionCacheTargetBoundaries(): none {
-  Assert.isTrue(frontendEmissionCacheSupported("native"))
-  Assert.isFalse(frontendEmissionCacheSupported("wasm"))
-  Assert.isFalse(frontendEmissionCacheSupported("ios-app"))
+export function testNativeOutputNameFlattensPackagePathsAndAddsWindowsSuffix(): none {
+  Assert.equal(nativeBuildOutputName("std/json", "macos"), "std-json")
+  Assert.equal(nativeBuildOutputName("tool", "windows"), "tool.exe")
+  Assert.equal(nativeBuildOutputName("tool.EXE", "windows"), "tool.EXE")
 }
 
 import { env, run, ExecOptions } from "std/os"
-import { readText, remove, exists, writeText } from "std/fs"
+import { readText, remove, exists } from "std/fs"
 import { DebugLaunch } from "./debug-command"
 import { parseJsonValue } from "std/json"
 
@@ -68,18 +41,4 @@ export function testDebugDriverExternalLaunchIntegration(): none {
     if target == "macos-app" { Assert.stringContains(launch.executable, ".app/Contents/MacOS/") }
     remove(descriptor)!
   }
-}
-
-import { silentTestFailureMessage } from "./driver"
-
-export function testDescribesSilentTestCrashSignal(): none {
-  Assert.equal(silentTestFailureMessage(139), "test process terminated by signal 11 (SIGSEGV) without output")
-  Assert.equal(silentTestFailureMessage(134), "test process terminated by signal 6 (SIGABRT) without output")
-  Assert.equal(silentTestFailureMessage(159), "test process terminated by signal 31 without output")
-}
-
-export function testDescribesSilentTestExitCode(): none {
-  Assert.equal(silentTestFailureMessage(1), "test process exited with code 1 without output")
-  Assert.equal(silentTestFailureMessage(128), "test process exited with code 128 without output")
-  Assert.equal(silentTestFailureMessage(-1), "test process exited with code -1 without output")
 }

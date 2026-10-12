@@ -253,9 +253,16 @@ completion races, ownership transfer, consumption aliases, and domain lifetime.
 | `macos-app.do` / `ios-app.do` | Deterministic bundle metadata, signing arguments, and platform plans |
 | `macos-app-driver.do` / `ios-app-driver.do` | Bundle materialization and Apple tool execution |
 | `ios-device.do` | Physical-device discovery, provisioning selection, signing, install, and launch boundary |
-| `driver.do` | Top-level CLI workflow, filesystem materialization, source-loader adaptation, and delegation to focused boundaries |
+| `process-driver.do` | Native subprocess execution, host platform naming, and bounded command/diagnostic output |
+| `source-loader-driver.do` | Logical/disk path mapping, declared and reached package state, bundled stdlib acquisition, and the request `SourceLoader` |
+| `frontend-cache-driver.do` | Frontend cache fingerprints, exact-hit validation, recorded state, and stale emitted-module cleanup |
+| `materialize-driver.do` | Content-preserving generated-project writes, executable resources, and embedded runtime/observer assets |
+| `test-driver.do` | `doof test` discovery, group harness builds, parallel test processes, JSON results, and coverage reports |
+| `launch-driver.do` | Post-compile native build and build/run/observe/profile/debug launch for console, macOS, and iOS targets |
+| `package-driver.do` | Release build, resource copying, and macOS/iOS signing and archiving for `doof package` |
+| `driver.do` | CLI routing and the compile workflow; delegates to the focused `*-driver.do` modules above |
 
-If `driver.do` starts making a reusable semantic or planning decision, extract
+If a `*-driver.do` module starts making a reusable semantic or planning decision, extract
 that decision into a pure owning module and keep only environment adaptation in
 the driver.
 
@@ -304,7 +311,7 @@ creates the index directory even for an empty report.
   unique missing-import fixes, and token/trivia-preserving indentation.
 - `editor-wasm.do`: JSON reactor facade and single-worker snapshot ownership.
 - `test-discovery.do`: shared parser-based test discovery; `test-runner.do` owns
-  harnesses and execution support. `driver.do` exposes JSON discovery/results and
+  harnesses and execution support. `test-driver.do` exposes JSON discovery/results and
   exact-ID selection for native workflows.
 - `extensions/vscode-doof`: TypeScript LSP/VS Code adapters, worker hosting,
   packaging scripts, language registration, and desktop integration tests. This

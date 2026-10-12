@@ -45,7 +45,7 @@ phase:
 | New expression lowering | `emitter-expr.do` → one focused `emitter-expr-*.do` module |
 | New C++ representation | `emitter-types.do` → affected focused emitters → runtime if required |
 | New package or native input | `package-manifest.do` → policy/acquisition → project emission → native planning/driver |
-| New CLI behavior | `cli.do` → a pure planning module where possible → `driver.do` |
+| New CLI behavior | `cli.do` → a pure planning module where possible → `driver.do` routing → focused `*-driver.do` boundary |
 
 Every changed compiler module needs focused adjacent `*.test.do` coverage.
 Language changes also update `spec/` and `.github/skills/doof-language/`.
