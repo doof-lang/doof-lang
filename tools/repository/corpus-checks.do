@@ -5,6 +5,7 @@ import { erase, execute, files, path, read, require, text, write } from "./commo
 
 readonly expectErrorPrefix = "// expect-error: "
 readonly checkedFence = "```doof check"
+readonly checkedBodyFence = "```doof check body"
 
 // Expected diagnostics are `// expect-error: <line>:<column> <message>` comments.
 // Each is normalized to `<line>:<column>: <message>` for comparison.
@@ -51,20 +52,25 @@ export class SpecExample {
   source: string
 }
 
-// Only fences opened with exactly "```doof check" are compile-checked; other
-// `doof` fences may be fragments, signatures, or deliberately invalid code.
+// Only fences opened with exactly "```doof check" or "```doof check body" are
+// compile-checked; other `doof` fences may be fragments, signatures, or
+// deliberately invalid code. A body fence holds statements and is checked inside
+// a function whose header occupies the first line of the extracted file.
 export function checkedSpecExamples(file: string, markdown: string): Result<SpecExample[], string> {
   result: SpecExample[] := []
   lines := markdown.split("\n")
   let i = 0
   while i < lines.length {
-    if lines[i].trimEnd() != checkedFence { i += 1; continue }
+    opener := lines[i].trimEnd()
+    if opener != checkedFence && opener != checkedBodyFence { i += 1; continue }
+    wrapped := opener == checkedBodyFence
     start := i + 2
     body: string[] := []
     i += 1
     while i < lines.length && !lines[i].startsWith("```") { body.push(lines[i]); i += 1 }
     try require(i < lines.length, file + ":" + string(start) + ": unterminated doof check fence")
-    result.push(SpecExample { file, line: start, source: joinStrings(body.cloneReadonly(), "\n") + "\n" })
+    source := joinStrings(body.cloneReadonly(), "\n") + "\n"
+    result.push(SpecExample { file, line: start, source: if wrapped then "function example(): none {\n" + source + "}\n" else source })
     i += 1
   }
   return Success(result)

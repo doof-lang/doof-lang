@@ -288,7 +288,7 @@ triple := (x: int): int { return x * 3 }
 
 ### Inferred Return Type
 
-```doof
+```doof check body
 double := (x: int) => x * 2
 
 compute := (x: int) => {
@@ -403,7 +403,7 @@ it would be unclear which parameter it means. `(value, index)` is accepted, sinc
 
 ### Inline Usage
 
-```doof
+```doof check body
 c := [1, 2, 3].map((item: int): int => item * 2)   // item binds to `it` by position
 ```
 
@@ -627,7 +627,7 @@ and parameter types in declaration order, plus the return type. For example,
 
 Named functions and local lambda bindings share the same function type model:
 
-```doof
+```doof check body
 function bar(x: int): int => x * 12
 barLambda := (x: int): int => x * 12
 ```

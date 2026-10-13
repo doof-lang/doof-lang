@@ -91,6 +91,30 @@ export function testDiagnosesNestedFunctionFeaturesWithoutLambdaSemantics(): non
   EditorAssert.equal(editorParser.issues[0].message, "Nested generic functions are not supported; use a non-generic local function or a top-level generic function")
 }
 
+export function testRejectsModuleDirectivesInsideBlocks(): none {
+  cases: string[][] := [
+    ["import { Helper } from \"./helper\"", "Import declarations are only valid at module level"],
+    ["import function cos(x: double): double from \"<cmath>\"", "Import declarations are only valid at module level"],
+    ["mock import for \"./a\" { \"./b\" => \"./c\" }", "mock import directives are only valid at module level"],
+    ["export { helper }", "Export declarations are only valid at module level"],
+  ]
+  for entry of cases {
+    parser := EditorParser { source: "function main(): none {\n  if true {\n    " + entry[0] + "\n  }\n}" }
+    result := catchPanic(=> parser.parse())
+    case result { _: Failure<string> -> { } _ -> { panic("expected module directive parse failure: " + entry[0]) } }
+    EditorAssert.equal(parser.errorMessage, entry[1])
+    EditorAssert.equal(parser.errorLine, 3)
+    EditorAssert.equal(parser.errorColumn, 5)
+  }
+
+  editorParser := EditorParser { source: "function main(): none {\nimport { Helper } from \"./helper\"\nprintln(\"still parsing\")\n}", editorMode: true }
+  program := editorParser.parse()
+  EditorAssert.equal(program.statements.length, 1)
+  EditorAssert.equal(editorParser.issues.length, 1)
+  EditorAssert.equal(editorParser.issues[0].message, "Import declarations are only valid at module level")
+  EditorAssert.equal(editorParser.issues[0].span.start.line, 2)
+}
+
 function parsedCaseExpression(source: string): CaseExpression {
   parser := EditorParser { source, editorMode: true }
   program := parser.parse()

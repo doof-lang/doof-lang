@@ -4,7 +4,7 @@
 
 Standard arithmetic operators with familiar precedence:
 
-```doof
+```doof check body
 a := 10 + 5    // Addition: 15
 b := 10 - 5    // Subtraction: 5
 c := 10 * 5    // Multiplication: 50
@@ -55,7 +55,7 @@ negMod := -7 % 3       // -1 (C++ truncated division semantics)
 
 Numeric types can be explicitly cast using function-call syntax:
 
-```doof
+```doof check body
 x := 42
 f := float(x)         // int → float
 d := double(x)        // int → double
@@ -72,7 +72,7 @@ Numeric casts accept exactly one argument of a numeric type (`int`, `long`, `flo
 
 ### Unary Operators
 
-```doof
+```doof check body
 x := 5
 neg := -x     // Negation: -5
 pos := +x     // Unary plus: 5
@@ -418,7 +418,7 @@ patterns.
 
 ## String Operators
 
-```doof
+```doof check body
 greeting := "Hello, " + "World!"  // Concatenation
 
 // Prefer string interpolation
@@ -432,7 +432,7 @@ msg := "Hello, ${name}!"
 
 The `as` operator performs checked runtime narrowing/conversion. For plain values it yields `Result<T, string>`. For `Result<V, F>` sources it narrows the success channel and yields `Result<T, F | string>`:
 
-```doof
+```doof check body
 value: int | string := "hello"
 r := value as string   // Result<string, string>
 

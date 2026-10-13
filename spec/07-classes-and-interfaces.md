@@ -772,7 +772,7 @@ Point { x: 1.0, y: 2.0 }      // ✅ OK
 
 **Nominal construction** — literal-valued fields are auto-filled:
 
-```doof
+```doof check body
 let r1 = Success { value: 42 }     // kind auto-filled to "Success"
 let r2 = Success(42)               // Positional — kind auto-filled
 ```

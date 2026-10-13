@@ -2,7 +2,7 @@
 
 ## Overview
 
-Doof uses an ESM-style module system with explicit imports and exports. Each file is a module with its own scope. All imports and exports are determined at compile time.
+Doof uses an ESM-style module system with explicit imports and exports. Each file is a module with its own scope. All imports and exports are determined at compile time. Import, export, and `mock import` declarations are only valid at module level; inside a function or other block they are compile errors.
 
 ---
 

@@ -38,6 +38,13 @@ export function testCorpusCheckedSpecExamplesSelectsOnlyMarkedFences(): none {
   Assert.equal(examples[1].line, 13)
   Assert.equal(examples[1].file, "spec/a.md")
 }
+export function testCorpusCheckedSpecExamplesWrapsBodyFences(): none {
+  markdown := "```doof check body\nx := 1\nprintln(x)\n```\n\n```doof checkbody\nignored := 1\n```\n"
+  examples := checkedSpecExamples("spec/a.md", markdown)!
+  Assert.equal(examples.length, 1)
+  Assert.equal(examples[0].line, 2)
+  Assert.equal(examples[0].source, "function example(): none {\nx := 1\nprintln(x)\n}\n")
+}
 export function testCorpusCheckedSpecExamplesRejectsUnterminatedFence(): none {
   let rejected = false
   case checkedSpecExamples("spec/a.md", "```doof check\nx := 1\n") {

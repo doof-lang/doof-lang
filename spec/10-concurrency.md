@@ -66,7 +66,7 @@ return type.
 
 `async` is also valid with a value-producing block:
 
-```doof
+```doof check body
 input := 21
 promise := async {
     let values = [input * 2]

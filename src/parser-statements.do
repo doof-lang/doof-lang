@@ -396,6 +396,19 @@ export function parseBlock(parser: Parser): Block {
   return Block { kind: "block", statements, span: parser.span(start) }
 }
 
+// Statements inside a block. A module directive is parsed in full before it is
+// rejected at its start, so editor recovery resumes after the directive.
+export function parseLocalStatement(parser: Parser): Statement {
+  let directive = ""
+  if parser.check(TokenType.Import) { directive = "Import declarations" }
+  if parser.check(TokenType.Mock) { directive = "mock import directives" }
+  if parser.check(TokenType.Export) { directive = "Export declarations" }
+  start := parser.location()
+  statement := parseStatement(parser)
+  if directive != "" { parser.failAt(start, directive + " are only valid at module level") }
+  return normalizeLocalFunction(parser, statement)
+}
+
 // Local named functions are syntax sugar for immutable lambda bindings. Keep
 // this normalization at the parser boundary so checking, closure capture, and
 // emission have exactly one representation for local callable values.

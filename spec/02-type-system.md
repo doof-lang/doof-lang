@@ -98,7 +98,7 @@ This has two important consequences:
 
 `SerialObject` is a built-in intrinsic alias for `readonly Map<string, SerialValue>`. It is interchangeable with that exact map shape in annotations, assignments, and return types:
 
-```doof
+```doof check body
 payload: SerialObject := { "name": "Ada" }
 row: readonly Map<string, SerialValue> := payload
 ```
@@ -216,7 +216,7 @@ Numeric casts accept exactly one numeric argument and return the target type, wi
 
 To format primitive values as strings explicitly, use `string(...)` constructor syntax:
 
-```doof
+```doof check body
 let answer: string = string(42)
 let ok: string = string(true)
 let ratio: string = string(3.5)
@@ -1890,7 +1890,7 @@ both bind `T`. See [Error Handling — Declaration-`else`](09-error-handling.md#
 
 Use `expr as T` for checked runtime narrowing/conversion. It returns a `Result`:
 
-```doof
+```doof check body
 value: int | string := "hello"
 name := value as string              // Result<string, string>
 

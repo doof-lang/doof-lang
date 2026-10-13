@@ -84,10 +84,14 @@ summary HTML, and annotated per-file HTML output.
   diagnostics it declares, and `doof emit` must write no output for it. See
   that directory's README.
 - Spec code fences opened with ` ```doof check ` are written to standalone files
-  under `build/spec-examples/` and must pass `doof check`. Plain ` ```doof `
-  fences are not checked; use them for fragments, signatures, multi-file
-  examples, and deliberately invalid code. Mark a new spec example
-  `doof check` whenever it is a complete, valid single file.
+  under `build/spec-examples/` and must pass `doof check`. Fences opened with
+  ` ```doof check body ` hold statements and are checked inside a generated
+  `function example(): none { ... }`, which shifts reported lines by one.
+  Plain ` ```doof ` fences are not checked; use them for fragments that need
+  outside declarations, signatures, multi-file examples, and deliberately
+  invalid code. Mark a new spec example `doof check` whenever it is a
+  complete, valid single file, or `doof check body` when it is a valid
+  self-contained statement sequence.
 
 Focused semantic tests belong beside their source module. Native
 representation, runtime, resource, package, and Apple-platform behavior belongs

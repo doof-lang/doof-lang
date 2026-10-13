@@ -26,7 +26,7 @@ two states:
 The arm types may be written explicitly and constructed without a surrounding
 Result context. Both constructor spellings are equivalent:
 
-```doof
+```doof check body
 ok: Success<int> := Success(42)
 alsoOk: Success<int> := Success { value: 42 }
 failed: Failure<string> := Failure("bad")
@@ -496,7 +496,7 @@ function recover(input: Result<int, string>): int {
 
 `as` performs checked runtime narrowing or conversion and returns a `Result`.
 
-```doof
+```doof check body
 value: int | string := "hello"
 narrowed := value as string       // Result<string, string>
 

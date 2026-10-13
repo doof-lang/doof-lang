@@ -211,7 +211,7 @@ counters := Counter {}         // ✅ Immutable binding, mutable interior
 
 Local `readonly` declarations may also use `<-` blocks when the final value is produced with `yield`:
 
-```doof
+```doof check body
 readonly configName <- {
     yield "main"
 }

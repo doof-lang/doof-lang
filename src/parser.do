@@ -19,7 +19,7 @@ import {
   parseCaseExpression as parseCaseExpressionImpl,
   looksLikePattern as looksLikePatternImpl,
   parseDestructuring as parseDestructuringImpl,
-  normalizeLocalFunction,
+  parseLocalStatement,
 } from "./parser-statements"
 import { parseOptionalType as parseOptionalTypeImpl, parseTypeAnnotation as parseTypeAnnotationImpl } from "./parser-types"
 import { parseExpression as parseExpressionImpl, parseAdditive as parseAdditiveImpl, parseUnary as parseUnaryImpl } from "./parser-expressions"
@@ -104,18 +104,17 @@ export class Parser {
     // do not consume their own terminator (`if c { };`, `class A {};`).
     if match(TokenType.Semicolon) { return }
     if !editorMode {
-      statement := parseStatement()
-      statements.push(if inBlock then normalizeLocalFunction(this, statement) else statement)
+      statements.push(if inBlock then parseLocalStatement(this) else parseStatement())
       return
     }
     start := pos
     parsed := catchPanic(=> {
-      statement := parseStatement()
-      return if inBlock then normalizeLocalFunction(this, statement) else statement
+      return if inBlock then parseLocalStatement(this) else parseStatement()
     })
     statement := parsed else failure {
       if errorMessage == "" { panic(failure) }
-      reportIssue(errorMessage)
+      failure_ := AstLocation { line: errorLine, column: errorColumn, offset: errorOffset }
+      issues.push(ParserIssue { message: errorMessage, span: SourceSpan { start: failure_, end: failure_ } })
       errorMessage = ""
       // Make progress, then synchronize at a delimiter or a later source line.
       if pos == start && !atEnd() { advance() }
