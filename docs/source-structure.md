@@ -62,10 +62,11 @@ modules own the following decisions:
 | `checker-absence.do` | Types of postfix `?`, optional access, and the postfix `?`/`!` receiver nodes that lower Result receivers of `?.`, `?[]`, `!.`, and `??` |
 | `checker-struct-layout.do` | Struct value-layout validation, rejecting structs that contain themselves by value |
 | `checker-numeric.do` | Numeric bound membership, operator capabilities, and correlated promotion |
+| `checker-constants.do` | Compile-time evaluation of constant int expressions, shared by enum backing values and range bound checks |
 | `checker-inference.do` | Contextual path validation and common-type inference; only optional unions are synthesized for value paths |
 | `checker-expressions.do` | Expression dispatch, literals, yield and catch blocks, identifiers, and implicit method bindings |
 | `checker-members.do` | Member and index access (including `?.`, `!.`, `?[]` over absent, Result, and weak receivers), explicit generic static receivers, dot shorthand, and union-alias JSON decoders |
-| `checker-operators.do` | Binary, unary, and `as` operators, `??`, comparison carriers, and the operand-overlap rule shared with case patterns |
+| `checker-operators.do` | Binary, unary, and `as` operators, `??`, range bounds, comparison carriers, and the operand-overlap rule shared with case patterns |
 | `checker-assignment.do` | Assignment targets, compound and `??=` operators, and `try target = expr` success-type checking |
 | `checker-case.do` | Case expressions, case-pattern binding, bare generic pattern inference, and exhaustiveness |
 | `checker-calls.do` | Calls, generic application, named-function callback arity, and actor-call boundaries |

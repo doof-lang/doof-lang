@@ -104,3 +104,21 @@ export function testEqualityComparesUnionsWithTheirMembers(): none {
   }
 }
 
+
+export function testInclusiveRangeRejectsConstantMaximumIntEnd(): none {
+  for source of ["0..2147483647", "1..2147483646 + 1", "-5..(2147483647)"] {
+    result := checked("function make(): Range => " + source)
+    Assert.equal(result.diagnostics.length, 1)
+    Assert.stringContains(result.diagnostics[0].message, "Inclusive range \"..\" cannot end at the maximum int (2147483647)")
+  }
+  result := checked("function main(): none { for i of 0..2147483647 { } }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].span.start.column, 37)
+}
+
+export function testRangeAcceptsBoundsBelowOrExcludingMaximumInt(): none {
+  for source of ["0..<2147483647", "0..2147483646", "2147483647..<2147483647", "0..limit"] {
+    Assert.equal(checked("function make(limit: int): Range => " + source).diagnostics.length, 0)
+  }
+  Assert.equal(checked("function size(value: int): int => case value { 0..2147483647 -> 1, _ -> 0 }").diagnostics.length, 0)
+}

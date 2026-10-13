@@ -4,6 +4,7 @@ import { absenceLayers, canBeAbsent, hasFailureLayer, hasPresentValue, presentTy
 import { AsExpression, BinaryExpression, DotShorthand, EnumDeclaration, SourceSpan, UnaryExpression } from "./ast"
 import { optionalConversion, optionalType } from "./checker-absence"
 import { finish, requireBool, typeError } from "./checker-common"
+import { constantInt } from "./checker-constants"
 import { checkExpression } from "./checker-expressions"
 import { pathType } from "./checker-inference"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
@@ -58,6 +59,7 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
   if operator == "..<" || operator == ".." {
     validateRangeOperand(state, operator, "left", left, expression.left.span)
     validateRangeOperand(state, operator, "right", right, expression.right.span)
+    if operator == ".." { rejectInclusiveRangeAtMaximumInt(state, expression) }
     return finish(state, expression, rangeType())
   }
   if operator == "==" || operator == "!=" {
@@ -108,6 +110,14 @@ function admitsNone(type_: ResolvedType): bool {
     _ -> { }
   }
   return false
+}
+
+// A Range stores an exclusive upper bound, which cannot represent one past
+// the maximum int, so an inclusive range ending there is rejected.
+function rejectInclusiveRangeAtMaximumInt(state: CheckerState, expression: BinaryExpression): none {
+  end := constantInt(expression.right)
+  if end == none || end! != 2147483647L { return }
+  typeError(state, "Inclusive range \"..\" cannot end at the maximum int (2147483647); its exclusive upper bound would overflow", expression.right.span)
 }
 
 function validateRangeOperand(state: CheckerState, operator: string, side: string, operand: ResolvedType, span: SourceSpan): none {

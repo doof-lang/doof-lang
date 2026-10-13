@@ -319,7 +319,9 @@ Set iteration follows first-insertion order. Re-adding an existing value keeps i
 `a..b` and `a..<b` create finite `Range` values. A range can be stored in a
 binding, passed to a function, or used directly in `for of`. Range iteration
 yields `int`. Ranges only iterate upward; a range whose lower bound is greater
-than its upper bound is empty.
+than its upper bound is empty. A `for of` evaluates both bounds once, left to
+right, when the loop starts, so the body cannot change how many times it runs
+(`for i of 0..<items.length` is unaffected by `items.push`).
 
 ### Inclusive Range (`..`)
 
@@ -366,6 +368,16 @@ exclusive.upperBound // 10
 
 The `upperBound` accessor is always exclusive. For `1..9`, the upper bound is
 adjusted to `10`; for `1..<10`, it is already `10`.
+
+Because the exclusive upper bound must itself be an `int`, an inclusive range
+cannot end at the maximum `int`. A `..` range whose upper bound is a constant
+equal to `2147483647` is a compile-time error. Use `..<` with an end below the
+maximum instead: `0..<2147483647` is the same range as `0..2147483646`.
+
+```doof reject body
+full := 0..2147483647      // ❌ Error: inclusive range cannot end at the maximum int
+below := 0..2147483646     // ✅ upperBound is 2147483647
+```
 
 ### Practical Range Example
 

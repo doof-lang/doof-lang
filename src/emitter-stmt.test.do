@@ -388,6 +388,69 @@ export function testForOfSetVisitsValuesPresentAtEntry(): none {
   Assert.equal(visited, "1,2,3,")
 }
 
+export function testForOfRangeFixesItsEndAtEntry(): none {
+  let items = [1, 2, 3]
+  let visited = ""
+  for i of 0..<items.length {
+    visited = visited + string(i) + ","
+    items.push(i)
+  }
+  Assert.equal(visited, "0,1,2,")
+  let last = 2
+  for i of 0..last {
+    visited = visited + string(i) + ","
+    last = 10
+  }
+  Assert.equal(visited, "0,1,2,0,1,2,")
+}
+
+let forOfRangeBoundCalls = 0
+function forOfRangeBound(value: int): int {
+  forOfRangeBoundCalls += 1
+  return value
+}
+
+export function testForOfRangeEvaluatesEachBoundOnce(): none {
+  forOfRangeBoundCalls = 0
+  let total = 0
+  for i of forOfRangeBound(1)..<forOfRangeBound(4) { total += i }
+  for i of forOfRangeBound(1)..forOfRangeBound(4) { total += i }
+  Assert.equal(total, 16)
+  Assert.equal(forOfRangeBoundCalls, 4)
+}
+
+function forOfRangeMaxInt(): int => 2147483647
+
+export function testForOfInclusiveRangeEndsAtMaximumInt(): none {
+  let visited = 0
+  let last = 0
+  for i of (forOfRangeMaxInt() - 2)..forOfRangeMaxInt() {
+    visited += 1
+    last = i
+    if visited > 3 { break }
+  }
+  Assert.equal(visited, 3)
+  Assert.equal(last, 2147483647)
+  let discarded = 0
+  for _ of (forOfRangeMaxInt() - 1)..forOfRangeMaxInt() {
+    discarded += 1
+    if discarded > 2 { break }
+  }
+  Assert.equal(discarded, 2)
+}
+
+export function testForOfRangeEmitsBoundsOnceInOrder(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function main(items: int[]): int { let total = 0\nfor i of 0..<items.length { total += i }\nfor j of 1..3 { total += j }\nreturn total }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "for (int32_t i = 0, _range_end_")
+  Assert.stringContains(source, " = static_cast<int32_t>((items)->size()); i < _range_end_")
+  Assert.stringContains(source, "for (int64_t _range_index_")
+  Assert.stringContains(source, "const int32_t j = static_cast<int32_t>(_range_index_")
+}
+
 class ForOfCounter {
   let count: int
 }

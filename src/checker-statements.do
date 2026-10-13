@@ -43,6 +43,7 @@ import { validateStructLayout } from "./checker-struct-layout"
 import { checkExpression, addClassMethods } from "./checker-expressions"
 import { checkedCaseSubjectType, casePatternsExhaustive, checkCasePatterns } from "./checker-case"
 import { checkOmittedCollectionLiteral } from "./checker-literals"
+import { constantInt } from "./checker-constants"
 import { resolveType, memberType, resolveMember } from "./checker-resolution"
 import { deprecatedClassMethodFunction, deprecatedConstDeclaration, deprecatedConstField, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
 import { decorateAnnotationWithResolved, blockContainsLoopExit, containsString, optionalResolvedType, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
@@ -767,7 +768,7 @@ export function checkEnum(state: CheckerState, enum_: EnumDeclaration, scope: Sc
     if variant.value != none {
       valueType := checkExpression(state, variant.value!, scope, optionalResolvedType(primitive("int")))
       if !isAssignableWithInterfaces(state.result, valueType, primitive("int")) { typeError(state, "Enum value must be an int", variant.span) }
-      value = enumConstantInt(variant.value!)
+      value = constantInt(variant.value!)
       if value == none { typeError(state, "Enum variant \"" + variant.name + "\" value must be a compile-time int constant", variant.value!.span) }
     }
     if value != none {
@@ -787,40 +788,6 @@ export function checkEnum(state: CheckerState, enum_: EnumDeclaration, scope: Sc
       nextValue = value! + 1L
     }
   }
-}
-
-function enumConstantInt(expression: Expression): long | none {
-  case expression {
-    literal: IntLiteral -> { return long(literal.value) }
-    unary: UnaryExpression -> {
-      if !unary.prefix || (unary.operator != "+" && unary.operator != "-") { return none }
-      operand := enumConstantInt(unary.operand)
-      if operand == none { return none }
-      result := if unary.operator == "-" then -operand! else operand!
-      if result < -2147483648L || result > 2147483647L { return none }
-      return result
-    }
-    binary: BinaryExpression -> {
-      left := enumConstantInt(binary.left)
-      right := enumConstantInt(binary.right)
-      if left == none || right == none { return none }
-      let result = 0L
-      if binary.operator == "+" { result = left! + right! }
-      else if binary.operator == "-" { result = left! - right! }
-      else if binary.operator == "*" { result = left! * right! }
-      else if binary.operator == "\\" {
-        if right! == 0L { return none }
-        result = left! \ right!
-      } else if binary.operator == "%" {
-        if right! == 0L { return none }
-        result = left! % right!
-      } else { return none }
-      if result < -2147483648L || result > 2147483647L { return none }
-      return result
-    }
-    _ -> { return none }
-  }
-  return none
 }
 
 // The parser accepts any dotted name as a literal-valued field; only an enum

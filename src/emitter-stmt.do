@@ -553,10 +553,24 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
   name := if statement.bindings.length == 0 then "_item" else discardableCppName(statement.bindings[0], loopId, 0)
   case statement.iterable {
     range: BinaryExpression -> {
-      if range.operator == "..<" || range.operator == ".." {
-        endOperator := if range.operator == "..<" then " < " else " <= "
-        return ind + "for (int32_t " + name + " = " + emitExpression(range.left, context) + "; " + name + endOperator + emitExpression(range.right, context) + "; ++" + name + ") {\n" +
+      // Both bounds are evaluated once, left to right, before the first
+      // iteration, so the body cannot move the end (`0..<items.length`).
+      end := "_range_end_" + string(loopId)
+      lower := emitExpression(range.left, context)
+      upper := emitExpression(range.right, context)
+      if range.operator == "..<" {
+        return ind + "for (int32_t " + name + " = " + lower + ", " + end + " = " + upper + "; " + name + " < " + end + "; ++" + name + ") {\n" +
           body + ind + "}\n" + breakTarget
+      }
+      if range.operator == ".." {
+        // A 64-bit counter lets an inclusive range end at the maximum int
+        // without overflowing past it.
+        counter := "_range_index_" + string(loopId)
+        binding := if statement.bindings.length == 0 || statement.bindings[0] == "_"
+          then ""
+          else indent(level + 1) + "const int32_t " + name + " = static_cast<int32_t>(" + counter + ");\n"
+        return ind + "for (int64_t " + counter + " = " + lower + ", " + end + " = " + upper + "; " + counter + " <= " + end + "; ++" + counter + ") {\n" +
+          binding + body + ind + "}\n" + breakTarget
       }
     }
     _ -> { }
