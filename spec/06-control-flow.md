@@ -4,9 +4,13 @@
 
 ### Basic Forms
 
-```doof
+```doof check
+condition := true
+temperature := 25
+score := 85
+
 if condition {
-    doSomething()
+    println("condition holds")
 }
 
 if temperature > 30 {
@@ -30,7 +34,11 @@ if score >= 90 {
 
 `if` can be used as an expression when all branches return a value:
 
-```doof
+```doof check
+score := 85
+x := -4
+isLoggedIn := true
+
 grade := if score >= 90 then "A" 
          else if score >= 80 then "B"
          else if score >= 70 then "C"
@@ -49,7 +57,8 @@ Branches of type `never` do not contribute a value type. If every branch is
 
 Blocks are required for statement forms:
 
-```doof
+```doof check
+x := 3
 if x > 0 {
     println("positive")
 } else {
@@ -59,8 +68,8 @@ if x > 0 {
 
 ### No Implicit `none` Narrowing in If
 
-```doof
-value: int | none := getValue()
+```doof check body
+value: int | none := 42
 
 if value != none {
     println(value!)  // explicit assertion still required
@@ -87,7 +96,8 @@ Some expression-like contexts use a block that produces a value by explicitly `y
 
 Case-expression arms may use block bodies instead of a single expression:
 
-```doof
+```doof check
+n := -3
 result := case n {
     0 -> {
         yield "zero"
@@ -99,13 +109,15 @@ result := case n {
         yield "positive"
     }
 }
+println(result)  // negative
 ```
 
 ### `<-` Value-Yield Blocks
 
 Local `let`, local `readonly`, and statement-only local reassignment can use `<-` followed by a block:
 
-```doof
+```doof check body
+ready := true
 let x <- {
     if ready {
         yield 10
@@ -197,10 +209,16 @@ for name of names {
 Use `_` to iterate for side effects or to discard positions from a destructured
 element. Discards introduce no loop binding and may be repeated:
 
-```doof
+```doof check
+lines := ["a", "b"]
+entries: Map<string, int> := { "x": 1 }
+pairs := [(1, 2), (3, 4)]
+let count = 0
+let ticks = 0
+
 for _ of lines { count += 1 }
 for _, value of entries { println(value) }
-for _, _ of pairs { tick() }
+for _, _ of pairs { ticks += 1 }
 ```
 
 Current iterable forms are arrays, maps, sets, finite `Range` values, and
@@ -227,7 +245,7 @@ for item of queue {
 // visited 1, 2, 3; queue is now [1, 2, 3, 10, 20, 30]
 ```
 
-```doof
+```doof check
 class Counter implements Stream<int> {
     let current: int
     end: int
@@ -245,10 +263,14 @@ class Counter implements Stream<int> {
     value(): int => this.currentValue
 }
 
-for value of Counter(0, 3) {
+values: Stream<int> := Counter(0, 3)
+for value of values {
     println(value)
 }
 ```
+
+A class that implements `Stream<T>` is iterated through a `Stream<T>`-typed
+value, as `values` is here.
 
 ### For-Of with Maps
 
@@ -340,7 +362,9 @@ adjusted to `10`; for `1..<10`, it is already `10`.
 
 ### Practical Range Example
 
-```doof
+```doof check
+function loadItems(): string[] => ["a", "b", "c"]
+
 items := loadItems()
 indices := 0..<items.length
 println("last valid index is ${indices.upperBound - 1}")
@@ -374,7 +398,21 @@ for i of 0..<10 {
 
 ### Labeled Break and Continue
 
-```doof
+```doof check
+class Cell {
+    value: int
+    isEmpty(): bool => value == 0
+}
+
+function process(cell: Cell): none { println(cell.value) }
+function markRowComplete(row: Cell[]): none { println("row done") }
+
+height := 2
+width := 2
+grid := [[1, 2], [3, 4]]
+target := 3
+rows := [[Cell(1), Cell(0)], [Cell(2), Cell(3)]]
+
 outer: for y of 0..<height {
     for x of 0..<width {
         if grid[y][x] == target {
@@ -402,7 +440,10 @@ outer: for row of rows {
 The `then` clause executes when a loop completes normally, meaning control
 leaves the loop without `break` or another non-local exit such as `return`:
 
-```doof
+```doof check
+items := [1, 2, 3]
+target := 4
+
 for item of items {
     if item == target {
         println("Found!")
@@ -415,7 +456,17 @@ for item of items {
 
 This applies even when the loop body ran; natural completion still counts:
 
-```doof
+```doof check
+class Data {
+    value: int
+    isCorrupt(): bool => value < 0
+}
+
+let remaining = [1, 2, 3]
+function hasMoreData(): bool => remaining.length > 0
+function readData(): Data => Data(remaining.pop()!)
+function process(data: Data): none { println(data.value) }
+
 while hasMoreData() {
     let data = readData()
     if data.isCorrupt() {
@@ -442,7 +493,11 @@ for let i = 0; i < 3; i += 1 {
 
 ## Early Return
 
-```doof
+```doof check
+class User { id: int }
+
+users := [User(1), User(2)]
+
 function findUser(id: int): User | none {
     if id < 0 {
         return none
@@ -466,7 +521,10 @@ Return exits the entire function, not just the current block.
 
 ### Prefer For-Of Over Traditional For
 
-```doof
+```doof check
+items := [1, 2, 3]
+function process(item: int): none { println(item) }
+
 // ✅ Preferred
 for item of items {
     process(item)
@@ -494,24 +552,34 @@ for let i = 0; i < 10; i += 1 {
 
 ### Avoid Deep Nesting with Early Returns
 
-```doof
+```doof check
+class Data {
+    value: int
+    allowed: bool
+    isValid(): bool => value >= 0
+    hasPermission(): bool => allowed
+}
+
+function compute(data: Data): int => data.value * 2
+
 // ❌ Deep nesting
-function process(data: Data | none): Result | none {
-    if data != none {
-        if data.isValid() {
-            if data.hasPermission() {
-                return compute(data)
+function processNested(maybe: Data | none): int | none {
+    case maybe {
+        data: Data -> {
+            if data.isValid() {
+                if data.hasPermission() {
+                    return compute(data)
+                }
             }
         }
+        _ -> { }
     }
     return none
 }
 
 // ✅ Early returns flatten the code
-function process(data: Data | none): Result | none {
-    if data == none {
-        return none
-    }
+function processFlat(maybe: Data | none): int | none {
+    data := maybe else { return none }
     if !data.isValid() {
         return none
     }

@@ -146,12 +146,17 @@ println(meta.description)   // "A simple calculator."
 Generic functions can access `.metadata` on a type parameter only when that
 parameter has the compiler-known `Reflectable` constraint:
 
-```doof
+```doof check
+class Calculator "A simple calculator." {
+    add "Adds two numbers."(a: int, b: int): int => a + b
+}
+
 function toolName<T: Reflectable>(tool: T): string {
     return T.metadata.name
 }
 
 name := toolName<Calculator>{ tool: Calculator { } }
+println(name)  // "Calculator"
 ```
 
 `Reflectable` is a constraint-only intrinsic. It is not a normal value type, and
@@ -174,13 +179,19 @@ Each entry in `.methods` is a `MethodReflection` with:
 
 The metadata object itself also exposes an `.invoke` helper for name-based dispatch:
 
-```doof
+```doof check
+import { formatJsonValue } from "std/json"
+
+class Calculator "A simple calculator." {
+    add "Adds two numbers."(a: int, b: int): int => a + b
+}
+
 meta := Calculator.metadata
 calc := Calculator { }
 result := meta.invoke(calc, "add", { a: 1, b: 2 })
 case result {
-    success: Success -> println(success.value)  // 3
-    failure: Failure -> println(failure.error)
+    success: Success -> println(formatJsonValue(success.value))  // 3
+    failure: Failure -> println(formatJsonValue(failure.error))
 }
 ```
 
@@ -197,14 +208,20 @@ case result {
 
 Each method reflection has an `.invoke` member that dispatches a method call using `SerialValue` parameters, returning a `Result<SerialValue, SerialValue>`:
 
-```doof
+```doof check
+import { formatJsonValue } from "std/json"
+
+class Calculator "A simple calculator." {
+    add "Adds two numbers."(a: int, b: int): int => a + b
+}
+
 meta := Calculator.metadata
 method := meta.methods[0]
 calc := Calculator { }
 result := method.invoke(calc, { a: 1, b: 2 })
 case result {
-    success: Success -> println(success.value)  // 3
-    failure: Failure -> println(failure.error)
+    success: Success -> println(formatJsonValue(success.value))  // 3
+    failure: Failure -> println(formatJsonValue(failure.error))
 }
 ```
 

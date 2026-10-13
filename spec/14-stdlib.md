@@ -85,9 +85,10 @@ All methods accept an optional trailing message that is prepended to the default
 
 ### Example
 
-```doof
+```doof check
 import { Assert } from "std/assert"
-import { add } from "./math"
+
+function add(a: int, b: int): int => a + b
 
 export function testAdd(): none {
     Assert.equal(add(2, 3), 5)
@@ -172,7 +173,9 @@ findNextAny(candidates: readonly byte[]): long | none
 
 ### Example
 
-```doof
+```doof check
+import { BlobBuilder, BlobReader } from "std/blob"
+
 // Encode a framed message
 function encodeMessage(id: int, body: string): readonly byte[] {
     b := BlobBuilder()
@@ -276,29 +279,32 @@ function readClaims(token: string): Result<readonly Map<string, SerialValue>, Jw
 
 File system access for POSIX-compatible platforms.  All operations that can fail return `Result<T, IoError>`.
 
-```doof
+```doof check
 import { readText, writeText, readBlob, writeBlob, appendText, appendBlob,
          readLineStream, readBlockStream, writeBlobStream, writeLineStream,
-         exists, isFile, isDirectory, readDir, mkdir, remove, rename, copy,
-         EntryKind, DirEntry, IoError } from "std/fs"
+         exists, isFile, isDirectory, metadata, readDir, mkdir, remove, rename, copy,
+         EntryKind, FileInfo, IoError } from "std/fs"
 ```
 
 ### Types
 
 ```doof check
+import { Instant } from "std/time"
+
 enum EntryKind { File = 0, Directory = 1, Symlink = 2, Other = 3 }
 
-class DirEntry {
+class FileInfo {
     name: string        // filename (not full path)
     kind: EntryKind
     size: long          // bytes; 0 for directories
-    modifiedAt: long    // Unix epoch seconds
+    modifiedAt: Instant
 }
 
 enum IoError {
     NotFound = 0, PermissionDenied = 1, AlreadyExists = 2,
     IsDirectory = 3, NotDirectory = 4, InvalidPath = 5,
-    Interrupted = 6, Other = 7
+    Interrupted = 6, Other = 7, Unsupported = 8, InvalidArgument = 9,
+    Closed = 10, UnexpectedEof = 11, WouldBlock = 12
 }
 ```
 
@@ -331,7 +337,8 @@ writeLineStream(path: string, lines: Stream<string>): Result<none, IoError>
 exists(path: string): bool
 isFile(path: string): bool
 isDirectory(path: string): bool
-readDir(path: string): Result<DirEntry[], IoError>
+metadata(path: string): Result<FileInfo, IoError>
+readDir(path: string): Result<FileInfo[], IoError>
 mkdir(path: string): Result<none, IoError>
 remove(path: string): Result<none, IoError>
 rename(sourcePath: string, destPath: string): Result<none, IoError>
@@ -589,7 +596,7 @@ returns a normalized absolute path.
 
 ### Example
 
-```doof
+```doof check
 import { absolute, homeDirectory, join, basename, extension, stem } from "std/path"
 
 root := homeDirectory()!
@@ -599,6 +606,7 @@ base      := basename(logFile)   // "app.log"
 name      := stem(logFile)       // "app"
 ext       := extension(logFile)  // ".log"
 source    := absolute("src/main.do")!
+println(source)
 ```
 
 ---
@@ -649,7 +657,7 @@ In replacement strings, `$n` refers to the n-th capture group.
 
 ### Example
 
-```doof
+```doof check
 import { Regex, RegexFlag } from "std/regex"
 
 try emailRe := Regex.compile("([^@]+)@([^@]+\\.\\w+)")
@@ -658,13 +666,13 @@ try emailRe := Regex.compile("([^@]+)@([^@]+\\.\\w+)")
 emailRe.test("ada@example.com")          // true
 
 // Extract
-match := emailRe.find("Contact: ada@example.com") else { return }
+match := emailRe.find("Contact: ada@example.com")!
 user   := match.captures[0]              // "ada"
 domain := match.captures[1]             // "example.com"
 
 // Named groups
 try namedRe := Regex.compile("(?P<user>[^@]+)@(?P<domain>[^@]+)")
-m := namedRe.find("ada@example.com") else { return }
+m := namedRe.find("ada@example.com")!
 u := m.capture("user")                  // "ada" | none
 
 // Case-insensitive replace
@@ -1055,8 +1063,13 @@ function createUser(req: CreateUserRequest): Result<CreateUserResponse, string> 
 
 ### Compute elapsed time
 
-```doof
+```doof check
 import { Instant } from "std/time"
+
+function doExpensiveWork(): none {
+    let total = 0L
+    for i of 0..<1000000 { total += long(i) }
+}
 
 start := Instant.now()
 doExpensiveWork()

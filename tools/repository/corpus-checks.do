@@ -1,11 +1,15 @@
 // Command-level language corpora: rejected sample programs and checked spec examples.
 import { join as joinStrings } from "std/string"
 import { exists } from "std/fs"
+import { parseInt } from "std/parse"
 import { erase, execute, files, path, read, require, text, write } from "./common"
 
 readonly expectErrorPrefix = "// expect-error: "
 readonly checkedFence = "```doof check"
 readonly checkedBodyFence = "```doof check body"
+readonly rejectedFence = "```doof reject"
+readonly rejectedBodyFence = "```doof reject body"
+readonly rejectionMarker = "❌"
 
 // Expected diagnostics are `// expect-error: <line>:<column> <message>` comments.
 // Each is normalized to `<line>:<column>: <message>` for comparison.
@@ -50,30 +54,57 @@ export class SpecExample {
   file: string
   line: int
   source: string
+  rejected: bool = false
+  // Extracted-file line numbers carrying the rejection marker.
+  markedLines: int[] = []
 }
 
-// Only fences opened with exactly "```doof check" or "```doof check body" are
-// compile-checked; other `doof` fences may be fragments, signatures, or
-// deliberately invalid code. A body fence holds statements and is checked inside
-// a function whose header occupies the first line of the extracted file.
+// Checked fences open with "```doof check" or "```doof reject", optionally
+// followed by "body"; other `doof` fences may be fragments or signatures and
+// are not checked. A body fence holds statements and is checked inside a
+// function whose header occupies the first line of the extracted file. A reject
+// fence must fail `doof check`, with errors on exactly its lines marked ❌.
 export function checkedSpecExamples(file: string, markdown: string): Result<SpecExample[], string> {
   result: SpecExample[] := []
   lines := markdown.split("\n")
   let i = 0
   while i < lines.length {
     opener := lines[i].trimEnd()
-    if opener != checkedFence && opener != checkedBodyFence { i += 1; continue }
-    wrapped := opener == checkedBodyFence
+    if opener != checkedFence && opener != checkedBodyFence && opener != rejectedFence && opener != rejectedBodyFence { i += 1; continue }
+    wrapped := opener.endsWith(" body")
+    rejected := opener.startsWith(rejectedFence)
     start := i + 2
     body: string[] := []
+    markedLines: int[] := []
     i += 1
-    while i < lines.length && !lines[i].startsWith("```") { body.push(lines[i]); i += 1 }
-    try require(i < lines.length, file + ":" + string(start) + ": unterminated doof check fence")
+    while i < lines.length && !lines[i].startsWith("```") {
+      if lines[i].contains(rejectionMarker) { markedLines.push(body.length + if wrapped then 2 else 1) }
+      body.push(lines[i])
+      i += 1
+    }
+    try require(i < lines.length, file + ":" + string(start) + ": unterminated doof example fence")
+    try require(!rejected || markedLines.length > 0, file + ":" + string(start) + ": doof reject fence has no line marked " + rejectionMarker)
     source := joinStrings(body.cloneReadonly(), "\n") + "\n"
-    result.push(SpecExample { file, line: start, source: if wrapped then "function example(): none {\n" + source + "}\n" else source })
+    result.push(SpecExample { file, line: start, source: if wrapped then "function example(): none {\n" + source + "}\n" else source, rejected, markedLines })
     i += 1
   }
   return Success(result)
+}
+
+// A rejected example must report errors on exactly its marked lines.
+export function rejectionMismatch(markedLines: int[], reported: string[]): string {
+  reportedLines: int[] := []
+  for diagnostic of reported {
+    line := parseInt(diagnostic.substring(0, diagnostic.indexOf(":"))) else { continue }
+    if !reportedLines.contains(line) { reportedLines.push(line) }
+  }
+  problems: string[] := []
+  for line of markedLines { if !reportedLines.contains(line) { problems.push("line " + string(line) + " is marked but reported no error") } }
+  for diagnostic of reported {
+    line := parseInt(diagnostic.substring(0, diagnostic.indexOf(":"))) else { continue }
+    if !markedLines.contains(line) { problems.push("unmarked error " + diagnostic) }
+  }
+  return joinStrings(problems.cloneReadonly(), "\n")
 }
 
 export function falseNegativeChecks(root: string, compiler: string, stdlib: string): Result<none, string> {
@@ -113,6 +144,7 @@ export function specExampleChecks(root: string, compiler: string, stdlib: string
   failures: string[] := []
   try names := files(spec)
   let count = 0
+  let rejectedCount = 0
   for name of names {
     if !name.endsWith(".md") { continue }
     try markdown := read(path(spec, name))
@@ -123,11 +155,19 @@ export function specExampleChecks(root: string, compiler: string, stdlib: string
       sample := path(work, name.substring(0, name.length - 3) + "-" + string(example.line) + ".do")
       try write(sample, example.source)
       try checked := execute(compiler, ["check", sample], environment)
-      if checked.exitCode != 0 { failures.push(location + ": example does not check\n" + text(checked.stdout).trimEnd()) }
+      output := text(checked.stdout).trimEnd()
+      if !example.rejected {
+        if checked.exitCode != 0 { failures.push(location + ": example does not check\n" + output) }
+        continue
+      }
+      rejectedCount += 1
+      if checked.exitCode == 0 { failures.push(location + ": rejected example was accepted"); continue }
+      mismatch := rejectionMismatch(example.markedLines, reportedDiagnostics(output, sample))
+      if mismatch != "" { failures.push(location + ": rejected example errors do not match its " + rejectionMarker + " lines (extracted-file lines)\n" + mismatch + "\n" + output) }
     }
   }
   try require(count > 0, "No doof check examples found in " + spec)
   try require(failures.length == 0, "Spec examples failed:\n" + joinStrings(failures.cloneReadonly(), "\n"))
-  println("Spec examples: " + string(count) + " checked")
+  println("Spec examples: " + string(count) + " checked (" + string(rejectedCount) + " rejected as marked)")
   return Success()
 }

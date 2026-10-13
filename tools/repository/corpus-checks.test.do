@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import { join } from "std/string"
-import { checkedSpecExamples, diagnosticMismatch, expectedDiagnostics, reportedDiagnostics } from "./corpus-checks"
+import { checkedSpecExamples, diagnosticMismatch, expectedDiagnostics, rejectionMismatch, reportedDiagnostics } from "./corpus-checks"
 
 export function testCorpusExpectedDiagnostics(): none {
   source := "// Invalid: two bounds.\n// expect-error: 5:5 Range bounds; got \"string\"\n  // expect-error: 5:10  Second  \nfunction f(): none {}\n"
@@ -52,4 +52,28 @@ export function testCorpusCheckedSpecExamplesRejectsUnterminatedFence(): none {
     success: Success -> {}
   }
   Assert.isTrue(rejected)
+}
+export function testCorpusRejectedSpecExamplesRecordMarkedLines(): none {
+  markdown := "```doof reject\nx := 1\ny: string := 2  // ❌ Error\n```\n\n```doof reject body\nlet z = 1\nz = \"a\"  // ❌\n```\n"
+  examples := checkedSpecExamples("spec/a.md", markdown)!
+  Assert.equal(examples.length, 2)
+  Assert.isTrue(examples[0].rejected)
+  Assert.equal(examples[0].markedLines.length, 1)
+  Assert.equal(examples[0].markedLines[0], 2)
+  Assert.isTrue(examples[1].rejected)
+  Assert.equal(examples[1].markedLines[0], 3)
+  Assert.equal(examples[1].source, "function example(): none {\nlet z = 1\nz = \"a\"  // ❌\n}\n")
+}
+export function testCorpusRejectedSpecExampleRequiresMarker(): none {
+  let rejected = false
+  case checkedSpecExamples("spec/a.md", "```doof reject\nx := 1\n```\n") {
+    failure: Failure -> { rejected = failure.error.contains("spec/a.md:2: doof reject fence has no line marked") }
+    success: Success -> {}
+  }
+  Assert.isTrue(rejected)
+}
+export function testCorpusRejectionMismatch(): none {
+  Assert.equal(rejectionMismatch([2, 4], ["2:5: First", "4:1: Second", "4:9: Cascade"]), "")
+  Assert.equal(rejectionMismatch([2, 4], ["2:5: First"]), "line 4 is marked but reported no error")
+  Assert.equal(rejectionMismatch([2], ["2:5: First", "3:1: Extra"]), "unmarked error 3:1: Extra")
 }

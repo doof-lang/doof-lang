@@ -21,7 +21,7 @@ ordinary local state again.
 
 Actors wrap classes:
 
-```doof
+```doof check
 class Counter {
     let value: int
 
@@ -35,6 +35,7 @@ class Counter {
 }
 
 counter := Actor<Counter>(0)
+counter.increment(1)
 ```
 
 Each actor processes method calls sequentially. An actor is a serial execution
@@ -47,7 +48,14 @@ runtime worker threads, but messages for one actor never overlap.
 
 Actor calls are synchronous by default:
 
-```doof
+```doof check
+class Counter {
+    let value: int
+    increment(n: int): none { this.value = this.value + n }
+    get(): int => this.value
+}
+
+counter := Actor<Counter>(0)
 counter.increment(5)
 n := counter.get()
 ```
@@ -56,7 +64,14 @@ The caller blocks until the actor method completes.
 
 Actor calls may be asynchronous:
 
-```doof
+```doof check
+class Counter {
+    let value: int
+    increment(n: int): none { this.value = this.value + n }
+    get(): int => this.value
+}
+
+counter := Actor<Counter>(0)
 p := async counter.increment(10)
 p.get()!
 ```
@@ -105,8 +120,12 @@ function is inferred isolated. Arguments must satisfy the same boundary rules
 as actor-call arguments, and the result must be transferable from a temporary
 worker domain:
 
-```doof
+```doof check
+function compute(n: int): int => n * 2
+
+input := 21
 promise := async compute(input)
+println(promise.get()!)  // 42
 ```
 
 The direct form is rejected when `compute` reaches mutable module/static state
@@ -186,9 +205,15 @@ capture mutable module or static state into the new domain.
 
 `retire actor` stops an actor and returns its inner state:
 
-```doof
+```doof check
+class Job {
+    let runs: int = 0
+    run(): none { this.runs += 1 }
+}
+
 job := Actor<Job>()
 state: Job := retire job
+println(state.runs)  // 0
 ```
 
 The type transformation is:
@@ -199,9 +224,16 @@ Actor<T> -> T
 
 Retirement is queue ordered:
 
-```doof
+```doof check
+class Job {
+    let runs: int = 0
+    run(): none { this.runs += 1 }
+}
+
+job := Actor<Job>()
 p := async job.run()
 state := retire job
+println(state.runs)  // 1
 ```
 
 The actor observes:
@@ -314,8 +346,10 @@ recoverable failures; a callback can use `catchPanic` locally when appropriate.
 
 A mutable array of promises can consume whichever operation completes first:
 
-```doof
-result: Result<T, string> := pending.takeFirstCompleted()
+```doof check
+pending: Promise<int>[] := [async { yield 1 }, async { yield 2 }]
+result: Result<int, string> := pending.takeFirstCompleted()
+println(pending.length)  // 1
 ```
 
 `takeFirstCompleted()` blocks until one promise settles, removes that promise
@@ -335,14 +369,16 @@ that entry is inspected; do not mix registered completions into a pending array.
 Function values are actor-affine callbacks. A callback belongs to the actor
 domain in which it was created. Normal call syntax:
 
-```doof
-callback(args)
+```doof check
+callback := (n: int): int => n + 1
+println(callback(1))
 ```
 
 lowers to a checked local callback call. The explicit spelling is:
 
-```doof
-callback.call(args)
+```doof check
+callback := (n: int): int => n + 1
+println(callback.call(1))
 ```
 
 Local callback calls execute immediately and are valid only in the owning actor
@@ -350,8 +386,10 @@ domain. Calling a callback from another actor domain is a runtime logic error.
 
 Callbacks can also be posted back to their owning actor domain:
 
-```doof
-promise := callback.post(args)
+```doof check
+callback := (n: int): int => n + 1
+promise := callback.post(1)
+promise.onComplete((result) => println(result!))
 ```
 
 `post` enqueues the callback invocation on the owning actor and returns
@@ -379,11 +417,11 @@ allowed because those references already belong to the current domain.
 
 `isolated` is an enforced promise:
 
-```doof
+```doof reject
 shared := [0]
 
 isolated function invalid(): none {
-    shared.push(1) // error: accesses mutable module state
+    shared.push(1) // ❌ accesses mutable module state
 }
 ```
 
