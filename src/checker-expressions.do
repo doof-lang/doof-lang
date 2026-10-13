@@ -205,6 +205,17 @@ export function checkIdentifier(state: CheckerState, identifier: Identifier, sco
   return finish(state, identifier, binding!.type_)
 }
 
+// The nearest method scope decides whether `this` and instance members exist.
+function inStaticContext(scope: Scope): bool {
+  let current: Scope | none = scope
+  while current != none {
+    if current!.staticContext { return true }
+    if current!.thisType != none { return false }
+    current = current!.parent
+  }
+  return false
+}
+
 export function implicitMethod(state: CheckerState, scope: Scope, name: string, span: SourceSpan): Binding | none {
   case currentThisType(scope) {
     owner: ClassType -> {
@@ -214,6 +225,10 @@ export function implicitMethod(state: CheckerState, scope: Scope, name: string, 
         class_: ClassDeclaration -> {
           for method of class_.methods {
             if method.name == name {
+              if !method.static_ && inStaticContext(scope) {
+                typeError(state, "Cannot call instance method '" + name + "' from a static method", span)
+                return Binding { name, kind: "method", type_: unknownType(), mutable: false, span: checkerSemanticSpan(span), module: state.info!.path, symbol: owner.symbol }
+              }
               methodType := method.resolvedType ?? checkFunction(state, method, scope, owner)
               return Binding {
                 name, kind: "method", type_: methodType, mutable: false,

@@ -75,3 +75,14 @@ export function testEditorCheckerExpressionsRetainsCheckedGraphWithScopes(): non
   EditorAssert.isTrue(result.analysis.modules[0].editorExpressions.length > 0)
 }
 
+
+export function testStaticMethodsCannotCallInstanceMethodsImplicitly(): none {
+  invalid := checked("class Counter {\nlet count = 0\nincrement(): none { count += 1 }\nstatic bad(): none { increment() }\n}")
+  Assert.equal(invalid.diagnostics.length, 1)
+  Assert.equal(invalid.diagnostics[0].message, "Cannot call instance method 'increment' from a static method")
+  Assert.equal(invalid.diagnostics[0].span.start.line, 4)
+  valid := checked("class Counter {\nlet count = 0\nincrement(): none { count += 1; reset() }\nstatic reset(): none { helper() }\nstatic helper(): none {}\n}")
+  Assert.equal(valid.diagnostics.length, 0)
+  lambda := checked("class Counter {\nlet count = 0\nincrement(): none { count += 1 }\nstatic bad(): none { run := (): none => increment()\nrun() }\n}")
+  Assert.equal(lambda.diagnostics.length, 1)
+}
