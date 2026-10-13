@@ -43,3 +43,9 @@ export function testCheckerConsolidationFieldInferenceSkipsConstants(): none {
   Assert.equal(hasErrorDiagnostics(result.diagnostics), false)
   Assert.isTrue(result.emission != none)
 }
+
+export function testInterfaceBoundSubstitutesMethodParameters(): none {
+  result := checked("interface Cmp<V> { less(other: V): bool }\nclass N { v: int\nless(other: int): bool => v < other }\nfunction lessN<T: Cmp<int>>(a: T, b: int): bool => a.less(b)\nfunction main(): bool => lessN(N { v: 1 }, 2)")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}

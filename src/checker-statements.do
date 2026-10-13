@@ -366,10 +366,21 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
   if owner != none && !fn.static_ { addClassFields(state, scope, owner!); addClassMethods(state, scope, owner!) }
   returnType := if fn.returnType == none then noneType() else resolveType(state, fn.returnType!, state.info!, scope)
   scope.returnType = returnType
-  functionValue := functionType(functionParameters(state, fn, scope), returnType, fn.typeParams)
-  fn.resolvedType = optionalResolvedType(functionValue)
+  // Resolve through the scope chain so owner type parameters (such as an
+  // interface's `V`) are visible to the cached signature, not only the body.
+  let parameterTypes: FunctionParamType[] = []
   for parameter of fn.params {
-    parameterType := if parameter.type_ == none then unknownType() else resolveType(state, parameter.type_!, state.info!, scope)
+    parameterTypes.push(FunctionParamType {
+      name: parameter.name,
+      type_: if parameter.type_ == none then unknownType() else resolveType(state, parameter.type_!, state.info!, scope),
+      hasDefault: parameter.defaultValue != none,
+    })
+  }
+  functionValue := functionType(parameterTypes, returnType, fn.typeParams)
+  fn.resolvedType = optionalResolvedType(functionValue)
+  for index of 0..<fn.params.length {
+    parameter := fn.params[index]
+    parameterType := parameterTypes[index].type_
     parameter.resolvedType = optionalResolvedType(parameterType)
     if parameter.defaultValue != none {
       previousAllowsCaller := state.allowsCaller
@@ -408,18 +419,6 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
     if parameter.type_ != none && parameter.resolvedType != none { decorateAnnotationWithResolved(parameter.type_!, parameter.resolvedType!) }
   }
   return functionValue
-}
-
-export function functionParameters(state: CheckerState, fn: FunctionDeclaration, scope: Scope): FunctionParamType[] {
-  let parameters: FunctionParamType[] = []
-  for parameter of fn.params {
-    parameters.push(FunctionParamType {
-      name: parameter.name,
-      type_: if parameter.resolvedType != none then parameter.resolvedType! else if parameter.type_ == none then unknownType() else resolveAnnotation(parameter.type_!, state.info!, state.result, scope.typeParams),
-      hasDefault: parameter.defaultValue != none,
-    })
-  }
-  return parameters
 }
 
 export function checkClass(state: CheckerState, class_: ClassDeclaration, scope: Scope): none {

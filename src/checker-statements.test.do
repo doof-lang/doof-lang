@@ -250,3 +250,19 @@ export function testForInitializersShareTheLoopScope(): none {
   mismatched := checked("function main(): none { for let i = 0, j: string = 1; i < 2; i += 1 { } }")
   Assert.isTrue(mismatched.diagnostics.length > 0)
 }
+
+export function testGenericInterfaceMethodParametersUseInterfaceTypeParameters(): none {
+  valid := checked("interface Cmp<V> { less(other: V): bool }\nclass N { v: int\nless(other: int): bool => v < other }\nfunction main(): bool { c: Cmp<int> := N { v: 1 }\nreturn c.less(2) }")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+  invalid := checked("interface Cmp<V> { less(other: V): bool }\nfunction f(c: Cmp<int>): bool => c.less(\"x\")")
+  Assert.equal(invalid.diagnostics.length, 1)
+  Assert.isTrue(invalid.diagnostics[0].message.contains("string"))
+  Assert.isFalse(invalid.diagnostics[0].message.contains("Unknown resolved type"))
+}
+
+export function testGenericInterfaceBoundAcceptsSelfReferentialArgument(): none {
+  result := checked("interface Cmp<V> { less(other: V): bool }\nclass N { v: int\nless(other: N): bool => v < other.v }\nfunction minOf<T: Cmp<T>>(a: T, b: T): T { if a.less(b) { return a }\nreturn b }\nfunction main(): int => minOf(N { v: 1 }, N { v: 2 }).v")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}
