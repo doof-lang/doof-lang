@@ -578,6 +578,16 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
           ind + "    const auto " + name + " = std::visit([](auto&& _obj) { return _obj->value(); }, " + iterableName + ");\n" +
           body + ind + "}\n" + breakTarget
       }
+      class_: ClassType -> {
+        // The checker accepts a class iterable only when it is a stream, so
+        // its own next()/value() methods drive the loop without boxing it as
+        // a Stream<T> variant. A struct stream advances a local copy.
+        accessor := if class_.symbol.kind == "struct" then "." else "->"
+        return ind + "auto " + iterableName + " = " + iterable + ";\n" +
+          ind + "while (" + iterableName + accessor + "next()) {\n" +
+          ind + "    const auto " + name + " = " + iterableName + accessor + "value();\n" +
+          body + ind + "}\n" + breakTarget
+      }
       _ -> { }
     }
   }

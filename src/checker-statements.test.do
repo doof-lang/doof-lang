@@ -283,3 +283,32 @@ export function testLocalDeclarationAnnotationsReportOnce(): none {
   Assert.equal(map.diagnostics.length, 1)
   Assert.stringContains(map.diagnostics[0].message, "Map key type \"Key\" is not supported")
 }
+
+export function testForOfAcceptsClassStreamsDeclaredAfterTheLoop(): none {
+  result := checked(
+    "function main(): none { for v of Ticks(0, 2) { total: int := v } }\n" +
+    "class Ticks { let i: int\nend: int\nnext(): bool { i = i + 1\nreturn i <= end }\nvalue(): int => i }"
+  )
+  Assert.equal(result.diagnostics.length, 0)
+
+  generic := checked(
+    "function main(): none { for s of Repeat<string>(\"x\", 2) { text: string := s } }\n" +
+    "class Repeat<T> implements Stream<T> { item: T\nlet times: int\nnext(): bool { times = times - 1\nreturn times >= 0 }\nvalue(): T => item }"
+  )
+  Assert.equal(generic.diagnostics.length, 0)
+}
+
+export function testForOfRejectsClassesWithoutTheStreamProtocol(): none {
+  sources := [
+    "class Plain { x: int }\nfunction main(): none { for v of Plain(1) {} }",
+    "class NoValue { next(): bool => false }\nfunction main(): none { for v of NoValue() {} }",
+    "class IntNext { next(): int => 0\nvalue(): int => 0 }\nfunction main(): none { for v of IntNext() {} }",
+    "class ArgValue { next(): bool => false\nvalue(index: int): int => index }\nfunction main(): none { for v of ArgValue() {} }",
+    "class StaticNext { static next(): bool => false\nvalue(): int => 0 }\nfunction main(): none { for v of StaticNext() {} }",
+  ]
+  for source of sources {
+    result := checked(source)
+    Assert.equal(result.diagnostics.length, 1)
+    Assert.stringContains(result.diagnostics[0].message, "For-of requires an array, map, set, Range, or Stream value")
+  }
+}

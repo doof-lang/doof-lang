@@ -193,6 +193,12 @@ checker acceptance and C++ variant membership aligned.
 element type. The monomorphiser has matching intrinsic implementation logic
 when it builds concrete stream variants.
 
+`for-of` over a class-typed iterable resolves the instance `next()` and
+`value()` members directly, so a stream class declared later in the module is
+accepted before its body has been checked. The emitter lowers such a loop to
+direct method calls on the instance and never builds a `Stream<T>` variant for
+it.
+
 The conformance recursion carries a visited class/interface-pair set. This
 allows nested structural return types without non-termination while retaining
 the conservative rule that an unresolved declaration or field cannot prove a

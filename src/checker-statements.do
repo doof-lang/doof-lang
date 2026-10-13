@@ -43,7 +43,7 @@ import { validateStructLayout } from "./checker-struct-layout"
 import { checkExpression, addClassMethods } from "./checker-expressions"
 import { checkedCaseSubjectType, casePatternsExhaustive, checkCasePatterns } from "./checker-case"
 import { checkOmittedCollectionLiteral } from "./checker-literals"
-import { resolveType, memberType } from "./checker-resolution"
+import { resolveType, memberType, resolveMember } from "./checker-resolution"
 import { deprecatedClassMethodFunction, deprecatedConstDeclaration, deprecatedConstField, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
 import { decorateAnnotationWithResolved, blockContainsLoopExit, containsString, optionalResolvedType, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
 import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterface, isAssignableWithInterfaces } from "./checker-interfaces"
@@ -119,7 +119,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
     }
     forOf: ForOfStatement -> {
       iterable := checkExpression(state, forOf.iterable, scope, none)
-      element := iterableElement(iterable)
+      element := forOfElement(state, iterable, forOf.iterable.span)
       if iterable.kind != "unknown" && iterable.kind != "never" && element.kind == "unknown" {
         typeError(state, "For-of requires an array, map, set, Range, or Stream value; got " + typeName(iterable), forOf.iterable.span)
       }
@@ -1047,4 +1047,32 @@ export function addClassFields(state: CheckerState, scope: Scope, owner: ClassTy
     }
     _ -> { }
   }
+}
+
+// A class with instance `next(): bool` and `value(): T` methods is iterated as
+// a Stream<T>. Member resolution reads method signatures directly, so the
+// class may be declared after the loop that iterates it.
+function forOfElement(state: CheckerState, iterable: ResolvedType, span: SourceSpan): ResolvedType {
+  case iterable {
+    class_: ClassType -> {
+      next := resolveMember(state, class_, "next", span)
+      value := resolveMember(state, class_, "value", span)
+      if !next.instance || next.field || !value.instance || value.field { return unknownType() }
+      case next.type_! {
+        nextFunction: FunctionType -> {
+          if nextFunction.params.length != 0 || !sameType(nextFunction.returnType, primitive("bool")) { return unknownType() }
+        }
+        _ -> { return unknownType() }
+      }
+      case value.type_! {
+        valueFunction: FunctionType -> {
+          if valueFunction.params.length == 0 { return valueFunction.returnType }
+        }
+        _ -> { }
+      }
+      return unknownType()
+    }
+    _ -> { return iterableElement(iterable) }
+  }
+  return unknownType()
 }

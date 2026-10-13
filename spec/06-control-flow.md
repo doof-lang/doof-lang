@@ -263,14 +263,21 @@ class Counter implements Stream<int> {
     value(): int => this.currentValue
 }
 
+for value of Counter(0, 3) {
+    println(value)
+}
+
 values: Stream<int> := Counter(0, 3)
 for value of values {
     println(value)
 }
 ```
 
-A class that implements `Stream<T>` is iterated through a `Stream<T>`-typed
-value, as `values` is here.
+A class whose instances expose `next(): bool` and `value(): T` methods can be
+iterated directly, without first converting it to `Stream<T>`. The loop calls
+the instance's own methods, so it advances that instance: iterating a class
+held by a variable leaves the variable positioned where the loop stopped. A
+struct stream is a value, so the loop advances its own copy.
 
 ### For-Of with Maps
 

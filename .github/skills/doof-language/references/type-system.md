@@ -477,7 +477,7 @@ class Counter implements Stream<int> {
 }
 ```
 
-`for value of someStream` works anywhere an iterable is expected.
+`for value of someStream` works anywhere an iterable is expected. A class with `next(): bool` and `value(): T` methods can be iterated directly, as in `for v of Counter(3) { ... }`, without first assigning it to a `Stream<T>`; the loop advances that instance.
 
 ## Class, Struct, and Interface Type Identity
 

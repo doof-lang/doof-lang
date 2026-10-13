@@ -155,7 +155,7 @@ class Counter implements Stream<int> {
 }
 ```
 
-`for-of` can iterate over any `Stream<T>` value and binds each iteration variable as `T`.
+`for-of` can iterate over any `Stream<T>` value, or directly over an instance of a class that satisfies `Stream<T>`, and binds each iteration variable as `T`.
 
 ### Static Members
 

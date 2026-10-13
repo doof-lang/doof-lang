@@ -401,3 +401,71 @@ export function testForOfSnapshotIsShallow(): none {
   }
   Assert.equal(visited, "1,20,")
 }
+
+// A class stream iterated directly calls its own next()/value() methods
+// instead of boxing the instance into a Stream<T> variant.
+export function testForOfOverClassStreamCallsItsMethodsDirectly(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function main(): int { let total = 0\nfor v of Ticks(0, 3) { total = total + v }\nreturn total }\n" +
+    "class Ticks { let i: int\nend: int\nnext(): bool { i = i + 1\nreturn i <= end }\nvalue(): int => i }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "while (_iterable_")
+  Assert.stringContains(source, "->next())")
+  Assert.stringContains(source, "->value();")
+  Assert.equal(source.contains("std::visit"), false)
+}
+
+class ForOfTicks implements Stream<int> {
+  let current: int
+  end: int
+  next(): bool {
+    current = current + 1
+    return current <= end
+  }
+  value(): int => current
+}
+
+class ForOfRepeat<T> {
+  item: T
+  let times: int
+  next(): bool {
+    times = times - 1
+    return times >= 0
+  }
+  value(): T => item
+}
+
+struct ForOfCountdown {
+  let left: int
+  next(): bool {
+    left = left - 1
+    return left >= 0
+  }
+  value(): int => left
+}
+
+export function testForOfIteratesClassStreamsDirectly(): none {
+  let visited = ""
+  for v of ForOfTicks(0, 3) { visited = visited + string(v) + "," }
+  for s of ForOfRepeat<string>("x", 2) { visited = visited + s + "," }
+  countdown := ForOfCountdown { left: 2 }
+  for n of countdown { visited = visited + string(n) + "," }
+  Assert.equal(visited, "1,2,3,x,x,1,0,")
+}
+
+export function testForOfClassStreamBreakSkipsThenAndCapturesEachValue(): none {
+  ticks := ForOfTicks(0, 10)
+  let total = 0
+  let completed = false
+  for v of ticks {
+    if v == 3 { break }
+    total = total + v
+  } then { completed = true }
+  Assert.equal(total, 3)
+  Assert.isFalse(completed)
+  // The loop advanced the shared instance, so iteration resumes after 3.
+  Assert.equal(ticks.next(), true)
+  Assert.equal(ticks.value(), 4)
+}
