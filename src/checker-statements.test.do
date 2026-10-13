@@ -266,3 +266,20 @@ export function testGenericInterfaceBoundAcceptsSelfReferentialArgument(): none 
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
 }
+
+export function testLocalDeclarationAnnotationsReportOnce(): none {
+  sources := [
+    "function main(): none { x: Missing := 1 }",
+    "function main(): none { let x: Missing = 1 }",
+    "function main(): none { readonly x: Missing = 1 }",
+    "function main(values: int[] | none): none { x: Missing := values else { return } }",
+  ]
+  for source of sources {
+    result := checked(source)
+    Assert.equal(result.diagnostics.length, 1)
+    Assert.equal(result.diagnostics[0].message, "Unknown type 'Missing'")
+  }
+  map := checked("class Key {}\nfunction main(): none { values: Map<Key, int> := {} }")
+  Assert.equal(map.diagnostics.length, 1)
+  Assert.stringContains(map.diagnostics[0].message, "Map key type \"Key\" is not supported")
+}

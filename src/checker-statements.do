@@ -281,12 +281,14 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
   }
   let inferredCollectionType: ResolvedType | none = none
   if annotation != none && elseBlock == none { inferredCollectionType = checkOmittedCollectionLiteral(state, annotation!, value, scope) }
-  let expectedValueType: ResolvedType | none = none
-  if annotation != none && elseBlock == none && inferredCollectionType == none { expectedValueType = optionalResolvedType(resolveType(state, annotation!, state.info!, scope)) }
+  // Resolve the annotation once: resolution reports its diagnostics.
+  let annotatedType: ResolvedType | none = none
+  if annotation != none && inferredCollectionType == none { annotatedType = optionalResolvedType(resolveType(state, annotation!, state.info!, scope)) }
+  let expectedValueType: ResolvedType | none = if elseBlock == none then annotatedType else none
   if kind == "readonly" && expectedValueType != none { expectedValueType = optionalResolvedType(applyDeepReadonly(expectedValueType!)) }
   let valueType = if inferredCollectionType == none then checkExpression(state, value, scope, expectedValueType) else inferredCollectionType!
   let declaredType: ResolvedType = valueType
-  if annotation != none && inferredCollectionType == none { declaredType = resolveType(state, annotation!, state.info!, scope) }
+  if annotatedType != none { declaredType = annotatedType! }
   if kind == "readonly" {
     valueType = applyDeepReadonly(valueType)
     declaredType = applyDeepReadonly(declaredType)

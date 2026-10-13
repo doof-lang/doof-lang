@@ -91,12 +91,17 @@ export function testDiagnosesNestedFunctionFeaturesWithoutLambdaSemantics(): non
   EditorAssert.equal(editorParser.issues[0].message, "Nested generic functions are not supported; use a non-generic local function or a top-level generic function")
 }
 
-export function testRejectsModuleDirectivesInsideBlocks(): none {
+export function testRejectsModuleDeclarationsInsideBlocks(): none {
   cases: string[][] := [
     ["import { Helper } from \"./helper\"", "Import declarations are only valid at module level"],
     ["import function cos(x: double): double from \"<cmath>\"", "Import declarations are only valid at module level"],
     ["mock import for \"./a\" { \"./b\" => \"./c\" }", "mock import directives are only valid at module level"],
     ["export { helper }", "Export declarations are only valid at module level"],
+    ["class Local { x: int }", "Class declarations are only valid at module level"],
+    ["private struct Point { x: int }", "Struct declarations are only valid at module level"],
+    ["interface Shape { area(): double }", "Interface declarations are only valid at module level"],
+    ["enum Color { Red, Green }", "Enum declarations are only valid at module level"],
+    ["type Id = int", "Type alias declarations are only valid at module level"],
   ]
   for entry of cases {
     parser := EditorParser { source: "function main(): none {\n  if true {\n    " + entry[0] + "\n  }\n}" }

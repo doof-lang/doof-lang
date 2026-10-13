@@ -396,13 +396,21 @@ export function parseBlock(parser: Parser): Block {
   return Block { kind: "block", statements, span: parser.span(start) }
 }
 
-// Statements inside a block. A module directive is parsed in full before it is
-// rejected at its start, so editor recovery resumes after the directive.
+// Statements inside a block. Module directives and type declarations are
+// parsed in full before being rejected at their start, so editor recovery
+// resumes after the declaration.
 export function parseLocalStatement(parser: Parser): Statement {
   let directive = ""
   if parser.check(TokenType.Import) { directive = "Import declarations" }
   if parser.check(TokenType.Mock) { directive = "mock import directives" }
   if parser.check(TokenType.Export) { directive = "Export declarations" }
+  modified := parser.check(TokenType.Private) || parser.check(TokenType.Isolated)
+  declarationToken := if modified then parser.peek(1).kind else parser.current().kind
+  if declarationToken == TokenType.Class { directive = "Class declarations" }
+  if declarationToken == TokenType.Struct { directive = "Struct declarations" }
+  if declarationToken == TokenType.Interface { directive = "Interface declarations" }
+  if declarationToken == TokenType.Enum { directive = "Enum declarations" }
+  if declarationToken == TokenType.Type { directive = "Type alias declarations" }
   start := parser.location()
   statement := parseStatement(parser)
   if directive != "" { parser.failAt(start, directive + " are only valid at module level") }

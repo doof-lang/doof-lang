@@ -46,15 +46,6 @@ export function decorateAnnotationType(state: CheckerState, annotation: TypeAnno
   return resolvedType
 }
 
-// Local declarations resolve their annotation more than once; report each
-// unsupported key or element type once per source site.
-function unsupportedHashCollectionType(state: CheckerState, message: string, span: SourceSpan): none {
-  for diagnostic of state.diagnostics {
-    if diagnostic.message == message && diagnostic.span.start.offset == span.start.offset && diagnostic.module == state.info!.path { return }
-  }
-  typeError(state, message, span)
-}
-
 function resolveAnnotationType(resolution: AnnotationResolution, annotation: TypeAnnotation, module: ModuleInfo, scope: Scope, validateConstraints: bool = true): ResolvedType {
   state := resolution.state
   case annotation {
@@ -102,7 +93,7 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
         key := resolveAnnotationType(resolution, named.typeArgs[0], module, scope, validateConstraints)
         value := resolveAnnotationType(resolution, named.typeArgs[1], module, scope, validateConstraints)
         if !isSupportedHashCollectionType(key) {
-          unsupportedHashCollectionType(state, "Map key type \"" + typeName(key) + "\" is not supported; map keys must be byte, string, int, long, char, bool, or enum", named.typeArgs[0].span)
+          typeError(state, "Map key type \"" + typeName(key) + "\" is not supported; map keys must be byte, string, int, long, char, bool, or enum", named.typeArgs[0].span)
         }
         return finishAnnotation(resolution, annotation, mapType(key, value, named.name == "ReadonlyMap"))
       }
@@ -110,7 +101,7 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
         if named.typeArgs.length != 1 { typeError(state, named.name + " requires one type argument", named.span); return finishAnnotation(resolution, annotation, unknownType()) }
         element := resolveAnnotationType(resolution, named.typeArgs[0], module, scope, validateConstraints)
         if !isSupportedHashCollectionType(element) {
-          unsupportedHashCollectionType(state, "Set element type \"" + typeName(element) + "\" is not supported; set elements must be byte, string, int, long, char, bool, or enum", named.typeArgs[0].span)
+          typeError(state, "Set element type \"" + typeName(element) + "\" is not supported; set elements must be byte, string, int, long, char, bool, or enum", named.typeArgs[0].span)
         }
         return finishAnnotation(resolution, annotation, setType(element, named.name == "ReadonlySet"))
       }
