@@ -214,9 +214,13 @@ JSON eligibility and JSON code demand are intentionally separate:
    generated and marks metadata needs on declarations.
 3. The monomorphisation walk observes checked member uses:
    `toSerialObject`, `fromSerialValue`, and `metadata`.
-4. `InstantiationPlan` records direction-specific class keys in
+4. `InstantiationPlan` records direction-specific class and interface keys in
    `jsonSerializationKeys` and `jsonDeserializationKeys`. Demand is propagated
-   recursively through supported field, collection, tuple, and union types.
+   recursively through supported field, collection, tuple, and union types, and
+   from an interface to each implementing class. An interface's
+   deserialization key selects its generated `Interface_fromSerialValue`
+   decoder; interface encoding is a visitor over the implementations and needs
+   no generated function.
 5. WebAssembly wrapper planning adds entry-parameter deserialization and
    result serialization demand to the same plan before ordinary graph
    emission.

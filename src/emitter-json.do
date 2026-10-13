@@ -10,19 +10,21 @@ import {
   IntLiteral, InterfaceDeclaration, LongLiteral, MemberExpression, NoneLiteral, Statement, StringLiteral, TypeAliasDeclaration, UnaryExpression,
 } from "./ast"
 import { quote } from "./emitter-expr-literals"
-import { ArrayResolvedType, ClassType, EnumType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
+import { emitNoImplementationsAccess, implementationlessInterface } from "./emitter-no-implementations"
+import { jsonValueType } from "./checker-types"
+import { ArrayResolvedType, ClassType, EnumType, InterfaceType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitClassInnerType, emitContextType, usesVariantRepresentation } from "./emitter-types"
-import { JsonDiscriminator, interfaceJsonDiscriminator, jsonOwnerKey, nullableJsonMember, unionAliasJsonDiscriminator } from "./json-semantics"
+import { JsonDiscriminator, interfaceJsonDiscriminator, jsonInterfaceKey, jsonOwnerKey, nullableJsonMember, unionAliasJsonDiscriminator } from "./json-semantics"
 
-export function emitInterfaceJsonDeclaration(owner: InterfaceDeclaration): string {
-  if !owner.needsJson { return "" }
+export function emitInterfaceJsonDeclaration(owner: InterfaceDeclaration, context: EmitContext): string {
+  if !containsJsonDemand(context.jsonDeserializationKeys, jsonInterfaceKey(owner)) { return "" }
   return "doof::Result<" + owner.name + ", std::string> " + owner.name + "_fromSerialValue(const doof::SerialValue& _json, bool _lenient);\n"
 }
 
 export function emitInterfaceJsonDefinition(owner: InterfaceDeclaration, context: EmitContext): string {
-  if !owner.needsJson { return "" }
+  if !containsJsonDemand(context.jsonDeserializationKeys, jsonInterfaceKey(owner)) { return "" }
   if owner.resolvedSymbol != none && owner.resolvedSymbol!.implementations.length == 0 {
     return "\ndoof::Result<" + owner.name + ", std::string> " + owner.name + "_fromSerialValue(const doof::SerialValue&, bool) {\n" +
       "    return doof::Failure<std::string>{\"Interface " + owner.name + " has no implementing classes\"};\n}\n"
@@ -234,6 +236,7 @@ export function emitJsonTypeCheck(json: string, type_: ResolvedType, context: Em
     _: NoneType -> { return "doof::serial_is_null(" + json + ")" }
     _: SerialValueResolvedType -> { return "true" }
     _: ClassType -> { return "doof::serial_is_object(" + json + ")" }
+    _: InterfaceType -> { return "doof::serial_is_object(" + json + ")" }
     enum_: EnumType -> {
       if context != none && enumBackingKind(enum_, context!) == "string" { return "doof::serial_is_string(" + json + ")" }
       return "doof::serial_fits_int(" + json + ")"
@@ -263,6 +266,9 @@ export function emitJsonRead(json: string, type_: ResolvedType, context: EmitCon
     _: SerialValueResolvedType -> { return json }
     class_: ClassType -> {
       return "doof::serial_decode_value(" + emitClassInnerType(class_, context.modulePath, context.names) + "::fromSerialValue(" + json + ", _lenient))"
+    }
+    interface_: InterfaceType -> {
+      return "doof::serial_decode_value(" + emitContextType(interface_, context) + "_fromSerialValue(" + json + ", _lenient))"
     }
     enum_: EnumType -> {
       return "doof::serial_decode_value(" + emitContextType(enum_, context) + "_fromSerialValue(" + json + ", false))"
@@ -324,6 +330,7 @@ export function jsonTypeName(type_: ResolvedType, context: EmitContext | none = 
     _: NoneType -> { return "null" }
     _: SerialValueResolvedType -> { return "json" }
     _: ClassType -> { return "object" }
+    _: InterfaceType -> { return "object" }
     enum_: EnumType -> {
       if context != none && enumBackingKind(enum_, context!) == "string" { return "string" }
       return "integer"
@@ -349,6 +356,10 @@ export function emitJsonField(value: string, resolvedType: ResolvedType, context
     class_: ClassType -> {
       if class_.symbol.kind == "struct" { return "doof::serial_value(" + value + ".toSerialObject())" }
       return "doof::serial_value(" + value + "->toSerialObject())"
+    }
+    interface_: InterfaceType -> {
+      if implementationlessInterface(interface_, context) != none { return emitNoImplementationsAccess(value, interface_, jsonValueType(), context) }
+      return "std::visit([&](auto&& _obj) -> doof::SerialValue { return doof::serial_value(_obj->toSerialObject()); }, " + value + ")"
     }
     enum_: EnumType -> {
       return emitContextType(enum_, context) + "_toSerialValue(" + value + ")"

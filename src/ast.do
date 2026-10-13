@@ -770,7 +770,6 @@ export class InterfaceDeclaration {
   staticMethods: FunctionDeclaration[] = []
   exported: bool
   let resolvedSymbol: Symbol | none = none
-  let needsJson: bool = false
   span: SourceSpan
 }
 

@@ -4,7 +4,7 @@ import { ActorType, ArrayResolvedType, Binding, ClassMetadataResolvedType, Class
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { CheckedMember, ClassDeclaration, DotShorthand, EnumDeclaration, Expression, FunctionDeclaration, Identifier, InterfaceDeclaration, MemberExpression, Program, SourceSpan, TypeAnnotation, Parameter, TypeParameterConstraint } from "./ast"
 import { interfaceBoundReceiver, applyDeepReadonly, arrayType, classMetadataType, classType, functionType, joinTypes, jsonObjectType, jsonValueType, mapType, resultType, setType, noneType, primitive, promiseType, sameType, typeName, unionType, methodReflectionType, substituteTypeParams, typeParameter, unknownType } from "./checker-types"
-import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, isGeneratedJsonType } from "./json-semantics"
+import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, interfaceJsonSerializationBlocker, isGeneratedJsonType } from "./json-semantics"
 
 import { CheckerState } from "./checker-state"
 
@@ -489,11 +489,23 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
               typeError(state, "Cannot deserialize interface \"" + interface_.name + "\": all implementing classes must share a literal-valued string field with distinct values (e.g. kind: \"variant\")", span)
               return unknownType()
             }
-            interface_.needsJson = true
             return functionType([
               FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false },
               FunctionParamType { name: "lenient", type_: primitive("bool"), hasDefault: true },
             ], resultType(object, primitive("string")))
+          }
+          if property == "toSerialObject" {
+            if interface_.typeParams.length > 0 {
+              typeError(state, "Automatic JSON serialization is not available on generic interface \"" + interface_.name + "\"", span)
+              return unknownType()
+            }
+            blocker := interfaceJsonSerializationBlocker(interface_, jsonPrograms(state.result))
+            if blocker != none {
+              typeError(state, "Cannot serialize interface \"" + interface_.name + "\": implementing class \"" + blocker! + "\" does not support automatic JSON serialization", span)
+              return unknownType()
+            }
+            recordMember(selection, interfaceType_, interfaceType_.symbol.module, none, false, none, true)
+            return functionType([], jsonObjectType())
           }
 
         }

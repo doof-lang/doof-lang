@@ -127,6 +127,10 @@ export function testJsonAliasAndGenericDecodeNative(): none {
   runNativeFixture("json-alias-and-generic-decode")
 }
 
+export function testInterfaceJsonNative(): none {
+  runNativeFixture("interface-json")
+}
+
 export function testPositionalClassLiteralsNative(): none {
   runNativeFixture("positional-class-literals")
 }

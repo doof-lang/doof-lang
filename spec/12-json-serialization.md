@@ -85,6 +85,7 @@ println(formatJsonValue(u.toSerialObject()))
 | `bool` | JSON boolean |
 | `none` | JSON `null` |
 | Class or struct instances | JSON object (recursive) |
+| Non-generic interfaces | The implementation's JSON object (see [Interface Serialization](#interface-serialization)) |
 | `T[]` | JSON array |
 | `Tuple<T1, T2, ...>` | JSON array |
 | `Map<string, T>` | JSON object when `T` is serializable |
@@ -152,8 +153,9 @@ println(user.isSuccess())  // true
 A type parameter bounded by an ordinary interface also gets `T.fromSerialValue(...)`
 and `value.toSerialObject()` implicitly; the interface need not declare them (they
 are reserved names). Each concrete argument must then be a class or struct eligible
-for that direction (`fromSerialValue` also accepts enums, and interfaces that
-`Interface.fromSerialValue` could decode directly); otherwise compilation reports
+for that direction (`fromSerialValue` also accepts enums and interfaces that
+`Interface.fromSerialValue` could decode directly; `toSerialObject` also accepts
+interfaces whose `value.toSerialObject()` is available); otherwise compilation reports
 an error at the member access naming the argument type. The generated JSON code is
 emitted for the concrete arguments, exactly as for direct calls.
 
@@ -268,6 +270,60 @@ When `lenient` is `true`:
 
 Lenient mode does not relax structural requirements: objects must still be objects, arrays must still be arrays, required fields must still be present unless they have defaults, and unsupported coercions still fail.
 
+## Interface Serialization
+
+A value of a non-generic interface type has a `.toSerialObject()` method that
+encodes the value's runtime implementation exactly as that class's own
+`.toSerialObject()` would. Encoding needs no discriminator, but an
+implementation's literal-valued fields are encoded like any other field, so a
+discriminated interface round-trips through `Interface.fromSerialValue`.
+
+```doof check
+import { formatJsonValue } from "std/json"
+
+interface Pet {
+  speak(): string
+}
+
+class Dog implements Pet {
+  name: string
+  speak(): string => "woof"
+}
+
+class Cat implements Pet {
+  lives: int
+  speak(): string => "meow"
+}
+
+pet: Pet := Dog { name: "Rex" }
+println(formatJsonValue(pet.toSerialObject()))  // {"name":"Rex"}
+```
+
+Every implementing class must support automatic JSON serialization; the error
+names the first class that does not. Interfaces are structural, so this includes
+every class whose shape satisfies the interface, whether or not it declares
+`implements`. An interface with no implementing classes has no values, so encoding
+it is always accepted. Generic interfaces cannot be encoded.
+
+```doof reject
+interface Pet {
+  speak(): string
+}
+
+class Dog implements Pet {
+  name: string
+  speak(): string => "woof"
+}
+
+class Robot implements Pet {
+  onSpeak: (): string
+  speak(): string => onSpeak()
+}
+
+pet: Pet := Dog { name: "Rex" }
+pet.toSerialObject()  // ❌ implementing class "Robot" does not support automatic JSON serialization
+```
+
 ## Interface Deserialization
 
 Interfaces can be deserialized using a shared literal-valued discriminator field. All implementing classes must share a literal-valued field with the same name and distinct string values.
@@ -325,6 +381,53 @@ Animal.fromSerialValue({})  // ❌ implementing classes must share a literal str
 A discriminator value that names no implementing class fails at run time, as
 the `unknown` binding in the example above shows:
 `Failure("Unknown kind: \"triangle\"")`.
+
+### Interface-Typed Fields
+
+Interface types may appear in fields, array elements, string-keyed map values,
+tuples, and nullable fields. Each direction applies its own interface rule:
+encoding a containing class requires the interface to be encodable, and decoding
+it requires the interface's discriminator. Recursive interfaces are supported.
+
+```doof check
+import { formatJsonValue } from "std/json"
+
+interface Node {
+  weight(): int
+}
+
+class Leaf implements Node {
+  kind: "leaf"
+  value: int
+  weight(): int => value
+}
+
+class Branch implements Node {
+  kind: "branch"
+  children: Node[]
+
+  weight(): int {
+    let total = 0
+    for child of children { total += child.weight() }
+    return total
+  }
+}
+
+class Tree {
+  root: Node
+}
+
+tree := Tree { root: Branch { children: [Leaf { value: 1 }, Leaf { value: 2 }] } }
+json := tree.toSerialObject()
+println(formatJsonValue(json))
+// {"root":{"kind":"branch","children":[{"kind":"leaf","value":1},{"kind":"leaf","value":2}]}}
+restored := Tree.fromSerialValue(json)
+println(restored.isSuccess())  // true
+```
+
+An unknown discriminator inside a nested value reports its path, for example
+`Field "root": Field "children": [0]: Unknown kind: "twig"` for a `Tree` whose
+first child has `kind: "twig"`.
 
 ## Named Union Alias Deserialization
 

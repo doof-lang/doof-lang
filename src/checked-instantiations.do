@@ -14,7 +14,7 @@ import {
   RangePattern, ReadonlyDeclaration, RetireExpression, ReturnStatement, Statement, StringLiteral, TryStatement, TupleLiteral, TypePattern, UnaryExpression, ValuePattern,
   WhileStatement, WithStatement, YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression, Program,
 } from "./ast"
-import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator } from "./json-semantics"
+import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, interfaceJsonSerializationBlocker } from "./json-semantics"
 import { AnalysisResult } from "./analyzer"
 import { sameType, substituteTypeParams, typeName } from "./checker-types"
 import { classSatisfiesConcreteInterface } from "./checker-interfaces"
@@ -368,10 +368,7 @@ function collectJsonMemberDemand(member: MemberExpression, modulePath: string, a
     return
   }
   if member.property == "fromSerialValue" {
-    case receiver {
-      interface_: InterfaceType -> { addInterfaceJsonDeserializationDemand(plan, interface_, analysis) }
-      _ -> { addJsonDeserializationDemand(plan, receiver, analysis) }
-    }
+    addJsonDeserializationDemand(plan, receiver, analysis)
     return
   }
   if member.property != "metadata" { return }
@@ -423,18 +420,22 @@ function validateImpliedJsonMember(member: MemberExpression, receiver: ResolvedT
       reason = " (enums use toSerialValue)"
     }
     interfaceType_: InterfaceType -> {
-      // Mirrors the checker's rule for direct `Interface.fromSerialValue`: a
-      // non-generic interface whose implementations share a discriminator.
+      // Mirrors the checker's rules for direct interface JSON members:
+      // encoding needs serializable implementations, decoding a shared
+      // discriminator.
       declaration := interfaceDeclaration(analysis, interfaceType_.symbol.module, interfaceType_.symbol.name)
-      if member.property != "fromSerialValue" || declaration == none {
+      if declaration == none {
         supported = false
       } else if declaration!.typeParams.length > 0 {
-        reason = " (generic interfaces cannot be decoded)"
+        reason = if member.property == "toSerialObject" then " (generic interfaces cannot be encoded)" else " (generic interfaces cannot be decoded)"
+      } else if member.property == "toSerialObject" {
+        blocker := interfaceJsonSerializationBlocker(declaration!, programs)
+        supported = blocker == none
+        if !supported { reason = " (implementing class \"" + blocker! + "\" does not support it)" }
       } else if interfaceType_.symbol.implementations.length > 0 && interfaceJsonDiscriminator(declaration!, programs) == none {
         reason = " (implementing classes must share a literal-valued string field with distinct values)"
       } else {
         supported = true
-        declaration!.needsJson = true
       }
     }
     _ -> { }
@@ -474,19 +475,22 @@ export function collectJsonDemand(keys: string[], type_: ResolvedType, analysis:
         collectJsonDemand(keys, field.resolvedType!, analysis)
       }
     }
+    // An interface value encodes or decodes through each implementation; its
+    // key also selects the generated interface decoder.
+    interface_: InterfaceType -> {
+      if interface_.typeArgs.length > 0 { return }
+      key := interface_.symbol.module + "::" + interface_.symbol.name
+      if containsString(keys, key) { return }
+      keys.push(key)
+      for implementation of interface_.symbol.implementations {
+        if implementation.typeParams.length == 0 { collectJsonDemand(keys, ClassType { name: implementation.name, symbol: implementation }, analysis) }
+      }
+    }
     array: ArrayResolvedType -> { collectJsonDemand(keys, array.elementType, analysis) }
     map: MapResolvedType -> { collectJsonDemand(keys, map.valueType, analysis) }
     tuple: TupleResolvedType -> { for element of tuple.elements { collectJsonDemand(keys, element, analysis) } }
     union_: UnionResolvedType -> { for member of union_.types { collectJsonDemand(keys, member, analysis) } }
     _ -> { }
-  }
-}
-
-function addInterfaceJsonDeserializationDemand(plan: CheckedInstantiations, type_: InterfaceType, analysis: AnalysisResult): none {
-  declaration := interfaceDeclaration(analysis, type_.symbol.module, type_.symbol.name)
-  if declaration == none || declaration!.resolvedSymbol == none { return }
-  for implementation of declaration!.resolvedSymbol!.implementations {
-    addJsonDeserializationDemand(plan, ClassType { name: implementation.name, symbol: implementation }, analysis)
   }
 }
 

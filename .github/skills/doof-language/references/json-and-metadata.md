@@ -36,6 +36,7 @@ Rules:
 | `bool` | boolean |
 | `none` | JSON `null` |
 | Class or struct instances | object (recursive) |
+| Non-generic interfaces | the implementation's object (see Interface JSON) |
 | `T[]` | array |
 | `Tuple<T1, T2>` | array |
 | Enums (implicit or int-backed) | integer backing value |
@@ -95,9 +96,15 @@ When `lenient` is `true`:
 - `bool` fields accept numbers and `"true"` / `"false"` / `"1"` / `"0"`
 - Numeric fields accept booleans as `1` / `0`
 
-### Interface Deserialization
+### Interface JSON
 
-Requires a shared literal-valued discriminator field with distinct string values across all implementing classes:
+An interface value encodes as its runtime implementation: `shape.toSerialObject()`
+is available when every implementing class is serializable, and needs no
+discriminator. Decoding requires a shared literal-valued discriminator field with
+distinct string values across all implementing classes. Interface-typed fields,
+array elements, map values, and nullable fields follow the same per-direction
+rules, so a class with a `Shape[]` field encodes and decodes on demand, and
+recursive interfaces such as tree nodes work. Generic interfaces are not JSON types.
 
 ```doof
 interface Shape { area(): double }
@@ -116,9 +123,13 @@ class Rect implements Shape {
 
 Shape.fromSerialValue({ kind: "circle", radius: 5.0 })  // Result<Shape, string>
 Shape.fromSerialValue({ kind: "circle", radius: 5.0 }, true)
+shape: Shape := Circle { radius: 2.0 }
+shape.toSerialObject()  // {"kind":"circle","radius":2.0}
 ```
 
-Compile error if implementing classes lack a shared literal-valued discriminator.
+Compile error if implementing classes lack a shared literal-valued discriminator
+(decoding) or if any implementing class is not serializable (encoding; the error
+names the class).
 
 A named alias of a class union uses the same rule: with `type Shape = Circle | Rect`,
 `Shape.fromSerialValue(json)` returns `Result<Shape, string>`. Generic aliases and

@@ -51,3 +51,38 @@ export function testInstantiationDiscoveryBoundsExpandingDiscovery(): none {
   Assert.isTrue(catalog.overflowTrace.length <= 12)
   Assert.stringContains(catalog.overflowTrace[0], "::function::grow::[array:")
 }
+
+export function testInterfaceJsonDemandReachesImplementationsByDirection(): none {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source:
+    "interface Shape { area(): int }\n" +
+    "class Square implements Shape { kind: \"square\"\nside: int\narea(): int => side }\n" +
+    "class Disc implements Shape { kind: \"disc\"\nradius: int\narea(): int => radius }\n" +
+    "class Scene { shapes: Shape[] }\n" +
+    "function encode(shape: Shape): SerialObject => shape.toSerialObject()\n" +
+    "function decode(json: SerialValue): Result<Scene, string> => Scene.fromSerialValue(json)" }]).analyze("/main.do")
+  diagnostics := createChecker(analysis, "/main.do").check("/main.do").diagnostics
+  for diagnostic of diagnostics { println(diagnostic.message) }
+  Assert.equal(diagnostics.length, 0)
+  catalog := discoverInstantiations(analysis)
+  Assert.equal(joined(catalog.jsonSerializationKeys), "/main.do::Shape,/main.do::Square,/main.do::Disc")
+  Assert.equal(joined(catalog.jsonDeserializationKeys), "/main.do::Scene,/main.do::Shape,/main.do::Square,/main.do::Disc")
+}
+
+export function testImpliedInterfaceEncodingNamesTheBlockingImplementation(): none {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source:
+    "interface Pet { speak(): string }\n" +
+    "class Dog implements Pet { name: string\nspeak(): string => name }\n" +
+    "class Robot implements Pet { onSpeak: (): string\nspeak(): string => onSpeak() }\n" +
+    "function encode<T: Pet>(value: T): SerialObject => value.toSerialObject()\n" +
+    "function main(): none { pet: Pet := Dog { name: \"Rex\" }\nencode<Pet>(pet) }" }]).analyze("/main.do")
+  Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
+  catalog := discoverInstantiations(analysis)
+  Assert.equal(catalog.jsonErrors.length, 1)
+  Assert.equal(catalog.jsonErrors[0].message, "Type \"Pet\" does not support automatic JSON serialization (implementing class \"Robot\" does not support it), required by 'toSerialObject' on type parameter \"T\"")
+}
+
+function joined(values: string[]): string {
+  let result = ""
+  for value of values { result = if result == "" then value else result + "," + value }
+  return result
+}

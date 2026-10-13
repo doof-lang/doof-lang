@@ -97,7 +97,7 @@ function collect(statement: Statement, plan: HeaderPlanBuilder, context: EmitCon
           }
         }
         plan.interfaceAliases.push(planInterfaceAlias(interface_, context, classes))
-        declaration := emitInterfaceJsonDeclaration(interface_)
+        declaration := emitInterfaceJsonDeclaration(interface_, context)
         if declaration != "" { plan.functionSignatures.push(textDeclaration(declaration)) }
       }
     }

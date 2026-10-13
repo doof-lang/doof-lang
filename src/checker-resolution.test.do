@@ -227,3 +227,50 @@ export function testStringReplaceReturnsString(): none {
   missingArgument := checked("function first(text: string): string => text.replace(\"a\")")
   Assert.isTrue(missingArgument.diagnostics.length > 0)
 }
+
+export function testInterfaceValuesExposeToSerialObject(): none {
+  result := checked(
+    "interface Shape { area(): int }\n" +
+    "class Square implements Shape { kind: \"square\"\nside: int\narea(): int => side }\n" +
+    "class Scene { shapes: Shape[]\nfocus: Shape | none = none }\n" +
+    "function encode(shape: Shape): SerialObject => shape.toSerialObject()\n" +
+    "function encodeScene(scene: Scene): SerialObject => scene.toSerialObject()\n" +
+    "function decodeScene(json: SerialValue): Result<Scene, string> => Scene.fromSerialValue(json)",
+  )
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.isFalse(hasErrorDiagnostics(result.diagnostics))
+}
+
+export function testInterfaceSerializationNamesTheBlockingImplementation(): none {
+  result := checked(
+    "interface Pet { speak(): string }\n" +
+    "class Dog implements Pet { name: string\nspeak(): string => name }\n" +
+    "class Robot implements Pet { onSpeak: (): string\nspeak(): string => onSpeak() }\n" +
+    "function encode(pet: Pet): SerialObject => pet.toSerialObject()",
+  )
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].message, "Cannot serialize interface \"Pet\": implementing class \"Robot\" does not support automatic JSON serialization")
+}
+
+export function testInterfaceSerializationRejectsGenericInterfaces(): none {
+  result := checked(
+    "interface Box<T> { get(): T }\n" +
+    "function encode(box: Box<int>): SerialObject => box.toSerialObject()",
+  )
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].message, "Automatic JSON serialization is not available on generic interface \"Box\"")
+}
+
+export function testInterfaceFieldsDecodeOnlyWithADiscriminator(): none {
+  result := checked(
+    "interface Pet { speak(): string }\n" +
+    "class Dog implements Pet { name: string\nspeak(): string => name }\n" +
+    "class Cat implements Pet { lives: int\nspeak(): string => \"meow\" }\n" +
+    "class Kennel { pets: Pet[] }\n" +
+    "function encode(kennel: Kennel): SerialObject => kennel.toSerialObject()\n" +
+    "function decode(json: SerialValue): Result<Kennel, string> => Kennel.fromSerialValue(json)",
+  )
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].message, "Type \"Kennel\" does not support automatic JSON deserialization")
+  Assert.equal(result.diagnostics[0].span.start.line, 8)
+}

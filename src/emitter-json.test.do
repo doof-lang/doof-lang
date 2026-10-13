@@ -130,3 +130,37 @@ export function testUnionAliasDecoderDispatchesOnDiscriminator(): none {
   }], "/main.do")
   Assert.stringNotContains(unused.emission!.modules[0].header, "Shape_fromSerialValue")
 }
+
+export function testInterfaceFieldsLowerThroughVisitorAndDecoder(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "interface Shape { area(): int }\n" +
+    "class Square implements Shape { kind: \"square\"\nside: int\narea(): int => side }\n" +
+    "class Disc implements Shape { kind: \"disc\"\nradius: int\narea(): int => radius }\n" +
+    "class Scene { shapes: Shape[] }\n" +
+    "function encode(scene: Scene): SerialObject => scene.toSerialObject()\n" +
+    "function decode(json: SerialValue): Result<Scene, string> => Scene.fromSerialValue(json)",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  module := result.emission!.modules[0]
+  Assert.stringContains(module.source, "std::visit([&](auto&& _obj) -> doof::SerialValue { return doof::serial_value(_obj->toSerialObject()); }, _element)")
+  Assert.stringContains(module.source, "doof::serial_decode_value(Shape_fromSerialValue(_element, _lenient))")
+  Assert.stringContains(module.header, "doof::Result<Shape, std::string> Shape_fromSerialValue(const doof::SerialValue& _json, bool _lenient);")
+  Assert.stringContains(module.source, "if (_discriminator == \"square\")")
+}
+
+export function testInterfaceEncodingAloneEmitsNoDecoder(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "interface Pet { speak(): string }\n" +
+    "class Dog implements Pet { name: string\nspeak(): string => name }\n" +
+    "class Cat implements Pet { lives: int\nspeak(): string => \"meow\" }\n" +
+    "function encode(pet: Pet): SerialObject => pet.toSerialObject()",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  module := result.emission!.modules[0]
+  Assert.stringContains(module.source, "_obj->toSerialObject()")
+  Assert.stringContains(module.source, "Dog::toSerialObject() const")
+  Assert.stringContains(module.source, "Cat::toSerialObject() const")
+  Assert.stringNotContains(module.header + module.source, "fromSerialValue")
+}

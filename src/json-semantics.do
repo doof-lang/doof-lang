@@ -7,7 +7,7 @@ import {
   ArrayType, BoolLiteral, CharLiteral, ClassDeclaration, ClassField, DoubleLiteral, FloatLiteral,
   ExportDeclaration, IntLiteral, InterfaceDeclaration, LongLiteral, NamedType, Program, Statement, StringLiteral, TypeAliasDeclaration, TypeAnnotation, UnionType,
 } from "./ast"
-import { ArrayResolvedType, ClassType, EnumType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, Symbol, TupleResolvedType, UnionResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassType, EnumType, InterfaceType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, Symbol, TupleResolvedType, UnionResolvedType } from "./semantic"
 
 export class JsonDiscriminatorEntry {
   value: string
@@ -33,6 +33,16 @@ export function interfaceJsonDiscriminator(
   programs: Program[],
   cache: JsonEligibilityCache | none = none,
 ): JsonDiscriminator | none {
+  let visited: string[] = []
+  return interfaceJsonDiscriminatorInner(owner, programs, cache, visited)
+}
+
+function interfaceJsonDiscriminatorInner(
+  owner: InterfaceDeclaration,
+  programs: Program[],
+  cache: JsonEligibilityCache | none,
+  visited: string[],
+): JsonDiscriminator | none {
   if owner.resolvedSymbol == none || owner.resolvedSymbol!.implementations.length == 0 { return none }
   let implementations: ClassDeclaration[] = []
   for symbol of owner.resolvedSymbol!.implementations {
@@ -40,7 +50,52 @@ export function interfaceJsonDiscriminator(
     if declaration == none { return none }
     implementations.push(declaration!)
   }
-  return classesJsonDiscriminator(implementations, programs, cache)
+  return classesJsonDiscriminator(implementations, programs, cache, visited)
+}
+
+/**
+ * An interface value encodes through its runtime implementation, so every
+ * implementing class must support serialization. Without implementations no
+ * value can exist and encoding is vacuously available.
+ */
+export function canGenerateInterfaceJsonSerialization(owner: InterfaceDeclaration, programs: Program[] = []): bool {
+  return owner.typeParams.length == 0 && owner.resolvedSymbol != none && interfaceJsonSerializationBlocker(owner, programs) == none
+}
+
+/** Names the first implementing class that prevents encoding the interface. */
+export function interfaceJsonSerializationBlocker(owner: InterfaceDeclaration, programs: Program[] = []): string | none {
+  let visited: string[] = []
+  return interfaceJsonSerializationBlockerInner(owner, programs, visited)
+}
+
+function interfaceJsonSerializationBlockerInner(owner: InterfaceDeclaration, programs: Program[], visited: string[]): string | none {
+  if owner.resolvedSymbol == none || markJsonKeyVisited(jsonInterfaceKey(owner), visited) { return none }
+  for symbol of owner.resolvedSymbol!.implementations {
+    if symbol.native_ || symbol.typeParams.length > 0 { return symbol.name }
+    declaration := findJsonClassDeclaration(programs, symbol)
+    if declaration == none || !canGenerateJsonSerializationInner(declaration!, programs, visited) { return symbol.name }
+  }
+  return none
+}
+
+function canGenerateInterfaceJsonSerializationInner(owner: InterfaceDeclaration, programs: Program[], visited: string[]): bool {
+  return owner.typeParams.length == 0 && owner.resolvedSymbol != none && interfaceJsonSerializationBlockerInner(owner, programs, visited) == none
+}
+
+// Interface decoders reuse the direct `Interface.fromSerialValue` rule: a
+// shared string discriminator, or no implementations at all.
+function canGenerateInterfaceJsonDeserializationInner(owner: InterfaceDeclaration, programs: Program[], visited: string[]): bool {
+  if owner.typeParams.length > 0 || owner.resolvedSymbol == none { return false }
+  if markJsonKeyVisited(jsonInterfaceKey(owner), visited) { return true }
+  if owner.resolvedSymbol!.implementations.length == 0 { return true }
+  return interfaceJsonDiscriminatorInner(owner, programs, none, visited) != none
+}
+
+function interfaceTypeSerializable(symbol: Symbol, typeArgs: int, programs: Program[], visited: string[], encode: bool): bool {
+  if typeArgs > 0 { return false }
+  declaration := findJsonInterfaceDeclaration(programs, symbol)
+  if declaration == none { return programs.length == 0 }
+  return if encode then canGenerateInterfaceJsonSerializationInner(declaration!, programs, visited) else canGenerateInterfaceJsonDeserializationInner(declaration!, programs, visited)
 }
 
 /**
@@ -67,7 +122,8 @@ export function unionAliasJsonDiscriminator(
           _ -> { return none }
         }
       }
-      return classesJsonDiscriminator(members, programs, cache)
+      let visited: string[] = []
+      return classesJsonDiscriminator(members, programs, cache, visited)
     }
     _ -> { return none }
   }
@@ -77,9 +133,10 @@ function classesJsonDiscriminator(
   implementations: ClassDeclaration[],
   programs: Program[],
   cache: JsonEligibilityCache | none,
+  visited: string[],
 ): JsonDiscriminator | none {
   for implementation of implementations {
-    if !canGenerateJsonDeserialization(implementation, programs, cache) { return none }
+    if !implementationDecodes(implementation, programs, cache, visited) { return none }
   }
   if implementations.length == 0 { return none }
   for candidate of implementations[0].fields {
@@ -98,6 +155,13 @@ function classesJsonDiscriminator(
     }
   }
   return none
+}
+
+// The cache only memoizes top-level answers; nested queries share `visited` so
+// recursive interfaces terminate.
+function implementationDecodes(implementation: ClassDeclaration, programs: Program[], cache: JsonEligibilityCache | none, visited: string[]): bool {
+  if visited.length == 0 { return canGenerateJsonDeserialization(implementation, programs, cache) }
+  return canGenerateJsonDeserializationInner(implementation, programs, visited)
 }
 
 function fixedStringField(owner: ClassDeclaration, name: string): string | none {
@@ -185,6 +249,7 @@ export function isGeneratedJsonType(type_: ResolvedType, programs: Program[] = [
       if declaration == none { return programs.length == 0 }
       return canGenerateJsonDeserializationInner(declaration!, programs, visited)
     }
+    interface_: InterfaceType -> { return interfaceTypeSerializable(interface_.symbol, interface_.typeArgs.length, programs, visited, false) }
     array: ArrayResolvedType -> { return isGeneratedJsonType(array.elementType, programs, visited) }
     map: MapResolvedType -> {
       case map.keyType {
@@ -215,6 +280,7 @@ function isGeneratedJsonSerializationType(type_: ResolvedType, programs: Program
       if declaration == none { return programs.length == 0 }
       return canGenerateJsonSerializationInner(declaration!, programs, visited)
     }
+    interface_: InterfaceType -> { return interfaceTypeSerializable(interface_.symbol, interface_.typeArgs.length, programs, visited, true) }
     array: ArrayResolvedType -> {
       if array.elementType.kind == "json-value" { return true }
       return isGeneratedJsonSerializationType(array.elementType, programs, visited)
@@ -236,6 +302,7 @@ function isGeneratedJsonSerializationType(type_: ResolvedType, programs: Program
       if inner == none { return false }
       case inner! {
         _: ClassType -> { return isGeneratedJsonSerializationType(inner!, programs, visited) }
+        _: InterfaceType -> { return isGeneratedJsonSerializationType(inner!, programs, visited) }
         _: ArrayResolvedType -> { return isGeneratedJsonSerializationType(inner!, programs, visited) }
         _: MapResolvedType -> { return isGeneratedJsonSerializationType(inner!, programs, visited) }
         _ -> { return isGeneratedJsonType(inner!, programs, visited) }
@@ -324,6 +391,7 @@ function isGeneratedJsonDeserializationAnnotation(annotation: TypeAnnotation, pr
       }
       if named.typeArgs.length != 0 || named.resolvedSymbol == none || named.resolvedSymbol!.native_ { return false }
       if named.resolvedSymbol!.kind == "enum" { return true }
+      if named.resolvedSymbol!.kind == "interface" { return interfaceTypeSerializable(named.resolvedSymbol!, 0, programs, visited, false) }
       if named.resolvedSymbol!.kind != "class" && named.resolvedSymbol!.kind != "struct" { return false }
       declaration := findJsonClassDeclaration(programs, named.resolvedSymbol!)
       if declaration == none { return programs.length == 0 }
@@ -371,6 +439,9 @@ function isGeneratedJsonSerializationAnnotation(annotation: TypeAnnotation, prog
           _ -> { return false }
         }
       }
+      if named.resolvedSymbol != none && named.resolvedSymbol!.kind == "interface" {
+        return named.typeArgs.length == 0 && interfaceTypeSerializable(named.resolvedSymbol!, 0, programs, visited, true)
+      }
       if named.resolvedSymbol != none && (named.resolvedSymbol!.kind == "class" || named.resolvedSymbol!.kind == "struct") {
         declaration := findJsonClassDeclaration(programs, named.resolvedSymbol!)
         if declaration == none { return programs.length == 0 }
@@ -411,13 +482,22 @@ function isGeneratedJsonSerializationAnnotation(annotation: TypeAnnotation, prog
 }
 
 function markJsonOwnerVisited(owner: ClassDeclaration, visited: string[]): bool {
-  key := jsonOwnerKey(owner)
+  return markJsonKeyVisited(jsonOwnerKey(owner), visited)
+}
+
+function markJsonKeyVisited(key: string, visited: string[]): bool {
   for existing of visited { if existing == key { return true } }
   visited.push(key)
   return false
 }
 
 export function jsonOwnerKey(owner: ClassDeclaration): string {
+  module := if owner.resolvedSymbol == none then "" else owner.resolvedSymbol!.module
+  return module + "::" + owner.name
+}
+
+/** Interfaces share the class key space; one module cannot declare both names. */
+export function jsonInterfaceKey(owner: InterfaceDeclaration): string {
   module := if owner.resolvedSymbol == none then "" else owner.resolvedSymbol!.module
   return module + "::" + owner.name
 }
@@ -429,6 +509,26 @@ function findJsonClassDeclaration(programs: Program[], symbol: Symbol): ClassDec
       if declaration == none || declaration!.resolvedSymbol == none { continue }
       if declaration!.resolvedSymbol!.module == symbol.module && declaration!.name == symbol.name { return declaration }
     }
+  }
+  return none
+}
+
+function findJsonInterfaceDeclaration(programs: Program[], symbol: Symbol): InterfaceDeclaration | none {
+  for program of programs {
+    for statement of program.statements {
+      declaration := jsonInterfaceDeclaration(statement)
+      if declaration == none || declaration!.resolvedSymbol == none { continue }
+      if declaration!.resolvedSymbol!.module == symbol.module && declaration!.name == symbol.name { return declaration }
+    }
+  }
+  return none
+}
+
+function jsonInterfaceDeclaration(statement: Statement): InterfaceDeclaration | none {
+  case statement {
+    interface_: InterfaceDeclaration -> { return interface_ }
+    export_: ExportDeclaration -> { return jsonInterfaceDeclaration(export_.declaration) }
+    _ -> { return none }
   }
   return none
 }
