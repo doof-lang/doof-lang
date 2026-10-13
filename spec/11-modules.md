@@ -12,8 +12,10 @@ Doof uses an ESM-style module system with explicit imports and exports. Each fil
 
 Export declarations directly:
 
-```doof
+```doof check math.do
 // math.do
+import { sqrt } from "std/math"
+
 export readonly PI = 3.14159
 export readonly E = 2.71828
 
@@ -31,18 +33,18 @@ export type Outcome<T> = Success<T> | Failure<string>
 
 Or export separately from declaration:
 
-```doof
-class Helper { ... }
-function publicFunction(): none { ... }
-function privateFunction(): none { ... }
+```doof check
+class Helper { name: string }
+function publicFunction(): none { privateFunction() }
+function privateFunction(): none { println("private") }
 
 export { Helper, publicFunction }
 ```
 
 ### Export Renaming
 
-```doof
-class InternalVector { ... }
+```doof check
+class InternalVector { x, y: float }
 function internalAdd(a: int, b: int): int => a + b
 
 export { 
@@ -55,12 +57,12 @@ export {
 
 Doof omits default exports to encourage explicit naming:
 
-```doof
-// ❌ Not supported
-export default class Foo { }
-
+```doof reject
 // ✅ Use named exports
 export class Foo { }
+
+// Not supported
+export default class Bar { }  // ❌
 ```
 
 **Rationale:** Consistent import syntax, no naming confusion, better tooling support.
@@ -71,21 +73,32 @@ export class Foo { }
 
 ### Named Imports
 
-```doof
+```doof check
 import { Vector, add, PI } from "./math"
 
 let v = Vector { x: 1.0, y: 2.0, z: 3.0 }
 let sum = add(1, 2)
+println(sum)
 ```
 
 ### Import Renaming
 
-```doof
+Given a second module that also exports a `Vector`:
+
+```doof check math2d.do
+// math2d.do
+export class Vector { x, y: float }
+```
+
+renaming keeps both available:
+
+```doof check
 import { Vector as Vec3, add as addInts } from "./math"
 import { Vector as Vec2 } from "./math2d"
 
 let v3 = Vec3 { x: 1.0, y: 2.0, z: 3.0 }
 let v2 = Vec2 { x: 1.0, y: 2.0 }
+println(addInts(1, 2))
 ```
 
 ### No Namespace Imports
@@ -93,7 +106,7 @@ let v2 = Vec2 { x: 1.0, y: 2.0 }
 Doof has no namespace imports. `import * as ns from "mod"` is a parse error;
 import each name, using `as` to resolve collisions:
 
-```doof
+```doof check
 import { Vector, add, PI } from "./math"
 import { Vector as Vector2 } from "./math2d"
 ```
@@ -102,12 +115,18 @@ import { Vector as Vector2 } from "./math2d"
 
 Import only type information (erased at runtime):
 
-```doof
+```doof check types.do
+// types.do
+export class User { name: string }
+export class Config { name: string }
+```
+
+```doof reject
 import type { User, Config } from "./types"
 
-function process(user: User, config: Config): none { ... }
+function process(user: User, config: Config): none { println(user.name + config.name) }
 
-let u = User { ... }  // ❌ Error: User is a type-only import
+let u = User { name: "Ada" }  // ❌ Error: User is a type-only import
 ```
 
 Useful for avoiding circular import issues with values while still using types.
@@ -116,8 +135,8 @@ Useful for avoiding circular import issues with values while still using types.
 
 Doof can import native C++ classes directly:
 
-```doof
-export import class BlobReader from "blob_reader.hpp" as native::BlobReader {
+```doof check
+import class BlobReader from "blob_reader.hpp" as native::BlobReader {
     static constructor(data: readonly byte[], offset: int = 0): BlobReader
     current(): byte
 }
@@ -125,6 +144,7 @@ export import class BlobReader from "blob_reader.hpp" as native::BlobReader {
 payload: readonly byte[] := [7, 9]
 first := BlobReader(payload)
 second := BlobReader { data: payload, offset: 1 }
+println(first.current())
 ```
 
 When an imported class declares a `static constructor(...): SameClass` or `static constructor(...): Result<SameClass, E>` method, direct construction routes through that factory. Positional construction follows the factory parameter order, named construction uses the factory parameter names, omitted arguments use the Doof defaults declared on the imported signature, and fallible constructor calls have the declared `Result` type.
@@ -145,7 +165,19 @@ headers.
 
 ### Relative Paths
 
-```doof
+```doof check paths/helper.do
+export class Helper { name: string }
+```
+
+```doof check config.do
+export class Config { name: string }
+```
+
+```doof check paths/db/database.do
+export class Database { url: string }
+```
+
+```doof check paths/app.do
 import { Helper } from "./helper"       // Same directory
 import { Config } from "../config"       // Parent directory
 import { Database } from "./db/database" // Subdirectory
@@ -262,9 +294,13 @@ src/util.do   -> hello_doof::src::util
 
 Extensions are optional and inferred:
 
-```doof
-import { Foo } from "./foo"      // Equivalent
-import { Foo } from "./foo.do"   // Equivalent
+```doof check foo.do
+export class Foo { name: string }
+```
+
+```doof check
+import { Foo } from "./foo"                 // Equivalent
+import { Foo as SameFoo } from "./foo.do"   // Equivalent
 ```
 
 ---
@@ -273,7 +309,23 @@ import { Foo } from "./foo.do"   // Equivalent
 
 ### Simple Re-export
 
-```doof
+```doof check reexports/math/linear.do
+export class Vector { x, y: float }
+export class Matrix { values: float[] }
+```
+
+```doof check reexports/math/trig.do
+export import function sin(x: float): float from "<cmath>" as std::sin
+export import function cos(x: float): float from "<cmath>" as std::cos
+export import function tan(x: float): float from "<cmath>" as std::tan
+```
+
+```doof check reexports/math/constants.do
+export readonly PI = 3.14159
+export readonly E = 2.71828
+```
+
+```doof check reexports/index.do
 // index.do
 export { Vector, Matrix } from "./math/linear"
 export { sin, cos, tan } from "./math/trig"
@@ -282,7 +334,11 @@ export { PI, E } from "./math/constants"
 
 ### Re-export with Renaming
 
-```doof
+```doof check reexports/internal.do
+export class InternalVector { x, y: float }
+```
+
+```doof check reexports/renamed.do
 export { InternalVector as Vector } from "./internal"
 ```
 
@@ -292,9 +348,10 @@ Re-exports must list their names explicitly. Neither `export * from "mod"`
 nor `export * as ns from "mod"` is supported. Use named re-exports, with
 `as` aliases where needed:
 
-```doof
+```doof reject reexports/explicit.do
 export { Vector, Matrix } from "./math/linear"
 export { sin, cos, tan } from "./math/trig"
+export * from "./math/constants"  // ❌
 ```
 
 ---
@@ -304,10 +361,33 @@ export { sin, cos, tan } from "./math/trig"
 A root `.test.do` module can replace a dependency imported by one specific
 source module in its compilation graph:
 
-```doof
+```doof check mocking/checkout.test.do
 mock import for "./checkout" {
     "./payments" => "./payments.mock"
 }
+
+import { total } from "./checkout"
+
+export function testTotal(): none {
+    assert(total() == 0, "mock payments charge nothing")
+}
+```
+
+Here `checkout.do` imports `./payments`, and `payments.mock.do` exports the same
+names:
+
+```doof check mocking/checkout.do
+import { charge } from "./payments"
+
+export function total(): int => charge(10)
+```
+
+```doof check mocking/payments.do
+export function charge(amount: int): int => amount
+```
+
+```doof check mocking/payments.mock.do
+export function charge(amount: int): int => 0
 ```
 
 The `for` value is a source module specifier relative to the root test file. It
@@ -337,30 +417,47 @@ mylib/
 └── types.do
 ```
 
-```doof
+```doof check mylib/index.do
 // mylib/index.do
 export { Parser } from "./internal/parser"
 export { Validator } from "./internal/validator"
 export { Config, Options } from "./types"
 ```
 
-```doof
+```doof check mylib/internal/parser.do
+export class Parser { source: string }
+```
+
+```doof check mylib/internal/validator.do
+export class Validator { strict: bool }
+```
+
+```doof check mylib/types.do
+export class Config { name: string }
+export class Options { verbose: bool }
+```
+
+Consumer code imports the barrel. When `mylib` is a declared package
+dependency, the import is `from "mylib"`; within one project it is a relative
+path:
+
+```doof check
 // Consumer code
-import { Parser, Config } from "mylib"
+import { Parser, Config } from "./mylib"
 ```
 
 ### Visibility
 
 Items not exported are module-private:
 
-```doof
+```doof check
 readonly INTERNAL_PRECISION = 1e-10  // Private
 
-function internalHelper(): none { ... }  // Private
+function internalHelper(): none { println(INTERNAL_PRECISION) }  // Private
 
 export function calculate(): float {
     internalHelper()  // ✅ Can use internally
-    return result
+    return 1.0f
 }
 ```
 
@@ -370,13 +467,15 @@ export function calculate(): float {
 
 Doof handles circular imports cleanly because module-level `readonly` declarations are immutable and functions hoist at global scope:
 
-```doof
+```doof check circular/a.do
 // a.do
 import { B } from "./b"
 export class A {
     b: B | none = none
 }
+```
 
+```doof check circular/b.do
 // b.do
 import { A } from "./a"
 export class B {
@@ -402,7 +501,7 @@ function main(): none {
 
 The `main()` function serves as the program's entry point and must have one of the following signatures:
 
-```doof
+```text
 // No arguments
 function main(): none { ... }
 
@@ -426,7 +525,7 @@ arguments. The executable path is omitted, so `doof-server ./site` receives
 
 The presence of a `main()` function distinguishes executable modules from library modules:
 
-```doof
+```doof check app.do
 // app.do — Executable module
 import { processData } from "./lib"
 
@@ -436,7 +535,7 @@ function main(): none {
 }
 ```
 
-```doof check
+```doof check lib.do
 // lib.do — Library module (no main)
 export function processData(): string {
     return "processed"
@@ -520,7 +619,7 @@ doofc test.do          # Compiles test.do + any of its imports
 
 A project can have multiple executable modules:
 
-```doof
+```doof check entries/server.do
 // server.do
 import { startServer } from "./http"
 
@@ -529,13 +628,23 @@ function main(): none {
 }
 ```
 
-```doof
+```doof check entries/migrate.do
 // migrate.do
 import { runMigrations } from "./database"
 
 function main(): none {
     runMigrations()
 }
+```
+
+Both share library modules:
+
+```doof check entries/http.do
+export function startServer(): none { println("serving") }
+```
+
+```doof check entries/database.do
+export function runMigrations(): none { println("migrating") }
 ```
 
 Each is compiled separately:
@@ -560,7 +669,7 @@ Current conventions:
 
 Example:
 
-```doof check
+```doof check math.test.do
 // math.test.do
 export function testAdd(): none {
     assert(1 + 1 == 2, "expected addition to work")
@@ -626,8 +735,10 @@ state. Listing tests performs discovery only and does not compile them.
 
 Code at module scope executes during module initialization, **before** `main()` runs:
 
-```doof
-readonly config = { name: "default" }
+```doof check
+class Config { name: string }
+
+readonly config = Config { name: "default" }
 
 function main(): none {
     // Executes after declarative modules are initialized
@@ -675,9 +786,10 @@ than a per-module state machine.
 
 The `main()` function can use postfix `!` and `?` for error handling:
 
-```doof
+```doof check
 import { IoError, readText } from "std/fs"
-import type { Config } from "./types"
+
+class Config { name: string }
 
 function main(): none {
     // Panic if file read fails (acceptable for entry point)
@@ -687,13 +799,15 @@ function main(): none {
 
 function loadConfig(path: string): Result<Config, IoError> {
     try content := readText(path)
-    return parseConfig(content)
+    return Success(Config { name: content.trim() })
 }
 ```
 
 Or return an exit code based on results:
 
-```doof
+```doof check
+function processData(): Result<string, string> => Success("done")
+
 function main(): int {
     result := processData()
     case result {
@@ -798,8 +912,10 @@ Angle-bracket paths (`<...>`) produce system-style includes.
 
 Extern classes behave exactly like regular Doof classes — they're heap-allocated and reference-counted using `std::shared_ptr`:
 
-```doof
+```doof check
 import class Database from "./db.hpp" {
+    host: string
+    port: int
     query(sql: string): Result<string[], string>
     close(): none
 }
@@ -839,14 +955,16 @@ Prefer a Doof-first boundary when designing interop modules:
 
 Example:
 
-```doof
+```doof check interop/types.do
 // types.do
 export enum NativeBoardgameEventKind {
     Unknown = 0,
     CloseRequested = 1,
     RenderRequested = 2
 }
+```
 
+```doof check interop/host-runtime.do
 // host-runtime.do
 import { NativeBoardgameEventKind } from "./types"
 
@@ -889,13 +1007,14 @@ Field declarations follow the same syntax as Doof class fields. The transpiler h
 
 Construction works like native Doof classes — positional or named:
 
-```doof
+```doof check
 import class Rect from "./shapes.hpp" {
     x, y, width, height: float
 }
 
 r1 := Rect(0.0, 0.0, 100.0, 50.0)             // positional
 r2 := Rect { x: 0.0, y: 0.0, width: 100.0, height: 50.0 }  // named
+println(r1.width)
 ```
 
 The transpiler emits the appropriate C++ constructor call. The extern C++ class must have a constructor with matching parameters.
@@ -910,8 +1029,12 @@ The transpiler emits the appropriate C++ constructor call. The extern C++ class 
 
 ### Practical Example — Wrapping a C++ Library
 
-```doof
+```doof check
 // sqlite.do
+import class NativeExecResult from "./native_sqlite.hpp" {
+    changes: int
+}
+
 import class NativeSqliteDatabase from "./native_sqlite.hpp" {
     static open(path: string): Result<NativeSqliteDatabase, string>
     exec(sql: string): Result<NativeExecResult, string>
@@ -946,7 +1069,7 @@ Doof can import standalone C/C++ functions using `import function` declarations.
 
 ### Basic Syntax
 
-```doof
+```doof check
 // Import a C++ function — no header (assume it's available)
 import function myHelper(n: int): int
 
@@ -954,7 +1077,7 @@ import function myHelper(n: int): int
 import function cos(x: float): float from "<cmath>"
 
 // Import with a C++ qualified name
-import function cos(x: float): float from "<cmath>" as std::cos
+import function cosine(x: float): float from "<cmath>" as std::cos
 
 // Promise that a native implementation is safe to call from isolated code
 import isolated function monotonicNanos(): long from "native_time.hpp"
@@ -1007,11 +1130,13 @@ Doof code uses `sin` and `cos`; the transpiler emits `std::sin` and `std::cos` i
 
 Imported functions can be exported and imported by other Doof modules:
 
-```doof
+```doof check native/math.do
 // math.do
 export import function sin(x: float): float from "<cmath>" as std::sin
 export import function cos(x: float): float from "<cmath>" as std::cos
+```
 
+```doof check native/main.do
 // main.do
 import { sin, cos } from "./math"
 function test(x: float): float => sin(x) + cos(x)

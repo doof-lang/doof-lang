@@ -5,10 +5,7 @@ import { parseInt } from "std/parse"
 import { erase, execute, files, path, read, require, text, write } from "./common"
 
 readonly expectErrorPrefix = "// expect-error: "
-readonly checkedFence = "```doof check"
-readonly checkedBodyFence = "```doof check body"
-readonly rejectedFence = "```doof reject"
-readonly rejectedBodyFence = "```doof reject body"
+readonly fencePrefix = "```doof "
 readonly rejectionMarker = "❌"
 
 // Expected diagnostics are `// expect-error: <line>:<column> <message>` comments.
@@ -57,36 +54,70 @@ export class SpecExample {
   rejected: bool = false
   // Extracted-file line numbers carrying the rejection marker.
   markedLines: int[] = []
+  // Named examples share a per-chapter directory so they can import each other.
+  fileName: string = ""
 }
 
-// Checked fences open with "```doof check" or "```doof reject", optionally
-// followed by "body"; other `doof` fences may be fragments or signatures and
-// are not checked. A body fence holds statements and is checked inside a
-// function whose header occupies the first line of the extracted file. A reject
-// fence must fail `doof check`, with errors on exactly its code lines marked ❌.
+class FenceMode {
+  rejected: bool
+  wrapped: bool
+  fileName: string
+}
+
+// A checked fence opens with "```doof check" or "```doof reject", then an
+// optional "body", then an optional relative ".do" file name.
+function fenceMode(file: string, line: int, opener: string): Result<FenceMode | none, string> {
+  if !opener.startsWith(fencePrefix) { return Success(none) }
+  words := opener.substring(fencePrefix.length).split(" ")
+  if words[0] != "check" && words[0] != "reject" { return Success(none) }
+  let index = 1
+  wrapped := index < words.length && words[index] == "body"
+  if wrapped { index += 1 }
+  let fileName = ""
+  if index < words.length {
+    fileName = words[index]
+    index += 1
+    location := file + ":" + string(line) + ": "
+    try require(fileName.endsWith(".do") && !fileName.startsWith("/") && !fileName.contains(".."), location + "example file name must be a relative .do path: " + fileName)
+  }
+  try require(index == words.length, file + ":" + string(line) + ": malformed doof example fence: " + opener)
+  return Success(FenceMode { rejected: words[0] == "reject", wrapped, fileName })
+}
+
+// Checked fences open with "```doof check" or "```doof reject"; other `doof`
+// fences are signature outlines and are not checked. A body fence holds
+// statements and is checked inside a function whose header occupies the first
+// line of the extracted file. A reject fence must fail `doof check`, with
+// errors on exactly its code lines marked ❌. A named fence such as
+// "```doof check math.do" is written under that name beside the chapter's
+// other named examples before any of them is checked.
 export function checkedSpecExamples(file: string, markdown: string): Result<SpecExample[], string> {
   result: SpecExample[] := []
   lines := markdown.split("\n")
   let i = 0
   while i < lines.length {
-    opener := lines[i].trimEnd()
-    if opener != checkedFence && opener != checkedBodyFence && opener != rejectedFence && opener != rejectedBodyFence { i += 1; continue }
-    wrapped := opener.endsWith(" body")
-    rejected := opener.startsWith(rejectedFence)
+    try parsed := fenceMode(file, i + 1, lines[i].trimEnd())
+    mode := parsed else { i += 1; continue }
     start := i + 2
     body: string[] := []
     markedLines: int[] := []
     i += 1
     while i < lines.length && !lines[i].startsWith("```") {
       // A comment-only line may head a group of invalid lines without being one.
-      if lines[i].contains(rejectionMarker) && !lines[i].trim().startsWith("//") { markedLines.push(body.length + if wrapped then 2 else 1) }
+      if lines[i].contains(rejectionMarker) && !lines[i].trim().startsWith("//") { markedLines.push(body.length + if mode.wrapped then 2 else 1) }
       body.push(lines[i])
       i += 1
     }
     try require(i < lines.length, file + ":" + string(start) + ": unterminated doof example fence")
-    try require(!rejected || markedLines.length > 0, file + ":" + string(start) + ": doof reject fence has no line marked " + rejectionMarker)
+    try require(!mode.rejected || markedLines.length > 0, file + ":" + string(start) + ": doof reject fence has no line marked " + rejectionMarker)
+    for existing of result {
+      try require(mode.fileName == "" || existing.fileName != mode.fileName, file + ":" + string(start) + ": duplicate example file name " + mode.fileName)
+    }
     source := joinStrings(body.cloneReadonly(), "\n") + "\n"
-    result.push(SpecExample { file, line: start, source: if wrapped then "function example(): none {\n" + source + "}\n" else source, rejected, markedLines })
+    result.push(SpecExample {
+      file, line: start, source: if mode.wrapped then "function example(): none {\n" + source + "}\n" else source,
+      rejected: mode.rejected, markedLines, fileName: mode.fileName,
+    })
     i += 1
   }
   return Success(result)
@@ -150,11 +181,18 @@ export function specExampleChecks(root: string, compiler: string, stdlib: string
     if !name.endsWith(".md") { continue }
     try markdown := read(path(spec, name))
     try examples := checkedSpecExamples("spec/" + name, markdown)
+    chapter := name.substring(0, name.length - 3)
+    samples: string[] := []
     for example of examples {
+      sample := path(path(work, chapter), if example.fileName == "" then "example-" + string(example.line) + ".do" else example.fileName)
+      try write(sample, example.source)
+      samples.push(sample)
+    }
+    for index of 0..<examples.length {
+      example := examples[index]
+      sample := samples[index]
       count += 1
       location := example.file + ":" + string(example.line)
-      sample := path(work, name.substring(0, name.length - 3) + "-" + string(example.line) + ".do")
-      try write(sample, example.source)
       try checked := execute(compiler, ["check", sample], environment)
       output := text(checked.stdout).trimEnd()
       if !example.rejected {

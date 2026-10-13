@@ -77,3 +77,33 @@ export function testCorpusRejectionMismatch(): none {
   Assert.equal(rejectionMismatch([2, 4], ["2:5: First"]), "line 4 is marked but reported no error")
   Assert.equal(rejectionMismatch([2], ["2:5: First", "3:1: Extra"]), "unmarked error 3:1: Extra")
 }
+export function testCorpusNamedSpecExamplesKeepFileNames(): none {
+  markdown := "```doof check math.do\nexport function add(a: int, b: int): int => a + b\n```\n\n```doof reject body lib/app.do\nx: string := 1  // ❌\n```\n"
+  examples := checkedSpecExamples("spec/a.md", markdown)!
+  Assert.equal(examples.length, 2)
+  Assert.equal(examples[0].fileName, "math.do")
+  Assert.isTrue(!examples[0].rejected)
+  Assert.equal(examples[1].fileName, "lib/app.do")
+  Assert.isTrue(examples[1].rejected)
+  Assert.equal(examples[1].markedLines[0], 2)
+}
+export function testCorpusNamedSpecExamplesRejectBadNames(): none {
+  let duplicate = false
+  case checkedSpecExamples("spec/a.md", "```doof check a.do\nx := 1\n```\n```doof check a.do\ny := 2\n```\n") {
+    failure: Failure -> { duplicate = failure.error.contains("spec/a.md:5: duplicate example file name a.do") }
+    success: Success -> {}
+  }
+  Assert.isTrue(duplicate)
+  let outside = false
+  case checkedSpecExamples("spec/a.md", "```doof check ../a.do\nx := 1\n```\n") {
+    failure: Failure -> { outside = failure.error.contains("must be a relative .do path") }
+    success: Success -> {}
+  }
+  Assert.isTrue(outside)
+  let malformed = false
+  case checkedSpecExamples("spec/a.md", "```doof check body a.do extra\nx := 1\n```\n") {
+    failure: Failure -> { malformed = failure.error.contains("malformed doof example fence") }
+    success: Success -> {}
+  }
+  Assert.isTrue(malformed)
+}

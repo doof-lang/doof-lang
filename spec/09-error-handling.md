@@ -44,18 +44,32 @@ destructured (`{ value } := ok`), and `==` compares the payload field.
 equal. Two Results are equal when they hold the same arm with equal payloads,
 and a Result compares with an arm like any union with one of its members:
 
-```doof
-parseCount("3") == Success(3)    // true
-parseCount("") != Success(3)     // true
+```doof check
+import { parseInt } from "std/parse"
+
+function parseCount(text: string): Result<int, string> {
+    count := parseInt(text) else { return Failure("invalid count") }
+    return Success(count)
+}
+
+println(parseCount("3") == Success(3))    // true
+println(parseCount("") != Success(3))     // true
 ```
 
 `T` is the success payload type. `E` is the failure payload type. Either can be
 a class, enum, primitive, collection, nullable type, or union:
 
-```doof
-Result<int, ParsingError>
-Result<Config, string>
-Result<Data, IOError | NetworkError>
+```doof check
+import { ParsingError } from "std/parse"
+
+class Config { name: string }
+class Data { bytes: int }
+enum IOError { NotFound, Denied }
+class NetworkError { message: string }
+
+type Parsed = Result<int, ParsingError>
+type Loaded = Result<Config, string>
+type Fetched = Result<Data, IOError | NetworkError>
 ```
 
 Use specific error types when callers need to branch on the cause. Use `string`
@@ -85,14 +99,22 @@ function parseCount(text: string): Result<int, string> {
 Named construction is also supported as an alternate spelling for the same
 wrapping operation:
 
-```doof
-return Success { value: count }
-return Failure { error: .InvalidFormat }
+```doof check
+import { ParsingError } from "std/parse"
+
+function parsed(count: int): Result<int, ParsingError> {
+    if count < 0 {
+        return Failure { error: .InvalidFormat }
+    }
+    return Success { value: count }
+}
 ```
 
 Either channel may be payloadless:
 
-```doof
+```doof check
+function canWrite(): bool => true
+
 function save(): Result<none, string> {
     if !canWrite() {
         return Failure("disk full")
@@ -114,11 +136,12 @@ and propagation or panic paths do not attempt to format an error payload.
 
 The parsing helpers from `std/parse` return `Result<T, ParsingError>`:
 
-```doof
+```doof check
 import { ParsingError, parseDouble, parseInt } from "std/parse"
 
 count := parseInt("123")      // Result<int, ParsingError>
 ratio := parseDouble("3.14")  // Result<double, ParsingError>
+println(count == Success(123))  // true
 ```
 
 `ParsingError` has `InvalidFormat`, `Overflow`, `Underflow`, and `EmptyInput`
@@ -133,7 +156,10 @@ pattern matches the success state and exposes the success payload as `.value`;
 a `Failure` pattern matches the failure state and exposes the error payload as
 `.error`.
 
-```doof
+```doof check
+import { parseInt } from "std/parse"
+
+input := "12"
 case parseInt(input) {
     s: Success -> println("count=${s.value}")
     f: Failure -> println("invalid count: ${f.error.name}")
@@ -143,11 +169,15 @@ case parseInt(input) {
 The `.value` and `.error` members exist only on the narrowed case-arm binding.
 They are not fields on the `Result` value itself:
 
-```doof
+```doof reject
+import { ParsingError, parseInt } from "std/parse"
+
+input := "12"
+println(input)
 result: Result<int, ParsingError> := parseInt(input)
 
-value := result.value  // Error: Result<int, ParsingError> has no field "value"
-error := result.error  // Error: Result<int, ParsingError> has no field "error"
+value := result.value  // ❌ Error: Result<int, ParsingError> has no field "value"
+error := result.error  // ❌ Error: Result<int, ParsingError> has no field "error"
 ```
 
 The type checker must first know which state is present.
@@ -158,31 +188,35 @@ A `Result` value cannot be silently discarded. Calling a `Result`-returning
 function as a bare statement is a compile-time error unless the call has a local
 failure handler.
 
-```doof
-function readText(path: string): Result<string, string> { ... }
+```doof reject
+function readText(path: string): Result<string, string> => Success("{}")
 
-readText("config.json")  // Error: Result value must be used
+readText("config.json")  // ❌ Error: Result value must be used
 ```
 
 Valid ways to acknowledge the result include:
 
-```doof
-result := readText("config.json")
-_ := readText("config.json")  // explicitly discard the Result
-try text := readText("config.json")
-text := readText("config.json")!
-text := readText("config.json")?
-text := readText("config.json") ?? "default"
+```doof check
+function readText(path: string): Result<string, string> => Success("{}")
 
-readText("config.json") else error {
-    println("read failed: ${error}")
-}
+function acknowledge(): Result<string, string> {
+    result := readText("config.json")
+    _ := readText("config.json")  // explicitly discard the Result
+    try tried := readText("config.json")
+    forced := readText("config.json")!
+    optional := readText("config.json")?
+    fallback := readText("config.json") ?? "default"
 
-return readText("config.json")
+    readText("config.json") else error {
+        println("read failed: ${error}")
+    }
 
-case readText("config.json") {
-    s: Success -> println(s.value)
-    f: Failure -> println(f.error)
+    case readText("config.json") {
+        s: Success -> println(s.value)
+        f: Failure -> println(f.error)
+    }
+
+    return readText("config.json")
 }
 ```
 
@@ -202,7 +236,13 @@ A statement-level `try` on `Result<never, E>` cannot continue normally: its
 failure propagates to the enclosing function or catch block, and its success
 payload is uninhabited. This applies to both bare and binding forms.
 
-```doof
+```doof check
+import { parseJsonValue } from "std/json"
+
+class Config { name: string }
+
+function readText(path: string): Result<string, string> => Success("{\"name\":\"app\"}")
+
 function loadConfig(path: string): Result<Config, string> {
     // readText(), parseJsonValue(), and Config.fromSerialValue() each return
     // Result<_, string>.
@@ -228,7 +268,7 @@ Rules:
 
 Supported forms:
 
-```doof
+```text
 try step()                 // Result<none, E>; no value is bound
 try value := expr          // immutable binding
 try value: Type := expr    // typed immutable binding
@@ -255,8 +295,13 @@ panics at runtime if the success array is shorter than the pattern.
 Postfix `!` unwraps the present value or panics when the value is absent:
 a `Failure`, a `none` success value, or an outer `none`.
 
-```doof
+```doof check
+class Config { name: string }
+
+function loadConfig(path: string): Result<Config, string> => Success(Config { name: path })
+
 config := loadConfig("required.json")!
+println(config.name)
 ```
 
 It is an expression and can be used in any function. Use it only when absence
@@ -271,8 +316,13 @@ originating error is not discarded.
 
 Postfix `?` converts any absent value to `none`:
 
-```doof
+```doof check
+class Config { name: string }
+
+function loadConfig(path: string): Result<Config, string> => Success(Config { name: path })
+
 config := loadConfig("optional.json")?   // Config | none
+println(config?.name ?? "none")
 ```
 
 On success, the result is the present value. On `Failure` or a `none` success
@@ -290,13 +340,22 @@ postfix replacement.
 Declaration-`else` unwraps a nullable and/or `Result` expression with an
 explicit bail-out path.
 
-```doof
-config := loadConfig(path) else error {
-    return Failure("could not load config: ${error}")
-}
+```doof check
+class Config { name: string }
 
-name := maybeName() else {
-    return Failure("missing name")
+function loadConfig(path: string): Result<Config, string> => Success(Config { name: path })
+
+function maybeName(): string | none => "Ada"
+
+function describe(path: string): Result<string, string> {
+    config := loadConfig(path) else error {
+        return Failure("could not load config: ${error}")
+    }
+
+    name := maybeName() else {
+        return Failure("missing name")
+    }
+    return Success(config.name + " for " + name)
 }
 ```
 
@@ -322,15 +381,28 @@ Rules:
   occurred.
 - Failure capture is not allowed for nullable-only subjects.
 
-```doof
-text := readText(path) else error {
-    return Failure("read failed: ${error}")
+```doof check
+class Source { text: string }
+class Diagnostic { message: string }
+
+function readText(path: string): Result<string, string> => Success("text")
+function loadSource(path: string): Result<Source | none, Diagnostic> => Success(none)
+function report(diagnostic: Diagnostic): none { println(diagnostic.message) }
+
+function read(path: string): Result<string, string> {
+    text := readText(path) else error {
+        return Failure("read failed: ${error}")
+    }
+    return Success(text)
 }
 
-// loadSource(): Result<Source | none, Diagnostic>; none means "not found".
-source := loadSource(path) else diagnostic {
-    if diagnostic != none { report(diagnostic!) }
-    return none
+function find(path: string): Source | none {
+    // loadSource(): Result<Source | none, Diagnostic>; none means "not found".
+    source := loadSource(path) else diagnostic {
+        if diagnostic != none { report(diagnostic!) }
+        return none
+    }
+    return source
 }
 ```
 
@@ -338,7 +410,13 @@ The discard form has no post-block binding. It may be used without an `else`
 block to explicitly discard a value, or with an `else` handler that may fall
 through:
 
-```doof
+```doof check
+class WriteError { message: string }
+function writeText(path: string, text: string): Result<none, WriteError> => Success()
+
+path := "out.txt"
+text := "hello"
+println("writing " + path)
 _ := writeText(path, text)
 
 _ := writeText(path, text) else error {
@@ -353,7 +431,9 @@ _ := writeText(path, text) else error {
 A `Result`-returning expression statement can attach `else` to handle failure
 without binding the success value:
 
-```doof
+```doof check body
+function saveState(): Result<none, string> => Failure("disk full")
+
 saveState() else error {
     println("save failed: ${error}")
 }
@@ -380,9 +460,18 @@ force operators treat them alike and never propagate a `Failure`; see
 
 `??` evaluates its fallback when the left side is absent:
 
-```doof
+```doof check
+class Config { name: string }
+
+function loadConfig(path: string): Result<Config, string> => Success(Config { name: path })
+
+function maybeName(): string | none => none
+function defaultConfig(): Config => Config { name: "default" }
+
+path := "app.json"
 name := maybeName() ?? "anonymous"
 config := loadConfig(path) ?? defaultConfig()
+println(name)
 ```
 
 For `Result<T, E> ?? T`, the expression unwraps the success payload or evaluates
@@ -392,12 +481,19 @@ the fallback on failure. Evaluation is lazy and right-associative.
 
 `??=` assigns only when the left-hand variable is absent:
 
-```doof
+```doof check
+class Config { name: string }
+
+function loadFromDisk(): string => "disk"
+function loadCache(): Result<Config, string> => Failure("cold")
+function loadDefaults(): Config => Config { name: "default" }
+
 let cached: string | none = none
 cached ??= loadFromDisk()
 
 let config: Result<Config, string> = loadCache()
 config ??= loadDefaults()
+println(cached ?? "")
 ```
 
 For `Result<T, E>` variables, the right-hand side may be either a compatible
@@ -407,16 +503,34 @@ For `Result<T, E>` variables, the right-hand side may be either a compatible
 
 Postfix `!` unwraps the present value, panicking when it is absent:
 
-```doof
+```doof check
+class Config { name: string }
+
+function loadConfig(path: string): Result<Config, string> => Success(Config { name: path })
+
+class User { name: string }
+function maybeUser(): User | none => User { name: "Ada" }
+
+path := "app.json"
 user := maybeUser()!
 config := loadConfig(path)!
+println(user.name)
 ```
 
 Force member access `!.` combines unwrap-or-panic with a field or method access:
 
-```doof
+```doof check
+class User { email: string }
+class Connection { send(request: string): string => "ok: " + request }
+
+function loadUser(id: int): Result<User, string> => Success(User { email: "ada@example.com" })
+
+id := 1
+request := "ping"
+connection: Connection | none := Connection {}
 email := loadUser(id)!.email
 response := connection!.send(request)
+println(response)
 ```
 
 Applying `!` or `!.` to a value that is neither nullable nor a `Result` is a
@@ -429,25 +543,61 @@ compile-time error.
 `?.` treats a `Failure` receiver like `none`: `r?.m` is `(r?)?.m`. The receiver
 is evaluated once.
 
-```doof
+```doof check
+class LookupError { message: string }
+class ProfileError { message: string }
+class Profile { bio: string }
+class User {
+    name: string
+    profile(): Result<Profile, ProfileError> => Success(Profile { bio: "hi" })
+}
+
+function findUser(id: int): Result<User, LookupError> => Success(User { name: "Ada" })
+
+id := 1
 // findUser(): Result<User, LookupError>
 name := findUser(id)?.name  // string | none
+println(name ?? "")
 ```
 
 A member whose own type is a `Result` keeps its `Failure`, and the receiver's
 absence becomes a `none` success value:
 
-```doof
+```doof check
+class LookupError { message: string }
+class ProfileError { message: string }
+class Profile { bio: string }
+class User {
+    name: string
+    profile(): Result<Profile, ProfileError> => Success(Profile { bio: "hi" })
+}
+
+function findUser(id: int): Result<User, LookupError> => Success(User { name: "Ada" })
+
+id := 1
 // User.profile(): Result<Profile, ProfileError>
 profile := findUser(id)?.profile()
 // Result<Profile | none, ProfileError>
+println(profile.isSuccess())
 ```
 
 Chain further, or add `?`, `!`, or `??`, to collapse that `Failure` too:
 
-```doof
+```doof check
+class LookupError { message: string }
+class ProfileError { message: string }
+class Profile { bio: string }
+class User {
+    name: string
+    profile(): Result<Profile, ProfileError> => Success(Profile { bio: "hi" })
+}
+
+function findUser(id: int): Result<User, LookupError> => Success(User { name: "Ada" })
+
+id := 1
 bio := findUser(id)?.profile()?.bio   // string | none
 profile := findUser(id)?.profile()?   // Profile | none
+println(bio ?? "")
 ```
 
 To propagate the receiver's `Failure`, unwrap it with `try` first.
@@ -520,15 +670,21 @@ Rules:
 
 Because `as` returns `Result`, all standard Result patterns apply:
 
-```doof
-try name := value as string
-name := (value as string)!
-name := (value as string) ?? "default"
+```doof check
+function propagated(value: int | string): Result<string, string> {
+    try name := value as string
+    return Success(name)
+}
 
-case value as string {
+value: int | string := "hello"
+forced := (value as string)!
+fallback := (value as string) ?? "default"
+
+length := case value as string {
     s: Success -> s.value.length
     _: Failure -> 0
 }
+println(length)  // 5
 ```
 
 See [05-operators.md](05-operators.md#type-narrowing-operator-as) for the full
@@ -541,11 +697,20 @@ operator matrix.
 `catch` captures failures from statement-level `try` inside a block instead of
 propagating them from the enclosing function.
 
-```doof
+```doof check
+enum IOError { NotFound, Denied }
+enum HeaderParseError { Malformed }
+class Header { name: string }
+
+function readHeader(): Result<none, IOError> => Success()
+function readBody(): Result<none, IOError> => Success()
+function parseHeader(): Result<Header, HeaderParseError> => Success(Header { name: "h" })
+
 err: IOError | HeaderParseError | none := catch {
     try readHeader()
     try readBody()
 }
+println(err == none)  // true
 ```
 
 If every `try` in the block succeeds, the `catch` expression evaluates to
@@ -555,7 +720,15 @@ to that failure payload.
 Without an annotation, captured errors must share an assignable type `E`,
 and the result is `E | none`. Unrelated error types require an explicit union:
 
-```doof
+```doof check
+enum IOError { NotFound, Denied }
+enum HeaderParseError { Malformed }
+class Header { name: string }
+
+function readHeader(): Result<none, IOError> => Success()
+function readBody(): Result<none, IOError> => Success()
+function parseHeader(): Result<Header, HeaderParseError> => Success(Header { name: "h" })
+
 // readHeader(): Result<none, IOError>
 // parseHeader(): Result<Header, HeaderParseError>
 
@@ -564,6 +737,7 @@ err: IOError | HeaderParseError | none := catch {
     try header := parseHeader()
 }
 // IOError | HeaderParseError | none
+println(err == none)  // true
 ```
 
 Rules:
@@ -580,7 +754,12 @@ Rules:
 `catch` is useful when a sequence of fallible operations should be attempted
 locally and the caller only needs to know whether any step failed:
 
-```doof
+```doof check
+class NetworkError { message: string }
+
+function connect(): Result<none, NetworkError> => Success()
+function sendPing(): Result<none, NetworkError> => Failure(NetworkError { message: "timeout" })
+
 case catch {
     try connect()
     try sendPing()
@@ -617,7 +796,7 @@ input, missing files, parse errors, or network failures. Model those as
 
 The primitive assertion helper is:
 
-```doof
+```text
 function assert(condition: bool, message: string): none
 ```
 
@@ -643,11 +822,14 @@ These helpers are library APIs, not additional global built-ins.
 converts a panic from that callback into a failure Result with a string error
 payload.
 
-```doof
+```doof check
+function initializePlugin(): none { panic("plugin missing") }
+
 result := catchPanic(=> {
     initializePlugin()
     return "ready"
 })
+println(result.isFailure())  // true
 ```
 
 If the callback completes normally, `catchPanic` returns a success Result with
@@ -667,7 +849,7 @@ not a general exception system.
 
 Doof provides process-local runtime counters for lightweight instrumentation:
 
-```doof
+```text
 function metricsIncrement(name: string, value: long): none
 function metricsSnapshotPrometheus(): string
 ```
@@ -699,7 +881,7 @@ and reference-counted ownership.
 
 ## Quick Reference
 
-```doof
+```text
 // Constructing
 return Success(value)
 return Success { value: value }

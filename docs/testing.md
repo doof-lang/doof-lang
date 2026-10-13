@@ -84,7 +84,10 @@ summary HTML, and annotated per-file HTML output.
   diagnostics it declares, and `doof emit` must write no output for it. See
   that directory's README.
 - Spec code fences opened with ` ```doof check ` are written to standalone files
-  under `build/spec-examples/` and must pass `doof check`. Fences opened with
+  under `build/spec-examples/<chapter>/` and must pass `doof check`. A fence
+  opened with ` ```doof check math.do ` (any mode may end with a relative
+  `.do` path) is written under that name, and every chapter file is written
+  before any is checked, so examples can import one another. Fences opened with
   ` ```doof check body ` hold statements and are checked inside a generated
   `function example(): none { ... }`, which shifts reported lines by one.
   Fences opened with ` ```doof reject ` (or ` ```doof reject body `) show invalid
