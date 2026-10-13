@@ -7,7 +7,7 @@
 import {
   ArrayLiteral, BinaryExpression, BoolLiteral, CallExpression, CharLiteral, ClassDeclaration, ClassField, ConstDeclaration,
   ConstructExpression, DotShorthand, DoubleLiteral, ExportDeclaration, Expression,
-  FloatLiteral, Identifier, ImmutableBinding, IntLiteral, LetDeclaration, LongLiteral, NoneLiteral,
+  FloatLiteral, Identifier, ImmutableBinding, IntLiteral, LetDeclaration, LongLiteral, MemberExpression, NoneLiteral,
   ObjectLiteral, ObjectProperty, ReadonlyDeclaration, Statement, StringLiteral, TupleLiteral,
   UnaryExpression,
 } from "./ast"
@@ -126,6 +126,25 @@ function literalTree(state: CheckerState, expression: Expression): bool {
       return literalPositionalClassDefaults(state, call.resolvedClass!, call.args.length)
     }
     dot: DotShorthand -> { return dot.resolvedShorthandOwnerKind == "enum" }
+    member: MemberExpression -> { return enumVariant(member) }
+    _ -> { return false }
+  }
+  return false
+}
+
+// `Color.Red` names a variant through its enum, exactly like the `.Red` shorthand.
+function enumVariant(member: MemberExpression): bool {
+  if member.optional || member.force { return false }
+  case member.resolvedType {
+    _: EnumType -> { }
+    _ -> { return false }
+  }
+  case member.object {
+    owner: Identifier -> {
+      binding := owner.resolvedBinding else { return false }
+      if binding.kind == "enum" { return true }
+      return binding.kind == "import" && binding.symbol != none && binding.symbol!.kind == "enum"
+    }
     _ -> { return false }
   }
   return false
@@ -161,6 +180,7 @@ function scalarConstantInitializer(expression: Expression): bool {
     _: CharLiteral -> { return true }
     _: BoolLiteral -> { return true }
     dot: DotShorthand -> { return dot.resolvedShorthandOwnerKind == "enum" }
+    member: MemberExpression -> { return enumVariant(member) }
     _ -> { return false }
   }
   return false

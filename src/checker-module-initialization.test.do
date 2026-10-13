@@ -31,3 +31,19 @@ export function testOptionalValuesUseNullableDirectStorage(): none {
     Assert.stringContains(result.diagnostics[0].message, "cannot use direct default-constructed assignable storage")
   }
 }
+
+export function testQualifiedEnumVariantsAreLiterals(): none {
+  result := compile([
+    SourceFile { path: "/colors.do", source: "export enum Color { Red, Green }" },
+    SourceFile { path: "/main.do", source:
+      "import { Color } from \"./colors\"\nenum Suit { Spades, Hearts }\nreadonly FIRST = Suit.Spades\n" +
+      "let piles: Map<Suit, int> = { Suit.Spades: 0, .Hearts: 1 }\nlet colors: Color[] = [Color.Red]\nreadonly COPY = FIRST\nfunction main(): none {}",
+    },
+  ], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  // Members of a variant are reads, not literals.
+  name := compile([SourceFile { path: "/main.do", source: "enum Suit { Spades }\nreadonly NAME = Suit.Spades.name\nfunction main(): none {}" }], "/main.do")
+  Assert.equal(name.diagnostics.length, 1)
+  Assert.stringContains(name.diagnostics[0].message, "Module initializer for 'NAME' must be a literal tree")
+}
