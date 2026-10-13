@@ -138,8 +138,11 @@ function collect(statement: Statement, plan: HeaderPlanBuilder, context: EmitCon
       )
     }
     binding: ImmutableBinding -> {
-      reserveHeaderNamespaceName(plan, binding.name)
-      collectModuleValueDeclaration(plan, planModuleValueDeclaration(binding.name, binding.resolvedType!, context), binding.resolvedType!)
+      // A script-level discard runs its initializer and declares no storage.
+      if binding.name != "_" {
+        reserveHeaderNamespaceName(plan, binding.name)
+        collectModuleValueDeclaration(plan, planModuleValueDeclaration(binding.name, binding.resolvedType!, context), binding.resolvedType!)
+      }
     }
     let_: LetDeclaration -> {
       reserveHeaderNamespaceName(plan, let_.name)

@@ -309,6 +309,8 @@ export class ModuleAnalyzer {
         return Symbol { kind: "readonly", name: value.name, module, exported: value.exported }
       }
       value: ImmutableBinding -> {
+        // A discard executes its initializer but declares nothing.
+        if value.name == "_" { return none }
         return Symbol { kind: "const", name: value.name, module, exported: value.exported }
       }
       value: EnumDeclaration -> {

@@ -59,3 +59,13 @@ export function testStreamModuleValuesFollowTheirInterfaceAlias(): none {
   Assert.isTrue(alias > 0)
   Assert.isTrue(header.indexOf("extern Stream__int stream;") > alias)
 }
+
+export function testScriptDiscardsRunWithoutModuleStorage(): none {
+  source := "function f(): Result<int, string> => Success(1)\n_ := f()\n_ := f()\nprintln(\"done\")"
+  result := compile([SourceFile { path: "/main.do", source }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  module := result.emission!.modules[0]
+  Assert.stringNotContains(module.header, " _;")
+  Assert.equal(module.source.split("f();").length, 3)
+}

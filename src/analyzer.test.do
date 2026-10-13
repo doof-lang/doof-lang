@@ -445,3 +445,11 @@ export function testResultArmsAreBuiltinTypeNames(): none {
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
 }
+
+export function testModuleDiscardsDeclareNoSymbol(): none {
+  result := createAnalyzer([SourceFile {
+    path: "/main.do", source: "function f(): Result<int, string> => Success(1)\n_ := f()\n_ := f()\nprintln(\"done\")",
+  }]).analyze("/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  for symbol of moduleAt(result, "/main.do").symbols { Assert.notEqual(symbol.name, "_") }
+}
