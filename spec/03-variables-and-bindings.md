@@ -16,7 +16,14 @@ Doof provides binding mechanisms with distinct semantics for deep immutability, 
 | `with` | Scoped immutable binding | Shallow (content mutable) | Block only |
 | `const` | Deprecated immutable declaration | Legacy | Global or nested |
 
-```doof
+```doof check
+import { Instant } from "std/time"
+
+class Config { name: string = "app" }
+
+function loadConfig(): Config => Config {}
+function getCurrentTime(): Instant => Instant.now()
+
 readonly MAX_SIZE = 100             // Deep immutable module constant
 
 function main(): none {
@@ -30,7 +37,11 @@ function main(): none {
 
 Local `let` and local `readonly` declarations can use `<-` when the initializer needs imperative work before producing its final value:
 
-```doof
+```doof check body
+condition := true
+items := [1, 2, 3]
+function log(message: string): none { println(message) }
+
 let x <- {
     if condition {
         yield 10
@@ -52,7 +63,8 @@ readonly total: int <- {
 
 The same syntax is also available for statement-only reassignment of an existing local variable:
 
-```doof
+```doof check body
+shouldSkip := false
 let count = 0
 count <- {
     if shouldSkip {
@@ -89,7 +101,9 @@ label := "immutable value with mutable interior"
 
 The `:=` operator creates an immutable binding with **shallow immutability** — the binding cannot be reassigned, but its contents remain mutable:
 
-```doof
+```doof reject
+class Point { x, y: int }
+
 // Shallow immutability - binding is immutable, content is mutable
 items := [1, 2, 3]        // int[] — mutable array
 items.push(4)             // ✅ OK — array contents are mutable
@@ -103,7 +117,9 @@ point = Point(3, 4)       // ❌ Error — binding is immutable
 
 ### Shallow vs Deep: Key Distinction
 
-```doof
+```doof reject
+class Foo { let x: int }
+
 // := is shallow - mutable content allowed
 data := [1, 2, 3]              // int[]
 data.push(4)                   // ✅ OK
@@ -113,7 +129,6 @@ readonly frozen = [1, 2, 3]    // readonly int[]
 frozen.push(4)                 // ❌ Error
 
 // readonly collection type is shallow at the element boundary
-class Foo { x: int }
 let view: readonly Foo[] = readonly [Foo { x: 1 }]
 view[0].x = 2                  // ✅ OK
 ```
@@ -141,7 +156,9 @@ buffer = [5, 6]            // ✅ OK
 
 `let` also accepts local yield-block initializers and statement-only yield-block reassignment:
 
-```doof
+```doof check body
+function loadInitialValue(): int => -3
+
 let current <- {
     yield loadInitialValue()
 }
@@ -156,7 +173,7 @@ current <- {
 
 ### Explicit Type Overrides Inference
 
-```doof
+```doof reject body
 // Mutable binding, but readonly contents
 let frozen: readonly int[] = [1, 2, 3]
 frozen[0] = 99            // ❌ Error: readonly array
@@ -190,7 +207,7 @@ allowed only in native entry scripts. In ordinary modules, compute them inside
 
 ### Local Scope
 
-```doof
+```doof reject body
 readonly data = [1, 2, 3]    // readonly int[] - deeply immutable
 data.push(4)                  // ❌ Error: readonly array
 data = [5, 6]                 // ❌ Error: immutable binding
@@ -200,7 +217,7 @@ Deep immutability here means the entire reachable value must be immutable. Colle
 
 Nominal classes and structs are not made readonly implicitly. A `readonly` binding whose value type has a `let` field, a mutable collection field, or another mutable reachable member is rejected; use `:=` for a singleton with mutable state:
 
-```doof
+```doof reject
 class Counter {
     let count: int = 0
 }
@@ -222,7 +239,7 @@ readonly configName <- {
 Fields are shallow immutable by default, `let` opts into field-slot
 reassignment, and `readonly` provides deep immutability:
 
-```doof
+```doof reject
 class Entity {
     id: int                                 // Shallow immutable field
     readonly tags: string[]                 // Treated as readonly string[]
@@ -273,7 +290,10 @@ z := [1, 2]                  // int[] (mutable content, immutable binding)
   top-level executable statements are allowed only in native entry scripts;
   ordinary modules put this work inside `main()` or another function.
 
-```doof
+```doof reject
+class Config { name: string = "app" }
+function loadConfig(): Config => Config {}
+
 // ✅ Valid — module constants
 readonly PI = 3.14159
 readonly MAX_USERS = 1000
@@ -282,7 +302,7 @@ readonly MAX_USERS = 1000
 readonly PRIMES = readonly [2, 3, 5]
 
 // ✅ Valid — shallow immutable module binding
-config := { name: "default" }         // Binding is immutable; value interior may be mutable
+config: Map<string, string> := { name: "default" }  // Binding is immutable; value interior may be mutable
 
 // ✅ Valid — functions hoist
 function main(): none {
@@ -296,10 +316,10 @@ function bar(x: int): int => x * 12
 let counter = 0
 
 // ❌ Invalid in an ordinary reference module
-readonly value <- { yield 1 } // Error: <- blocks are local-only
+readonly value <- { yield 1 } // ❌ Error: <- blocks are local-only
 
 // ❌ Hoisting error for readonly and :=
-let x = LIMIT              // Error: LIMIT used before declaration
+let x = LIMIT              // ❌ Error: LIMIT used before declaration
 readonly LIMIT = 100       // readonly doesn't hoist
 ```
 
@@ -313,8 +333,10 @@ readonly LIMIT = 100       // readonly doesn't hoist
 - Local functions cannot reference themselves for recursion; module-level
   functions can (see [Named Functions and Lambda Bindings](04-functions-and-lambdas.md#named-functions-and-lambda-bindings))
 
-```doof
-function outer() {
+```doof reject
+function load(): string => "config"
+
+function outer(): none {
     helper(5)  // ❌ Error: used before declaration
     
     readonly LIMIT = 100
@@ -326,7 +348,7 @@ function outer() {
     helper(5)  // ✅ Works
 }
 
-function scopes() {
+function scopes(): none {
     value := 1
     value := 2      // ❌ Error: already declared in this scope
 
@@ -380,7 +402,7 @@ The `with` statement introduces one or more immutable bindings that are scoped t
 
 ### Syntax
 
-```doof
+```text
 with <name> [:Type] := <expression> [, ...] {
     // name is in scope here
 }
@@ -394,7 +416,13 @@ terminates the enclosing path for return-completeness checking.
 
 ### Single Binding
 
-```doof
+```doof check
+class Connection { url: string = "db://local" }
+
+function openDatabase(): Connection => Connection {}
+function query(connection: Connection, sql: string): none { println(sql) }
+function update(connection: Connection, sql: string): none { println(sql) }
+
 with connection := openDatabase() {
     query(connection, "SELECT * FROM users")
     update(connection, "UPDATE stats SET visits = visits + 1")
@@ -406,7 +434,12 @@ Use `_` when the value must remain alive for the block but does not need a
 source-level binding. The initializer is still evaluated and the retained value
 is destroyed at the ordinary end of the `with` scope:
 
-```doof
+```doof check
+class Guard { name: string = "lock" }
+
+function acquireGuard(): Guard => Guard {}
+function updateProtectedState(): none { println("updated") }
+
 with _ := acquireGuard() {
     updateProtectedState()
 }
@@ -420,7 +453,10 @@ discard a `Result`; handle or unwrap the `Result` before entering the scope.
 
 Multiple bindings are separated by commas. They are evaluated left-to-right, and later bindings can reference earlier ones:
 
-```doof
+```doof check
+function computeX(): int => 2
+function computeY(x: int): int => x * 3
+
 with x := computeX(), y := computeY(x) {
     println("Result: ${x + y}")
 }
@@ -430,7 +466,9 @@ with x := computeX(), y := computeY(x) {
 
 Type annotations can be provided for any binding:
 
-```doof
+```doof check
+prices := [1.5, 2.25]
+
 with total: double := prices.reduce(0.0, (sum, price) => sum + price) {
     println("Total: ${total}")
 }
@@ -440,7 +478,15 @@ with total: double := prices.reduce(0.0, (sum, price) => sum + price) {
 
 `with` blocks can be nested:
 
-```doof
+```doof check
+class Config { dbUrl: string = "db://local" }
+class Database { url: string }
+
+function loadConfig(): Config => Config {}
+function openDatabase(url: string): Database => Database { url }
+function migrate(db: Database): none { println("migrate " + db.url) }
+function seed(db: Database): none { println("seed " + db.url) }
+
 with config := loadConfig() {
     with db := openDatabase(config.dbUrl) {
         migrate(db)
@@ -475,7 +521,7 @@ Destructuring mirrors initialisation — both positional and named forms are sup
 
 Extracts fields in declaration order:
 
-```doof
+```doof check
 class Point {
     x, y, z: float
 }
@@ -487,7 +533,7 @@ point := Point (1.0, 2.0, 3.0)
 println(x)  // 1.0
 
 // Partial — trailing fields can be omitted
-(x, y) := point
+(left, top) := point
 
 // Mutable bindings
 let (a, b, c) = point
@@ -511,7 +557,7 @@ let py = 0.0
 
 Extracts specific fields by name:
 
-```doof
+```doof check
 class User {
     id: int
     name: string
@@ -528,9 +574,6 @@ println(name)   // "Alice"
 // Order doesn't matter
 { age, id } := user
 
-// Mutable bindings
-let { name, age } = user
-
 // Assignment to existing mutable bindings
 let userName = ""
 let userAge = 0
@@ -539,7 +582,11 @@ let userAge = 0
 
 ### Renaming with `as`
 
-```doof
+```doof check
+class User { id: int; name: string; email: string }
+
+user := User { id: 1, name: "Alice", email: "alice@example.com" }
+
 { name as userName, email as userEmail } := user
 println(userName)   // "Alice"
 
@@ -553,7 +600,7 @@ println(userName)   // "Alice"
 
 Tuples destructure with the same positional syntax as classes:
 
-```doof
+```doof check
 function getStats(): Tuple<int, float, string> {
     return (42, 3.14, "hello")
 }
@@ -562,7 +609,7 @@ function getStats(): Tuple<int, float, string> {
 (count, average, label) := getStats()
 
 // Mutable bindings
-let (count, average, label) = getStats()
+let (mutableCount, mutableAverage, mutableLabel) = getStats()
 
 // Assignment to existing mutable bindings
 let total = 0
@@ -570,10 +617,10 @@ let tag = ""
 (total, _, tag) = getStats()
 
 // Partial — trailing fields can be omitted
-(count, average) := getStats()  // Ignores third field
+(firstCount, firstAverage) := getStats()  // Ignores third field
 
 // Discard an intermediate tuple position
-(count, _, label) := getStats()
+(onlyCount, _, onlyLabel) := getStats()
 
 // Field access without destructuring
 stats := getStats()
@@ -587,7 +634,7 @@ For tuples and classes, `_` discards a position without creating a binding.
 
 Arrays destructure with square brackets and bind the array element type:
 
-```doof
+```doof check
 values := [10, 20, 30]
 
 // Immutable bindings
@@ -600,9 +647,9 @@ let [a, b, c] = values
 [head, _, tail] := values
 
 // Assignment to existing mutable bindings
-let first = 0
-let third = 0
-[first, _, third] = values
+let low = 0
+let high = 0
+[low, _, high] = values
 ```
 
 **Rules:**
@@ -618,7 +665,14 @@ let third = 0
 
 Destructuring patterns can also assign into bindings that already exist:
 
-```doof
+```doof check
+class Point { x, y: int }
+class User { name: string }
+
+point := Point { x: 1, y: 2 }
+values := [1, 2, 3]
+user := User { name: "Ada" }
+
 let x = 0
 let y = 0
 (x, y) = point
@@ -644,7 +698,12 @@ Destructuring patterns are not currently accepted directly in function
 parameters. Accept the value as an ordinary parameter and destructure it at the
 start of the function body:
 
-```doof
+```doof check
+import { sqrt } from "std/math"
+
+class Point { x, y, z: float }
+class User { name: string; age: int }
+
 function magnitude(point: Point): float {
     (x, y, z) := point
     return sqrt(x*x + y*y + z*z)

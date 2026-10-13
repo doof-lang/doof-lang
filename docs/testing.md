@@ -88,9 +88,10 @@ summary HTML, and annotated per-file HTML output.
   ` ```doof check body ` hold statements and are checked inside a generated
   `function example(): none { ... }`, which shifts reported lines by one.
   Fences opened with ` ```doof reject ` (or ` ```doof reject body `) show invalid
-  code: `doof check` must fail, every line containing ❌ must report an error,
-  and no other line may. A checked file with top-level statements is a native
-  entry script, so examples may run statements directly. Plain ` ```doof `
+  code: `doof check` must fail, every code line containing ❌ must report an
+  error, and no other line may. A comment-only line with ❌ is a heading.
+  A checked file with top-level statements is a native entry script, so
+  examples may run statements directly. Plain ` ```doof `
   fences are not checked; keep them for signature outlines and multi-file
   examples. Make new examples complete so they can use one of the checked
   forms.

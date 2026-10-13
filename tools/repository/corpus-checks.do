@@ -63,7 +63,7 @@ export class SpecExample {
 // followed by "body"; other `doof` fences may be fragments or signatures and
 // are not checked. A body fence holds statements and is checked inside a
 // function whose header occupies the first line of the extracted file. A reject
-// fence must fail `doof check`, with errors on exactly its lines marked ❌.
+// fence must fail `doof check`, with errors on exactly its code lines marked ❌.
 export function checkedSpecExamples(file: string, markdown: string): Result<SpecExample[], string> {
   result: SpecExample[] := []
   lines := markdown.split("\n")
@@ -78,7 +78,8 @@ export function checkedSpecExamples(file: string, markdown: string): Result<Spec
     markedLines: int[] := []
     i += 1
     while i < lines.length && !lines[i].startsWith("```") {
-      if lines[i].contains(rejectionMarker) { markedLines.push(body.length + if wrapped then 2 else 1) }
+      // A comment-only line may head a group of invalid lines without being one.
+      if lines[i].contains(rejectionMarker) && !lines[i].trim().startsWith("//") { markedLines.push(body.length + if wrapped then 2 else 1) }
       body.push(lines[i])
       i += 1
     }

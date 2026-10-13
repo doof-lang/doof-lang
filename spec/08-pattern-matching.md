@@ -10,7 +10,8 @@ Doof's `case` forms provide pattern matching with value matching, range matching
 
 ## Basic Value Matching
 
-```doof
+```doof check body
+value := 2
 let description = case value {
     0 -> "zero",
     1 -> "one",
@@ -21,8 +22,9 @@ let description = case value {
 
 ### Multiple Values
 
-```doof
-case status {
+```doof check body
+status := 404
+label := case status {
     200 | 201 | 204 -> "success"
     400 | 404 -> "client error"
     500 | 502 | 503 -> "server error"
@@ -32,7 +34,12 @@ case status {
 
 ### String Matching
 
-```doof
+```doof check
+function startServer(): none { println("starting") }
+function stopServer(): none { println("stopping") }
+function restartServer(): none { println("restarting") }
+
+command := "start"
 case command {
     "start" -> startServer(),
     "stop" -> stopServer(),
@@ -47,9 +54,15 @@ case command {
 
 Enum values can be matched directly. When the `case` subject is a known enum type, **dot-shorthand** can be used for variant names:
 
-```doof
+```doof check
 enum Direction { North, South, East, West }
 
+function moveUp(): none { println("up") }
+function moveDown(): none { println("down") }
+function moveRight(): none { println("right") }
+function moveLeft(): none { println("left") }
+
+direction := Direction.East
 case direction {
     .North -> moveUp(),
     .South -> moveDown(),
@@ -60,7 +73,15 @@ case direction {
 
 Fully qualified names also work:
 
-```doof
+```doof check
+enum Direction { North, South, East, West }
+
+function moveUp(): none { println("up") }
+function moveDown(): none { println("down") }
+function moveRight(): none { println("right") }
+function moveLeft(): none { println("left") }
+
+direction := Direction.East
 case direction {
     Direction.North -> moveUp(),
     Direction.South -> moveDown(),
@@ -73,7 +94,7 @@ case direction {
 
 Integer-valued enums match by identity, not by raw value:
 
-```doof
+```doof check
 enum HttpStatus {
     OK = 200,
     Created = 201,
@@ -82,29 +103,39 @@ enum HttpStatus {
     ServerError = 500
 }
 
-case status {
+status := HttpStatus.Created
+label := case status {
     .OK | .Created | .NoContent -> "success"
     .NotFound -> "not found",
     .ServerError -> "server error",
     _ -> "other"
 }
+println(label)  // success
 ```
 
 ### Enum Matching as Expression
 
-```doof
+```doof check
+enum Color { Red, Green, Blue }
+
+color := Color.Green
 let label = case color {
     .Red   -> "danger",
     .Green -> "safe",
     .Blue  -> "info"
 }
+println(label)  // safe
 ```
 
 ### Exhaustiveness
 
 When all enum variants are covered, no `_` wildcard is needed. The compiler enforces exhaustive matching:
 
-```doof
+```doof reject
+enum Direction { North, South, East, West }
+
+direction := Direction.North
+
 // ✅ All variants covered — no wildcard needed
 let message = case direction {
     .North -> "up",
@@ -112,9 +143,10 @@ let message = case direction {
     .East  -> "right",
     .West  -> "left"
 }
+println(message)
 
-// ❌ Error: non-exhaustive — missing Direction.West
-let message = case direction {
+// Error: non-exhaustive — missing Direction.West
+let partial = case direction {  // ❌
     .North -> "up",
     .South -> "down",
     .East  -> "right"
@@ -125,14 +157,18 @@ let message = case direction {
 
 ## Range Matching
 
-```doof
+```doof check body
+age := 30
+score := 85
+day := 6
+
 let category = case age {
     ..<18 -> "Minor",
     ..<65 -> "Adult",
     _ -> "Senior"
 }
 
-case score {
+grade := case score {
     90.. -> "A",
     80..<90 -> "B",
     70..<80 -> "C",
@@ -140,7 +176,7 @@ case score {
     ..<60 -> "F"
 }
 
-case day {
+kind := case day {
     1..5 -> "weekday",
     6..7 -> "weekend",
     _ -> "invalid"
@@ -160,7 +196,9 @@ Range patterns match only integer subjects (`byte`, `int`, or `long`), and their
 bounds must be integers. Floating-point, `char`, nullable, and other subjects
 are compile errors; compare such values with `if` conditions instead.
 
-```doof
+```doof reject
+score := 91.5
+count := 3
 case score { 90.0.. -> "A", _ -> "F" }   // ❌ Error: Range patterns require an integer subject (byte, int, or long); got "double"
 case count { 90.5.. -> "A", _ -> "F" }   // ❌ Error: Range pattern bounds must be integers; got "double"
 ```
@@ -207,7 +245,9 @@ The shorthand is the general rule for generic types. A type pattern that names
 a generic type without type arguments takes them from the one subject member
 of that type. This applies wherever the arm appears, and to generic classes:
 
-```doof
+```doof check
+class Box<T> { value: T }
+
 function value(x: Success<int> | none): int => case x {
     s: Success -> s.value,      // Success<int>
     _ -> 0
@@ -244,19 +284,26 @@ case container.result {
 
 ### Combining Patterns
 
-```doof
-case response.status {
+```doof check
+class Response { status: int }
+
+response := Response { status: 503 }
+label := case response.status {
     200 -> "OK",
     404 -> "Not Found",
     s: int -> "Status: ${s}"  // Captures other status codes
 }
+println(label)  // Status: 503
 ```
 
 ---
 
 ## Multi-Statement Blocks
 
-```doof
+```doof check body
+function logError(message: string): none { println(message) }
+
+response: Result<int, string> := Success(21)
 let value = case response {
     s: Success -> {
         readonly doubled = s.value * 2
@@ -276,7 +323,10 @@ let value = case response {
 
 Case statements are expressions and can be used anywhere:
 
-```doof
+```doof check
+value := 1
+status := 200
+
 // Variable assignment
 let result = case value {
     0 -> "zero",
@@ -303,12 +353,14 @@ When `case` is used in a **value position** (i.e. as an expression — assigned 
 variable, returned directly, passed as an argument, etc.) each arm must evaluate
 to a value.  Using `return` inside such an arm is a **compile error**.
 
-```doof
-// ❌ Error: 'return' cannot be used inside a case-expression arm
+```doof reject
+function tryOp(): Result<int, string> => Success(1)
+
+// Error: 'return' cannot be used inside a case-expression arm
 function main(): int {
     x := case tryOp() {
         s: Success -> s.value,
-        f: Failure -> { return 1 }   // ← compile error
+        f: Failure -> { return 1 }   // ❌ compile error
     }
     return x
 }
@@ -322,7 +374,9 @@ behaviour.
 When `case` is used as a **statement** (not assigned to anything), arms may
 contain `return` freely:
 
-```doof
+```doof check
+function tryOp(): Result<int, string> => Success(1)
+
 // ✅ Fine: case at statement level
 function main(): int {
     case tryOp() {
@@ -355,7 +409,11 @@ If you need early exit from inside a case expression, either:
 
 Case keeps it simple — pattern checks types/values, you access fields normally:
 
-```doof
+```doof reject
+class Point { x, y: int }
+
+point: Point | none := Point { x: 1, y: 2 }
+
 // ✅ Clean and explicit
 case point {
     p: Point -> {
@@ -363,11 +421,12 @@ case point {
         readonly y = p.y
         println("Point at (${x}, ${y})")
     }
+    _ -> { }
 }
 
-// ❌ Not supported
+// Not supported
 case point {
-    Point { x, y } => println("Point at (${x}, ${y})")
+    Point { x, y } => println("Point at (${x}, ${y})")  // ❌
 }
 ```
 
@@ -375,16 +434,18 @@ case point {
 
 Complex conditional logic should use `if` statements or ranges:
 
-```doof
+```doof check body
+value := 42
+
 // ✅ Use ranges
-case value {
+range := case value {
     11..99 -> "in range",
     _ -> "out of range"
 }
 
 // ✅ Extract complex conditions
 readonly isValid = value > 10 && value < 100 && value % 2 == 0
-case isValid {
+validity := case isValid {
     true -> "valid",
     false -> "invalid"
 }
@@ -398,7 +459,7 @@ The `else` narrow form provides a compact "unwrap or bail" pattern for Result an
 
 ### Syntax
 
-```doof
+```text
 name := expression else {
     // name is not in scope here
     ... must exit (return / break / continue) ...
@@ -449,7 +510,10 @@ function test(): string {
 One declaration removes every absent layer. An outer `none`, a `Failure`, and
 a `none` success value all run the `else` block:
 
-```doof
+```doof check
+class Config { name: string }
+class AppError { message: string }
+
 function loadConfig(): Result<Config, AppError> | none => none
 function findConfig(): Result<Config | none, AppError> => Success { value: none }
 
@@ -466,7 +530,10 @@ function test(): string {
 The success binding is available only after the `else` block.
 `else error { ... }` captures the `Failure`'s error payload:
 
-```doof
+```doof check
+class Config { name: string }
+class AppError { message: string }
+
 function loadConfig(): Result<Config, AppError> => Failure { error: AppError { message: "not found" } }
 
 function test(): string {
@@ -481,7 +548,10 @@ function test(): string {
 When the subject can also be absent as `none`, the error has type `E | none`,
 and `none` means no `Failure` occurred:
 
-```doof
+```doof check
+class Config { name: string }
+class AppError { message: string }
+
 function findConfig(): Result<Config | none, AppError> => Success { value: none }
 
 function test(): string {
@@ -500,8 +570,13 @@ Failure capture requires a `Result` subject; nullable-only subjects cannot use
 
 An explicit type annotation is supported:
 
-```doof
-x: string := getValue() else { return 0 }
+```doof check
+function getValue(): string | none => "hello"
+
+function length(): int {
+    x: string := getValue() else { return 0 }
+    return x.length
+}
 ```
 
 ### In Loops
@@ -530,7 +605,10 @@ function process(): none {
 
 Result-returning expression statements can use `else` directly to handle failures without binding the success value:
 
-```doof
+```doof check body
+function savePuzzleState(path: string): Result<none, string> => Failure("disk full")
+
+path := "puzzle.json"
 savePuzzleState(path) else error {
     println("failed to save: " + error)
 }
@@ -544,9 +622,10 @@ post-block binding invariant to satisfy.
 
 ## Complete Example
 
-```doof
+```doof check
 class Point { x, y: float; }
 class Line { start, end: Point; }
+class Response { status: int; body: string }
 type Shape = Point | Line
 
 function describe(shape: Shape): string => case shape {

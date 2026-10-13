@@ -25,7 +25,10 @@ Doof has two division operators:
 - **`/`** — floating-point division. **Cannot** be applied to two integer operands (compile error). At least one operand must be `float` or `double`, or use a numeric cast.
 - **`\`** — integer division. **Requires** both operands to be integer types (`int` or `long`). Truncates toward zero.
 
-```doof
+```doof check body
+a := 7
+b := 2
+
 // Floating-point division (/ operator)
 floatDiv := 7.0 / 2.0          // 3.5
 mixed := float(7) / 2.0        // 3.5 (cast int to float)
@@ -35,11 +38,14 @@ precise := double(a) / double(b) // double division via casts
 intDiv := 7 \ 2        // 3 (truncates toward zero)
 negDiv := -7 \ 2       // -3
 longDiv := 100L \ 3L   // 33L
+```
 
-// Compile errors:
-7 / 2          // ❌ Error: "/" cannot be applied to two integer operands
-7.0 \ 2.0      // ❌ Error: "\" requires integer operands
-7.0 % 2.0      // ❌ Error: "%" requires integer operands
+Each of these is a compile error:
+
+```doof reject body
+half := 7 / 2          // ❌ "/" cannot be applied to two integer operands
+whole := 7.0 \ 2.0     // ❌ "\" requires integer operands
+rest := 7.0 % 2.0      // ❌ "%" requires integer operands
 ```
 
 ### Modulo Operator
@@ -82,7 +88,7 @@ pos := +x     // Unary plus: 5
 
 Doof does **not** have `++` or `--` operators:
 
-```doof
+```doof reject body
 let x = 5
 x++      // ❌ Error: no increment operator
 x += 1   // ✅ Use compound assignment instead
@@ -94,7 +100,10 @@ x += 1   // ✅ Use compound assignment instead
 
 ## Comparison Operators
 
-```doof
+```doof check body
+a := 1
+b := 2
+
 a == b     // Equality (reference for objects)
 a != b     // Inequality
 a < b      // Less than
@@ -150,7 +159,10 @@ support equality with `none`, including through generic functions such as
 
 ## Logical Operators
 
-```doof
+```doof check body
+a := true
+b := false
+
 a && b    // Logical AND
 a || b    // Logical OR
 !a        // Logical NOT
@@ -158,12 +170,19 @@ a || b    // Logical OR
 
 All logical operators require `bool` operands. Short-circuit evaluation applies:
 
-```doof
+```doof check body
+function expensiveCall(): bool {
+    println("called")
+    return true
+}
+list := [1, 2]
+target := 1
+
 false && expensiveCall()  // expensiveCall() never executed
 true || expensiveCall()   // expensiveCall() never executed
 
 if list.length > 0 && list[0] == target {
-    // ...
+    println("found")
 }
 ```
 
@@ -196,17 +215,32 @@ Applying any absence operator to a value that is neither nullable nor a
 
 ### Postfix `?` — Convert to Optional
 
-```doof
+```doof check
 import { parseInt } from "std/parse"
+
+class Profile { bio: string }
+
+function maybeName(): string | none => "Ada"
+function loadProfile(): Result<Profile | none, string> => Success(none)
 
 value := parseInt("12")?          // int | none (none on Failure)
 name := maybeName()?              // string | none (a no-op on a nullable)
 profile := loadProfile()?         // Profile | none for Result<Profile | none, E>
+println(value ?? 0)
 ```
 
 ### Postfix `!` — Panic When Absent
 
-```doof
+```doof check
+import { parseInt } from "std/parse"
+
+class User { name: string }
+class Config { port: int }
+
+function maybeUser(): User | none => User { name: "Ada" }
+function saveConfig(config: Config): Result<none, string> => Success()
+
+config := Config { port: 8080 }
 value := parseInt("12")!          // int (panics on Failure)
 sum := parseInt("12")! + 2        // int
 user := maybeUser()!              // User (panics on none)
@@ -220,12 +254,20 @@ includes the error text.
 
 Provides a fallback when the left operand is absent:
 
-```doof
+```doof check
+import { readText } from "std/fs"
+
+class Config { port: int }
+
+function loadConfig(): Result<Config, string> => Failure("missing")
+
+defaultConfig := Config { port: 8080 }
 name: string | none := none
 displayName := name ?? "Anonymous"          // "Anonymous"
 
 config := loadConfig() ?? defaultConfig     // Config (fallback on Failure)
-data := readFile("cache.txt") ?? ""         // string
+data := readText("cache.txt") ?? ""         // string
+println(displayName)
 ```
 
 **Operands:** `x` must be able to be absent: a union with `none`, a
@@ -245,20 +287,35 @@ joined with the type of `y`:
   result stays nullable when either side was. A fallback that may itself be
   absent therefore keeps the result nullable:
 
-```doof
+```doof check
+class Circle { radius: int = 1 }
+class Square { side: int = 1 }
+
+function selected(): Circle | Square | none => none
+function lastCircle(): Circle | none => Circle {}
+
 current: Circle | Square | none := selected()
 fallback: Circle | none := lastCircle()
 shape := current ?? fallback                // Circle | Square | none
 safe := current ?? Square {}                // Circle | Square
+println(shape == none)
 ```
 
 Types with no such relationship are an error; annotate the expected type.
 
 **Associativity:** Right-to-left, so chains compose:
 
-```doof
+```doof check
+class Config { source: string }
+
+function loadFromCache(): Config | none => none
+function loadFromDisk(): Result<Config, string> => Failure("missing")
+function fetchFromNetwork(): Config | none => none
+
+defaultConfig := Config { source: "default" }
 config := loadFromCache() ?? loadFromDisk() ?? fetchFromNetwork() ?? defaultConfig
 // Groups as: loadFromCache() ?? (loadFromDisk() ?? (fetchFromNetwork() ?? defaultConfig))
+println(config.source)  // default
 ```
 
 **Lazy evaluation:** The right operand is evaluated only when the left is
@@ -271,12 +328,17 @@ absent.
 
 Assigns only when the target is currently absent:
 
-```doof
+```doof check body
+function loadFromDisk(): string => "disk"
+function readCache(): Result<string, string> => Failure("cold")
+function readFromDisk(): Result<string, string> => Success("disk")
+function fetchFromNetwork(): Result<string, string> => Success("network")
+
 let cache: string | none = none
 cache ??= loadFromDisk()  // Assigns result of loadFromDisk()
 cache ??= loadFromDisk()  // No-op, cache already has value
 
-let data: Result<string, Error> = readCache()
+let data: Result<string, string> = readCache()
 data ??= readFromDisk()     // Replaces data only if it is absent
 data ??= fetchFromNetwork() // No-op if data is present
 ```
@@ -292,7 +354,17 @@ assignment will occur.
 
 Access a member or element only when the receiver is present:
 
-```doof
+```doof check
+class Address { city: string }
+class User { name: string; address: Address | none = none }
+class Logger { log(message: string): none { println(message) } }
+
+function getUser(): User | none => User { name: "Ada" }
+function getItems(): string[] | none => ["a"]
+function loadUser(id: int): Result<User, string> => Success(User { name: "Ada" })
+
+logger: Logger | none := Logger {}
+id := 1
 user: User | none := getUser()
 city := user?.address?.city     // string | none
 logger?.log("Hello")            // Only calls if logger is present
@@ -313,13 +385,22 @@ Values](04-functions-and-lambdas.md#functions-and-methods-as-values).
 The receiver's absence becomes `none`. A member that itself returns a `Result`
 keeps its own `Failure`, and the `none` joins its success value:
 
-```doof
-// findUser(): Result<User, LookupError>
-// User.profile(): Result<Profile, ProfileError>
+```doof check
+class LookupError { message: string }
+class ProfileError { message: string }
+class Profile { bio: string }
+class User {
+    profile(): Result<Profile, ProfileError> => Success(Profile { bio: "hi" })
+}
+
+function findUser(id: int): Result<User, LookupError> => Success(User {})
+
+id := 1
 profile := findUser(id)?.profile()   // Result<Profile | none, ProfileError>
 // findUser fails or yields none -> Success(none); profile() fails -> its Failure
 
 bio := findUser(id)?.profile()?.bio  // string | none: every absence collapses
+println(bio ?? "")  // hi
 ```
 
 `Result<none, E>` receivers have no present value, so `?.` on them is an error.
@@ -329,22 +410,39 @@ bio := findUser(id)?.profile()?.bio  // string | none: every absence collapses
 `x!.m` is `(x!).m` and `x![i]` is `(x!)[i]`: the receiver panics when absent,
 then the access proceeds.
 
-```doof
+```doof check
+class User {
+    name: string
+    getEmail(): string => name + "@example.com"
+}
+
+function getUser(): User | none => User { name: "ada" }
+function loadUser(): Result<User, string> => Success(User { name: "ada" })
+function maybeItems(): string[] | none => ["a"]
+
 user: User | none := getUser()
 name := user!.name                   // string (panics if user is none)
 
 email := loadUser()!.getEmail()      // panics if loadUser fails
 first := maybeItems()![0]            // panics if maybeItems() is absent
+println(email)
 ```
 
 **When to use `!`:**
 
-```doof
+```doof check
+class Config { port: int }
+class Data { field: int }
+
+function loadConfig(): Result<Config, string> => Success(Config { port: 8080 })
+function tryLoadData(): Result<Data, string> => Success(Data { field: 1 })
+
 // ✅ When absence indicates a programming error
 port := loadConfig()!.port
 
 // ❌ For expected absence — use ?, ??, declaration-else, or case instead
 value := tryLoadData()!.field  // Bad: failure might be expected
+println(port)
 ```
 
 **Comparison:**
@@ -362,7 +460,10 @@ expired reference as absent.
 ---
 ## Bitwise Operators
 
-```doof
+```doof check body
+a := 0b1100
+b := 0b1010
+
 a & b     // Bitwise AND
 a | b     // Bitwise OR
 a ^ b     // Bitwise XOR
@@ -461,15 +562,26 @@ Since `as` always returns a `Result`, use standard Result patterns:
 
 Unlike `int(x)` / `long(x)` / `float(x)` / `double(x)`, which are direct casts, numeric `as` is checked. For example, `x as int` fails when a `long` is out of range or a floating-point value has a fractional component.
 
-```doof
+```doof check
 // With try (in Result-returning function):
-try s := value as string
+function withTry(value: int | string): Result<int, string> {
+    try s := value as string
+    return Success(s.length)
+}
 
 // With else-narrow:
-s := value as string else { return defaultValue }
+function withElse(value: int | string, defaultValue: string): string {
+    s := value as string else { return defaultValue }
+    return s
+}
 
 // Else blocks may also terminate with panic:
-object := value as readonly Map<string, SerialValue> else { panic("Expected object") }
+function withPanic(value: SerialValue): readonly Map<string, SerialValue> {
+    object := value as readonly Map<string, SerialValue> else { panic("Expected object") }
+    return object
+}
+
+value: int | string := "hello"
 
 // With postfix ! (panic on failure):
 s := (value as string)!
@@ -485,17 +597,27 @@ case value as string {
 
 `as` binds tighter than unary prefix operators (`!`, `-`) but looser than postfix operators (`.`, `()`, `[]`, `?`, `!`):
 
-```doof
-(value as string)!          // parentheses unwrap the narrowing Result
-obj.method() as Foo         // (obj.method()) as Foo
-maybeValue()! as string     // (maybeValue()!) as string
+```doof check
+class Foo { label: string = "foo" }
+class Bar { label: string = "bar" }
+class Factory { method(): Foo | Bar => Foo {} }
+
+function maybeValue(): int | string | none => "text"
+
+value: int | string := "hello"
+obj := Factory {}
+
+unwrapped := (value as string)!          // parentheses unwrap the narrowing Result
+foo := obj.method() as Foo               // (obj.method()) as Foo
+text := maybeValue()! as string          // (maybeValue()!) as string
+println(unwrapped)
 ```
 
 ### Invalid Narrowing
 
 The compiler rejects narrowing that has no runtime path to success:
 
-```doof
+```doof reject
 x: int := 42
 r := x as string    // ❌ Error: Cannot narrow "int" to "string"
 ```
@@ -507,10 +629,17 @@ r := x as string    // ❌ Error: Cannot narrow "int" to "string"
 The `try` statement unwraps a `Success` value or returns the `Failure` from the
 enclosing function:
 
-```doof
-function loadConfig(): Result<Config, Error> {
+```doof check
+import { parseJsonValue } from "std/json"
+
+class Config { name: string }
+
+function readFile(path: string): Result<string, string> => Success("{\"name\":\"app\"}")
+function validate(value: SerialValue): Result<Config, string> => Config.fromSerialValue(value)
+
+function loadConfig(): Result<Config, string> {
     try content := readFile("config.json")   // Returns Failure early if error
-    try parsed := parseJSON(content)
+    try parsed := parseJsonValue(content)
     try config := validate(parsed)
     return Success { value: config }
 }
@@ -562,7 +691,7 @@ From highest to lowest:
 
 Doof does **not** support user-defined operator overloading:
 
-```doof
+```doof reject
 class Vector {
     x, y: float
     
@@ -572,8 +701,11 @@ class Vector {
     }
 }
 
-v3 := v1 + v2       // ❌ Error
+v1 := Vector { x: 1.0, y: 2.0 }
+v2 := Vector { x: 3.0, y: 4.0 }
+sum := v1 + v2      // ❌ Error
 v3 := v1.add(v2)    // ✅ OK
+println(v3.x)
 ```
 
 **Rationale:** Operator overloading can make code harder to reason about. Method calls are explicit about what operation occurs and avoid precedence/associativity surprises.

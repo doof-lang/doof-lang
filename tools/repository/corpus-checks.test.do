@@ -54,12 +54,12 @@ export function testCorpusCheckedSpecExamplesRejectsUnterminatedFence(): none {
   Assert.isTrue(rejected)
 }
 export function testCorpusRejectedSpecExamplesRecordMarkedLines(): none {
-  markdown := "```doof reject\nx := 1\ny: string := 2  // ❌ Error\n```\n\n```doof reject body\nlet z = 1\nz = \"a\"  // ❌\n```\n"
+  markdown := "```doof reject\n// ❌ Invalid\nx := 1\ny: string := 2  // ❌ Error\n```\n\n```doof reject body\nlet z = 1\nz = \"a\"  // ❌\n```\n"
   examples := checkedSpecExamples("spec/a.md", markdown)!
   Assert.equal(examples.length, 2)
   Assert.isTrue(examples[0].rejected)
   Assert.equal(examples[0].markedLines.length, 1)
-  Assert.equal(examples[0].markedLines[0], 2)
+  Assert.equal(examples[0].markedLines[0], 3)
   Assert.isTrue(examples[1].rejected)
   Assert.equal(examples[1].markedLines[0], 3)
   Assert.equal(examples[1].source, "function example(): none {\nlet z = 1\nz = \"a\"  // ❌\n}\n")

@@ -34,12 +34,11 @@ or otherwise be unable to complete normally (for example, an unconditional
 without a wildcard or known exhaustive Result, enum, or nominal-union pattern
 does not establish a return on every path.
 
-```doof
-function choose(flag: bool): int {
+```doof reject
+function choose(flag: bool): int {  // ❌ Error: the function can reach the closing brace without returning
     if flag {
         return 1
     }
-    // ❌ Error: the function can reach the closing brace without returning
 }
 ```
 
@@ -71,7 +70,9 @@ function double(x: int): int => x * 2
 
 Function calls support both positional `()` and named `{}` argument forms.
 
-```doof
+```doof check
+score := 120
+
 function clamp(value: int, min: int, max: int): int {
     if value < min { return min }
     if value > max { return max }
@@ -85,7 +86,10 @@ clamp{ min: 0, max: 100, value: score } // same call, different source order
 
 Named calls are resolved by parameter name, so they work well when several parameters share the same type. They also support the same shorthand as named construction when a binding already has the target parameter name:
 
-```doof
+```doof check
+function clamp(value: int, min: int, max: int): int => if value < min then min else if value > max then max else value
+
+score := 120
 value := score
 clamp{ value, min: 0, max: 100 }      // shorthand for value: value
 ```
@@ -98,11 +102,11 @@ class, struct, and actor construction.
 
 Omitting a named parameter is only valid when that parameter has a default value:
 
-```doof
+```doof reject
 function greet(name: string, punctuation: string = "!"): string => name + punctuation
 
 greet{ name: "Ada" }                 // ok
-greet{ punctuation: "?" }            // error: missing required parameter "name"
+greet{ punctuation: "?" }            // ❌ error: missing required parameter "name"
 ```
 
 Default parameter expressions may call static class methods, which makes factory
@@ -124,7 +128,21 @@ function spawnDefault(transform: Transform = .identity()): Transform => transfor
 The same shorthand works wherever the expected type is known, including
 bindings and arguments:
 
-```doof
+```doof check
+import { parseInt } from "std/parse"
+
+class Transform {
+    x: int
+    static identity(): Transform => Transform(0)
+    static parse(text: string): Transform | none {
+        x := parseInt(text) else { return none }
+        return Transform(x)
+    }
+}
+
+function move(transform: Transform): none { println(transform.x) }
+
+text := "4"
 origin: Transform := .identity()
 parsed: Transform | none := .parse(text)    // static parse(text: string): Transform | none
 move(.identity())
@@ -144,13 +162,20 @@ Named-call syntax is independent of capitalization: `GroupBox{title: "Account"}`
 Typed tags are an alternate named-call spelling for classes, structs,
 functions, callbacks, and callable members:
 
-```doof
+```doof check
+class User { name: string }
+class Icon { name: string }
+class Button { id: int; label: string }
+class Panel { title: string; children: (string | Icon)[] }
+
+user := User { name: "Ada" }
 button := <Button id=1 label="Save"/>
 
 page := <Panel title="Welcome">
     Hello {user.name}
     <Icon name="star"/>
 </Panel>
+println(page.children.length)
 ```
 
 Tag attributes accept scalar literals and leading-dot shorthand directly, for
@@ -159,7 +184,15 @@ example `items={loadItems()}`. A contextual `=>` lambda may use its ordinary
 syntax directly after the attribute name and inherits the expected callback's
 parameter names and types:
 
-```doof
+```doof check
+class ClickEvent { name: string }
+class Button { onClick: (event: ClickEvent): none }
+
+let pending = [1]
+function recordClick(): none { println("click") }
+function refresh(): none { println("refresh") }
+function submit(): none { println("submit") }
+
 <Button onClick=>println("clicked")/>
 <Button onClick=>println(event.name)/>
 <Button onClick=>{ recordClick(); refresh() }/>
@@ -251,10 +284,10 @@ export function add(a: int, b: int): int => a + b
 
 A `private` function is **file-scoped** — it can only be called from within the same source file where it is defined. It cannot be exported or imported.
 
-```doof
+```doof check
 // Internal helper — not visible outside this file
 private function hash(input: string): string {
-    // ...
+    return "hashed:" + input
 }
 
 export function checkPassword(candidate: string, stored: string): bool {
@@ -264,7 +297,7 @@ export function checkPassword(candidate: string, stored: string): bool {
 
 Attempting to export a private function is a compile error:
 
-```doof
+```doof reject
 export private function helper(): none {}  // ❌ Error: cannot export a private declaration
 ```
 
@@ -278,12 +311,12 @@ Lambdas are anonymous function values with the same expression and block forms.
 
 ### Fully Explicit Form
 
-```doof
+```doof check body
 // Expression body
 double := (x: int): int => x * 2
 
 // Block body
-triple := (x: int): int { return x * 3 }
+triple := (x: int): int => { return x * 3 }
 ```
 
 ### Inferred Return Type
@@ -329,18 +362,19 @@ Parameter names do not have to match the signature; see
 [Flexible Parameter Specification](#flexible-parameter-specification) for how
 they bind:
 
-```doof
+```doof check
 type Handler = (msg: string): none
 
 let h1: Handler = (msg) => println(msg)          // ✅ Binds msg by name
 let h2: Handler = (message) => println(message)  // ✅ Binds msg by position
+h1("hello")
 ```
 
 ### Full Type Inference (Parameterless Form)
 
 When the complete function signature is known, the parameter list can be omitted entirely — parameter names are inherited from the signature:
 
-```doof
+```doof check
 type Handler = (msg: string): none
 let handler: Handler = => println(msg)  // msg from signature
 
@@ -349,6 +383,7 @@ let transform: Transform = => x * 2  // x from signature
 
 type BinaryOp = (a: int, b: int): int
 let add: BinaryOp = => a + b  // a and b from signature
+handler("ready")
 ```
 
 The same inference applies when the contextual type is a union containing one
@@ -390,7 +425,13 @@ nums.map((index, it) => it + index)  // Both reversed — names disambiguate
 Otherwise, the parameters bind by position, and trailing parameters may be
 omitted. This lets a lambda rename parameters for clarity:
 
-```doof
+```doof reject
+class User { name: string }
+
+users := [User { name: "Ada" }]
+totals := [1, 2, 3]
+nums := [4, 5, 6]
+
 users.map((user) => user.name)                    // user is `it`
 totals.reduce(0, (sum, value) => sum + value)     // sum is `acc`, value is `it`
 nums.map((value, index) => value * index)         // value is `it`, index is `index`
@@ -411,7 +452,7 @@ c := [1, 2, 3].map((item: int): int => item * 2)   // item binds to `it` by posi
 
 Enums are first-class types and can be used in function parameters and return types. When calling such functions, dot-shorthand is available for enum arguments:
 
-```doof
+```doof check
 enum Direction { North, South, East, West }
 
 function opposite(dir: Direction): Direction => case dir {
@@ -422,6 +463,7 @@ function opposite(dir: Direction): Direction => case dir {
 }
 
 let result = opposite(.North)  // Direction.South
+println(result == .South)  // true
 ```
 
 ---
@@ -430,7 +472,7 @@ let result = opposite(.North)  // Direction.South
 
 Built-in collection methods use consistent, brief parameter names:
 
-```doof
+```text
 // Array callback signatures:
 map:         (it: T, index: int): U
 filter:      (it: T, index: int): bool
@@ -462,11 +504,13 @@ three examples above, the body `it + 1` produces an `int` that widens to
 `double`, and the result is `double[]`. When explicit sources disagree, the
 checker reports the clash instead of choosing one:
 
-```doof
+```doof reject body
+items := [1, 2, 3]
+
 items.map<string>((it): double => it)     // ❌ Argument 1 returns double; expected a callback returning string
-r: string[] := items.map((it): double => it) // ❌ Cannot assign double[] to string[]
-r: string[] := items.map(=> it + 1)       // ❌ Cannot return int from lambda returning string
-total := items.reduce(0, => acc + it * 0.5) // ❌ Cannot return double from lambda returning int
+r1: string[] := items.map((it): double => it) // ❌ Cannot assign double[] to string[]
+r2: string[] := items.map(=> it + 1)      // ❌ Cannot return int from lambda returning string
+intTotal := items.reduce(0, => acc + it * 0.5) // ❌ Cannot return double from lambda returning int
 total := items.reduce(0.0, => acc + it * 0.5) // ✅ double
 ```
 
@@ -475,7 +519,10 @@ determine, not only array methods.
 
 ### Practical Usage
 
-```doof
+```doof check
+class User { name: string; age: int }
+function getUsers(): User[] => [User { name: "Ada", age: 36 }, User { name: "Kim", age: 12 }]
+
 let numbers = [10, 20, 30, 40, 50]
 
 // Parameterless form — inherits names from signature
@@ -502,8 +549,9 @@ users.filter((user) => user.age >= 18)
 Explicit lambda parameter lists may use `_` to discard parameters that the
 callback must accept but does not use:
 
-```doof
-events.reduce(0, (count, _, _): int => count + 1)
+```doof check body
+events := ["open", "close"]
+count := events.reduce(0, (count, _, _): int => count + 1)
 ```
 
 Each `_` is an independent discard target and introduces no binding, so
@@ -515,9 +563,17 @@ named-call labels.
 
 When a function call is used as a complete expression statement, a trailing block `{ body }` after the closing `)` is parsed as an additional parameterless lambda argument. The opening `{` must be on the **same line** as the closing `)`. Trailing lambdas are intentionally scoped to read as control-structure-like statement blocks (e.g. `forEach`, `withTransaction`, `withLock`):
 
-```doof
+```doof check
+class Item { name: string }
+
+function forEachWithInit(values: int[], initial: int, action: (it: int): none): none {
+    for value of values { action(value + initial) }
+}
+
+items := [Item { name: "a" }, Item { name: "b" }]
+
 // Payloadless callback — trailing lambda form
-items.forEach() { println(it) }
+items.forEach() { println(it.name) }
 
 // Multi-statement trailing lambda
 items.forEach() {
@@ -531,19 +587,35 @@ forEachWithInit([1, 2, 3], 0) { println(it) }
 
 Trailing lambdas are statement syntax, not general expression syntax. They are only valid as the final part of an expression statement:
 
-```doof
+```doof reject
+class Transaction { id: int = 1 }
+
+function withTransaction(action: (it: Transaction): none): bool { action(Transaction {}); return true }
+function withLock(action: (): none): bool { action(); return true }
+function writeAuditLog(transaction: Transaction): none { println(transaction.id) }
+function refresh(): none { println("refresh") }
+
+items := [1, 2, 3]
+let handler = false
+
 // OK — complete expression statement
 items.forEach() { println(it) }
-
-// ERROR — trailing lambda in a binding initializer
-logged := withTransaction() { writeAuditLog(it) }
-
-// ERROR — trailing lambda in an assignment RHS
-handler = withLock() { refresh() }
 
 // OK — use explicit lambdas in expression positions
 logged := withTransaction(=> writeAuditLog(it))
 handler = withLock((): none => { refresh() })
+
+// ERROR — trailing lambda in a binding initializer
+failed := withTransaction() { writeAuditLog(it) }  // ❌
+```
+
+An assignment right-hand side is rejected the same way:
+
+```doof reject body
+function withLock(action: (): none): bool { action(); return true }
+
+let handler = false
+handler = withLock() { println("refresh") }  // ❌ trailing lambda in an assignment RHS
 ```
 
 **Restrictions:**
@@ -554,21 +626,25 @@ Trailing lambdas have compile-time restrictions that keep them unambiguous and s
    the expected lambda type returns a value, the trailing form is rejected—use
    an explicit lambda instead:
 
-```doof
+```doof reject body
+items := [1, 2, 3]
+
 // OK — none callback
 items.forEach() { println(it) }
 
 // ERROR — value-returning callback; use explicit lambda
-items.map() { it * 2 }           // ✗ compile error
+items.map() { it * 2 }           // ❌ compile error
 items.map(=> it * 2)             // ✓ explicit parameterless lambda
 items.map((it) => it * 2)        // ✓ explicit lambda with params
 ```
 
 2. **No return statements:** `return` is forbidden inside trailing lambda bodies, whether bare or with a value:
 
-```doof
+```doof reject body
+items := [1, 2, 3]
+
 // ERROR — return inside trailing lambda
-items.forEach() { return }       // ✗ compile error
+items.forEach() { return }       // ❌ compile error
 
 // OK — return inside a regular lambda nested within
 items.forEach() {
@@ -579,9 +655,11 @@ items.forEach() {
 
 3. **No chaining:** Method or property chaining off a trailing lambda call is forbidden:
 
-```doof
+```doof reject body
+items := [1, 2, 3]
+
 // ERROR — chaining after trailing lambda
-items.filter() { println(it) }.map(=> it * 2)  // ✗ compile error
+items.filter() { println(it) }.map(=> it * 2)  // ❌ compile error
 
 // OK — use explicit lambdas for chaining
 items.filter((it) => it > 0).map(=> it * 2)
@@ -594,12 +672,17 @@ items.filter((it) => it > 0).map(=> it * 2)
 - Parentheses `()` are always required before the trailing block.
 - The opening `{` must be on the **same line** as the closing `)` to avoid ambiguity with destructuring and other `{`-starting constructs on the following line:
 
-```doof
+```doof reject
+class Point { x, y: int }
+
+items := [1, 2, 3]
+point := Point { x: 1, y: 2 }
+
 // Trailing lambda — `{` on same line as `)`
 items.forEach() { println(it) }
 
 // NOT a trailing lambda — `{` on next line starts a new statement
-items.forEach()
+items.forEach()  // ❌ missing the callback argument
 { x, y } := point
 ```
 
@@ -667,7 +750,21 @@ explicitly.
 
 Naming a function or method without calling it produces a function value:
 
-```doof
+```doof check
+class Matrix {
+    value: int
+    static identity(): Matrix => Matrix(1)
+}
+
+class Counter {
+    let total: int = 0
+    next(step: int): int { this.total += step; return this.total }
+}
+
+function double(x: int): int => x * 2
+function apply(f: (x: int): int, x: int): int => f(x)
+
+counter := Counter {}
 f := double                 // module function
 g := Matrix.identity        // static method
 h := counter.next           // bound method: `counter` is evaluated once, now
@@ -684,10 +781,11 @@ strongly while the function value lives.
 A generic function or method used as a value is instantiated from the expected
 function type, which must fix every type parameter:
 
-```doof
+```doof reject
+function apply(f: (x: int): int, x: int): int => f(x)
 function identity<T>(value: T): T => value
 
 apply(identity, 3)                          // T = int from apply's parameter
 let shout: (text: string): string = identity
-f := identity                               // error: no expected function type
+f := identity                               // ❌ error: no expected function type
 ```
