@@ -371,8 +371,10 @@ adjusted to `10`; for `1..<10`, it is already `10`.
 
 Because the exclusive upper bound must itself be an `int`, an inclusive range
 cannot end at the maximum `int`. A `..` range whose upper bound is a constant
-equal to `2147483647` is a compile-time error. Use `..<` with an end below the
-maximum instead: `0..<2147483647` is the same range as `0..2147483646`.
+equal to `2147483647` is a compile-time error, and one whose upper bound reaches
+that value at run time panics when the range is created, before a `for of` over
+it runs its first iteration. Use `..<` with an end below the maximum instead:
+`0..<2147483647` is the same range as `0..2147483646`.
 
 ```doof reject body
 full := 0..2147483647      // ❌ Error: inclusive range cannot end at the maximum int

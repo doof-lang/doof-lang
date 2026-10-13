@@ -213,3 +213,13 @@ export function testAsNarrowsClassInsideNullableInterfaceArm(): none {
   Assert.equal(asNestedShapeArea(AsNestedSquare { s: 4 }), 16)
   Assert.equal(asNestedShapeArea(7), -1)
 }
+
+export function testInclusiveRangeValuesCarryTheirSourceLocation(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function make(limit: int): Range {\nreturn 1..limit }\nfunction open(limit: int): Range => 1..<limit",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::range(1, limit, \"main\", 2)")
+  Assert.stringContains(source, "doof::range_exclusive(1, limit)")
+}

@@ -721,6 +721,17 @@ int main(int argc, char** argv) {
         selfClearing.call();
         require(weak.expired(), "completed callback retained its captures");
     }
+    {
+        const auto below = doof::range(2147483645, 2147483646, "main.do", 3);
+        require(below.upperBound == 2147483647, "inclusive range below the maximum int lost its end");
+        require(doof::inclusive_range_end(5, "main.do", 3) == 5, "inclusive range end changed an ordinary bound");
+        try {
+            (void)doof::range(0, 2147483647, "main.do", 4);
+            fail("inclusive range ending at the maximum int did not panic");
+        } catch (const doof::Panic& panic) {
+            require(panic.message() == "main.do:4: Inclusive range cannot end at the maximum int (2147483647)", "inclusive range panic message changed");
+        }
+    }
     if (argc != 2) {
         fail("expected one test mode");
     }

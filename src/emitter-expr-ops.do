@@ -328,7 +328,8 @@ export function emitBinary(expression: BinaryExpression, context: EmitContext): 
     }
   }
   if expression.operator == ".." {
-    return "doof::range(" + emitExpression(expression.left, context) + ", " + emitExpression(expression.right, context) + ")"
+    sourcePath := quote(moduleDiagnosticPath(context.modulePath, true, context.names))
+    return "doof::range(" + emitExpression(expression.left, context) + ", " + emitExpression(expression.right, context) + ", " + sourcePath + ", " + string(expression.span.start.line) + ")"
   }
   if expression.operator == "..<" {
     return "doof::range_exclusive(" + emitExpression(expression.left, context) + ", " + emitExpression(expression.right, context) + ")"

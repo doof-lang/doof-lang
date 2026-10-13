@@ -563,14 +563,11 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
           body + ind + "}\n" + breakTarget
       }
       if range.operator == ".." {
-        // A 64-bit counter lets an inclusive range end at the maximum int
-        // without overflowing past it.
-        counter := "_range_index_" + string(loopId)
-        binding := if statement.bindings.length == 0 || statement.bindings[0] == "_"
-          then ""
-          else indent(level + 1) + "const int32_t " + name + " = static_cast<int32_t>(" + counter + ");\n"
-        return ind + "for (int64_t " + counter + " = " + lower + ", " + end + " = " + upper + "; " + counter + " <= " + end + "; ++" + counter + ") {\n" +
-          binding + body + ind + "}\n" + breakTarget
+        // An end at the maximum int panics, as it does for a Range value, so
+        // the counter cannot overflow past it.
+        checkedEnd := "doof::inclusive_range_end(" + upper + ", " + quote(context.modulePath) + ", " + string(range.span.start.line) + ")"
+        return ind + "for (int32_t " + name + " = " + lower + ", " + end + " = " + checkedEnd + "; " + name + " <= " + end + "; ++" + name + ") {\n" +
+          body + ind + "}\n" + breakTarget
       }
     }
     _ -> { }

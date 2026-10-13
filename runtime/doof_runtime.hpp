@@ -2619,8 +2619,18 @@ struct Range {
     }
 };
 
-inline Range range(int32_t start, int32_t end) {
-    return Range{start, end + 1};
+// The exclusive upper bound of an inclusive range ending at the maximum int
+// would overflow. The checker rejects a constant end there; this catches the
+// rest at run time, both for Range values and for inline for-of loops.
+inline int32_t inclusive_range_end(int32_t end, const char* file, int32_t line) {
+    if (end == std::numeric_limits<int32_t>::max()) {
+        panic_at(file, line, "Inclusive range cannot end at the maximum int (" + std::to_string(end) + ")");
+    }
+    return end;
+}
+
+inline Range range(int32_t start, int32_t end, const char* file, int32_t line) {
+    return Range{start, inclusive_range_end(end, file, line) + 1};
 }
 
 inline Range range_exclusive(int32_t start, int32_t end) {
