@@ -94,10 +94,10 @@ summary HTML, and annotated per-file HTML output.
   code: `doof check` must fail, every code line containing ❌ must report an
   error, and no other line may. A comment-only line with ❌ is a heading.
   A checked file with top-level statements is a native entry script, so
-  examples may run statements directly. Plain ` ```doof `
-  fences are not checked; keep them for signature outlines and multi-file
-  examples. Make new examples complete so they can use one of the checked
-  forms.
+  examples may run statements directly. Plain ` ```doof ` fences are not
+  checked; keep them for signature outlines (bodiless members) and examples
+  that need a package manifest. Make every other example complete so it can
+  use one of the checked forms.
 
 Focused semantic tests belong beside their source module. Native
 representation, runtime, resource, package, and Apple-platform behavior belongs

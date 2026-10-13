@@ -34,11 +34,14 @@ reverse is not true: no inhabited value is assignable to `never`. Union and
 join normalization removes bottom members, so `T | never` is `T`; a union
 containing only `never` remains `never`.
 
-```doof
+```doof check
 function fail(message: string): never => panic(message)
 
-value: int := if ready then 42 else fail("not ready")
 type Value = string | never // string
+
+ready := true
+value: int := if ready then 42 else fail("not ready")
+println(value)
 ```
 
 `never` may appear in compound types such as `Result<never, E>`, but it is not
@@ -129,7 +132,7 @@ base64 JSON string.
 
 ### Numeric Literals
 
-```doof
+```doof check body
 let a = 42       // int (default for integer literals)
 let b = 42L      // long (explicit suffix)
 let c = 3.14     // double (default for decimal literals)
@@ -141,7 +144,7 @@ let h = 1e-10    // an exponent alone also makes a double
 let i = 2.5e3f   // float with an exponent
 
 // Context can influence literal interpretation
-let b: byte = 42    // Literal interpreted as byte
+let small: byte = 42    // Literal interpreted as byte
 let x: long = 42    // Literal interpreted as long
 let y: float = 3.14 // Literal interpreted as float
 ```
@@ -164,9 +167,9 @@ Hexadecimal and binary literals have no exponent; `e` is a hex digit there.
 
 Numeric types can be implicitly widened to larger types. Narrowing requires explicit conversion.
 
-```doof
+```doof reject body
 let b: byte = 42
-let i: int = b       // ✅ Implicit widening byte → int
+let fromByte: int = b       // ✅ Implicit widening byte → int
 
 let i: int = 42
 let l: long = i      // ✅ Implicit widening int → long
@@ -178,13 +181,13 @@ let bd: double = b   // ✅ Implicit widening byte → double
 let f: float = 3.14f
 let fd: double = f   // ✅ Implicit widening float → double
 
-let l: long = 1000L
-let i: int = l       // ❌ Error: potential data loss
+let big: long = 1000L
+let narrowed: int = big       // ❌ Error: potential data loss
 
-let i: int = 255
-let b: byte = i      // ❌ Error: potential data loss
+let wide: int = 255
+let tiny: byte = wide      // ❌ Error: potential data loss
 
-let f: float = i     // ❌ Error: int values above 2^24 lose precision
+let imprecise: float = wide     // ❌ Error: int values above 2^24 lose precision
 ```
 
 **Rationale:** Widening is always safe (no precision/range loss), while narrowing can lose data and should be explicit.
@@ -195,9 +198,9 @@ remains explicit because 64-bit integers can lose precision.
 
 To convert between numeric types explicitly, use function-call syntax with the type name:
 
-```doof
+```doof check body
 let x: int = 42
-let b: byte = byte(x)       // int → byte
+let small: byte = byte(x)       // int → byte
 let f: float = float(x)      // int → float (explicit cast)
 let d: double = double(x)    // int → double
 let n: int = int(3.14)       // double → int (truncates)
@@ -228,13 +231,14 @@ let ratio: string = string(3.5)
 
 Fallible string parsing is provided by `std/parse`:
 
-```doof
+```doof check
 import { parseByte, parseDouble, parseInt, parseLong } from "std/parse"
 
 count := parseInt("42")                // Result<int, ParsingError>
 channel := parseByte("255")            // Result<byte, ParsingError>
 total := parseLong("9007199254740991") // Result<long, ParsingError>
 ratio := parseDouble("3.14159")        // Result<double, ParsingError>
+println(count == Success(42))
 ```
 
 The package also exports `parseBool` and `parseFloat`. Numeric parse functions
@@ -375,7 +379,13 @@ actually `none` or the Result is a `Failure`, the program panics.
 
 Applying `!` to a value that is neither nullable nor a `Result` is a compile error.
 
-```doof
+```doof check
+import { ParsingError, parseInt } from "std/parse"
+
+class Node { value: int; next: Node | none = none }
+
+function greet(name: string): none { println("Hello, " + name) }
+
 name: string | none := "Alice"
 println(name!)                  // ✅ Asserts presence, type is string
 greet(name!)                    // ✅ Works in function argument position
@@ -383,7 +393,8 @@ greet(name!)                    // ✅ Works in function argument position
 parsed: Result<int, ParsingError> := parseInt("12")
 println(parsed! + 2)            // ✅ Unwraps Success, type is int
 
-node.next!.value                // ✅ Alternative: !. force-unwrap member access
+node := Node { value: 1, next: Node { value: 2 } }
+println(node.next!.value)       // ✅ Alternative: !. force-unwrap member access
 ```
 
 ---
@@ -404,10 +415,11 @@ present type of an optional. Terminating (`never`) paths contribute no value.
 Use an explicit binding, parameter, return, or contextual lambda return type
 when distinct alternatives are intentional:
 
-```doof
+```doof reject body
+ready := true
 optional := if ready then 1 else none             // int | none
 value: int | string := if ready then 1 else "one"
-bad := if ready then 1 else "one"                 // annotation required
+bad := if ready then 1 else "one"                 // ❌ annotation required
 ```
 
 Every path must fit an explicit expected type; an annotation does not allow an
@@ -419,7 +431,9 @@ success path. The same rules apply inside expression-bodied lambdas.
 
 ### Basic Inference Rules
 
-```doof
+```doof reject
+class Point { x, y: float }
+
 // ✅ Type inferred from initialiser
 let x = 42                        // int
 let y = 3.14                      // double
@@ -429,21 +443,23 @@ scores: Map := { "Alice": 100 }   // Map<string, int>
 unique: Set := [1, 2, 3]          // Set<int>
 
 // An empty array literal needs an expected type (annotation, parameter, return type, field)
-let empty = []                    // Error: cannot infer element type
+let empty = []                    // ❌ Error: cannot infer element type
 let nums: int[] = []              // ✅ Explicit annotation
-m: Map := {}                      // Error: empty map needs full annotation
-s: Set := []                      // Error: empty set needs full annotation
+m: Map := {}                      // ❌ Error: empty map needs full annotation
+s: Set := []                      // ❌ Error: empty set needs full annotation
 
 // `none` initializers infer the none type; annotate optional intent explicitly
 let maybe = none
-let x: int | none = none          // ✅ Explicit annotation
+let z: int | none = none          // ✅ Explicit annotation
 ```
 
 ### Bidirectional Flow
 
 Type information flows **both directions** in a single step:
 
-```doof
+```doof reject
+class Point { x, y: float }
+
 // Top-down: expected type known from context
 function process(items: int[]): none { }
 process([1, 2, 3])  // Literal infers int[] from parameter type
@@ -471,15 +487,18 @@ and literal-valued fields must be supplied for structural construction. The
 selected member then provides contextual types for property values, including
 nested object literals:
 
-```doof
+```doof check
 class Animal { name: string }
 class Question { text: string; yes: Knowledge; no: Knowledge }
 type Knowledge = Animal | Question
 
-let knowledge: Knowledge = {
-    text: "Does it swim",
-    yes: { name: "fish" },
-    no: { name: "bird" }
+function start(): Knowledge {
+    let knowledge: Knowledge = {
+        text: "Does it swim",
+        yes: { name: "fish" },
+        no: { name: "bird" }
+    }
+    return knowledge
 }
 ```
 
@@ -493,7 +512,7 @@ precedence over nominal union inference.
 
 When an expected type is known from context, numeric literals are interpreted as that type even when the default would differ:
 
-```doof
+```doof check
 class Point { x, y: float }
 
 // Without context: 0.0 is double, 42 is int
@@ -502,7 +521,7 @@ let i = 42    // int
 
 // With context: literals narrow to the expected type
 let p = Point(0.0, 0.0)        // 0.0 interpreted as float (from field type)
-p := Point { x: 0.0, y: 0.0 }  // Same — float context from field type
+q := Point { x: 0.0, y: 0.0 }  // Same — float context from field type
 x: float := 3.14               // 3.14 interpreted as float
 
 // Integer literals also narrow contextually
@@ -519,14 +538,14 @@ f: float := 1                  // 1 interpreted as float
 
 Expected types propagate through collection literals and method calls:
 
-```doof
+```doof check
 class Point { x, y: float }
 
 // Expected type flows into array elements
 points: Point[] := [{ x: 1.0, y: 2.0 }, { x: 3.0, y: 4.0 }]
 
 // Also works with positional syntax
-points: Point[] := [(1.0, 2.0), (3.0, 4.0)]
+pairs: Point[] := [(1.0, 2.0), (3.0, 4.0)]
 
 // And through function arguments
 function process(points: Point[]): none { }
@@ -546,7 +565,7 @@ hasTwo := nums.contains(2)      // true
 
 Binding keywords influence type inference and mutability:
 
-```doof
+```doof reject body
 // := provides shallow immutability - mutable collection type
 items := [1, 2, 3]        // int[] (mutable array, immutable binding)
 items.push(4)             // ✅ OK - array is mutable
@@ -572,17 +591,17 @@ explicit: int[] := [1, 2, 3]     // int[] (explicit overrides)
 
 ### Omitted Function Return Types
 
-```doof
+```doof reject
 // Value-producing functions declare their return type
 function double(x: int): int => x * 2
 
 // Unannotated named functions default to none, so value returns are invalid
 function choose(flag: bool) {
     if flag {
-        return 1
+        return 1  // ❌ Error: value return is not assignable to none
     }
-    return "hello"
-}  // ❌ Error: value return is not assignable to none
+    return "hello"  // ❌
+}
 
 function clarified(flag: bool): int | string {
     if flag {
@@ -598,7 +617,7 @@ function clarified(flag: bool): int | string {
 
 Doof has **no implicit absence** — nullability is explicit via union types:
 
-```doof
+```doof reject body
 let x: int = none        // ❌ Error: int is not nullable
 let y: int | none = none  // ✅ Explicit nullable type
 ```
@@ -607,7 +626,7 @@ let y: int | none = none  // ✅ Explicit nullable type
 
 These concepts are orthogonal:
 
-```doof
+```doof reject
 class User {
     name: string                   // Required and always present
     email: string | none           // Required, nullable
@@ -622,7 +641,7 @@ let u4 = User { name: "Alice", email: none, nickname: "Ali" }  // ✅
 
 ### Absence Safety
 
-```doof
+```doof reject
 function getLength(s: string | none): int {
     return s.length  // ❌ Error: s might be none
 }
@@ -646,7 +665,7 @@ function safeLengthV2(s: string | none): int {
 
 Union types express "one of several types":
 
-```doof
+```doof reject
 type Value = int | string | bool
 type Optional<T> = T | none
 
@@ -686,18 +705,18 @@ function routeKey(request: HttpRequest): string {
 
 Use literal-valued fields to create discriminated unions:
 
-```doof
-class Success {
-    kind: "Success"
+```doof check
+class Loaded {
+    kind: "Loaded"
     value: int
 }
 
-class Failure {
-    kind: "Failure"
+class Missing {
+    kind: "Missing"
     error: string
 }
 
-type Result = Success | Failure
+type Lookup = Loaded | Missing
 ```
 
 The language's intrinsic error arms use the same ordinary union model:
@@ -770,23 +789,32 @@ enum LogLevel {
 
 ### Accessing Enum Values
 
-```doof
+```doof check
+enum Direction { North, South, East, West }
+enum HttpStatus { OK = 200, Created, Accepted, NoContent = 204 }
+enum LogLevel { Debug = "DEBUG", Info = "INFO", Warn = "WARN", Error = "ERROR" }
+
 let dir = Direction.North       // Direction
 let status = HttpStatus.OK      // HttpStatus
 let level = LogLevel.Debug      // LogLevel
+println(dir)
 ```
 
 Every enum provides this intrinsic API:
 
-```doof
-direction.name                 // string: "North"
-direction.value                // int or string, matching the enum backing kind
-direction.toSerialValue()        // SerialValue containing direction.value
+```doof check
+enum Direction { North, South, East, West }
 
-Direction.values()             // readonly Direction[], declaration order
-Direction.fromName("North")    // Direction | none
-Direction.fromValue(1)         // Direction | none
-Direction.fromSerialValue(1)     // Result<Direction, string>
+direction := Direction.North
+name := direction.name                 // string: "North"
+value := direction.value               // int or string, matching the enum backing kind
+serial := direction.toSerialValue()    // SerialValue containing direction.value
+
+all := Direction.values()              // readonly Direction[], declaration order
+byName := Direction.fromName("North")  // Direction | none
+byValue := Direction.fromValue(1)      // Direction | none
+decoded := Direction.fromSerialValue(1)  // Result<Direction, string>
+println(name)
 ```
 
 Names and backing values must each be unique. Integer enums may mix implicit
@@ -814,11 +842,14 @@ a native contract violation and panics when its name or value mapping is used.
 
 When the target type is known from context, enum variants can be referenced with **dot-shorthand** — a leading `.` without the enum name:
 
-```doof
+```doof check
+enum Direction { North, South, East, West }
+enum LogLevel { Debug = "DEBUG", Info = "INFO", Warn = "WARN", Error = "ERROR" }
+
 let c: Direction = .East          // Direction.East
 let level: LogLevel = .Warn       // LogLevel.Warn
 
-function move(dir: Direction): none { ... }
+function move(dir: Direction): none { println(dir) }
 move(.North)                      // Direction.North
 
 function getLevel(): LogLevel {
@@ -834,7 +865,13 @@ Shorthand works anywhere the compiler can infer the enum type from context:
 - Parameter defaults and field defaults
 - Case arms matching on an enum value
 
-```doof
+```doof check
+enum Direction { North, South, East, West }
+function moveUp(): none { println("up") }
+function moveDown(): none { println("down") }
+function moveRight(): none { println("right") }
+function moveLeft(): none { println("left") }
+
 // Shorthand in case expressions
 direction: Direction := .North
 
@@ -858,14 +895,19 @@ case direction {
 
 All enums have a `.name` property returning the variant's declared name as a string:
 
-```doof
+```doof check
+enum Direction { North, South, East, West }
+
 let d = Direction.North
 println(d.name)  // "North"
 ```
 
 Integer-valued and string-valued enums additionally have a `.value` property:
 
-```doof
+```doof check
+enum HttpStatus { OK = 200, Created, Accepted, NoContent = 204 }
+enum LogLevel { Debug = "DEBUG", Info = "INFO", Warn = "WARN", Error = "ERROR" }
+
 let s = HttpStatus.OK
 println(s.name)   // "OK"
 println(s.value)  // 200
@@ -877,22 +919,29 @@ println(l.value)  // "DEBUG"
 
 ### Enum Utility Methods
 
-```doof
+```doof check
+enum Direction { North, South, East, West }
+enum HttpStatus { OK = 200, Created, Accepted, NoContent = 204 }
+
 // Get all variants
-Direction.values()   // readonly Direction[] — all variants in declaration order
+all := Direction.values()   // readonly Direction[] — all variants in declaration order
 
 // Convert from name
-Direction.fromName("North")   // Direction | none
+north := Direction.fromName("North")   // Direction | none
 
 // Convert from value (integer enums)
-HttpStatus.fromValue(200)     // HttpStatus | none
+ok := HttpStatus.fromValue(200)     // HttpStatus | none
+println(all.length)
 ```
 
 ### Enum Equality and Comparison
 
 Enum values support equality comparison. Integer-valued enums also support ordering:
 
-```doof
+```doof check
+enum Direction { North, South, East, West }
+enum HttpStatus { OK = 200, Created, Accepted, NoContent = 204 }
+
 let a = Direction.North
 let b = Direction.North
 a == b  // true
@@ -906,7 +955,7 @@ HttpStatus.OK < HttpStatus.NoContent  // true (200 < 204)
 
 Enum values can be used as literal-valued fields to discriminate unions, providing a type-safe alternative to string-based discriminator fields:
 
-```doof
+```doof check
 enum ShapeKind { Circle, Rectangle, Triangle }
 
 class CircleShape {
@@ -927,7 +976,10 @@ class TriangleShape {
 type Shape = CircleShape | RectangleShape | TriangleShape
 
 // Structural construction using enum discriminator
-let s: Shape = { kind: .Circle, radius: 5.0 }  // Constructs CircleShape
+function unitCircle(): Shape {
+    let s: Shape = { kind: .Circle, radius: 5.0 }  // Constructs CircleShape
+    return s
+}
 ```
 
 This provides stronger type safety than string-based discrimination — misspelled variant names are compile-time errors rather than silent bugs.
@@ -963,7 +1015,7 @@ type Message = TextMessage | ImageMessage
 
 Classes and structs define **nominal types** — two declarations with identical structure are distinct types. Classes are reference types; structs are value types.
 
-```doof
+```doof reject
 class Point {
     readonly x: float
     readonly y: float
@@ -975,7 +1027,7 @@ class Vector {
 }
 
 let p: Point = Vector { x: 1.0, y: 2.0 }  // ❌ Error: type mismatch
-let p: Point = Point { x: 1.0, y: 2.0 }   // ✅ OK
+let q: Point = Point { x: 1.0, y: 2.0 }   // ✅ OK
 ```
 
 ---
@@ -1016,7 +1068,12 @@ distance(p, v)  // ✅ Both structurally compatible
 
 Classes can optionally declare interface implementation for validation:
 
-```doof
+```doof reject
+interface Thing2D {
+    readonly x: float
+    readonly y: float
+}
+
 class Point implements Thing2D {
     readonly x: float
     readonly y: float
@@ -1041,14 +1098,17 @@ field-slot assignment.
 
 ### Type Construction with Interfaces
 
-```doof
+```doof reject
 interface Positioned {
     readonly x: float
     readonly y: float
 }
 
-// ❌ Ambiguous — multiple classes match
-let p: Positioned = { x: 1.0, y: 2.0 }  // Error: multiple candidates
+class Point { readonly x: float; readonly y: float }
+class Vector { readonly x: float; readonly y: float }
+
+// Ambiguous — multiple classes match
+let ambiguous: Positioned = { x: 1.0, y: 2.0 }  // ❌ Error: multiple candidates
 
 // ✅ Must use explicit constructor
 let p: Positioned = Point { x: 1.0, y: 2.0 }
@@ -1094,7 +1154,11 @@ inside union members. Alias expansion must terminate; direct and indirect cyclic
 aliases are errors. The same type-argument arity rules apply to forward and
 recursive function signatures as to other annotation sites:
 
-```doof
+```doof check
+class Message<T> { payload: T }
+class Ready<T> { value: T }
+class Closed<T> { reason: string; last: T | none = none }
+
 type Event<T> = Message<T> | Ready<T> | Closed<T>
 ```
 
@@ -1108,7 +1172,7 @@ type Event<T> = Message<T> | Ready<T> | Closed<T>
 | `ReadonlySet<T>` | — | Immutable set |
 | `Tuple<T1, T2, ...>` | — | Fixed-size heterogeneous tuple |
 
-```doof
+```doof reject body
 let nums: int[] = [1, 2, 3]
 let matrix: int[][] = [[1, 2], [3, 4]]
 
@@ -1161,9 +1225,12 @@ interface Reader<T> {
 Calls may supply every type argument explicitly or omit the complete argument
 list and use inference:
 
-```doof
+```doof check
+function identity<T>(value: T): T => value
+
 explicit := identity<int>(1)
 inferred := identity(1)
+println(explicit + inferred)
 ```
 
 Partial explicit argument lists are not supported. Inference structurally
@@ -1290,18 +1357,21 @@ Maps use `{ key: value }` literal syntax within `{ }`. Empty braces `{}` produce
 
 When the annotation omits type arguments entirely, non-empty homogeneous literals can supply both type arguments:
 
-```doof
+```doof check
 scores: Map := { "Alice": 100, "Bob": 95 }        // Map<string, int>
-scores: ReadonlyMap := { "Alice": 100 }            // ReadonlyMap<string, int>
-let scores: readonly Map<string, int> = { "Alice": 100 } // Same as ReadonlyMap<string, int>
-let scores: Map<string, int> = { "Alice": 100 }        // Also valid
+frozen: ReadonlyMap := { "Alice": 100 }            // ReadonlyMap<string, int>
+let view: readonly Map<string, int> = { "Alice": 100 } // Same as ReadonlyMap<string, int>
+let explicit: Map<string, int> = { "Alice": 100 }      // Also valid
 ```
 
 Both map type arguments must be omitted together. Partial annotations such as `Map<string>` and `ReadonlyMap<string>` are compile errors.
 
 Supported key types are `string`, `int`, `long`, `char`, `bool`, and enum types. In practice, the common supported forms are string keys, integer keys, long keys, and enum keys.
 
-```doof
+```doof reject
+enum Suit { Spades, Hearts, Diamonds, Clubs }
+enum Color { Red, Green, Blue }
+
 // Integer keys
 let m: Map<int, string> = { 1: "one", 2: "two" }
 
@@ -1312,16 +1382,14 @@ let ids: Map<long, string> = { 1L: "one", 2L: "two" }
 let scores: Map<string, int> = { "Alice": 100, "Bob": 95 }
 
 // Dot-shorthand syntax (enum keys with type inference)
-enum Suit { Spades, Hearts, Diamonds, Clubs }
 let piles: Map<Suit, int> = { .Spades: 0, .Hearts: 0, .Diamonds: 0, .Clubs: 0 }
 
 // Explicit enum access also works in map initializers
-enum Color { Red, Green, Blue }
 let labels: Map<Color, string> = { Color.Red: "Red", Color.Green: "Green" }
 
 // Empty map
 let empty: Map<int, string> = {}
-m: Map := {}                     // Error: cannot infer K and V from an empty map
+unknown: Map := {}               // ❌ Error: cannot infer K and V from an empty map
 ```
 
 The same key restrictions apply in all map initialization contexts, including declaration initializers, return-context literals, argument-context literals, parameter defaults, and field defaults.
@@ -1340,46 +1408,47 @@ let counts: Map<long, int> = { 1: 10, 2: 20 }
 
 Floating-point keys are rejected even though they parse, to avoid surprising hash/equality behavior around exact comparison and `NaN` values.
 
-```doof
-let bad: Map<float, int> = {}          // Error
-let alsoBad = { 1.5: "value" }       // Error
+```doof reject
+let bad: Map<float, int> = {}          // ❌ Error
+let alsoBad = { 1.5: "value" }       // ❌ Error
 ```
 
 Tuple, class-instance, and other non-scalar key types are also rejected.
 
-```doof
-let badTuple: Map<Tuple<int, string>, int> = {}  // Error
-
+```doof reject
 class Point { x: int }
-let badPoint: Map<Point, int> = {}               // Error
+
+let badTuple: Map<Tuple<int, string>, int> = {}  // ❌ Error
+let badPoint: Map<Point, int> = {}               // ❌ Error
 ```
 
 ### Set Type
 
 `Set<T>` is an intrinsic generic type for unique values with insertion-order iteration. When a `Set<T>` is expected, array literal syntax initializes the set and duplicate values are coalesced by the runtime representation.
 
-```doof
+```doof check
 enum Color { Red, Blue }
 
 let unique: Set<int> = [1, 2, 3, 2, 1]
 let empty: Set<string> = []
 let palette: Set<Color> = [Color.Red, Color.Blue, Color.Red]
 let ids: Set<long> = [1, 2, 3]  // int literals widen to long in Set<long> context
-unique: Set := [1, 2, 3]        // Set<int>
+inferred: Set := [1, 2, 3]      // Set<int>
 frozen: ReadonlySet := [1, 2, 3] // ReadonlySet<int>
 view: readonly Set := [1, 2, 3]  // ReadonlySet<int>; immutable binding
 let replaceable: readonly Set = [1, 2, 3] // ReadonlySet<int>; reassignable binding
 readonly deep: Set = [1, 2, 3]   // ReadonlySet<int>; deep readonly binding
 let frozen2: readonly Set<int> = [1, 2, 3] // Same as ReadonlySet<int>
+println(unique.size)
 ```
 
 When the annotation omits type arguments entirely, the checker may infer `T` only from a same-site non-empty homogeneous literal. Empty literals still require a full annotation:
 
-```doof
+```doof reject
 unique: Set := [1, 2, 3]          // Set<int>
 frozen: ReadonlySet := [1, 2, 3]  // ReadonlySet<int>
-let unique: Set<int> = [1, 2, 3]  // Also valid
-empty: Set := []                  // Error
+let explicit: Set<int> = [1, 2, 3]  // Also valid
+empty: Set := []                  // ❌ Error
 ```
 
 Binding mutability and collection mutability are independent. `:=` prevents
@@ -1500,13 +1569,16 @@ println(vec._3)    // 3.0
 
 Tuples use positional literal syntax — the same `(value, ...)` form used for class positional construction:
 
-```doof
+```doof check
+class Point { x, y: float }
+
 // When target type is known, constructs that type
 let p: Point = (1.0, 2.0)                  // Constructs Point (not a Tuple)
 let t: Tuple<float, float> = (1.0f, 2.0f)  // Constructs Tuple
 
 // When target type is unknown, infers Tuple
 result := (200, "OK")                      // Tuple<int, string>
+println(result._2)
 ```
 
 #### Tuple Destructuring
@@ -1598,7 +1670,12 @@ compatibility: parameters are matched by position and type. Thus
 
 Doof distinguishes between collection-level readonly types and deep immutability on `readonly` bindings and fields:
 
-```doof
+```doof reject
+class MutablePoint {
+    let x: float
+    let y: float
+}
+
 // := : Shallow immutability (immutable binding, mutable content)
 data := [1, 2, 3]              // int[] - binding immutable, content mutable
 data.push(4)                   // ✅ OK - array is mutable
@@ -1610,12 +1687,7 @@ frozen.push(4)                 // ❌ Error - array is readonly
 frozen = [5, 6]                // ❌ Error - binding is immutable
 
 // Collection modifier / type: readonly collection only
-data := readonly [1, 2, 3]     // readonly int[] - readonly collection surface
-
-class MutablePoint {
-    let x: float
-    let y: float
-}
+view := readonly [1, 2, 3]     // readonly int[] - readonly collection surface
 
 let points: readonly MutablePoint[] = readonly [MutablePoint { x: 1.0, y: 2.0 }]  // ✅ OK
 points[0].x = 2.0      // ✅ OK - element objects can still be mutable
@@ -1641,7 +1713,7 @@ Arrays are written only as `T[]` and `readonly T[]`. There are no `Array<T>` or 
 
 ### Readonly Classes
 
-```doof
+```doof reject
 // Readonly-compatible class
 class ImmutablePoint {
     x: float
@@ -1662,7 +1734,12 @@ readonly p2 = MutablePoint { x: 1.0, y: 2.0 }    // ❌ Error: class has mutable
 
 Readonly classes must contain only readonly-compatible types:
 
-```doof
+```doof reject
+class MutablePoint {
+    let x: float
+    let y: float
+}
+
 class Container {
     readonly items: int[]           // ✅ OK - implied as readonly int[]
     readonly count: int             // ✅ OK
@@ -1679,7 +1756,7 @@ class BadPoints {
 
 ### Bindings vs Fields vs Values
 
-```doof
+```doof reject
 class Container {
     readonly items: int[]           // field surface is treated as readonly int[]
     let count: int                  // mutable field
@@ -1690,17 +1767,15 @@ c1 := Container { items: [1, 2, 3], count: 3 }
 c1.items = [4, 5]       // ❌ Error: readonly field
 c1.items.push(4)        // ❌ Error: readonly array
 c1.count = 4            // ✅ OK: mutable field
-c1 = Container { ... }  // ❌ Error: immutable binding (:=)
+c1 = Container { items: [], count: 0 }  // ❌ Error: immutable binding (:=)
 
 // Mutable binding with same object
 let c2 = Container { items: [1, 2, 3], count: 3 }
 c2.count = 4            // ✅ OK: mutable field
-c2 = Container { ... }  // ✅ OK: mutable binding
+c2 = Container { items: [], count: 0 }  // ✅ OK: mutable binding
 
 // Deep readonly binding makes everything readonly
-readonly c3 = Container { items: [1, 2, 3], count: 3 }
-c3.count = 4            // ❌ Error: readonly binding
-c3 = Container { ... }  // ❌ Error: can't reassign readonly
+readonly c3 = Container { items: [1, 2, 3], count: 3 }  // ❌ Error: count is mutable
 ```
 
 ---
@@ -1722,7 +1797,10 @@ class TreeNode {
 
 In union types, `weak` qualifies the whole reference — `weak Foo | Bar` means a weak reference to a value of type `Foo | Bar`, not `(weak Foo) | Bar`:
 
-```doof
+```doof check
+class Widget { name: string }
+class Panel { title: string }
+
 class Observer {
     target: weak Widget | Panel  // weak (Widget | Panel)
 }
@@ -1762,9 +1840,11 @@ A `case` subject that stores `weak T` reads it once as
 case; `Failure` reports expiration. For `weak (T | none)`, an absent reference
 is `Success(none)`, while an expired non-absent reference is `Failure`.
 
-```doof
+```doof check
 class Node {
     backEdge: weak Node | none
+
+    visit(): none { println("visited") }
     
     visitParent(): none {
         backEdge?.visit()   // No-op if reference was cleared
@@ -1817,7 +1897,9 @@ Use explicit narrowing forms instead:
 - `case` to discriminate unions and enums
 - `expr as T` for checked runtime narrowing
 
-```doof
+```doof check body
+function getValue(): int | none => 42
+
 value: int | none := getValue()
 
 if value == none {
@@ -1833,23 +1915,23 @@ Use an explicit narrowing form to access a union member or unwrap a nullable or 
 
 #### `case` with Type Capture
 
-```doof
-class Success {
-    kind: "Success"
+```doof check
+class Loaded {
+    kind: "Loaded"
     value: int
 }
 
-class Failure {
-    kind: "Failure"
+class Missing {
+    kind: "Missing"
     error: string
 }
 
-type Result = Success | Failure
+type Lookup = Loaded | Missing
 
-function handle(r: Result): none {
+function handle(r: Lookup): none {
     case r {
-        s: Success -> println(s.value)
-        f: Failure -> println(f.error)
+        s: Loaded -> println(s.value)
+        f: Missing -> println(f.error)
     }
 }
 
@@ -1910,7 +1992,11 @@ small := numeric as int              // Result<int, string>
 
 Use `expr!` when you want an assertion rather than a typed failure path:
 
-```doof
+```doof check
+import { ParsingError, parseInt } from "std/parse"
+
+function maybeName(): string | none => "Ada"
+
 name: string | none := maybeName()
 println(name!)  // panics at runtime if name is none
 

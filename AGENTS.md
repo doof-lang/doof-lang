@@ -20,8 +20,9 @@ code is Doof source under `src/`; generated release snapshots are derived artifa
 - Update `spec/` and the Doof language skill when syntax or semantics change.
   Open complete, valid single-file spec examples with ` ```doof check ` (or
   ` ```doof check body ` for self-contained statements), and invalid ones with
-  ` ```doof reject `, marking each erroneous line with ❌, so the test suite
-  checks them.
+  ` ```doof reject `, marking each erroneous line with ❌. Name files that
+  import one another, as in ` ```doof check math.do `. The test suite checks
+  every such fence.
 - Pin new rejected programs in `tests/analyzer-false-negatives/` with
   `// expect-error: <line>:<column> <message>` comments.
 - Update architecture/source-structure docs when ownership or lowering changes.

@@ -23,7 +23,7 @@ class User {
 
 Field defaults are evaluated at construction time. They can use `@caller` to capture who constructed the instance:
 
-```doof
+```doof check
 class AssertionError {
     message: string
     source: SourceLocation = @caller
@@ -31,6 +31,7 @@ class AssertionError {
 
 err := AssertionError { message: "boom" }
 // err.source points at the construction site above
+println(err.source.line)
 ```
 
 Field defaults may call static class methods. When the field type is a class,
@@ -74,18 +75,18 @@ Literal-valued fields enable discriminated unions and structural typing. A
 literal after the field name's `:` makes the field a compile-time constant
 whose type is the literal's type:
 
-```doof
-class Success {
-    kind: "Success"
+```doof check
+class Loaded {
+    kind: "Loaded"
     value: int
 }
 
-class Failure {
-    kind: "Failure"
+class Missing {
+    kind: "Missing"
     error: string
 }
 
-type Result = Success | Failure
+type Lookup = Loaded | Missing
 ```
 
 The value must be a single non-interpolated string, character, boolean, or
@@ -164,7 +165,7 @@ Static field defaults in declarative modules follow the construction-only
 module initializer rules. They execute explicitly at the class declaration's
 position in module initialization order.
 
-```doof
+```doof check
 class MathUtils {
     static version = "1.0"
 
@@ -183,13 +184,20 @@ class MathUtils {
 
 let result = MathUtils.max(10, 20)  // 20
 let version = MathUtils.version     // "1.0"
+println(result)
 ```
 
 Named class access uses `.`:
 
-```doof
+```doof check
+class MathUtils {
+    static version = "1.0"
+    static max(a: int, b: int): int => if a > b then a else b
+}
+
 let n = MathUtils.max(10, 20)
 let v = MathUtils.version
+println(n)
 ```
 
 In a context whose expected type is a class, `.member` is shorthand for a
@@ -199,7 +207,7 @@ as `Transform.zero`, and `transform: Transform = .identity()` lowers as
 
 #### Static Members and Instance State
 
-```doof
+```doof reject
 class Counter {
     let count = 0
     
@@ -227,7 +235,7 @@ construction syntax delegates to that method. Both positional and named
 construction are validated against `constructor` parameters instead of fields,
 and the construction expression has the constructor method's return type:
 
-```doof
+```doof check
 class Counter {
     count: int
 
@@ -238,9 +246,10 @@ class Counter {
 
 let a = Counter(10)                    // Counter.constructor(10)
 let b = Counter { initial: 10, step: 5 } // Counter.constructor(10, 5)
+println(a.count + b.count)  // 26
 ```
 
-```doof
+```doof check
 class Email {
     private value: string
 
@@ -253,13 +262,14 @@ class Email {
 }
 
 email := Email("a@example.com")! // Email(...) has type Result<Email, string>
+println(email == email)
 ```
 
 Generic classes follow the same rule. The class type arguments may be written
 explicitly or inferred from constructor arguments, including named construction
 and explicit static constructor calls:
 
-```doof
+```doof check
 class Channel<T> {
     handler: (value: T): none
 
@@ -268,9 +278,12 @@ class Channel<T> {
     }
 }
 
+function onString(value: string): none { println(value) }
+
 let a = Channel<string> { handler: onString }
 let b = Channel { handler: onString }
 let c = Channel.constructor{ handler: onString }
+a.handler("ready")
 ```
 
 Inference uses the constructor's parameters, or the fields when there is no
@@ -279,21 +292,33 @@ Inference uses the constructor's parameters, or the fields when there is no
 determined; otherwise construction is an error that asks for explicit type
 arguments:
 
-```doof
+```doof reject
 class Container<T, E> {
     result: Result<T, E>
 }
 
-Container { result: Success { value: 42 } }
-// ❌ Error: Cannot infer type arguments for generic class 'Container'; provide them explicitly as Container<T, E>
-Container<int, string> { result: Success { value: 42 } }   // ✅
+unknown := Container { result: Success { value: 42 } }  // ❌
+// Error: Cannot infer type arguments for generic class 'Container'; provide them explicitly as Container<T, E>
+known := Container<int, string> { result: Success { value: 42 } }   // ✅
+println(known.result.isSuccess())
 ```
 
 A static member of a generic class belongs to one instantiation: each
 instantiation has its own static fields. The instantiation can be written
 explicitly before the member, or inferred from a static call's arguments:
 
-```doof
+```doof reject
+class Channel<T> {
+    handler: (value: T): none
+
+    static tag(): string => "channel"
+    static constructor(handler: (value: T): none): Channel<T> {
+        return Channel<T> { handler }
+    }
+}
+
+function onString(value: string): none { println(value) }
+
 Channel<string>.tag()                  // explicit instantiation
 Channel<string>.constructor(onString)  // explicit instantiation
 Channel.constructor(onString)          // infers Channel<string>
@@ -308,9 +333,15 @@ constructor arguments, so dedicated `constructor` methods, defaults, generic
 inference, fallible return types, and visibility checks behave exactly as they
 do for the other construction spellings:
 
-```doof
+```doof check
+class Channel<T> { handler: (value: T): none }
+class Panel { title: string; children: string[] }
+
+function onString(value: string): none { println(value) }
+
 let d = <Channel handler={onString}/>
 let panel = <Panel title="Status">Ready</Panel>
+println(panel.children[0])
 ```
 
 Paired content supplies a `children` field or constructor parameter as
@@ -350,7 +381,7 @@ Structs lower to direct C++ values:
 
 Because structs are stored inline, a struct cannot contain itself by value, directly or through other structs, `T | none`, unions, tuples, or `Result` arms. Such declarations are rejected; classes, arrays, maps, sets, and callbacks provide the indirection needed for recursive data:
 
-```doof
+```doof reject
 struct Node { next: Node | none }   // ❌ Error: contains itself by value
 struct Tree { children: Tree[] }    // ✅ OK: arrays are references
 ```
@@ -366,7 +397,7 @@ The following class-only features are not available on structs in v1:
 Class statics are accessed through the class name. An instance never reaches
 its class's static members:
 
-```doof
+```doof reject
 class Rectangle {
     width: int
     static kind = "rectangle"
@@ -388,7 +419,7 @@ Interfaces declare instance members only. A class's static members do not take
 part in structural interface matching, so `MyCounter` below satisfies
 `Countable` through `getCount` alone:
 
-```doof
+```doof check
 interface Countable {
     getCount(): int
 }
@@ -400,6 +431,7 @@ class MyCounter {
 }
 
 let c: Countable = MyCounter.zero()  // ✅
+println(c.getCount())
 ```
 
 An interface may also declare **static members**. They never take part in
@@ -455,9 +487,11 @@ Doof uses **file-scoped** access control via the `private` keyword. A private de
 
 #### Private Class Fields
 
-```doof
-class User {
-    private passwordHash: string
+```doof check privacy/user.do
+function hash(input: string): string => "hashed:" + input
+
+export class User {
+    private passwordHash: string = ""
     name: string
 
     checkPassword(input: string): bool {
@@ -468,7 +502,7 @@ class User {
 
 From another file:
 
-```doof
+```doof reject privacy/login.do
 import { User } from "./user"
 u := User { name: "Alice" }
 h := u.passwordHash   // ❌ Error: "passwordHash" is private
@@ -476,8 +510,8 @@ h := u.passwordHash   // ❌ Error: "passwordHash" is private
 
 #### Private Methods
 
-```doof check
-class Parser {
+```doof check privacy/parser.do
+export class Parser {
     source: string
     private advance(): none { /* ... */ }
     parse(): none { this.advance() }   // ✅ same file
@@ -486,7 +520,7 @@ class Parser {
 
 From another file:
 
-```doof
+```doof reject privacy/parse.do
 import { Parser } from "./parser"
 p := Parser { source: "hello" }
 p.advance()   // ❌ Error: "advance" is private
@@ -503,7 +537,7 @@ private class InternalState { x: int }       // file-local
 export function publicApi(): int => helper() // ✅ same file
 ```
 
-```doof
+```doof reject
 export private function foo(): none {}  // ❌ Parse error: cannot export a private declaration
 ```
 
@@ -511,7 +545,7 @@ export private function foo(): none {}  // ❌ Parse error: cannot export a priv
 
 Classes with private fields **that lack default values** cannot be constructed from outside their defining file, because the caller would need to supply values for fields it cannot see:
 
-```doof check
+```doof check privacy/lib.do
 // lib.do
 export class Config {
     private secret: string       // no default → blocks external construction
@@ -523,10 +557,11 @@ export function makeConfig(name: string): Config {
 }
 ```
 
-```doof
+```doof reject privacy/main.do
 // main.do
 import { Config, makeConfig } from "./lib"
 c1 := makeConfig("prod")                     // ✅ use factory
+println(c1.name)
 c2 := Config { secret: "x", name: "test" }   // ❌ cannot construct
 ```
 
@@ -606,7 +641,7 @@ Shadowing rules:
 
 `this` refers to the current instance and can be used as a value — passed as an argument, returned, or stored:
 
-```doof
+```doof check
 class Builder {
     let value = 0
     
@@ -622,13 +657,14 @@ class Builder {
 }
 
 let result = Builder().add(1).add(2).add(3).build()  // 6
+println(result)
 ```
 
 ### `this` in Lambdas
 
 Lambdas capture `this` from their **lexical scope**, just like any other variable. There is no re-binding of `this` — lambdas defined inside a method always refer to the enclosing instance:
 
-```doof
+```doof check
 class Processor {
     items: string[] = []
     
@@ -638,7 +674,7 @@ class Processor {
         newItems.forEach((item) => this.items.push(item)) // ✅ Explicit also works
     }
     
-    getHandler(): (string): none {
+    getHandler(): (item: string): none {
         // Returned lambda still captures this
         return (item) => items.push(item)  // ✅ this.items from Processor
     }
@@ -649,7 +685,7 @@ class Processor {
 
 `this` is **not available** in static methods. Attempting to use it is a compile-time error:
 
-```doof
+```doof reject
 class Registry {
     entries: string[] = []
     
@@ -677,9 +713,11 @@ Doof provides dual syntax options: **named field syntax** and **positional synta
 
 ### Named Field Syntax
 
-```doof
+```doof check
+class Point { x, y, z: float }
+
 let p = Point { x: 1.0, y: 2.0, z: 3.0 }
-let p: Point = { x: 1.0, y: 2.0, z: 3.0 }  // Type-annotated literal
+let q: Point = { x: 1.0, y: 2.0, z: 3.0 }  // Type-annotated literal
 ```
 
 - Self-documenting — field names make intent clear
@@ -688,9 +726,11 @@ let p: Point = { x: 1.0, y: 2.0, z: 3.0 }  // Type-annotated literal
 
 ### Positional Syntax
 
-```doof
+```doof check
+class Point { x, y, z: float }
+
 let p = Point (1.0, 2.0, 3.0)
-let p: Point = (1.0, 2.0, 3.0)  // Type-annotated tuple-like literal
+let q: Point = (1.0, 2.0, 3.0)  // Type-annotated tuple-like literal
 ```
 
 - Concise — minimal syntax overhead
@@ -736,7 +776,7 @@ Positional syntax cannot skip intermediate fields — use named syntax for that.
 The compiler validates constructor arguments at compile time:
 
 **Argument count:**
-```doof
+```doof reject
 class Point { x, y: float }
 
 Point(1.0)              // ❌ Error: expected 2 arguments, got 1
@@ -751,7 +791,7 @@ Config("localhost", 80) // ✅ OK
 ```
 
 **Argument types:**
-```doof
+```doof reject
 class Point { x, y: float }
 
 Point("hello", "world")  // ❌ Error: string is not assignable to float
@@ -759,7 +799,7 @@ Point(1.0, 2.0)          // ✅ OK (contextually narrowed from double to float)
 ```
 
 **Named field validation:**
-```doof
+```doof reject
 class Point { x, y: float }
 
 Point { z: 1.0 }              // ❌ Error: unknown field "z"
@@ -779,26 +819,32 @@ let r2 = Success(42)               // Positional — kind auto-filled
 
 **Structural construction** — literal-valued fields must be specified:
 
-```doof
-let r1: Result = { kind: "Success", value: 42 }
+```doof check
+class Loaded { kind: "Loaded"; value: int }
+class Missing { kind: "Missing"; error: string }
+type Lookup = Loaded | Missing
+
+let r1: Lookup = { kind: "Loaded", value: 42 }
+println(r1.kind)  // Loaded
 ```
 
 Positional literals cannot select a union member; use an object literal or
-explicit construction such as `Success(42)`.
+explicit construction such as `Loaded { value: 42 }`.
 
 ### Nested Initialisation
 
-```doof
+```doof check
+class Point { x, y: float; }
 class Line { start: Point; end: Point; }
 
 // Explicit types
-let line = Line { start: Point { x: 0.0, y: 0.0 }, end: Point { x: 1.0, y: 1.0 } }
+let line1 = Line { start: Point { x: 0.0, y: 0.0 }, end: Point { x: 1.0, y: 1.0 } }
 
 // Type elision — type inferred from context
-let line = Line { start: { x: 0.0, y: 0.0 }, end: { x: 1.0, y: 1.0 } }
+let line2 = Line { start: { x: 0.0, y: 0.0 }, end: { x: 1.0, y: 1.0 } }
 
 // Positional with type elision
-let line = Line ((0.0, 0.0), (1.0, 1.0))
+let line3 = Line ((0.0, 0.0), (1.0, 1.0))
 ```
 
 ### Contextual Sum-Type Initialisation
@@ -806,14 +852,17 @@ let line = Line ((0.0, 0.0), (1.0, 1.0))
 An object literal expected to produce a union of classes or structs may omit
 its nominal type when exactly one member accepts its field shape:
 
-```doof
+```doof check
 class Leaf { value: int }
 class Branch { left: Node; right: Node }
 type Node = Leaf | Branch
 
-let tree: Node = {
-    left: { value: 1 },
-    right: { value: 2 }
+function build(): Node {
+    let tree: Node = {
+        left: { value: 1 },
+        right: { value: 2 }
+    }
+    return tree
 }
 ```
 
@@ -826,7 +875,9 @@ construction.
 
 ### Name-Value Shorthand
 
-```doof
+```doof check
+class Person { name: string; age: int }
+
 readonly name = "Bob"
 readonly age = 25
 
@@ -834,13 +885,17 @@ let p = Person { name, age }  // Equivalent to { name: name, age: age }
 
 // Also works with contextual typing and mixed styles
 p2: Person := { name, age: 30 }
+println(p.name + p2.name)
 ```
 
 Works with named construction, contextual object literals, and can be mixed with explicit field values.
 
 ### Field Spread
 
-```doof
+```doof check
+class BaseConfig { host: string; port: int = 8080 }
+class ExtendedConfig { host: string; port: int = 8080; timeout: int; retries: int }
+
 readonly base = BaseConfig { host: "localhost" }
 let extended = ExtendedConfig { 
     ...base,           // Spreads matching fields
@@ -855,6 +910,7 @@ let extended2 = ExtendedConfig {
     timeout: 30,
     retries: 3
 }
+println(extended2.port)
 ```
 
 Spread sources must be type-compatible — the compiler verifies field types match.
@@ -865,7 +921,9 @@ Spread sources must be type-compatible — the compiler verifies field types mat
 
 Interfaces define structural contracts. In Doof's closed-world model, interfaces are automatically satisfied by any class with matching structure.
 
-```doof
+```doof check
+class Canvas { width: int }
+
 interface Drawable {
     draw(canvas: Canvas): none
 }
@@ -878,14 +936,20 @@ interface Positioned {
 
 ### Automatic Matching
 
-```doof
+```doof check
+class Canvas { width: int }
+interface Drawable { draw(canvas: Canvas): none }
+interface Positioned { readonly x: float; readonly y: float }
+
 class Circle {
     readonly x: float
     readonly y: float
     radius: float
     
-    draw(canvas: Canvas): none { ... }
+    draw(canvas: Canvas): none { println(canvas.width) }
 }
+
+canvas := Canvas { width: 100 }
 
 // Circle automatically satisfies both Drawable and Positioned
 function render(d: Drawable): none { d.draw(canvas); }
@@ -948,13 +1012,17 @@ are specified in [the type system](02-type-system.md#interface-constraints).
 
 ### Optional Explicit Implementation
 
-```doof
+```doof check
+class Canvas { width: int }
+interface Drawable { draw(canvas: Canvas): none }
+interface Positioned { readonly x: float; readonly y: float }
+
 class Circle implements Drawable, Positioned {
     readonly x: float
     readonly y: float
     radius: float
     
-    draw(canvas: Canvas): none { ... }
+    draw(canvas: Canvas): none { println(canvas.width) }
 }
 ```
 
@@ -966,25 +1034,31 @@ Benefits: early error detection, documents intent, validates refactoring compati
 
 Doof uses `${}` syntax for string interpolation:
 
-```doof
+```doof check
 let name = "Alice"
 let age = 30
+let x = 1
+let y = 2
 let message = "Hello, ${name}! You are ${age} years old."
 
 // Values with a defined string representation can be interpolated
 let calc = "Sum: ${x + y}"
 let padded = "Value: ${string(age).padStart(5, '0')}"
+println(message)
 ```
 
 ### Multi-line Strings
 
-```doof
+```doof check
+let name = "Alice"
+let age = 30
 let report = `
     User Report:
     Name: ${name}
     Age: ${age}
     Status: ${if age >= 18 then "Adult" else "Minor"}
 `
+println(report)
 ```
 
 Interpolations are evaluated exactly once, from left to right. Supported values
@@ -1006,12 +1080,14 @@ file.
 
 **No format specifiers** — prepare a string value before interpolation:
 
-```doof
+```doof reject
+let num = 42
+
 // ✅ Convert, then use supported string methods
 let padded = "Value: ${string(num).padStart(5, '0')}"
 
-// ❌ No special syntax
-let hex = "Color: ${255:x}"  // Not supported
+// No special syntax
+let hex = "Color: ${255:x}"  // ❌ Not supported
 ```
 
 ---
@@ -1051,19 +1127,30 @@ Doof uses **reference counting** for memory management with **deterministic dest
 
 Classes can define a `destructor` block that runs deterministically when the last reference is released:
 
-```doof
+```doof check
+enum IOError { NotFound, Denied }
+class Data { text: string }
+
+function closeRawHandle(handle: int): none { println("closed " + string(handle)) }
+function parse(content: string): Data => Data { text: content }
+
 class FileHandle {
     handle: int
     
     destructor {
         closeRawHandle(handle)  // Deterministic cleanup
     }
+
+    read(): Result<string, IOError> => Success("contents")
+    write(data: string): Result<none, IOError> => Success()
 }
+
+function openFile(path: string): Result<FileHandle, IOError> => Success(FileHandle { handle: 3 })
 
 function processFile(path: string): Result<Data, IOError> {
     try file := openFile(path)
     try content := file.read()
-    return { value: parse(content) }
+    return Success(parse(content))
     // file's destructor runs here — last reference goes out of scope
 }
 ```
@@ -1080,7 +1167,18 @@ function processFile(path: string): Result<Data, IOError> {
 
 Because Doof uses reference counting (not garbage collection), destruction is predictable:
 
-```doof
+```doof check
+enum IOError { NotFound, Denied }
+
+class FileHandle {
+    handle: int
+    destructor { println("closed " + string(handle)) }
+    read(): Result<string, IOError> => Success("contents")
+    write(data: string): Result<none, IOError> => Success()
+}
+
+function openFile(path: string): Result<FileHandle, IOError> => Success(FileHandle { handle: 3 })
+
 function transferData(): Result<none, IOError> {
     try src := openFile("input.dat")
     try dst := openFile("output.dat")
@@ -1102,7 +1200,10 @@ To break reference cycles (the primary downside of reference counting), Doof pro
 
 `weak` applies to the **entire type expression** — it qualifies the reference, not the type:
 
-```doof
+```doof check
+class Widget { name: string }
+class Panel { title: string }
+
 class TreeNode {
     children: TreeNode[] = []
     parent: weak TreeNode | none = none  // Weak reference to parent
@@ -1120,7 +1221,10 @@ class Observer {
 - Collections choose their weak side with grouping: `(weak Foo)[]` is an array of weak references, `Map<K, weak Foo>` holds weak values, and `weak (Foo[])` is a weak reference to the array; bare `weak Foo[]` is ambiguous and rejected (see [Weak Reference Precedence](02-type-system.md#precedence))
 - Use `?.` and `!.` operators for lightweight access (same syntax as Result/none handling)
 
-```doof
+```doof check
+class Event { name: string }
+class EventListener { handleEvent(event: Event): none { println(event.name) } }
+
 // Preventing cycles in a graph
 class Node {
     edges: Node[] = []            // Strong — keeps neighbours alive
