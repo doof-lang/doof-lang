@@ -350,7 +350,8 @@ function moduleValueDeclarationNeedsIncludes(type_: ResolvedType): bool {
       return moduleValueDeclarationNeedsIncludes(map.keyType) || moduleValueDeclarationNeedsIncludes(map.valueType)
     }
     set_: SetResolvedType -> { return moduleValueDeclarationNeedsIncludes(set_.elementType) }
-    stream: StreamResolvedType -> { return moduleValueDeclarationNeedsIncludes(stream.elementType) }
+    // A stream lowers to a generated interface alias when source classes implement it.
+    _: StreamResolvedType -> { return true }
     result: ResultResolvedType -> {
       return moduleValueDeclarationNeedsIncludes(result.valueType) || moduleValueDeclarationNeedsIncludes(result.errorType)
     }

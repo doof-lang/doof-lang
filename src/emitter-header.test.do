@@ -47,3 +47,15 @@ export function testClassDefinitionsFollowLaterByValueStructs(): none {
   Assert.isTrue(header.indexOf("struct Wrapped {") < owner)
   Assert.isTrue(header.indexOf("struct Paired {") < owner)
 }
+
+export function testStreamModuleValuesFollowTheirInterfaceAlias(): none {
+  source := "class Counter implements Stream<int> {\nlet current: int\nnext(): bool { this.current += 1\nreturn this.current < 3 }\nvalue(): int => this.current }\n" +
+    "stream: Stream<int> := Counter(0)\nfor value of stream { println(value) }"
+  result := compile([SourceFile { path: "/main.do", source }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  header := result.emission!.modules[0].header
+  alias := header.indexOf("using Stream__int =")
+  Assert.isTrue(alias > 0)
+  Assert.isTrue(header.indexOf("extern Stream__int stream;") > alias)
+}
