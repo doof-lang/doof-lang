@@ -63,7 +63,11 @@ modules own the following decisions:
 | `checker-struct-layout.do` | Struct value-layout validation, rejecting structs that contain themselves by value |
 | `checker-numeric.do` | Numeric bound membership, operator capabilities, and correlated promotion |
 | `checker-inference.do` | Contextual path validation and common-type inference; only optional unions are synthesized for value paths |
-| `checker-expressions.do` | Expression dispatch, operators, narrowing, assignment, and case expressions |
+| `checker-expressions.do` | Expression dispatch, literals, yield and catch blocks, identifiers, and implicit method bindings |
+| `checker-members.do` | Member and index access (including `?.`, `!.`, `?[]` over absent, Result, and weak receivers), explicit generic static receivers, dot shorthand, and union-alias JSON decoders |
+| `checker-operators.do` | Binary, unary, and `as` operators, `??`, comparison carriers, and the operand-overlap rule shared with case patterns |
+| `checker-assignment.do` | Assignment targets, compound and `??=` operators, and `try target = expr` success-type checking |
+| `checker-case.do` | Case expressions, case-pattern binding, bare generic pattern inference, and exhaustiveness |
 | `checker-calls.do` | Calls, generic application, named-function callback arity, and actor-call boundaries |
 | `checker-call-inference.do` | Ranked type-argument inference for generic calls: argument values, declared lambda returns, contextual result type, then lambda bodies; speculative diagnostics are discarded |
 | `checker-lambdas.do` | Lambda signatures, by-name or positional parameter binding, declared/contextual return types, block-return inference, return-site decoration, and completion diagnostics |
@@ -78,7 +82,7 @@ modules own the following decisions:
 | `checker-actor-lifecycle.do` | Conservative straight-line use-after-retire diagnostics |
 | `ast-walk.do` | Shared shallow traversal and explicit preorder expression-tree collection for semantic and lowering passes |
 | `checker-module-initialization.do` | Construction-only declarative initializer validation and direct-storage eligibility |
-| `checker-async.do` | One recursive async boundary walk with direction-specific handle rules; capture decoration |
+| `checker-async.do` | `async` block and call checking; one recursive async boundary walk with direction-specific handle rules; capture decoration |
 | `checker-isolation.do` | Graph-wide transitive mutable-global effect validation |
 | `checker-validation.do` | Final graph walk proving the AST is decorated and safe to emit |
 | `json-semantics.do` | Shared eligibility contract for generated JSON methods |

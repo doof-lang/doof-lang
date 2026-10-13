@@ -117,3 +117,28 @@ export function testReportsUninferableGenericConstructionOnce(): none {
   explicit := constructionErrors(container + "function main(): none { c := Container<int, string> { result: Success { value: 42 } } }")
   Assert.equal(explicit.length, 0)
 }
+
+export function testCheckerConsolidationActorConstructorDefaults(): none {
+  result := compile([SourceFile { path: "/main.do", source: "class Worker { value: int\nstatic constructor(value: int = 4): Worker => Worker { value }\nread(): int => value }\nfunction main(): int { actor := Actor<Worker>()\nreturn actor.read() }" }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(hasErrorDiagnostics(result.diagnostics), false)
+  Assert.isTrue(result.emission != none)
+}
+
+export function testSecondConsolidationActorFactoryMustReturnDirectOwner(): none {
+  messages := constructionErrors("class Worker { value: int\nstatic constructor(value: int): Result<Worker, string> => Success { value: Worker { value } } }\nfunction make(): none { worker := Actor<Worker>(3) }")
+  let found = false
+  for message of messages { if message.contains("must return Worker directly") { found = true } }
+  Assert.isTrue(found)
+}
+
+export function testActorCreationRequiresAClassAndCrossableArguments(): none {
+  notClass := constructionErrors("interface Shape { area(): int }\nfunction make(): none { worker := Actor<Shape>() }")
+  Assert.equal(notClass.length, 1)
+  Assert.stringContains(notClass[0], "Actor requires a class type; \"Shape\" is not a class")
+  crossing := constructionErrors("class Box { let value: int }\nclass Worker { box: Box }\nfunction make(box: Box): none { worker := Actor<Worker>(box) }")
+  let found = false
+  for message of crossing { if message.contains("Actor constructor argument 1 of type \"Box\" cannot cross actor boundary") { found = true } }
+  for message of crossing { println(message) }
+  Assert.isTrue(found)
+}

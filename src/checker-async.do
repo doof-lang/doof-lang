@@ -1,15 +1,111 @@
-// Async-block capture decoration and cross-thread result validation.
+// Async expression checking, async-block capture decoration, and cross-thread
+// result validation.
 
 import { AnalysisResult } from "./analyzer"
-import { ActorType, ArrayResolvedType, ClassType, Diagnostic, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SemanticLocation, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
-import { AsyncExpression, Block, ClassDeclaration, Expression, Identifier, InterfaceDeclaration, SourceSpan, ThisExpression } from "./ast"
+import { ActorType, ArrayResolvedType, ClassType, Diagnostic, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, Scope, SuccessResolvedType, FailureResolvedType, SemanticLocation, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { AsyncExpression, Block, CallExpression, ClassDeclaration, Expression, Identifier, InterfaceDeclaration, MemberExpression, SourceSpan, ThisExpression } from "./ast"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { collectBlockExpressions, collectExpressionTree } from "./ast-walk"
-import { declarationFor } from "./checker-symbols"
-import { substituteTypeParams, typeName } from "./checker-types"
+import { declarationFor, optionalResolvedType } from "./checker-symbols"
+import { neverType, promiseType, substituteTypeParams, typeName, unknownType } from "./checker-types"
+import { finish, typeError } from "./checker-common"
+import { checkExpression } from "./checker-expressions"
+import { CheckerState } from "./checker-state"
+import { checkBlock } from "./checker-statements"
 
 class AsyncBoundaryViolation {
   reason: string
+}
+
+/** Checks 'async { ... }' blocks and 'async call(...)' worker dispatch. */
+export function checkAsync(state: CheckerState, async_: AsyncExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
+  case async_.expression {
+    block: Block -> {
+      let expectedValue: ResolvedType | none = none
+      if expected != none {
+        case expected! {
+          promise: PromiseType -> { expectedValue = promise.valueType }
+          _ -> { }
+        }
+      }
+      asyncScope := Scope {
+        parent: scope,
+        inValueYieldBlock: true,
+        yieldExpectedType: expectedValue,
+        yieldType: if expectedValue == none then optionalResolvedType(unknownType()) else expectedValue,
+      }
+      completes := checkBlock(state, block, asyncScope)
+      if completes { typeError(state, "Async blocks must yield a value on every path", block.span) }
+      let valueType = asyncScope.yieldType ?? unknownType()
+      if !completes && valueType.kind == "unknown" { valueType = neverType() }
+      violation := asyncResultViolation(state.result, valueType)
+      if violation != none {
+        typeError(state, "Async block result type \"" + typeName(valueType) + "\" cannot cross from the worker: " + violation!, async_.span)
+      }
+      return finish(state, async_, promiseType(valueType))
+    }
+    inner: Expression -> {
+      innerType := checkExpression(state, inner, scope, none)
+      let actorCall = false
+      let isolatedCall = false
+      case inner {
+        call: CallExpression -> {
+          isolatedCall = call.resolvedFunction != none
+          case call.callee {
+            member: MemberExpression -> {
+              if member.object.resolvedType != none {
+                case member.object.resolvedType! {
+                  _: ActorType -> { actorCall = true }
+                  _ -> { }
+                }
+              }
+            }
+            _ -> { }
+          }
+          if !actorCall && isolatedCall {
+            for i of 0..<call.args.length {
+              argumentType := call.args[i].value.resolvedType
+              if argumentType == none { continue }
+              violation := findActorBoundaryViolation(state.result, argumentType!)
+              if violation != none {
+                typeError(state,
+                  "Async call argument " + string(i + 1) + " of type \"" + typeName(argumentType!) + "\" cannot cross to the worker: " + violation!.reason,
+                  call.args[i].span,
+                )
+              }
+            }
+            case call.callee {
+              member: MemberExpression -> {
+                if member.resolvedStaticOwner == none && member.object.resolvedType != none {
+                  receiverViolation := findActorBoundaryViolation(state.result, member.object.resolvedType!)
+                  if receiverViolation != none {
+                    typeError(state,
+                      "Async call receiver of type \"" + typeName(member.object.resolvedType!) + "\" cannot cross to the worker: " + receiverViolation!.reason,
+                      member.object.span,
+                    )
+                  }
+                }
+              }
+              _ -> { }
+            }
+            resultViolation := asyncResultViolation(state.result, innerType)
+            if resultViolation != none {
+              typeError(state,
+                "Async call result type \"" + typeName(innerType) + "\" cannot cross from the worker: " + resultViolation!,
+                async_.span,
+              )
+            }
+          }
+        }
+        _ -> { }
+      }
+      if !actorCall && !isolatedCall {
+        typeError(state, "`async` requires an actor method call or an inferrably isolated function call", async_.span)
+      }
+      return finish(state, async_, promiseType(innerType))
+    }
+  }
+  return unknownType()
 }
 
 export function validateAsyncBlock(result: AnalysisResult, expression: AsyncExpression, module: string, diagnostics: Diagnostic[]): none {

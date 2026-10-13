@@ -110,7 +110,7 @@ For `Box<int>`:
    running call inference over the constructor signature with the class's own
    type parameters. A static member's instantiation is either written
    (`Channel<string>.tag`, parsed into `receiverTypeArgs` and resolved in
-   `checker-expressions.do`) or, for a call through a bare generic class name
+   `checker-members.do`) or, for a call through a bare generic class name
    (`Channel.constructor(onString)`), inferred together with the method's type
    arguments in `checker-calls.do`. Either way it is recorded as the member's
    `resolvedStaticReceiver`; collection and emission use that instantiation's

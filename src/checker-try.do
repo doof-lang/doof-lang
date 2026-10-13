@@ -7,7 +7,8 @@ import {
   TypeAnnotation,
 } from "./ast"
 import { CheckerState } from "./checker-state"
-import { checkAssignment, checkExpression } from "./checker-expressions"
+import { checkExpression } from "./checker-expressions"
+import { checkAssignment } from "./checker-assignment"
 import { checkDestructuring, declareUserBinding } from "./checker-statements"
 import { applyDeepReadonly, typeName } from "./checker-types"
 import { isAssignableWithInterfaces } from "./checker-interfaces"

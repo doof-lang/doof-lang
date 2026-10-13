@@ -27,3 +27,21 @@ export function testSecondConsolidationAsyncCaptureHandleDirection(): none {
   for diagnostic of checked.diagnostics { println(diagnostic.message) }
   Assert.equal(checked.diagnostics.length, 0)
 }
+
+function asyncErrors(source: string): string[] {
+  checked := createChecker(analyzed(source), "/main.do").check("/main.do")
+  let messages: string[] = []
+  for diagnostic of checked.diagnostics { if diagnostic.severity == "error" { messages.push(diagnostic.message) } }
+  return messages
+}
+
+export function testAsyncExpressionsRequireYieldingBlocksOrIsolatedCalls(): none {
+  Assert.equal(asyncErrors("function compute(): int => 4\nfunction run(): Promise<int> => async compute()").length, 0)
+  Assert.equal(asyncErrors("function run(): Promise<int> => async { yield 4 }").length, 0)
+  missing := asyncErrors("function run(flag: bool): Promise<int> => async { if flag { yield 4 } }")
+  Assert.equal(missing.length, 1)
+  Assert.stringContains(missing[0], "Async blocks must yield a value on every path")
+  notCall := asyncErrors("function run(): Promise<int> => async 4")
+  Assert.equal(notCall.length, 1)
+  Assert.stringContains(notCall[0], "`async` requires an actor method call or an inferrably isolated function call")
+}

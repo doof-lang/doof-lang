@@ -1,15 +1,16 @@
 // One specialized constructor signature and field contract for all construction syntax.
 
-import { checkArguments, propertyArguments, SuppliedArgument } from "./checker-arguments"
+import { checkArguments, positionalArguments, propertyArguments, SuppliedArgument } from "./checker-arguments"
 import { ClassType, InterfaceType, NoneType, UnknownType, FunctionParamType, FunctionType, ResolvedType, ResultResolvedType, Scope, TypeParameterType, UnionResolvedType } from "./semantic"
 
-import { CallArgument, CheckedConstruction, ConstructionDefault, ClassDeclaration, ConstructExpression, Identifier, ObjectProperty, FunctionDeclaration, SourceSpan, TupleLiteral } from "./ast"
+import { ActorCreationExpression, CallArgument, CheckedConstruction, ConstructionDefault, ClassDeclaration, ConstructExpression, Identifier, ObjectProperty, FunctionDeclaration, SourceSpan, TupleLiteral } from "./ast"
 import { CheckerState } from "./checker-state"
 import { checkExpression } from "./checker-expressions"
+import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { memberType, resolveType, validateTypeArgumentConstraints } from "./checker-resolution"
 import { classModuleFor, findClassField, isAssignableWithInterfaces } from "./checker-interfaces"
-import { containsString, declarationFor, hasObjectProperty, methodSignature, optionalResolvedType, valueSymbolFor, valueUseDiagnostic } from "./checker-symbols"
-import { classType, noneType, resultArmExpectation, resultArmType, resultType, substituteTypeParams, typeName, typeParameter, unknownType } from "./checker-types"
+import { containsString, declarationFor, hasObjectProperty, methodSignature, optionalResolvedType, symbolFor, valueSymbolFor, valueUseDiagnostic } from "./checker-symbols"
+import { actorType, classType, noneType, resultArmExpectation, resultArmType, resultType, sameType, substituteTypeParams, typeName, typeParameter, unknownType } from "./checker-types"
 import { inferCallTypeArguments } from "./checker-call-inference"
 import { finish, typeError } from "./checker-common"
 import { checkPropertyValue, checkAssignableProperty, sameFixedFieldValue } from "./checker-properties"
@@ -319,4 +320,39 @@ export function checkPositionalLiteralConstruction(state: CheckerState, expressi
   kind := if class_.symbol.kind == "struct" then "Struct" else "Class"
   checkArguments(state, args, construction.signature.params, scope, expression.span, kind + " \"" + class_.name + "\"")
   return finish(state, expression, construction.signature.returnType)
+}
+
+/** Checks 'Actor<T>(...)' creation: T's constructor, its arguments, and what may cross into the actor. */
+export function checkActorCreation(state: CheckerState, actorCreation: ActorCreationExpression, scope: Scope): ResolvedType {
+  symbol := symbolFor(state.info!, actorCreation.className)
+  if symbol == none || symbol!.kind != "class" {
+    for argument of actorCreation.args { checkExpression(state, argument, scope, none) }
+    typeError(state, "Actor requires a class type; \"" + actorCreation.className + "\" is not a class", actorCreation.span)
+    return finish(state, actorCreation, unknownType())
+  }
+  inner := classType(actorCreation.className, symbol!)
+  construction := resolveConstructor(state, inner)
+  actorCreation.resolvedConstruction = construction
+  actorCreation.resolvedConstructor = construction.factory
+  if construction.factory != none {
+    validateConstructorVisibility(state, inner, construction.factory!, actorCreation.span)
+    if !sameType(construction.signature.returnType, inner) {
+      typeError(state, "Actor constructor factory for \"" + inner.name + "\" must return " + inner.name + " directly", actorCreation.span)
+    }
+  }
+  params := construction.signature.params
+  validateFieldArguments(state, construction, inner, positionalArguments(actorCreation.args))
+  checkArguments(state, positionalArguments(actorCreation.args), params, scope, actorCreation.span,
+    "Actor \"" + actorCreation.className + "\"", "Actor constructor argument")
+  for i of 0..<actorCreation.args.length {
+    actual := actorCreation.args[i].resolvedType ?? unknownType()
+    violation := findActorBoundaryViolation(state.result, actual)
+    if violation != none {
+      typeError(state,
+        "Actor constructor argument " + string(i + 1) + " of type \"" + typeName(actual) + "\" cannot cross actor boundary: " + violation!.reason,
+        actorCreation.args[i].span,
+      )
+    }
+  }
+  return finish(state, actorCreation, actorType(inner))
 }

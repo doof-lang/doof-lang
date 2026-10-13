@@ -41,7 +41,7 @@ phase:
 | New syntax | `lexer.do` → the focused `parser-*.do` module → `ast.do` |
 | New name or import rule | `resolver.do` / `analyzer.do` → `checker-symbols.do` |
 | New type rule | `semantic.do` / `checker-types.do` → the focused checker module |
-| New control-flow rule | `checker-statements.do` or `checker-expressions.do` → AST decoration → emitter |
+| New control-flow rule | `checker-statements.do`, `checker-case.do`, or `checker-expressions.do` → AST decoration → emitter |
 | New expression lowering | `emitter-expr.do` → one focused `emitter-expr-*.do` module |
 | New C++ representation | `emitter-types.do` → affected focused emitters → runtime if required |
 | New package or native input | `package-manifest.do` → policy/acquisition → project emission → native planning/driver |
