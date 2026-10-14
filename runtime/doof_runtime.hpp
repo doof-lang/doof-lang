@@ -2076,8 +2076,40 @@ struct is_std_variant : std::false_type {};
 template <typename... T>
 struct is_std_variant<std::variant<T...>> : std::true_type {};
 
-// A union arm may itself be a variant carrier (an interface inside a nullable
-// or wider union), so checked narrowing descends into nested arms.
+// Marks an interface carrier whose alternatives a union splices in place.
+template <typename Interface>
+struct arms {};
+
+namespace union_detail {
+
+template <typename Variant, typename T>
+struct append;
+
+template <typename... Present, typename T>
+struct append<std::variant<Present...>, T> {
+    using type = std::conditional_t<(std::is_same_v<Present, T> || ...), std::variant<Present...>, std::variant<Present..., T>>;
+};
+
+template <typename Variant, typename... Members>
+struct build {
+    using type = Variant;
+};
+
+template <typename Variant, typename Member, typename... Rest>
+struct build<Variant, Member, Rest...> : build<typename append<Variant, Member>::type, Rest...> {};
+
+template <typename Variant, typename... Alternatives, typename... Rest>
+struct build<Variant, arms<std::variant<Alternatives...>>, Rest...> : build<Variant, Alternatives..., Rest...> {};
+
+} // namespace union_detail
+
+// A union carrier with interface members flattened into their implementing
+// alternatives, in member order and without duplicates.
+template <typename... Members>
+using union_t = typename union_detail::build<std::variant<>, Members...>::type;
+
+// A union arm may itself be a variant carrier (such as a Result), so checked
+// narrowing descends into nested arms. Interface members are already flat.
 template <typename Target, typename... Source>
 bool variant_is(const std::variant<Source...>& value) {
     return std::visit([](const auto& item) -> bool {

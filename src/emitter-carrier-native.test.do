@@ -131,6 +131,10 @@ export function testInterfaceJsonNative(): none {
   runNativeFixture("interface-json")
 }
 
+export function testNullableInterfaceNative(): none {
+  runNativeFixture("nullable-interface")
+}
+
 export function testPositionalClassLiteralsNative(): none {
   runNativeFixture("positional-class-literals")
 }

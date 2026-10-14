@@ -295,7 +295,10 @@ export function emitJsonRead(json: string, type_: ResolvedType, context: EmitCon
       inner := nullableJsonMember(union_)!
       if usesVariantRepresentation(type_) {
         optionalType := emitContextType(type_, context)
-        return "(doof::serial_is_null(" + json + ") ? " + optionalType + "{std::monostate{}} : " + optionalType + "{" + emitJsonRead(json, inner, context) + "})"
+        // A decoded interface variant spreads into the flattened union's arms.
+        read := emitJsonRead(json, inner, context)
+        present := if usesVariantRepresentation(inner) then "doof::variant_promote<" + optionalType + ">(" + read + ")" else optionalType + "{" + read + "}"
+        return "(doof::serial_is_null(" + json + ") ? " + optionalType + "{std::monostate{}} : " + present + ")"
       }
       if carrierOf(type_).kind == .SharedPointer {
         return "(doof::serial_is_null(" + json + ") ? " + emitCarrierAbsence(type_, context) + " : " + emitJsonRead(json, inner, context) + ")"
@@ -367,8 +370,10 @@ export function emitJsonField(value: string, resolvedType: ResolvedType, context
     union_: UnionResolvedType -> {
       inner := nullableJsonMember(union_)!
       if usesVariantRepresentation(resolvedType) {
-        innerType := emitContextType(inner, context)
-        return "(std::holds_alternative<std::monostate>(" + value + ") ? doof::serial_value(nullptr) : " + emitJsonField("std::get<" + innerType + ">(" + value + ")", inner, context) + ")"
+        // An interface member's implementors are flattened beside none, so
+        // removing none yields the interface variant rather than one arm.
+        present := if usesVariantRepresentation(inner) then "doof::unwrap_optional(" + value + ")" else "std::get<" + emitContextType(inner, context) + ">(" + value + ")"
+        return "(std::holds_alternative<std::monostate>(" + value + ") ? doof::serial_value(nullptr) : " + emitJsonField(present, inner, context) + ")"
       }
       if carrierOf(resolvedType).kind == .SharedPointer {
         return "(" + value + " ? " + emitJsonField(value, inner, context) + " : doof::serial_value(nullptr))"

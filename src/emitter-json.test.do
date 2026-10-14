@@ -164,3 +164,20 @@ export function testInterfaceEncodingAloneEmitsNoDecoder(): none {
   Assert.stringContains(module.source, "Cat::toSerialObject() const")
   Assert.stringNotContains(module.header + module.source, "fromSerialValue")
 }
+
+export function testNullableInterfaceFieldCodesThroughTheFlattenedInterface(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "interface Shape { area(): int }\n" +
+    "class Square implements Shape { kind: \"square\"\nside: int\narea(): int => side }\n" +
+    "class Disc implements Shape { kind: \"disc\"\nradius: int\narea(): int => radius }\n" +
+    "class Scene { focus: Shape | none = none }\n" +
+    "function encode(scene: Scene): SerialObject => scene.toSerialObject()\n" +
+    "function decode(json: SerialValue): Result<Scene, string> => Scene.fromSerialValue(json)",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  module := result.emission!.modules[0]
+  Assert.stringContains(module.source, ": doof::variant_promote<doof::union_t<std::monostate, doof::arms<Shape>>>(")
+  Assert.stringContains(module.header, "doof::union_t<std::monostate, doof::arms<Shape>> focus")
+  Assert.stringContains(module.source, "}, doof::unwrap_optional(this->focus))")
+  Assert.stringNotContains(module.source, "std::get<Shape>")
+}

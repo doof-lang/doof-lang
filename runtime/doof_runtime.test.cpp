@@ -9,6 +9,12 @@ static_assert(!std::is_aggregate_v<doof::Never>);
 static_assert(std::is_copy_constructible_v<doof::Result<doof::Never, std::string>>);
 static_assert(std::is_move_constructible_v<doof::Result<doof::Never, std::string>>);
 
+// Interface members splice their alternatives into one flat, deduplicated variant.
+using UnionShape = std::variant<std::shared_ptr<int>, std::shared_ptr<double>>;
+static_assert(std::is_same_v<doof::union_t<std::monostate, doof::arms<UnionShape>>, std::variant<std::monostate, std::shared_ptr<int>, std::shared_ptr<double>>>);
+static_assert(std::is_same_v<doof::union_t<doof::arms<UnionShape>, std::shared_ptr<double>, std::string>, std::variant<std::shared_ptr<int>, std::shared_ptr<double>, std::string>>);
+static_assert(std::is_same_v<decltype(doof::unwrap_optional(std::declval<doof::union_t<std::monostate, doof::arms<UnionShape>>>())), UnionShape>);
+
 namespace {
 
 [[noreturn]] void fail(const std::string& message) {

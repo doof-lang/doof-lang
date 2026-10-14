@@ -174,7 +174,7 @@ emitter or individual expression branch.
 | `emitter-carriers.do` | Pure specialized-type classification for value, return, payload, nullable storage, and explicit absence |
 | `emitter-carrier-values.do` | Shared absence construction and native carrier conversion, with exactly-once evaluation |
 | `emitter-carrier-native.test.do` | Compiles current-source emitter output and executes the durable native carrier matrix in the normal suite |
-| `emitter-types.do` | C++ type spelling and generic specialization using the shared carrier classification |
+| `emitter-types.do` | C++ type spelling and generic specialization using the shared carrier classification; unions splice interface members into one flat `doof::union_t` variant |
 | `emitter-json.do` | Demand-gated generated JSON reads, writes, enum backing values, paths, and interface dispatch; unit decoding validates null and all nested containers validate shape before access |
 | `emitter-metadata.do` | Reflection metadata, backing-value JSON Schema, and JSON invocation |
 | `emitter-wasm.do` | JSON-over-C-ABI WebAssembly wrapper generation |

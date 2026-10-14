@@ -172,3 +172,12 @@ export function testResultArmsLowerToTheirRuntimeStructs(): none {
   Assert.equal(emitType(FailureResolvedType { errorType: NoneType {} }), "doof::Failure<void>")
   Assert.isFalse(usesVariantRepresentation(SuccessResolvedType { valueType: integer }))
 }
+
+export function testUnionsSpliceInterfaceMembersIntoOneVariant(): none {
+  shape := InterfaceType { name: "Shape", symbol: Symbol { kind: "interface", name: "Shape", module: "/main.do", exported: false } }
+  triangle := ClassType { name: "Triangle", symbol: Symbol { kind: "class", name: "Triangle", module: "/main.do", exported: false } }
+  Assert.equal(emitType(UnionResolvedType { types: [shape, NoneType {}] }, "/main.do"), "doof::union_t<std::monostate, doof::arms<Shape>>")
+  Assert.equal(emitType(UnionResolvedType { types: [shape, triangle] }, "/main.do"), "doof::union_t<doof::arms<Shape>, std::shared_ptr<Triangle>>")
+  Assert.equal(emitType(UnionResolvedType { types: [triangle, NoneType {}] }, "/main.do"), "std::shared_ptr<Triangle>")
+  Assert.equal(emitType(shape, "/main.do"), "Shape")
+}

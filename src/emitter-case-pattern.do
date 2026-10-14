@@ -143,8 +143,8 @@ function emitJsonValuePattern(patternType: ResolvedType, subject: string, bindin
   }
 }
 
-// A class pattern may match inside a nested variant arm, such as an interface
-// carrier within `Shape | none`; only direct arms support `std::get`.
+// A class pattern may name an implementor of an interface member, such as
+// `Circle` within `Shape | none`; only named members use `std::get`.
 function isDirectVariantArm(patternType: ResolvedType, subjectType: ResolvedType): bool {
   case subjectType {
     union_: UnionResolvedType -> {

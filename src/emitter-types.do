@@ -233,10 +233,22 @@ function lowerCppTypeUncached(type_: ResolvedType, registry: CppTypeRegistry, ca
         member := lowerCppType(carrier.member!, registry, cache)
         return if carrier.wrapsOptional then registry.templateType("std::optional", [member]) else member
       }
+      // Interface members contribute their implementing alternatives, so
+      // `Shape | none` is one flat variant and removing none yields `Shape`.
       let arguments: CppType[] = []
+      let splicesInterface = false
       if carrier.hasNone { arguments.push(registry.atom("std::monostate")) }
-      for member of flattenCarrierMembers(union_.types) { if member.kind != "none" { arguments.push(lowerCppType(member, registry, cache)) } }
-      return registry.templateType("std::variant", arguments)
+      for member of flattenCarrierMembers(union_.types) {
+        if member.kind == "none" { continue }
+        lowered := lowerCppType(member, registry, cache)
+        if member.kind == "interface" {
+          splicesInterface = true
+          arguments.push(registry.templateType("doof::arms", [lowered]))
+        } else {
+          arguments.push(lowered)
+        }
+      }
+      return registry.templateType(if splicesInterface then "doof::union_t" else "std::variant", arguments)
     }
     weak_: WeakResolvedType -> { return lowerCppWeakType(weak_.inner, registry, cache) }
     _: NoneType -> { return registry.atom("std::monostate") }

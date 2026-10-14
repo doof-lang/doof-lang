@@ -54,7 +54,11 @@ root. This canonicalization does not change ordinary compiler emission.
 Doof primitives map to fixed-width C++ values. Classes use shared ownership,
 structs use value semantics, weak class references use `std::weak_ptr`, and
 closed-world interfaces lower to variants of known implementors. Nullable and
-union values use representation-appropriate optional/variant forms.
+union values use representation-appropriate optional/variant forms. A union
+with an interface member splices that interface's implementors into one flat
+variant through `doof::union_t<..., doof::arms<Interface>, ...>`, so
+`Shape | none` is `std::variant<std::monostate, Circle, Square>` (as shared
+pointers) and removing none yields exactly the `Shape` variant.
 
 Functions, methods, statements, and expressions are emitted from checker-
 decorated nodes. Whole-program monomorphization discovers concrete generic
