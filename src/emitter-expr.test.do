@@ -27,8 +27,8 @@ export function testGenericNoneLiteralWithoutContextUsesUnitCarrier(): none {
   Assert.isTrue(result.emission != none)
   let source = ""
   for module of result.emission!.modules { source = source + module.source }
-  Assert.stringContains(source, "std::make_tuple(std::monostate{}, 7)")
-  Assert.stringNotContains(source, "std::make_tuple(nullptr, 7)")
+  Assert.stringContains(source, "std::tuple<std::monostate, int32_t>(std::monostate{}, 7)")
+  Assert.stringNotContains(source, "(nullptr, 7)")
 }
 
 export function testEmitterGapConditionalDispatchPreservesExpectedUnionOrder(): none {
@@ -109,7 +109,7 @@ export function testWiderNoneUnitValuesNeedNoExpectedType(): none {
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   Assert.isTrue(result.emission != none)
-  Assert.stringContains(result.emission!.modules[0].source, "std::make_tuple((static_cast<void>(effect()), std::monostate{}), 1)")
+  Assert.stringContains(result.emission!.modules[0].source, "std::tuple<std::monostate, int32_t>((static_cast<void>(effect()), std::monostate{}), 1)")
 }
 
 export function testEmissionCleanupThisRetainsClassAndStructCarriers(): none {

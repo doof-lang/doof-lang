@@ -107,7 +107,7 @@ export function testPositionalLiteralLowersToConstruction(): none {
   Assert.stringContains(source, "std::make_shared<Point>(1.0, 2.0)")
   Assert.stringContains(source, "Vec{1, 2}")
   Assert.stringContains(source, "Vec{3, 4}")
-  Assert.stringContains(source, "std::make_tuple(1, 2)")
+  Assert.stringContains(source, "std::tuple<int32_t, int32_t>(1, 2)")
 }
 
 export function testNamedResultArmConstructionWithoutAResultContext(): none {

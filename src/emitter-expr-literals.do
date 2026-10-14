@@ -3,7 +3,7 @@
 import { emitCarrierAbsence } from "./emitter-carrier-values"
 import { emitClassObject } from "./emitter-construction"
 import { ArrayLiteral, ObjectLiteral, StringLiteral, TupleLiteral } from "./ast"
-import { ArrayResolvedType, ClassType, SerialValueResolvedType, MapResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, UnionResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassType, SerialValueResolvedType, MapResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { emitPropertyValue, findProperty } from "./emitter-expr-utils"
@@ -138,12 +138,19 @@ function emitMapObject(expression: ObjectLiteral, context: EmitContext, map: Map
 }
 
 export function emitTuple(expression: TupleLiteral, context: EmitContext): string {
+  // Elements convert to the checked element types, which may be wider than
+  // each element's own type (a union or nullable slot).
+  let tuple: TupleResolvedType | none = none
+  if expression.resolvedType != none {
+    case expression.resolvedType! { checked: TupleResolvedType -> { tuple = checked } _ -> { } }
+  }
   let values = ""
   for i of 0..<expression.elements.length {
     if i > 0 { values = values + ", " }
-    values = values + emitExpression(expression.elements[i], context)
+    values = values + (if tuple == none then emitExpression(expression.elements[i], context) else emitExpression(expression.elements[i], context, tuple!.elements[i]))
   }
-  return "std::make_tuple(" + values + ")"
+  if tuple == none { return "std::make_tuple(" + values + ")" }
+  return emitContextType(tuple!, context) + "(" + values + ")"
 }
 
 export function emitString(expression: StringLiteral, context: EmitContext): string {

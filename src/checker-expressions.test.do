@@ -86,3 +86,19 @@ export function testStaticMethodsCannotCallInstanceMethodsImplicitly(): none {
   lambda := checked("class Counter {\nlet count = 0\nincrement(): none { count += 1 }\nstatic bad(): none { run := (): none => increment()\nrun() }\n}")
   Assert.equal(lambda.diagnostics.length, 1)
 }
+
+export function testTupleLiteralElementsTakeTheirExpectedUnionSlots(): none {
+  result := checked(
+    "function make(): Tuple<int | string, bool> => (2, true)\n" +
+    "function run(): none {\n" +
+    "  a: Tuple<int | string, int> := (\"a\", 1)\n" +
+    "  b: Tuple<int | none, string | none> := (none, \"b\")\n" +
+    "  pairs: Tuple<int | string, int>[] := [(\"p\", 1), (2, 2)]\n" +
+    "}",
+  )
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  rejected := checked("function run(): none { a: Tuple<int | string, int> := (true, 1) }")
+  Assert.equal(rejected.diagnostics.length, 1)
+  Assert.equal(rejected.diagnostics[0].message, "Cannot assign (bool, int) to (int | string, int)")
+}

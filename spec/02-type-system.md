@@ -1581,6 +1581,14 @@ result := (200, "OK")                      // Tuple<int, string>
 println(result._2)
 ```
 
+Each element of a positional literal converts to its slot in the target tuple
+type, so a slot may be a union or nullable that the element widens into:
+
+```doof check
+let tagged: Tuple<int | string, int | none> = ("id", none)
+println(tagged._2 == none)  // true
+```
+
 #### Tuple Destructuring
 
 Tuples support positional destructuring, just like classes:

@@ -392,7 +392,8 @@ pair: Tuple<int, string> := (1, "one")
 (id, label) := pair
 ```
 
-Tuples are fixed-length and positionally destructured.
+Tuples are fixed-length and positionally destructured. Literal elements convert to their
+slots, so `t: Tuple<int | string, int | none> := ("id", none)` is valid.
 
 ### Maps
 

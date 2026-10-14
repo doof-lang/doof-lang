@@ -114,3 +114,17 @@ export function testCheckerConsolidationJsonShorthandEmission(): none {
     previous = source
   }
 }
+
+export function testTupleLiteralElementsConvertToCheckedSlots(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function pair(): Tuple<int | string, int | none> => (\"r\", none)\n" +
+    "function plain(): Tuple<int, string> => (1, \"x\")\n" +
+    "function main(): none { pair()\nplain() }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  let source = ""
+  for module of result.emission!.modules { source = source + module.source }
+  Assert.stringContains(source, "return std::tuple<std::variant<int32_t, std::string>, std::optional<int32_t>>(doof::variant_promote<std::variant<int32_t, std::string>>(std::string(\"r\")), std::nullopt);")
+  Assert.stringContains(source, "return std::tuple<int32_t, std::string>(1, std::string(\"x\"));")
+}

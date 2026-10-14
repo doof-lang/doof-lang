@@ -16,6 +16,7 @@ import { CheckerState } from "./checker-state"
 import { checkBlock, checkFunction } from "./checker-statements"
 import { builtinCallable, builtinSourceLocationType, currentThisType, declarationFor, declare, hasTypeParam, isBuiltinCallable, lookup, optionalResolvedType, resolveAnnotation, typeParamConstraint, typeParamConstraintName, valueUseDiagnostic } from "./checker-symbols"
 import { functionType, isStringInterpolatable, neverType, noneType, primitive, tupleType, typeName, typeParameter, unknownType } from "./checker-types"
+import { isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 import { ActorType, Binding, ClassType, Diagnostic, FunctionParamType, PrimitiveType, ResolvedType, Scope, TupleResolvedType } from "./semantic"
 
@@ -138,7 +139,9 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         let itemExpected: ResolvedType | none = none
         if expectedTuple != none && index < expectedTuple!.elements.length { itemExpected = optionalResolvedType(expectedTuple!.elements[index]) }
         itemType := checkExpression(state, item, scope, itemExpected)
-        elements.push(itemType)
+        // An element assignable to its expected slot takes that type, as array
+        // elements do, so a literal fits a tuple of unions or nullables.
+        elements.push(if itemExpected != none && isAssignableWithInterfaces(state.result, itemType, itemExpected!) then itemExpected! else itemType)
         if itemType.kind == "never" { diverges = true }
       }
       if diverges { return finish(state, expression, neverType()) }
