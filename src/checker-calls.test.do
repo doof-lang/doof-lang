@@ -254,3 +254,17 @@ c.handler(\"c\") }" }], "/main.do")
   mismatch := checked(channel + "function onInt(value: int): none {}\nfunction main(): none { c: Channel<string> := Channel.constructor(onInt) }")
   Assert.isTrue(mismatch.diagnostics.length > 0)
 }
+
+export function testStringConversionAcceptsUnionsOfPrimitivesAndEnums(): none {
+  result := checked(
+    "enum Color { Red, Green }\n" +
+    "function label(id: int | string, mixed: Color | bool | double): string => string(id) + string(mixed)",
+  )
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  for argument of ["int | none", "int | int[]"] {
+    rejected := checked("function label(value: " + argument + "): string => string(value)")
+    Assert.equal(rejected.diagnostics.length, 1)
+    Assert.equal(rejected.diagnostics[0].message, "Argument 1 has type " + argument + "; expected a primitive, enum, or union of them")
+  }
+}

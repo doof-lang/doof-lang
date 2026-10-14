@@ -225,7 +225,14 @@ let ok: string = string(true)
 let ratio: string = string(3.5)
 ```
 
-`string(...)` accepts exactly one primitive argument of type `byte`, `int`, `long`, `float`, `double`, `string`, `char`, or `bool` and returns a `string`.
+`string(...)` accepts exactly one argument of type `byte`, `int`, `long`, `float`, `double`, `string`, `char`, or `bool`, an enum, or a union whose members are all of those types, and returns a `string`. A union formats the member it holds. A union with `none` or any other member is rejected, so absence is handled first:
+
+```doof reject body
+let id: int | string = 7
+let label: string = string(id)      // "7"
+let maybe: int | none = 7
+let bad: string = string(maybe)     // ❌ none must be handled first
+```
 
 ### Numeric Parsing
 

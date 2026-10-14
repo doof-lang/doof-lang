@@ -36,9 +36,10 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           _: PrimitiveType -> { supported = true }
           _: EnumType -> { supported = true }
           _: UnknownType -> { supported = true }
+          union_: UnionResolvedType -> { supported = isStringConvertibleUnion(union_) }
           _ -> { }
         }
-        if !supported { typeError(state, "Argument 1 has type " + typeName(actual) + "; expected a primitive or enum", expression.args[0].span) }
+        if !supported { typeError(state, "Argument 1 has type " + typeName(actual) + "; expected a primitive, enum, or union of them", expression.args[0].span) }
         fn := functionType([FunctionParamType { name: "value", type_: actual, hasDefault: false }], primitive("string"))
         identifier.resolvedType = optionalResolvedType(fn)
         identifier.resolvedBinding = Binding { name: "string", kind: "builtin", type_: fn, mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
@@ -220,6 +221,19 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
     _ -> { typeError(state, "Expression of type " + typeName(calleeType) + " is not callable", expression.span); return finish(state, expression, unknownType()) }
   }
   return finish(state, expression, unknownType())
+}
+
+// string() accepts a union only when every member is itself convertible, so
+// a nullable union still needs its none handled explicitly.
+function isStringConvertibleUnion(union_: UnionResolvedType): bool {
+  for member of union_.types {
+    case member {
+      _: PrimitiveType -> { }
+      _: EnumType -> { }
+      _ -> { return false }
+    }
+  }
+  return true
 }
 
 // A named function value passed to an array callback may omit the trailing

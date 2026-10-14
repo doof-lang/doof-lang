@@ -112,7 +112,7 @@ big := parseLong("9007199254740991")
 ratio := parseDouble("3.14")
 ```
 
-`string(...)` accepts primitive values. The `std/parse` helpers return
+`string(...)` accepts primitives, enums, and unions of them (not `| none`). The `std/parse` helpers return
 `Result<T, ParsingError>`.
 
 ## Generic Constraints
