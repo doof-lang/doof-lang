@@ -167,3 +167,46 @@ export function testKeywordLengthDispatchPreservesOrdinaryNamesAndStreamMacros()
   }
   for name of ["stdin", "stdout", "stderr"] { Assert.equal(cppIdentifier(name), name + "_") }
 }
+
+export function testTopLevelNamespacesAvoidCGlobals(): none {
+  names := prepareModuleNames([
+    ModuleNamespaceMapping { logicalPrefix: "/bessel", packageName: "j1" },
+    ModuleNamespaceMapping { logicalPrefix: "/clock", packageName: "time/sin" },
+    ModuleNamespaceMapping { logicalPrefix: "/plain", packageName: "geometry" },
+  ])
+  Assert.equal(moduleNamespace("/bessel/main.do", names), "j1_::main_")
+  // Nested components sit inside the package namespace, so C names are safe there.
+  Assert.equal(moduleNamespace("/clock/printf.do", names), "time_::sin::printf")
+  Assert.equal(moduleNamespace("/plain/stat.do", names), "geometry::stat")
+}
+
+export function testCGlobalPackageNamespacesCompileNatively(): none {
+  root := join([tempDirectory(), "doof-native-c-global-namespaces"])
+  clearNativeMatrix(root)
+  mkdir(root)!
+  compiled := compileWithLoader([
+    SourceFile { path: "/main.do", source: "import { left } from \"./bessel/value\"\nimport { right } from \"./clock/index\"\nfunction main(): int => if left() + right() == 42 then 0 else 1" },
+    SourceFile { path: "/bessel/value.do", source: "export function left(): int => 20" },
+    SourceFile { path: "/clock/index.do", source: "export function right(): int => 22" },
+  ], "/main.do", noSourceLoader, [
+    ModuleNamespaceMapping { logicalPrefix: "/bessel", packageName: "j1" },
+    ModuleNamespaceMapping { logicalPrefix: "/clock", packageName: "time" },
+  ])
+  for diagnostic of compiled.diagnostics { println(diagnostic.message) }
+  Assert.equal(hasErrorDiagnostics(compiled.diagnostics), false)
+  writeText(join([root, "doof_runtime.hpp"]), readText("runtime/doof_runtime.hpp")!)!
+  executable := join([root, "matrix"])
+  let args = ["-std=c++17", "-O0", "-pthread", "-o", executable]
+  for module of compiled.emission!.modules {
+    writeText(join([root, module.headerName]), module.header)!
+    path := join([root, module.sourceName])
+    writeText(path, module.source)!
+    args.push(path)
+  }
+  built := run(env("CXX") ?? "c++", args, ExecOptions { withStdin: false, mergeStderrIntoStdout: true })!
+  if built.exitCode != 0 { println(BlobReader(built.stdout).readString(long(built.stdout.length))) }
+  Assert.equal(built.exitCode, 0)
+  executed := run(executable, [], ExecOptions { withStdin: false, mergeStderrIntoStdout: true })!
+  Assert.equal(executed.exitCode, 0)
+  clearNativeMatrix(root)
+}

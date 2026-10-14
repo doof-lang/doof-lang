@@ -138,7 +138,8 @@ emitter or individual expression branch.
 | File | Responsibility |
 | --- | --- |
 | `emitter-context.do` | Graph-wide nominal/method context, per-module emission state, and opt-in observer instrumentation configuration |
-| `emitter-names.do` | Immutable per-compilation namespace snapshots; pure stable filenames, diagnostics and native paths; shared C++ keyword escaping |
+| `emitter-names.do` | Immutable per-compilation namespace snapshots; pure stable filenames, diagnostics and native paths; shared C++ keyword escaping; package top-level namespaces avoid C globals |
+| `emitter-reserved-globals.do` | C and POSIX global names that a package's top-level namespace must not reuse |
 | `checked-instantiations.do` | Semantic specialization fixed point and shared JSON demand traversal |
 | `emitter-monomorphize.do` | C++ naming adapter over semantic specialization discovery |
 | `emitter-dependencies.do` | Immutable ordered direct-dependency extraction from checked surfaces, root bodies and concrete argument types |

@@ -3,6 +3,8 @@
 // These names are derived from logical source paths, never from traversal
 // order, so later split-module emission can preserve an ABI across builds.
 
+import { isReservedCGlobal } from "./emitter-reserved-globals"
+
 /** Maps a logical source prefix to the owning package's public C++ namespace. */
 export class ModuleNamespaceMapping {
   logicalPrefix: string
@@ -63,7 +65,7 @@ function computeModuleNamespace(path: string, names: ModuleNames = ModuleNames {
     if relativePath.endsWith(".do") {
       relativePath = relativePath.substring(0, relativePath.length - 3)
     }
-    let namespace = namespacePath(mapping!.packageName)
+    let namespace = namespacePath(mapping!.packageName, true)
     if relativePath != "" { namespace = namespace + "::" + namespacePath(relativePath) }
     return namespace
   }
@@ -129,13 +131,14 @@ function namespaceMappingForPath(path: string, names: ModuleNames = ModuleNames 
   return selected
 }
 
-function namespacePath(path: string): string {
+function namespacePath(path: string, globalScope: bool = false): string {
   components := path.replaceAll("\\", "/").split("/")
   let result = ""
   for component of components {
     if component == "" { continue }
     sanitized := namespaceComponent(component)
-    if result == "" { result = sanitized }
+    // Only a package's top-level namespace shares the global scope with C declarations.
+    if result == "" { result = if globalScope && isReservedCGlobal(sanitized) then sanitized + "_" else sanitized }
     else { result = result + "::" + sanitized }
   }
   return if result == "" then "module" else result
