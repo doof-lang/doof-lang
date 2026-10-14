@@ -855,6 +855,8 @@ export function isWeakReferenceTarget(type_: ResolvedType): bool {
     _: ArrayResolvedType -> { return true }
     _: MapResolvedType -> { return true }
     _: SetResolvedType -> { return true }
+    // Only classes implement interfaces, so every interface value is a reference.
+    _: InterfaceType -> { return true }
     union_: UnionResolvedType -> {
       let hasReference = false
       for member of union_.types {

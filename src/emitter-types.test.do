@@ -8,7 +8,7 @@ import { lowerCppType } from "./emitter-types"
 import { Assert } from "std/assert"
 import { EmitContext } from "./emitter-context"
 import { emitContextType, emitType, usesVariantRepresentation } from "./emitter-types"
-import { ClassType, FailureResolvedType, InterfaceType, NoneType, PrimitiveType, ResultResolvedType, SuccessResolvedType, Symbol, UnionResolvedType } from "./semantic"
+import { ClassType, FailureResolvedType, InterfaceType, NoneType, PrimitiveType, ResultResolvedType, SuccessResolvedType, Symbol, UnionResolvedType, WeakResolvedType } from "./semantic"
 
 export function testCarrierModelSeparatesResultStorageFromUnionDispatch(): none {
   integer := PrimitiveType { name: "int" }
@@ -180,4 +180,12 @@ export function testUnionsSpliceInterfaceMembersIntoOneVariant(): none {
   Assert.equal(emitType(UnionResolvedType { types: [shape, triangle] }, "/main.do"), "doof::union_t<doof::arms<Shape>, std::shared_ptr<Triangle>>")
   Assert.equal(emitType(UnionResolvedType { types: [triangle, NoneType {}] }, "/main.do"), "std::shared_ptr<Triangle>")
   Assert.equal(emitType(shape, "/main.do"), "Shape")
+}
+
+export function testWeakInterfaceTargetsSpliceWeakImplementorArms(): none {
+  shape := InterfaceType { name: "Shape", symbol: Symbol { kind: "interface", name: "Shape", module: "/main.do", exported: false } }
+  label := ClassType { name: "Label", symbol: Symbol { kind: "class", name: "Label", module: "/main.do", exported: false } }
+  Assert.equal(emitType(WeakResolvedType { inner: shape }, "/main.do"), "doof::union_t<doof::weak_arms<Shape>>")
+  Assert.equal(emitType(WeakResolvedType { inner: UnionResolvedType { types: [shape, NoneType {}] } }, "/main.do"), "std::optional<doof::union_t<doof::weak_arms<Shape>>>")
+  Assert.equal(emitType(WeakResolvedType { inner: UnionResolvedType { types: [shape, label, NoneType {}] } }, "/main.do"), "std::optional<doof::union_t<doof::weak_arms<Shape>, std::weak_ptr<Label>>>")
 }

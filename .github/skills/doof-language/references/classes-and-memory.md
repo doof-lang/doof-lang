@@ -277,6 +277,7 @@ class TreeNode {
 - Collections need grouping: `(weak A)[]` is an array of weak references, `Map<K, weak V>` holds weak values, `weak (A[])` weakly references the array. Bare `weak A[]` or `weak Map<...>` is rejected as ambiguous.
 - Accessing a weak reference yields `Result<T, WeakReferenceError>`.
 - A `case` weak subject is read once: `Success` retains a live target and `Failure` reports expiration. An absent nullable weak reference is `Success(none)`.
+- Weak targets are classes, interfaces, arrays, maps, sets, and unions of them (with `none`). An interface target such as `weak Shape | none` weakly references whichever implementing class it holds.
 - `weak` is class-only; structs are value types and cannot be weak targets.
 
 ## Description Metadata

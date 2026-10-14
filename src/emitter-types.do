@@ -271,10 +271,22 @@ function lowerCppWeakType(inner: ResolvedType, registry: CppTypeRegistry, cache:
     array: ArrayResolvedType -> { return registry.templateType("std::weak_ptr", [registry.templateType("std::vector", [lowerCppType(array.elementType, registry, cache)])]) }
     map: MapResolvedType -> { return registry.templateType("std::weak_ptr", [registry.templateType("doof::ordered_map", [lowerCppType(map.keyType, registry, cache), lowerCppType(map.valueType, registry, cache)])]) }
     set_: SetResolvedType -> { return registry.templateType("std::weak_ptr", [registry.templateType("doof::ordered_set", [lowerCppType(set_.elementType, registry, cache)])]) }
+    // An interface target holds a weak_ptr for each implementor in one variant.
+    interface_: InterfaceType -> { return registry.templateType("doof::union_t", [registry.templateType("doof::weak_arms", [lowerCppType(interface_, registry, cache)])]) }
     union_: UnionResolvedType -> {
       let arguments: CppType[] = []
-      for member of flattenCarrierMembers(union_.types) { if member.kind != "none" { arguments.push(lowerCppWeakType(member, registry, cache)) } }
-      type_ := if arguments.length == 1 then arguments[0] else registry.templateType("std::variant", arguments)
+      let splicesInterface = false
+      for member of flattenCarrierMembers(union_.types) {
+        if member.kind == "none" { continue }
+        if member.kind == "interface" {
+          splicesInterface = true
+          arguments.push(registry.templateType("doof::weak_arms", [lowerCppType(member, registry, cache)]))
+        } else {
+          arguments.push(lowerCppWeakType(member, registry, cache))
+        }
+      }
+      type_ := if splicesInterface then registry.templateType("doof::union_t", arguments)
+        else if arguments.length == 1 then arguments[0] else registry.templateType("std::variant", arguments)
       return if carrierOf(union_).hasNone then registry.templateType("std::optional", [type_]) else type_
     }
     _ -> { return registry.templateType("std::weak_ptr", [lowerCppType(inner, registry, cache)]) }

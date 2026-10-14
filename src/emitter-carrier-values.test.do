@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 import { EmitContext } from "./emitter-context"
 import { emitCarrierAbsence, emitCarrierConversion } from "./emitter-carrier-values"
-import { FailureResolvedType, NoneType, PrimitiveType, ResultResolvedType, SuccessResolvedType, UnionResolvedType } from "./semantic"
+import { FailureResolvedType, InterfaceType, NoneType, PrimitiveType, ResultResolvedType, SuccessResolvedType, Symbol, UnionResolvedType, WeakResolvedType } from "./semantic"
 
 export function testCarrierModelValueConversionAndInvalidAbsence(): none {
   context := EmitContext {}
@@ -28,4 +28,12 @@ export function testCarrierModelRewrapsResultArmsForTheirTargetResult(): none {
   failure := emitCarrierConversion("failure", FailureResolvedType { errorType: string_ }, ResultResolvedType { valueType: boolean, errorType: string_ }, context)
   Assert.stringContains(failure, "doof::Result<bool, std::string>")
   Assert.stringContains(failure, "doof::Failure<std::string>{_result_arm.error}")
+}
+
+export function testStrongInterfaceValuesWeakPromoteIntoOptionalWeakVariants(): none {
+  context := EmitContext { modulePath: "/main.do" }
+  shape := InterfaceType { name: "Shape", symbol: Symbol { kind: "interface", name: "Shape", module: "/main.do", exported: false } }
+  target := WeakResolvedType { inner: UnionResolvedType { types: [shape, NoneType {}] } }
+  Assert.equal(emitCarrierConversion("shape", shape, target, context), "doof::weak_promote<std::optional<doof::union_t<doof::weak_arms<Shape>>>>(shape)")
+  Assert.equal(emitCarrierConversion("held", target, target, context), "held")
 }

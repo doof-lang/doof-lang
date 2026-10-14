@@ -1831,6 +1831,42 @@ These spellings are errors:
 
 Absence never sits beside a weak arm: `(weak A) | none` is normalized to `weak (A | none)`, including when the weak arm comes from a type alias.
 
+### Weak Targets
+
+A weak reference targets a class, an interface, an array, a map, a set, a union
+of these (optionally with `none`), or a type parameter constrained to one of
+them. Only classes implement interfaces, so a weak interface reference weakly
+holds whichever implementing class instance it was given, and reading it yields
+the interface value:
+
+```doof check
+interface Shape { area(): double }
+class Circle implements Shape { radius: double; area(): double => radius * 2.0 }
+class Label { text: string }
+
+class Canvas {
+    let selection: weak Shape | none = none
+    let tagged: weak Shape | Label | none = none
+}
+
+function select(canvas: Canvas, shape: Shape): double | none {
+    canvas.selection = shape
+    return canvas.selection?.area()  // none once the shape is released
+}
+```
+
+Primitives, strings, structs, enums, tuples, callbacks, and Results are not
+weak targets:
+
+```doof reject
+struct Point { x: int; y: int }
+
+class Invalid {
+    weak count: int      // ❌ Error: not a valid weak reference target
+    weak origin: Point   // ❌ Error: not a valid weak reference target
+}
+```
+
 ### Access Semantics
 
 Because a weak-referenced object may have been destroyed, accessing a `weak` reference yields `Result<T, WeakReferenceError>`. The standard `?.` and `!.` operators provide lightweight access: an absent or expired reference is `none` under `?.` and panics under `!.`.

@@ -14,6 +14,8 @@ using UnionShape = std::variant<std::shared_ptr<int>, std::shared_ptr<double>>;
 static_assert(std::is_same_v<doof::union_t<std::monostate, doof::arms<UnionShape>>, std::variant<std::monostate, std::shared_ptr<int>, std::shared_ptr<double>>>);
 static_assert(std::is_same_v<doof::union_t<doof::arms<UnionShape>, std::shared_ptr<double>, std::string>, std::variant<std::shared_ptr<int>, std::shared_ptr<double>, std::string>>);
 static_assert(std::is_same_v<decltype(doof::unwrap_optional(std::declval<doof::union_t<std::monostate, doof::arms<UnionShape>>>())), UnionShape>);
+static_assert(std::is_same_v<doof::union_t<doof::weak_arms<UnionShape>, std::weak_ptr<std::string>>, std::variant<std::weak_ptr<int>, std::weak_ptr<double>, std::weak_ptr<std::string>>>);
+static_assert(std::is_same_v<decltype(doof::lock_weak(std::declval<doof::union_t<doof::weak_arms<UnionShape>>>()))::value_type, UnionShape>);
 
 namespace {
 
@@ -402,6 +404,13 @@ void test_null_carriers() {
     require(std::get<int>(std::get<Nested>(nested)) == 7, "nested variant payload was lost");
     auto flat = doof::variant_promote<std::variant<std::monostate, int, std::string>>(Nested{7});
     require(std::get<int>(flat) == 7, "ordinary variant widening stopped working");
+
+    using WeakShape = std::optional<doof::union_t<doof::weak_arms<UnionShape>>>;
+    auto held = std::make_shared<double>(2.0);
+    auto stored = doof::weak_promote<WeakShape>(UnionShape{held});
+    require(stored.has_value() && std::get<std::weak_ptr<double>>(stored.value()).lock() == held, "a strong interface value lost its weak arm");
+    require(!doof::weak_promote<WeakShape>(std::variant<std::monostate, std::shared_ptr<int>>{}).has_value(), "absent strong union stored as present");
+    require(!doof::weak_promote<WeakShape>(std::shared_ptr<int>{}).has_value(), "null class reference stored as present");
 }
 
 void test_string_builder() {

@@ -64,6 +64,10 @@ export function testWeakPrecedenceNative(): none {
   runNativeFixture("weak-precedence", "weak precedence ok")
 }
 
+export function testWeakInterfaceNative(): none {
+  runNativeFixture("weak-interface", "weak interface ok")
+}
+
 function runNativeFixture(fixture: string, expectedOutput: string = "", expectedExitCode: int = 0): none {
   root := join([tempDirectory(), "doof-native-" + fixture])
   clearNativeMatrix(root)

@@ -223,3 +223,9 @@ export function testInclusiveRangeValuesCarryTheirSourceLocation(): none {
   Assert.stringContains(source, "doof::range(1, limit, \"main\", 2)")
   Assert.stringContains(source, "doof::range_exclusive(1, limit)")
 }
+
+export function testWeakFieldAccessOnAnImplementationlessInterfaceIsUnreachable(): none {
+  source := emittedSource("interface Shape { name: string }\nfunction name(shape: weak Shape | none): string | none => shape?.name")
+  Assert.stringContains(source, "(static_cast<void>(_weak_value_1), doof::no_implementations<std::string>(\"Shape\"))")
+  Assert.stringNotContains(source, "_weak_item->name")
+}

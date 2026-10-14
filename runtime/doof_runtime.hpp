@@ -2080,6 +2080,10 @@ struct is_std_variant<std::variant<T...>> : std::true_type {};
 template <typename Interface>
 struct arms {};
 
+// Marks an interface carrier whose alternatives a weak union splices as weak_ptrs.
+template <typename Interface>
+struct weak_arms {};
+
 namespace union_detail {
 
 template <typename Variant, typename T>
@@ -2101,10 +2105,25 @@ struct build<Variant, Member, Rest...> : build<typename append<Variant, Member>:
 template <typename Variant, typename... Alternatives, typename... Rest>
 struct build<Variant, arms<std::variant<Alternatives...>>, Rest...> : build<Variant, Alternatives..., Rest...> {};
 
+template <typename Strong>
+struct weak_arm {
+    // Only an implementationless interface's placeholder arm lands here.
+    using type = std::weak_ptr<Strong>;
+};
+
+template <typename T>
+struct weak_arm<std::shared_ptr<T>> {
+    using type = std::weak_ptr<T>;
+};
+
+template <typename Variant, typename... Alternatives, typename... Rest>
+struct build<Variant, weak_arms<std::variant<Alternatives...>>, Rest...> : build<Variant, typename weak_arm<Alternatives>::type..., Rest...> {};
+
 } // namespace union_detail
 
 // A union carrier with interface members flattened into their implementing
-// alternatives, in member order and without duplicates.
+// alternatives, in member order and without duplicates. A weak reference
+// splices `weak_arms<Interface>`, holding a weak_ptr for each implementor.
 template <typename... Members>
 using union_t = typename union_detail::build<std::variant<>, Members...>::type;
 
@@ -2151,6 +2170,37 @@ Target variant_promote(const std::variant<Source...>& value) {
 template <typename Target, typename Source>
 Target variant_promote(const Source& value) {
     return Target{value};
+}
+
+// Stores a strong or weak value into an optional weak variant: each present
+// arm becomes its own weak_ptr arm, and none stays absent.
+template <typename Target, typename T>
+Target weak_promote(const std::shared_ptr<T>& value) {
+    return value == nullptr ? Target{} : Target{std::weak_ptr<T>(value)};
+}
+
+template <typename Target, typename T>
+Target weak_promote(const std::weak_ptr<T>& value) {
+    return Target{value};
+}
+
+template <typename Target, typename... Source>
+Target weak_promote(const std::variant<Source...>& value) {
+    return std::visit([](const auto& item) -> Target {
+        using Item = std::decay_t<decltype(item)>;
+        if constexpr (std::is_same_v<Item, std::monostate>) {
+            return Target{};
+        } else if constexpr (std::is_same_v<Item, NoImplementations>) {
+            return no_implementations<Target>("weak reference target");
+        } else {
+            return weak_promote<Target>(item);
+        }
+    }, value);
+}
+
+template <typename Target, typename Source>
+Target weak_promote(const std::optional<Source>& value) {
+    return value.has_value() ? weak_promote<Target>(value.value()) : Target{};
 }
 
 template <typename... T>

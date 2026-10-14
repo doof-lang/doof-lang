@@ -2741,3 +2741,9 @@ export function testStaticMethodsThroughInstancesNameTheClass(): none {
   Assert.equal(invalid.diagnostics.length, 1)
   Assert.equal(invalid.diagnostics[0].message, "Static member 'describe' must be accessed through its class: use 'Rectangle.describe'")
 }
+
+export function testChecksWeakInterfaceReferenceAccess(): none {
+  result := checked("interface Shape { area(): double }\nclass Circle implements Shape { area(): double => 1.0 }\nclass Holder { let weak focus: Shape | none = none\nlet watched: weak Shape | Circle | none = none }\nfunction set(holder: Holder, shape: Shape): none { holder.focus = shape }\nfunction area(holder: Holder): double | none => holder.focus?.area()\nfunction forced(shape: weak Shape): double => shape!.area()")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}

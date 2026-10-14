@@ -35,7 +35,7 @@ export function carrierOf(type_: ResolvedType, position: CarrierPosition = .Valu
           inner := carrierOf(union_)
           return NativeCarrier { kind: if inner.hasNone then .Optional else if weakTargetUsesVariant(union_) then .Variant else .WeakPointer }
         }
-        _ -> { return NativeCarrier { kind: .WeakPointer } }
+        _ -> { return NativeCarrier { kind: if weakTargetUsesVariant(weak_.inner) then .Variant else .WeakPointer } }
       }
     }
     union_: UnionResolvedType -> {
@@ -86,14 +86,33 @@ export function weakTargetAllowsNone(type_: ResolvedType): bool {
   return type_.kind == "union" && carrierOf(type_).hasNone
 }
 
+// An interface target is a variant of weak implementor arms even alone.
 export function weakTargetUsesVariant(type_: ResolvedType): bool {
   case type_ {
+    _: InterfaceType -> { return true }
     union_: UnionResolvedType -> {
       let present = 0
-      for member of flattenCarrierMembers(union_.types) { if member.kind != "none" { present += 1 } }
+      for member of flattenCarrierMembers(union_.types) {
+        if member.kind == "interface" { return true }
+        if member.kind != "none" { present += 1 }
+      }
       return present > 1
     }
     _ -> { return false }
   }
   return false
+}
+
+// The type a locked weak reference holds: its target without the none arm.
+export function presentWeakTarget(target: ResolvedType): ResolvedType {
+  case target {
+    union_: UnionResolvedType -> {
+      let present: ResolvedType[] = []
+      for member of union_.types { if member.kind != "none" { present.push(member) } }
+      if present.length == 1 { return present[0] }
+      return UnionResolvedType { types: present }
+    }
+    _ -> { return target }
+  }
+  return target
 }

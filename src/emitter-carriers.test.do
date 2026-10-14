@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
-import { carrierOf, CarrierKind, CarrierPosition, weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
-import { ArrayResolvedType, ClassType, FunctionType, SerialValueResolvedType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, Symbol, TupleResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { carrierOf, CarrierKind, CarrierPosition, presentWeakTarget, weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
+import { ArrayResolvedType, ClassType, FunctionType, InterfaceType, SerialValueResolvedType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, Symbol, TupleResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
 
 export function testCarrierModelPositionsAndNullableFamilies(): none {
   unit := NoneType {}
@@ -26,4 +26,14 @@ export function testCarrierModelPositionsAndNullableFamilies(): none {
     Assert.isTrue(carrier.hasNone)
     Assert.equal(carrier.naturalNullable, index < 5)
   }
+}
+
+export function testWeakInterfaceTargetsAreWeakVariants(): none {
+  shape := InterfaceType { name: "Shape", symbol: Symbol { kind: "interface", name: "Shape", module: "", exported: false } }
+  nullable := UnionResolvedType { types: [shape, NoneType {}] }
+  Assert.isTrue(weakTargetUsesVariant(shape))
+  Assert.isTrue(weakTargetUsesVariant(nullable))
+  Assert.equal(carrierOf(WeakResolvedType { inner: shape }).kind, CarrierKind.Variant)
+  Assert.equal(carrierOf(WeakResolvedType { inner: nullable }).kind, CarrierKind.Optional)
+  Assert.equal(presentWeakTarget(nullable).kind, "interface")
 }

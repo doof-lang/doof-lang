@@ -58,7 +58,10 @@ union values use representation-appropriate optional/variant forms. A union
 with an interface member splices that interface's implementors into one flat
 variant through `doof::union_t<..., doof::arms<Interface>, ...>`, so
 `Shape | none` is `std::variant<std::monostate, Circle, Square>` (as shared
-pointers) and removing none yields exactly the `Shape` variant.
+pointers) and removing none yields exactly the `Shape` variant. A weak interface
+target splices `doof::weak_arms<Interface>`, a `std::weak_ptr` per implementor;
+locking it yields the strong interface variant, and `doof::weak_promote` stores
+strong values into optional weak variants.
 
 Functions, methods, statements, and expressions are emitted from checker-
 decorated nodes. Whole-program monomorphization discovers concrete generic

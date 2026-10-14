@@ -340,3 +340,12 @@ export function testImpliedInterfaceDecodingRejectsUndiscriminatedArguments(): n
   Assert.equal(result.diagnostics.length, 1)
   Assert.stringContains(result.diagnostics[0].message, "Type \"Named\" does not support automatic JSON deserialization (implementing classes must share")
 }
+
+export function testWeakMethodCallVisitsInterfaceArmsOrIsUnreachableWithoutThem(): none {
+  visited := compile([SourceFile { path: "/main.do", source: "interface Shape { area(): double }\nclass Circle implements Shape { area(): double => 1.0 }\nfunction area(shape: weak Shape): double => shape!.area()" }], "/main.do")
+  Assert.equal(visited.diagnostics.length, 0)
+  Assert.stringContains(visited.emission!.modules[0].source, "std::visit([&](auto&& _weak_item) -> double { return _weak_item->area(); }, _weak_value_1)")
+  empty := compile([SourceFile { path: "/main.do", source: "interface Shape { area(): double }\nfunction area(shape: weak Shape): double => shape!.area()" }], "/main.do")
+  Assert.equal(empty.diagnostics.length, 0)
+  Assert.stringContains(empty.emission!.modules[0].source, "(static_cast<void>(_weak_value_1), doof::no_implementations<double>(\"Shape\"))")
+}

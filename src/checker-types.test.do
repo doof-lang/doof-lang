@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
-import { FunctionParamType, Symbol } from "./semantic"
-import { applyDeepReadonly, interfaceBoundReceiver, arrayType, classType, displayTypeName, failureType, functionType, isAssignable, mapType, noneType, primitive, promiseType, resultArmExpectation, resultType, sameType, streamType, substituteTypeParams, successType, typeName, typeParameter, mixedWeakUnionMessage, unionMutabilityConflict, unionType, weakType } from "./checker-types"
+import { FunctionParamType, InterfaceType, Symbol } from "./semantic"
+import { applyDeepReadonly, interfaceBoundReceiver, isWeakReferenceTarget, arrayType, classType, displayTypeName, failureType, functionType, isAssignable, mapType, noneType, primitive, promiseType, resultArmExpectation, resultType, sameType, streamType, substituteTypeParams, successType, typeName, typeParameter, mixedWeakUnionMessage, unionMutabilityConflict, unionType, weakType } from "./checker-types"
 
 export function testResultArmAssignabilityUsesOnlyItsPayloadChannel(): none {
   success := successType(primitive("int"))
@@ -271,4 +271,11 @@ export function testWeakReferencesWidenIntoOptionalWeakSlots(): none {
   Assert.isTrue(isAssignable(optional, optional))
   Assert.isFalse(isAssignable(optional, weakType(node)))
   Assert.isFalse(isAssignable(weakType(other), optional))
+}
+
+export function testInterfacesAreWeakReferenceTargets(): none {
+  shape := InterfaceType { name: "Shape", symbol: Symbol { kind: "interface", name: "Shape", module: "/main.do", exported: false } }
+  Assert.isTrue(isWeakReferenceTarget(shape))
+  Assert.isTrue(isWeakReferenceTarget(unionType([shape, noneType()])))
+  Assert.isFalse(isWeakReferenceTarget(unionType([shape, primitive("int")])))
 }

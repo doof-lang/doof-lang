@@ -3,7 +3,7 @@
 import { emitClassCall } from "./emitter-construction"
 
 import { emitCallArguments, emitDispatchCallArguments } from "./emitter-call-arguments"
-import { weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
+import { presentWeakTarget, weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
 import { CallExpression, Expression, FunctionDeclaration, Identifier, MemberExpression } from "./ast"
 import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, NoneType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
@@ -358,6 +358,8 @@ function emitWeakMemberCall(expression: CallExpression, member: MemberExpression
         if originalReturn == none { panic("Weak union method call has no resolved return type") }
         call = "std::visit([&](auto&& _weak_item) -> " + emitContextReturnType(originalReturn!, context) + " { return _weak_item->" + cppIdentifier(member.property) + "(" + arguments + "); }, " + temporary + ")"
       }
+      empty := implementationlessInterface(presentWeakTarget(weak_.inner), context)
+      if empty != none { call = emitNoImplementationsAccess(temporary, empty!, originalReturn, context) }
     }
     _ -> { }
   }

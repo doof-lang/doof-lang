@@ -4,7 +4,7 @@ import { emitCarrierConversion } from "./emitter-carrier-values"
 import { emitOptionalAbsent, emitOptionalIndex, emitOptionalMember, emitOptionalPresent } from "./emitter-optional-chain"
 import { emitAbsentTest, emitForced, emitOptional, emitterAbsenceLayers } from "./emitter-absence"
 import { absenceLayers, hasFailureLayer } from "./absence-types"
-import { carrierOf, weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
+import { carrierOf, presentWeakTarget, weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
 import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Identifier, IndexExpression, MemberExpression, StringLiteral, ThisExpression, UnaryExpression } from "./ast"
 import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, SerialValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
@@ -563,6 +563,8 @@ function emitWeakFieldAccess(expression: MemberExpression, object: string, conte
       if weakTargetUsesVariant(weak_.inner) {
         access = "std::visit([](auto&& _weak_item) { return _weak_item->" + cppIdentifier(expression.property) + "; }, " + temporary + ")"
       }
+      empty := implementationlessInterface(presentWeakTarget(weak_.inner), context)
+      if empty != none { access = emitNoImplementationsAccess(temporary, empty!, if expression.force then expression.resolvedType else expression.resolvedOptionalValue, context) }
     }
     _ -> { }
   }
@@ -605,18 +607,4 @@ export function emitIndex(expression: IndexExpression, context: EmitContext): st
     }
   }
   return object + "[" + index + "]"
-}
-
-// The type a locked weak reference holds: its target without the none arm.
-function presentWeakTarget(target: ResolvedType): ResolvedType {
-  case target {
-    union_: UnionResolvedType -> {
-      let present: ResolvedType[] = []
-      for member of union_.types { if member.kind != "none" { present.push(member) } }
-      if present.length == 1 { return present[0] }
-      return UnionResolvedType { types: present }
-    }
-    _ -> { return target }
-  }
-  return target
 }

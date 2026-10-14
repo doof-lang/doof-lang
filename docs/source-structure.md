@@ -171,7 +171,7 @@ emitter or individual expression branch.
 | `emitter-expr-actor.do` | Actors, promises, async calls, and retirement |
 | `emitter-expr-utils.do` | Decorated-type requirements, shared shorthand property emission, specialized expression-return boundaries, and model-backed nullable queries |
 | `emitter-case-pattern.do` | Type-pattern lowering from checked pattern types (a Result subject is the variant of its arms) and checker-decorated weak subject materialization shared by statement and expression cases; natural nullable absence patterns test for null, and absence bindings use the unit carrier |
-| `emitter-carriers.do` | Pure specialized-type classification for value, return, payload, nullable storage, and explicit absence |
+| `emitter-carriers.do` | Pure specialized-type classification for value, return, payload, nullable storage, and explicit absence, including weak variant targets (interfaces) and the present type a locked weak reference holds |
 | `emitter-carrier-values.do` | Shared absence construction and native carrier conversion, with exactly-once evaluation |
 | `emitter-carrier-native.test.do` | Compiles current-source emitter output and executes the durable native carrier matrix in the normal suite |
 | `emitter-types.do` | C++ type spelling and generic specialization using the shared carrier classification; unions splice interface members into one flat `doof::union_t` variant |

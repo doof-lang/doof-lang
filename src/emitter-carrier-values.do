@@ -1,8 +1,8 @@
 // C++ operations on the pure carrier model. No AST inspection or assignability.
 // Callers pass specialized checked types and the native source position.
 
-import { FailureResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType } from "./semantic"
-import { CarrierPosition, carrierOf } from "./emitter-carriers"
+import { FailureResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, WeakResolvedType } from "./semantic"
+import { CarrierPosition, carrierOf, weakTargetUsesVariant } from "./emitter-carriers"
 import { EmitContext } from "./emitter-context"
 import { emitContextReturnType, emitContextType, specializeEmitType } from "./emitter-types"
 
@@ -50,6 +50,17 @@ export function emitCarrierConversion(value: string, source: ResolvedType, targe
   targetCarrier := carrierOf(toType)
   if sourceCarrier.kind == .Void || (sourceCarrier.kind == .Unit && targetCarrier.kind != .Unit) {
     return "(static_cast<void>(" + value + "), " + emitCarrierAbsence(toType, context) + ")"
+  }
+  // An optional weak variant stores each present arm as its own weak_ptr; a
+  // strong variant or absent pointer has no implicit conversion into it.
+  case toType {
+    weak_: WeakResolvedType -> {
+      if targetCarrier.kind == .Optional && weakTargetUsesVariant(weak_.inner) {
+        toCpp := emitContextType(toType, context)
+        return if emitContextType(fromType, context) == toCpp then value else "doof::weak_promote<" + toCpp + ">(" + value + ")"
+      }
+    }
+    _ -> { }
   }
   if targetCarrier.kind == .Variant && !targetCarrier.naturalNullable {
     fromCpp := emitContextType(fromType, context)
