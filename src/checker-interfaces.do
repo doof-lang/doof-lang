@@ -35,7 +35,7 @@ import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-actor-lifecycle"
 
 
-import { methodSignature, resolveAnnotation, declarationFor, symbolName } from "./checker-symbols"
+import { containsString, methodSignature, resolveAnnotation, declarationFor, symbolName } from "./checker-symbols"
 
 export function symbolSpan(info: ModuleInfo, name: string): SourceSpan {
   for statement of info.program.statements { if symbolName(statement) == name { return statement.span } }
@@ -398,11 +398,6 @@ function resolvedClassFieldType(result: AnalysisResult, field: ClassField, symbo
 
 function concreteInterfacePairKey(class_: ClassType, interface_: InterfaceType): string {
   return class_.symbol.module + "::" + typeName(class_) + "->" + interface_.symbol.module + "::" + typeName(interface_)
-}
-
-function containsString(values: string[], value: string): bool {
-  for existing of values { if existing == value { return true } }
-  return false
 }
 
 export function findClassField(fields: ClassField[], name: string): ClassField | none {

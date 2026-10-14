@@ -12,7 +12,7 @@ import { CheckerState } from "./checker-state"
 import { checkExpression } from "./checker-expressions"
 
 import { finish, typeError } from "./checker-common"
-import { optionalResolvedType, hasObjectProperty, lookup, declarationFor } from "./checker-symbols"
+import { hasObjectProperty, lookup, declarationFor } from "./checker-symbols"
 import { findClassField, isAssignableWithInterfaces } from "./checker-interfaces"
 
 // Bare Map/Set annotations are declaration-local inference requests. Keep the
@@ -72,7 +72,7 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
                 if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span) }
                 else { property.resolvedBinding = binding; propertyType = binding!.type_ }
               }
-              property.resolvedType = optionalResolvedType(propertyType)
+              property.resolvedType = propertyType
               valueType = joinTypes(valueType, propertyType)
             }
             case keyType {
@@ -107,7 +107,7 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
     case expected! {
       _: SerialValueResolvedType -> {
         for item of expression.elements {
-          actual := checkExpression(state, item, scope, optionalResolvedType(jsonValueType()))
+          actual := checkExpression(state, item, scope, jsonValueType())
           if !isAssignableWithInterfaces(state.result, actual, jsonValueType()) { typeError(state, "Cannot assign " + typeName(actual) + " to SerialValue", item.span) }
         }
         return finish(state, expression, expected!)
@@ -115,7 +115,7 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
       union_: UnionResolvedType -> {
         if containsJsonValue(state, union_) {
           for item of expression.elements {
-            actual := checkExpression(state, item, scope, optionalResolvedType(jsonValueType()))
+            actual := checkExpression(state, item, scope, jsonValueType())
             if !isAssignableWithInterfaces(state.result, actual, jsonValueType()) { typeError(state, "Cannot assign " + typeName(actual) + " to SerialValue", item.span) }
           }
           return finish(state, expression, jsonValueType())
@@ -143,7 +143,7 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
   }
   if expectedElement != none {
     for item of expression.elements {
-      actual := checkExpression(state, item, scope, optionalResolvedType(expectedElement!))
+      actual := checkExpression(state, item, scope, expectedElement!)
       if !isAssignableWithInterfaces(state.result, actual, expectedElement!) { typeError(state, "Cannot assign " + typeName(actual) + " to " + typeName(expectedElement!), item.span) }
     }
     case expected! {
@@ -204,7 +204,7 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
       map: MapResolvedType -> {
         for property of expression.properties {
           if property.key != none {
-            actualKey := checkExpression(state, property.key!, scope, optionalResolvedType(map.keyType))
+            actualKey := checkExpression(state, property.key!, scope, map.keyType)
             if !isAssignableWithInterfaces(state.result, actualKey, map.keyType) { typeError(state, "Cannot assign " + typeName(actualKey) + " to map key type " + typeName(map.keyType), property.span) }
           } else if !sameType(map.keyType, primitive("string")) {
             typeError(state, "Cannot assign string to map key type " + typeName(map.keyType), property.span)

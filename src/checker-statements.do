@@ -40,13 +40,13 @@ import { pathType } from "./checker-inference"
 import { CheckerState, LambdaReturnObservation } from "./checker-state"
 import { checkTry } from "./checker-try"
 import { validateStructLayout } from "./checker-struct-layout"
-import { checkExpression, addClassMethods } from "./checker-expressions"
+import { checkCallerDefault, checkExpression, addClassMethods } from "./checker-expressions"
 import { checkedCaseSubjectType, casePatternsExhaustive, checkCasePatterns } from "./checker-case"
 import { checkOmittedCollectionLiteral } from "./checker-literals"
 import { constantInt } from "./checker-constants"
 import { resolveType, memberType, resolveMember } from "./checker-resolution"
 import { deprecatedClassMethodFunction, deprecatedConstDeclaration, deprecatedConstField, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
-import { decorateAnnotationWithResolved, blockContainsLoopExit, containsString, optionalResolvedType, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
+import { decorateAnnotationWithResolved, blockContainsLoopExit, containsString, classFieldBinding, fieldDisplayName, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
 import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterface, isAssignableWithInterfaces } from "./checker-interfaces"
 import { absenceErrorType, canBeAbsent, presentType } from "./absence-types"
 import { checkerSemanticSpan } from "./checker-validation"
@@ -67,7 +67,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
       aliasScope := Scope { parent: scope }
       populateTypeParameters(state, aliasScope, alias.typeParams, alias.typeParamConstraints)
       resolvedAlias := resolveType(state, alias.type_, state.info!, aliasScope)
-      alias.resolvedType = optionalResolvedType(resolvedAlias)
+      alias.resolvedType = resolvedAlias
       return true
     }
     _: MockImportDirective -> { return true }
@@ -162,7 +162,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
         valueType := checkExpression(state, binding.value, bodyScope, none)
         if valueType.kind == "never" { bindingsComplete = false }
         declaredType := if binding.type_ == none then valueType else resolveType(state, binding.type_!, state.info!, scope)
-        binding.resolvedType = optionalResolvedType(declaredType)
+        binding.resolvedType = declaredType
         if !isAssignableWithInterfaces(state.result, valueType, declaredType) { typeError(state, "Cannot assign " + displayTypeName(valueType) + " to " + displayTypeName(declaredType), binding.span) }
         if binding.name == "_" {
           case valueType {
@@ -187,16 +187,16 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
       }
       expectedYield := target!.yieldExpectedType
       valueType := checkExpression(state, yield_.value, scope, expectedYield)
-      target!.yieldType = optionalResolvedType(pathType(state, target!.yieldType ?? unknownType(), valueType, expectedYield, yield_.span))
+      target!.yieldType = pathType(state, target!.yieldType ?? unknownType(), valueType, expectedYield, yield_.span)
       return false
     }
     assignment: YieldBlockAssignmentStatement -> {
       if scope.parent == none {
         typeError(state, "'<-' yield-block reassignment is only allowed for local variables", assignment.span)
       }
-      binding := lookupYieldBinding(scope, assignment.name)
+      binding := lookup(scope, assignment.name)
       let expectedType: ResolvedType | none = none
-      if binding != none { expectedType = optionalResolvedType(binding!.type_) }
+      if binding != none { expectedType = binding!.type_ }
       valueType := checkExpression(state, assignment.value, scope, expectedType)
       if binding == none {
         typeError(state, "Undefined identifier \"" + assignment.name + "\"", assignment.span)
@@ -206,7 +206,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
       if !isAssignableWithInterfaces(state.result, valueType, binding!.type_) {
         typeError(state, "Cannot assign " + displayTypeName(valueType) + " to " + displayTypeName(binding!.type_), assignment.span)
       }
-      assignment.resolvedType = optionalResolvedType(binding!.type_)
+      assignment.resolvedType = binding!.type_
       return true
     }
     expression: ExpressionStatement -> {
@@ -284,16 +284,16 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
   if annotation != none && elseBlock == none { inferredCollectionType = checkOmittedCollectionLiteral(state, annotation!, value, scope) }
   // Resolve the annotation once: resolution reports its diagnostics.
   let annotatedType: ResolvedType | none = none
-  if annotation != none && inferredCollectionType == none { annotatedType = optionalResolvedType(resolveType(state, annotation!, state.info!, scope)) }
+  if annotation != none && inferredCollectionType == none { annotatedType = resolveType(state, annotation!, state.info!, scope) }
   let expectedValueType: ResolvedType | none = if elseBlock == none then annotatedType else none
-  if kind == "readonly" && expectedValueType != none { expectedValueType = optionalResolvedType(applyDeepReadonly(expectedValueType!)) }
+  if kind == "readonly" && expectedValueType != none { expectedValueType = applyDeepReadonly(expectedValueType!) }
   let valueType = if inferredCollectionType == none then checkExpression(state, value, scope, expectedValueType) else inferredCollectionType!
   let declaredType: ResolvedType = valueType
   if annotatedType != none { declaredType = annotatedType! }
   if kind == "readonly" {
     valueType = applyDeepReadonly(valueType)
     declaredType = applyDeepReadonly(declaredType)
-    value.resolvedType = optionalResolvedType(valueType)
+    value.resolvedType = valueType
     // Readonly collections are applied structurally above; nominal classes
     // must already be deeply immutable, matching readonly field validation.
     violation := findActorBoundaryViolation(state.result, declaredType)
@@ -337,10 +337,10 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
     typeError(state, "Cannot assign " + displayTypeName(valueType) + " to " + displayTypeName(declaredType), span)
   }
   case declaration {
-    const_: ConstDeclaration -> { const_.resolvedType = optionalResolvedType(declaredType) }
-    readonly_: ReadonlyDeclaration -> { readonly_.resolvedType = optionalResolvedType(declaredType) }
-    binding: ImmutableBinding -> { binding.resolvedType = optionalResolvedType(declaredType) }
-    let_: LetDeclaration -> { let_.resolvedType = optionalResolvedType(declaredType) }
+    const_: ConstDeclaration -> { const_.resolvedType = declaredType }
+    readonly_: ReadonlyDeclaration -> { readonly_.resolvedType = declaredType }
+    binding: ImmutableBinding -> { binding.resolvedType = declaredType }
+    let_: LetDeclaration -> { let_.resolvedType = declaredType }
     _ -> { }
   }
   if name != "_" {
@@ -380,16 +380,13 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
     })
   }
   functionValue := functionType(parameterTypes, returnType, fn.typeParams)
-  fn.resolvedType = optionalResolvedType(functionValue)
+  fn.resolvedType = functionValue
   for index of 0..<fn.params.length {
     parameter := fn.params[index]
     parameterType := parameterTypes[index].type_
-    parameter.resolvedType = optionalResolvedType(parameterType)
+    parameter.resolvedType = parameterType
     if parameter.defaultValue != none {
-      previousAllowsCaller := state.allowsCaller
-      state.allowsCaller = true
-      defaultType := checkExpression(state, parameter.defaultValue!, scope, optionalResolvedType(parameterType))
-      state.allowsCaller = previousAllowsCaller
+      defaultType := checkCallerDefault(state, parameter.defaultValue!, scope, parameterType)
       if !isAssignableWithInterfaces(state.result, defaultType, parameterType) {
         typeError(state, "Cannot use default value of type " + typeName(defaultType) + " for parameter '" + parameter.name + "' of type " + typeName(parameterType), parameter.defaultValue!.span)
       }
@@ -403,7 +400,7 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
   let completes = true
   case fn.body {
     expression: Expression -> {
-      actualReturn = checkExpression(state, expression, scope, optionalResolvedType(returnType))
+      actualReturn = checkExpression(state, expression, scope, returnType)
       if returnType.kind != "never" && !isAssignableWithInterfaces(state.result, actualReturn, returnType) {
         typeError(state, "Cannot return " + typeName(actualReturn) + " from function returning " + typeName(returnType), expression.span)
       }
@@ -443,27 +440,21 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
     if field.type_ != none {
       fieldType = resolveType(state, field.type_!, state.info!, classScope)
     } else if field.defaultValue != none {
-      previousAllowsCaller := state.allowsCaller
-      state.allowsCaller = true
-      fieldType = checkExpression(state, field.defaultValue!, classScope, none)
-      state.allowsCaller = previousAllowsCaller
+      fieldType = checkCallerDefault(state, field.defaultValue!, classScope, none)
     }
     validateEnumLiteralField(state, field, fieldType)
     if field.readonly_ || field.const_ { fieldType = applyDeepReadonly(fieldType) }
-    field.resolvedType = optionalResolvedType(if field.weak_ then weakType(fieldType) else fieldType)
+    field.resolvedType = if field.weak_ then weakType(fieldType) else fieldType
     if field.weak_ && !isWeakReferenceTarget(fieldType) {
-      name := if field.names.length == 0 then "<field>" else field.names[0]
+      name := fieldDisplayName(field)
       typeError(state, "Field \"" + name + "\" has type \"" + typeName(fieldType) + "\", which is not a valid weak reference target", field.span)
     }
     if class_.struct_ && (field.weak_ || containsWeakType(fieldType)) {
-      name := if field.names.length == 0 then "<field>" else field.names[0]
+      name := fieldDisplayName(field)
       typeError(state, "Struct field \"" + name + "\" cannot be weak", field.span)
     }
     if field.defaultValue != none && field.type_ != none {
-      previousAllowsCaller := state.allowsCaller
-      state.allowsCaller = true
-      defaultType := checkExpression(state, field.defaultValue!, classScope, optionalResolvedType(fieldType))
-      state.allowsCaller = previousAllowsCaller
+      defaultType := checkCallerDefault(state, field.defaultValue!, classScope, fieldType)
       if !isAssignableWithInterfaces(state.result, defaultType, fieldType) {
         typeError(state, "Cannot use default value of type " + typeName(defaultType) + " for field of type " + typeName(fieldType), field.defaultValue!.span)
       }
@@ -598,13 +589,13 @@ export function checkInterface(state: CheckerState, interface_: InterfaceDeclara
   for field of interface_.fields {
     let fieldType = resolveType(state, field.type_, state.info!, interfaceScope)
     if field.readonly_ { fieldType = applyDeepReadonly(fieldType) }
-    field.resolvedType = optionalResolvedType(fieldType)
+    field.resolvedType = fieldType
   }
   for method of interface_.methods { checkFunction(state, method, interfaceScope, none) }
   for field of interface_.staticFields {
     let fieldType = resolveType(state, field.type_, state.info!, interfaceScope)
     if field.readonly_ { fieldType = applyDeepReadonly(fieldType) }
-    field.resolvedType = optionalResolvedType(fieldType)
+    field.resolvedType = fieldType
   }
   for method of interface_.staticMethods { checkFunction(state, method, interfaceScope, none) }
 }
@@ -735,7 +726,7 @@ export function checkEnum(state: CheckerState, enum_: EnumDeclaration, scope: Sc
         typeError(state, "String enum variant \"" + variant.name + "\" requires an explicit string value", variant.span)
         continue
       }
-      checkExpression(state, variant.value!, scope, optionalResolvedType(primitive("string")))
+      checkExpression(state, variant.value!, scope, primitive("string"))
       let value: string | none = none
       case variant.value! {
         literal: StringLiteral -> { if literal.interpolations.length == 0 { value = literal.value } }
@@ -766,7 +757,7 @@ export function checkEnum(state: CheckerState, enum_: EnumDeclaration, scope: Sc
     else { names.push(variant.name) }
     let value: long | none = nextValue
     if variant.value != none {
-      valueType := checkExpression(state, variant.value!, scope, optionalResolvedType(primitive("int")))
+      valueType := checkExpression(state, variant.value!, scope, primitive("int"))
       if !isAssignableWithInterfaces(state.result, valueType, primitive("int")) { typeError(state, "Enum value must be an int", variant.span) }
       value = constantInt(variant.value!)
       if value == none { typeError(state, "Enum variant \"" + variant.name + "\" value must be a compile-time int constant", variant.value!.span) }
@@ -828,14 +819,14 @@ export function checkReturn(state: CheckerState, statement: ReturnStatement, sco
     return false
   }
   returnType := target!.returnType!
-  statement.resolvedExpectedType = optionalResolvedType(returnType)
+  statement.resolvedExpectedType = returnType
   let actualReturn = noneType()
   if statement.value == none {
     if returnType.kind != "none" && returnType.kind != "unknown" {
       typeError(state, "Expected a return value of type " + typeName(returnType), statement.span)
     }
   } else {
-    valueType := checkExpression(state, statement.value!, scope, optionalResolvedType(returnType))
+    valueType := checkExpression(state, statement.value!, scope, returnType)
     actualReturn = valueType
     if !isAssignableWithInterfaces(state.result, valueType, returnType) { typeError(state, "Cannot return " + typeName(valueType) + " from function returning " + typeName(returnType), statement.span) }
   }
@@ -948,18 +939,9 @@ function validateDestructuringTarget(state: CheckerState, scope: Scope, name: st
   if !isAssignableWithInterfaces(state.result, valueType, target!.type_) { typeError(state, "Cannot assign " + displayTypeName(valueType) + " to " + displayTypeName(target!.type_), span) }
 }
 
-function lookupYieldBinding(scope: Scope, name: string): Binding | none {
-  let current: Scope | none = scope
-  while current != none {
-    for binding of current!.bindings { if binding.name == name { return binding } }
-    current = current!.parent
-  }
-  return none
-}
-
 export function checkCase(state: CheckerState, statement: CaseStatement, scope: Scope, inLoop: bool = false): bool {
   subjectType := checkedCaseSubjectType(checkExpression(state, statement.subject, scope, none))
-  statement.resolvedSubjectType = optionalResolvedType(subjectType)
+  statement.resolvedSubjectType = subjectType
   let armPatterns: CasePattern[][] = []
   let allArmsReturn = statement.arms.length > 0
   for arm of statement.arms {
@@ -998,18 +980,7 @@ export function addClassFields(state: CheckerState, scope: Scope, owner: ClassTy
   case declaration! {
     class_: ClassDeclaration -> {
       for field of class_.fields {
-        for name of field.names {
-          declare(scope, Binding {
-            name,
-            kind: "field",
-            type_: field.resolvedType ?? unknownType(),
-            mutable: field.let_,
-            span: checkerSemanticSpan(field.span),
-            module: state.info!.path,
-            fieldMode: if field.readonly_ then "readonly" else if field.const_ then "const" else if field.let_ then "let" else "implicit",
-            fieldOwner: class_.name,
-          })
-        }
+        for name of field.names { declare(scope, classFieldBinding(field, name, class_, field.resolvedType ?? unknownType(), state.info!.path)) }
       }
     }
     _ -> { }

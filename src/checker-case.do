@@ -9,7 +9,7 @@ import { typesOverlap } from "./checker-operators"
 import { resolveType } from "./checker-resolution"
 import { CheckerState } from "./checker-state"
 import { checkBlock } from "./checker-statements"
-import { casePatternName, declarationFor, declare, optionalResolvedType } from "./checker-symbols"
+import { casePatternName, declarationFor, declare } from "./checker-symbols"
 import { failureType, neverType, resultType, sameType, successType, typeName, unknownType, weakReferenceErrorType } from "./checker-types"
 import { checkerSemanticSpan } from "./checker-validation"
 import type { Symbol } from "./semantic"
@@ -17,7 +17,7 @@ import { Binding, ClassType, EnumType, FailureResolvedType, PrimitiveType, Resol
 
 export function checkCaseExpression(state: CheckerState, expression: CaseExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   subjectType := checkedCaseSubjectType(checkExpression(state, expression.subject, scope, none))
-  expression.resolvedSubjectType = optionalResolvedType(subjectType)
+  expression.resolvedSubjectType = subjectType
   let inferredType: ResolvedType = neverType()
   let armPatterns: CasePattern[][] = []
   for arm of expression.arms {
@@ -30,7 +30,7 @@ export function checkCaseExpression(state: CheckerState, expression: CaseExpress
       block: Block -> {
         armScope.inValueYieldBlock = true
         armScope.yieldExpectedType = armExpected
-        armScope.yieldType = if armExpected == none then optionalResolvedType(unknownType()) else armExpected
+        armScope.yieldType = if armExpected == none then unknownType() else armExpected
         completes := checkBlock(state, block, armScope)
         if completes { typeError(state, "Block case-expression arms must yield a value on every path", block.span) }
         armType = armScope.yieldType ?? unknownType()
@@ -43,7 +43,7 @@ export function checkCaseExpression(state: CheckerState, expression: CaseExpress
   if subjectType.kind != "unknown" && subjectType.kind != "never" && !casePatternsExhaustive(state, subjectType, armPatterns) {
     typeError(state, "Case expression must be exhaustive", expression.span)
   }
-  expression.resolvedType = optionalResolvedType(inferredType)
+  expression.resolvedType = inferredType
   return inferredType
 }
 
@@ -287,10 +287,10 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
           }
         }
         case type_.type_ {
-          named: NamedType -> { named.resolvedType = optionalResolvedType(resolved) }
+          named: NamedType -> { named.resolvedType = resolved }
           _ -> { }
         }
-        type_.resolvedType = optionalResolvedType(resolved)
+        type_.resolvedType = resolved
         if !typesOverlap(state, subjectType, resolved) {
           typeError(state, "Case type pattern \"" + typeName(resolved) + "\" cannot match subject type \"" + typeName(subjectType) + "\"", type_.span)
         }
@@ -307,7 +307,7 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
         }
       }
       value: ValuePattern -> {
-        valueType := checkExpression(state, value.value, scope, optionalResolvedType(subjectType))
+        valueType := checkExpression(state, value.value, scope, subjectType)
         if !typesOverlap(state, subjectType, valueType) {
           typeError(state, "Case value pattern of type \"" + typeName(valueType) + "\" cannot match subject type \"" + typeName(subjectType) + "\"", value.span)
         }
@@ -331,7 +331,7 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
 
 function validateCaseRangeBound(state: CheckerState, bound: Expression | none, subjectType: ResolvedType, scope: Scope, span: SourceSpan): none {
   if bound == none { return }
-  boundType := checkExpression(state, bound!, scope, optionalResolvedType(subjectType))
+  boundType := checkExpression(state, bound!, scope, subjectType)
   if boundType.kind != "unknown" && !isIntegerOperand(boundType) {
     typeError(state, "Range pattern bounds must be integers; got \"" + typeName(boundType) + "\"", bound!.span)
     return

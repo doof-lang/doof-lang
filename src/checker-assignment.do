@@ -8,7 +8,7 @@ import { isAssignableWithInterfaces } from "./checker-interfaces"
 import { binaryOperatorType } from "./checker-operators"
 import { fieldAssignmentBinding } from "./checker-resolution"
 import { CheckerState } from "./checker-state"
-import { lookup, optionalResolvedType } from "./checker-symbols"
+import { lookup } from "./checker-symbols"
 import { displayTypeName, neverType, primitive, typeName, unknownType } from "./checker-types"
 import { ArrayResolvedType, MapResolvedType, ResolvedType, ResultResolvedType, Scope } from "./semantic"
 
@@ -33,12 +33,12 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
       binding := lookup(scope, identifier.name)
       if binding != none {
         identifier.resolvedBinding = binding
-        identifier.resolvedType = optionalResolvedType(binding!.type_)
+        identifier.resolvedType = binding!.type_
       }
     }
     _ -> { }
   }
-  let value = checkExpression(state, expression.value, scope, if tried then none else optionalResolvedType(targetType))
+  let value = checkExpression(state, expression.value, scope, if tried then none else targetType)
   if tried {
     case value {
       result: ResultResolvedType -> {
@@ -66,12 +66,12 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
       objectType := checkExpression(state, index.object, scope, none)
       case objectType {
         array: ArrayResolvedType -> {
-          checkExpression(state, index.index, scope, optionalResolvedType(primitive("int")))
+          checkExpression(state, index.index, scope, primitive("int"))
           if array.readonly_ { typeError(state, "Cannot assign through readonly array", expression.span) }
           if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, array.elementType) { typeError(state, "Cannot assign " + displayTypeName(value) + " to " + displayTypeName(array.elementType), expression.span) }
         }
         map: MapResolvedType -> {
-          key := checkExpression(state, index.index, scope, optionalResolvedType(map.keyType))
+          key := checkExpression(state, index.index, scope, map.keyType)
           if !isAssignableWithInterfaces(state.result, key, map.keyType) { typeError(state, "Cannot use " + typeName(key) + " as map key " + typeName(map.keyType), index.index.span) }
           if map.readonly_ { typeError(state, "Cannot assign through readonly map", expression.span) }
           if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, map.valueType) { typeError(state, "Cannot assign " + displayTypeName(value) + " to " + displayTypeName(map.valueType), expression.span) }

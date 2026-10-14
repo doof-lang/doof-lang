@@ -4,9 +4,10 @@
 // an earlier diagnostic when a later statement reuses the same resolved
 // lexical binding after `retire binding`.
 
-import { Expression, Identifier, RetireExpression, SourceSpan, Statement } from "./ast"
-import { ActorType, Binding, Diagnostic, SemanticLocation, SemanticSpan } from "./semantic"
+import { Expression, Identifier, RetireExpression, Statement } from "./ast"
+import { ActorType, Binding, Diagnostic } from "./semantic"
 import { collectNestedExpressions, collectStatementExpressions } from "./ast-walk"
+import { checkerSemanticSpan } from "./checker-validation"
 
 export function reportRetiredActorUses(statement: Statement, retired: Binding[], module: string, diagnostics: Diagnostic[]): none {
   if retired.length == 0 { return }
@@ -19,7 +20,7 @@ export function reportRetiredActorUses(statement: Statement, retired: Binding[],
         diagnostics.push(Diagnostic {
           severity: "error",
           message: "Cannot use actor binding \"" + identifier.name + "\" after it has been retired",
-          span: semanticSpan(identifier.span),
+          span: checkerSemanticSpan(identifier.span),
           module,
         })
       }
@@ -72,11 +73,4 @@ function sameBinding(left: Binding, right: Binding): bool {
 function addBinding(values: Binding[], value: Binding): none {
   for existing of values { if sameBinding(existing, value) { return } }
   values.push(value)
-}
-
-function semanticSpan(span: SourceSpan): SemanticSpan {
-  return SemanticSpan {
-    start: SemanticLocation { line: span.start.line, column: span.start.column, offset: span.start.offset },
-    end: SemanticLocation { line: span.end.line, column: span.end.column, offset: span.end.offset },
-  }
 }

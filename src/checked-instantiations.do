@@ -18,10 +18,12 @@ import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interface
 import { AnalysisResult } from "./analyzer"
 import { sameType, substituteTypeParams, typeName } from "./checker-types"
 import { classSatisfiesConcreteInterface } from "./checker-interfaces"
+import { containsString } from "./checker-symbols"
+import { checkerSemanticSpan } from "./checker-validation"
 import {
   ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType,
   StreamResolvedType, TupleResolvedType, TypeParameterType, TypeSubstitution, UnionResolvedType, WeakResolvedType,
-  Diagnostic, SemanticLocation, SemanticSpan,
+  Diagnostic,
 } from "./semantic"
 
 export class DiscoveredFunction {
@@ -442,10 +444,7 @@ function validateImpliedJsonMember(member: MemberExpression, receiver: ResolvedT
   }
   if supported { return }
   message := "Type \"" + typeName(receiver) + "\" does not support automatic JSON " + (if member.property == "toSerialObject" then "serialization" else "deserialization") + reason + ", required by '" + member.property + "' on type parameter \"" + typeName(member.object.resolvedType!) + "\""
-  span := SemanticSpan {
-    start: SemanticLocation { line: member.span.start.line, column: member.span.start.column, offset: member.span.start.offset },
-    end: SemanticLocation { line: member.span.end.line, column: member.span.end.column, offset: member.span.end.offset },
-  }
+  span := checkerSemanticSpan(member.span)
   // A generic body instantiated repeatedly with the same argument reports once.
   for existing of plan.jsonErrors {
     if existing.module == modulePath && existing.span.start.offset == span.start.offset && existing.message == message { return }
@@ -545,11 +544,6 @@ function addClass(plan: CheckedInstantiations, modulePath: string, declaration: 
   item := DiscoveredClass { key, modulePath, declaration, substitution: TypeSubstitution { names: declaration.typeParams, arguments: typeArgs }, trace: extendedTrace(plan.currentTrace, key) }
   plan.classes.push(item)
   plan.entries.push(item)
-}
-
-function containsString(values: string[], value: string): bool {
-  for existing of values { if existing == value { return true } }
-  return false
 }
 
 function addInterface(plan: CheckedInstantiations, modulePath: string, name: string, typeArgs: ResolvedType[]): none {

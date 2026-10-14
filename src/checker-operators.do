@@ -11,7 +11,7 @@ import { isAssignableWithInterfaces } from "./checker-interfaces"
 import { isIntegerOperand, isNumericOperand, numericOperationType, numericOperatorAllowed } from "./checker-numeric"
 import { resolveType } from "./checker-resolution"
 import { CheckerState } from "./checker-state"
-import { declarationFor, optionalResolvedType } from "./checker-symbols"
+import { declarationFor } from "./checker-symbols"
 import { isJsonValueType, isNumeric, isSerialBytesType, neverType, primitive, rangeType, resultType, sameType, typeName, unionType, unknownType } from "./checker-types"
 import { ArrayResolvedType, ClassType, EnumType, FailureResolvedType, InterfaceType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, Scope, SerialValueResolvedType, SuccessResolvedType, TypeParameterType, UnionResolvedType, UnknownType, WeakResolvedType } from "./semantic"
 
@@ -21,14 +21,14 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
   case expression.left {
     _: DotShorthand -> {
       right = checkExpression(state, expression.right, scope, none)
-      left = checkExpression(state, expression.left, scope, optionalResolvedType(right))
+      left = checkExpression(state, expression.left, scope, right)
     }
     _ -> {
       case expression.right {
         _: DotShorthand -> {
           left = checkExpression(state, expression.left, scope, none)
           shorthandExpected := if expression.operator == "??" then nonNoneType(state, left) else left
-          right = checkExpression(state, expression.right, scope, optionalResolvedType(shorthandExpected))
+          right = checkExpression(state, expression.right, scope, shorthandExpected)
         }
         _ -> {
           left = checkExpression(state, expression.left, scope, none)
@@ -139,7 +139,7 @@ export function checkUnary(state: CheckerState, expression: UnaryExpression, sco
   // Keep the operand decoration explicit at this boundary.  The emitter
   // consumes the operand node later, and must not reconstruct its type from
   // the unary state.result (notably for postfix ! over imported Result functions).
-        expression.operand.resolvedType = optionalResolvedType(value)
+        expression.operand.resolvedType = value
   if value.kind == "never" { return finish(state, expression, neverType()) }
   if expression.operator == "try" {
     // Bare `try` propagates by returning, so it only exists as a statement.

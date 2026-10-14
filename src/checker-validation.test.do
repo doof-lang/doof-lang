@@ -3,7 +3,7 @@ import { arrayType, classType, primitive, unionType } from "./checker-types"
 import { Assert } from "std/assert"
 import { AnalysisResult, createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
-import { validateCheckedTypes, validateResolved } from "./checker-validation"
+import { checkerSemanticSpan, pushDiagnostic, validateCheckedTypes, validateResolved } from "./checker-validation"
 import { CallExpression, FunctionDeclaration, MemberExpression } from "./ast"
 import { Diagnostic, SourceFile, Symbol } from "./semantic"
 
@@ -114,4 +114,22 @@ export function testPositionalLiteralConstructionIsValidated(): none {
   checked := createChecker(analysis, "/main.do").check("/main.do")
   Assert.equal(checked.diagnostics.length, 0)
   Assert.equal(validateCheckedTypes(analysis).length, 0)
+}
+
+export function testPushDiagnosticRecordsErrorAtConvertedSpan(): none {
+  analysis := analyzed("function main(): none {}\nfunction other(): none {}")
+  span := analysis.modules[0].program.statements[1].span
+  converted := checkerSemanticSpan(span)
+  Assert.equal(converted.start.line, 2)
+  Assert.equal(converted.start.column, span.start.column)
+  Assert.equal(converted.start.offset, span.start.offset)
+  Assert.equal(converted.end.offset, span.end.offset)
+  let diagnostics: Diagnostic[] = []
+  pushDiagnostic(diagnostics, "/main.do", span, "boom")
+  Assert.equal(diagnostics.length, 1)
+  Assert.equal(diagnostics[0].severity, "error")
+  Assert.equal(diagnostics[0].message, "boom")
+  Assert.equal(diagnostics[0].module, "/main.do")
+  Assert.equal(diagnostics[0].span.start.offset, span.start.offset)
+  Assert.equal(diagnostics[0].span.end.line, span.end.line)
 }

@@ -8,8 +8,8 @@ import { actorType, arrayType, classType, enumType, failureType, functionType, s
 
 import { CheckerState } from "./checker-state"
 import { isNumericConstraint, satisfiesNumericConstraint } from "./checker-numeric"
-import { deprecatedNoneAlias, typeError } from "./checker-common"
-import { builtinSourceLocationType, declaredSymbolName, optionalResolvedType, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
+import { deprecatedNoneAlias, typeArgumentArityMessage, typeError } from "./checker-common"
+import { builtinSourceLocationType, declaredSymbolName, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
 import { registerConcreteInterfaceImplementations, concreteTypes, classModuleFor, isAssignableWithInterfaces, satisfiesInterfaceBound, satisfiesInterfaceInstanceBound } from "./checker-interfaces"
 
 class AnnotationResolution {
@@ -36,13 +36,13 @@ function finishAnnotation(resolution: AnnotationResolution, annotation: TypeAnno
     if resolution.state.editorMode { resolution.state.info!.editorAnnotations.push(annotation) }
     conflict := unionMutabilityConflict(type_)
     if conflict != none { typeError(resolution.state, conflict!, annotation.span) }
-    annotation.resolvedType = optionalResolvedType(type_)
+    annotation.resolvedType = type_
   }
   return type_
 }
 
 export function decorateAnnotationType(state: CheckerState, annotation: TypeAnnotation, resolvedType: ResolvedType): ResolvedType {
-  annotation.resolvedType = optionalResolvedType(resolvedType)
+  annotation.resolvedType = resolvedType
   return resolvedType
 }
 
@@ -150,7 +150,7 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
         case declaration! {
           alias: TypeAliasDeclaration -> {
             if named.typeArgs.length != alias.typeParams.length {
-              typeError(state, alias.name + " requires " + string(alias.typeParams.length) + " type argument" + (if alias.typeParams.length == 1 then "" else "s"), named.span)
+              typeError(state, typeArgumentArityMessage(alias.name, alias.typeParams.length, named.typeArgs.length), named.span)
               return finishAnnotation(resolution, annotation, unknownType())
             }
             key := symbol!.module + ":" + alias.name
@@ -252,7 +252,7 @@ function rejectUnexpectedTypeArguments(resolution: AnnotationResolution, named: 
 
 function validateNominalTypeArity(state: CheckerState, name: string, expected: int, actual: int, span: SourceSpan): bool {
   if expected == actual { return true }
-  typeError(state, name + " requires " + string(expected) + " type argument" + (if expected == 1 then "" else "s") + "; received " + string(actual), span)
+  typeError(state, typeArgumentArityMessage(name, expected, actual), span)
   return false
 }
 

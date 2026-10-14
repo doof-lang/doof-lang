@@ -7,7 +7,7 @@ import { AnalysisResult } from "./analyzer"
 import { Binding, CheckResult, Diagnostic, Scope } from "./semantic"
 import { CheckerState } from "./checker-state"
 import { checkStatement } from "./checker-statements"
-import { checkExpression } from "./checker-expressions"
+import { checkCallerDefault } from "./checker-expressions"
 import { resolveType } from "./checker-resolution"
 import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-actor-lifecycle"
 import { discoverInterfaceImplementations, findModule } from "./checker-interfaces"
@@ -21,9 +21,8 @@ import {
   MockImportDirective, ReadonlyDeclaration, Statement, TryStatement, TypeAliasDeclaration,
 } from "./ast"
 import { applyDeepReadonly, arrayType, primitive, unknownType, weakType } from "./checker-types"
-import { typeError } from "./checker-common"
+import { discardDiagnosticsSince, typeError } from "./checker-common"
 import { validateModuleInitializerStatement } from "./checker-module-initialization"
-import { optionalResolvedType } from "./checker-symbols"
 
 export class ModuleChecker {
   state: CheckerState
@@ -237,15 +236,12 @@ function prepareClassFieldTypes(state: CheckerState): none {
               if field.type_ != none {
                 fieldType = resolveType(state, field.type_!, module, classScope)
               } else if field.defaultValue != none {
-                previousAllowsCaller := state.allowsCaller
-                state.allowsCaller = true
-                fieldType = checkExpression(state, field.defaultValue!, classScope, none)
-                state.allowsCaller = previousAllowsCaller
+                fieldType = checkCallerDefault(state, field.defaultValue!, classScope, none)
               }
-              while state.diagnostics.length > diagnosticCount { ignored := state.diagnostics.pop()! }
+              discardDiagnosticsSince(state, diagnosticCount)
               if fieldType.kind == "unknown" { continue }
               if field.readonly_ || field.const_ { fieldType = applyDeepReadonly(fieldType) }
-              field.resolvedType = optionalResolvedType(if field.weak_ then weakType(fieldType) else fieldType)
+              field.resolvedType = if field.weak_ then weakType(fieldType) else fieldType
               changed = true
             }
           }

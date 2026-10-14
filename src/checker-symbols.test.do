@@ -1,9 +1,9 @@
 import { Assert } from "std/assert"
 import { AnalysisResult, createAnalyzer } from "./analyzer"
-import { ClassDeclaration } from "./ast"
+import { ClassDeclaration, ClassField } from "./ast"
 import { SourceFile, FunctionType } from "./semantic"
-import { builtinCallable, isBuiltinCallable, methodSignature } from "./checker-symbols"
-import { typeName } from "./checker-types"
+import { builtinCallable, classFieldBinding, classFieldMode, fieldDisplayName, isBuiltinCallable, methodSignature } from "./checker-symbols"
+import { primitive, typeName } from "./checker-types"
 
 // Fails on parse or analysis diagnostics so a malformed fixture cannot pass
 // unnoticed through a test that only inspects checker output.
@@ -48,4 +48,44 @@ export function testRuntimeMetricBuiltinsExposeDocumentedSignatures(): none {
   snapshot := builtinCallable("metricsSnapshotPrometheus") as FunctionType else { panic("expected metricsSnapshotPrometheus function") }
   Assert.equal(snapshot.params.length, 0)
   Assert.equal(typeName(snapshot.returnType), "string")
+}
+
+function firstClass(analysis: AnalysisResult): ClassDeclaration {
+  class_ := analysis.modules[0].program.statements[0] as ClassDeclaration else { panic("expected class") }
+  return class_
+}
+
+export function testClassFieldModeFollowsDeclarationKeyword(): none {
+  class_ := firstClass(analyzed("class Point { let x: int\nreadonly y: int\nz: int\nkind: \"point\" }"))
+  Assert.equal(classFieldMode(class_.fields[0]), "let")
+  Assert.equal(classFieldMode(class_.fields[1]), "readonly")
+  Assert.equal(classFieldMode(class_.fields[2]), "implicit")
+  Assert.equal(classFieldMode(class_.fields[3]), "const")
+}
+
+export function testClassFieldBindingRecordsOwnerAndMutability(): none {
+  analysis := analyzed("class Point { let x: int\nz: int }")
+  class_ := firstClass(analysis)
+  mutable := classFieldBinding(class_.fields[0], "x", class_, primitive("int"), "/main.do")
+  Assert.equal(mutable.kind, "field")
+  Assert.equal(mutable.name, "x")
+  Assert.isTrue(mutable.mutable)
+  Assert.equal(mutable.fieldMode, "let")
+  Assert.equal(mutable.fieldOwner, "Point")
+  Assert.equal(mutable.module, "/main.do")
+  Assert.isTrue(mutable.symbol == none)
+  Assert.equal(mutable.span.start.line, class_.fields[0].span.start.line)
+  symbol := analysis.modules[0].symbols[0]
+  implicit := classFieldBinding(class_.fields[1], "z", class_, primitive("int"), "/other.do", symbol)
+  Assert.isFalse(implicit.mutable)
+  Assert.equal(implicit.fieldMode, "implicit")
+  Assert.equal(implicit.module, "/other.do")
+  Assert.isTrue(implicit.symbol != none)
+}
+
+export function testFieldDisplayNameFallsBackForRecoveredFields(): none {
+  class_ := firstClass(analyzed("class Point { x: int }"))
+  Assert.equal(fieldDisplayName(class_.fields[0]), "x")
+  nameless := ClassField { kind: "class-field", names: [], type_: none, defaultValue: none, static_: false, readonly_: false, private_: false, span: class_.span }
+  Assert.equal(fieldDisplayName(nameless), "<field>")
 }

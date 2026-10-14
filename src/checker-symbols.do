@@ -4,7 +4,7 @@ import { resolveProvisionalAnnotation } from "./checker-annotations"
 
 import { ArrayResolvedType, Binding, ClassType, FunctionParamType, FunctionType, MapResolvedType, RangeResolvedType, ResolvedType, Scope, SetResolvedType, Symbol, StreamResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
-import { ArrayType, Block, ClassDeclaration, ConstDeclaration, EnumDeclaration, Expression, FunctionDeclaration, AstFunctionType, IfStatement, ImmutableBinding, Identifier, InterfaceDeclaration, LetDeclaration, NamedType, ObjectProperty, ReadonlyDeclaration, Statement, TypeAliasDeclaration, TypeAnnotation, UnionType, WithStatement, BreakStatement, CaseStatement, TypePattern, WeakType } from "./ast"
+import { ArrayType, Block, ClassDeclaration, ClassField, ConstDeclaration, EnumDeclaration, Expression, FunctionDeclaration, AstFunctionType, IfStatement, ImmutableBinding, Identifier, InterfaceDeclaration, LetDeclaration, NamedType, ObjectProperty, ReadonlyDeclaration, Statement, TypeAliasDeclaration, TypeAnnotation, UnionType, WithStatement, BreakStatement, CaseStatement, TypePattern, WeakType } from "./ast"
 import { classType, enumType, functionType, interfaceType, jsonValueType, resultType, neverType, noneType, primitive, tupleType, unionType, typeParameter, unknownType } from "./checker-types"
 
 import { symbolSpan, findModule } from "./checker-interfaces"
@@ -35,7 +35,7 @@ export function casePatternName(pattern: TypePattern): string {
 export function decorateAnnotationWithResolved(annotation: TypeAnnotation, resolved: ResolvedType): none {
   case annotation {
     named: NamedType -> {
-      named.resolvedType = optionalResolvedType(resolved)
+      named.resolvedType = resolved
       case resolved {
         class_: ClassType -> {
           for i of 0..<named.typeArgs.length {
@@ -46,14 +46,14 @@ export function decorateAnnotationWithResolved(annotation: TypeAnnotation, resol
       }
     }
     array: ArrayType -> {
-      array.resolvedType = optionalResolvedType(resolved)
+      array.resolvedType = resolved
       case resolved {
         arrayResolved: ArrayResolvedType -> { decorateAnnotationWithResolved(array.elementType, arrayResolved.elementType) }
         _ -> { }
       }
     }
     union: UnionType -> {
-      union.resolvedType = optionalResolvedType(resolved)
+      union.resolvedType = resolved
       case resolved {
         unionResolved: UnionResolvedType -> {
           for i of 0..<union.types.length {
@@ -64,7 +64,7 @@ export function decorateAnnotationWithResolved(annotation: TypeAnnotation, resol
       }
     }
     function_: AstFunctionType -> {
-      function_.resolvedType = optionalResolvedType(resolved)
+      function_.resolvedType = resolved
       case resolved {
         functionResolved: FunctionType -> {
           for i of 0..<function_.params.length {
@@ -76,7 +76,7 @@ export function decorateAnnotationWithResolved(annotation: TypeAnnotation, resol
       }
     }
     weak_: WeakType -> {
-      weak_.resolvedType = optionalResolvedType(resolved)
+      weak_.resolvedType = resolved
       case resolved {
         weakResolved: WeakResolvedType -> { decorateAnnotationWithResolved(weak_.type_, weakResolved.inner) }
         _ -> { }
@@ -113,11 +113,28 @@ export function blockContainsLoopExit(block: Block): bool {
   return false
 }
 
-export function optionalResolvedType(value: ResolvedType): ResolvedType | none { return value }
 
 export function functionParameterIndex(parameters: FunctionParamType[], name: string): int {
   for i of 0..<parameters.length { if parameters[i].name == name { return i } }
   return -1
+}
+
+/** A field's first declared name for diagnostics; parser recovery can leave none. */
+export function fieldDisplayName(field: ClassField): string {
+  return if field.names.length == 0 then "<field>" else field.names[0]
+}
+
+/** How a class field may be reassigned, as reported by assignment diagnostics. */
+export function classFieldMode(field: ClassField): string {
+  return if field.readonly_ then "readonly" else if field.const_ then "const" else if field.let_ then "let" else "implicit"
+}
+
+/** The binding for one declared name of a class field. */
+export function classFieldBinding(field: ClassField, name: string, owner: ClassDeclaration, type_: ResolvedType, module: string, symbol: Symbol | none = none): Binding {
+  return Binding {
+    name, kind: "field", type_, mutable: field.let_, span: checkerSemanticSpan(field.span), module, symbol,
+    fieldMode: classFieldMode(field), fieldOwner: owner.name,
+  }
 }
 
 export function containsString(values: string[], value: string): bool {

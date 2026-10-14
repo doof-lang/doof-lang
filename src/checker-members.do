@@ -6,19 +6,19 @@ import type { TypeAliasDeclaration } from "./ast"
 import { CheckedMember, ClassDeclaration, DotShorthand, EnumDeclaration, Expression, Identifier, IndexExpression, MemberExpression, NamedType } from "./ast"
 import { isTypeParameterName } from "./ast-walk"
 import { forcedValue, optionalAccessType, optionalConversion } from "./checker-absence"
-import { finish, typeError } from "./checker-common"
+import { finish, typeArgumentArityMessage, typeError } from "./checker-common"
 import { checkExpression } from "./checker-expressions"
 import { instantiateGenericReference } from "./checker-generic-references"
 import { classModuleFor } from "./checker-interfaces"
 import { hasNoneMember } from "./checker-operators"
-import { indexType, jsonPrograms, resolveBoundStaticMember, resolveMember, resolveType, validateTypeArgumentConstraints } from "./checker-resolution"
+import { indexType, jsonPrograms, resolveBoundStaticMember, serialDecodeType, resolveMember, resolveType, validateTypeArgumentConstraints } from "./checker-resolution"
 import { CheckerState } from "./checker-state"
-import { declarationFor, lookup, optionalResolvedType } from "./checker-symbols"
-import { displayTypeName, functionType, jsonValueType, neverType, primitive, resultType, sameType, typeName, unionType, unknownType } from "./checker-types"
+import { declarationFor, lookup } from "./checker-symbols"
+import { displayTypeName, neverType, primitive, sameType, typeName, unionType, unknownType } from "./checker-types"
 import { checkerSemanticSpan } from "./checker-validation"
 import { unionAliasJsonDiscriminator } from "./json-semantics"
 import type { Symbol } from "./semantic"
-import { Binding, ClassType, EnumType, FunctionParamType, FunctionType, ResolvedType, Scope, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { Binding, ClassType, EnumType, FunctionType, ResolvedType, Scope, UnionResolvedType, WeakResolvedType } from "./semantic"
 
 /** Checks 'object.member', including '?.' and '!.' over absent and weak receivers. */
 export function checkMember(state: CheckerState, member: MemberExpression, scope: Scope, expected: ResolvedType | none, calleePosition: bool): ResolvedType {
@@ -52,7 +52,7 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
       member.object = optionalConversion(state, member.object, objectType)
       nullableReceiver = true
       objectType = presentType(objectType)
-      member.resolvedOptionalReceiver = optionalResolvedType(objectType)
+      member.resolvedOptionalReceiver = objectType
     } else {
       member.object = forcedValue(state, member.object, objectType)
       member.force = false
@@ -76,7 +76,7 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
         if !sameType(unwrapped, union_) {
           objectType = unwrapped
           nullableReceiver = true
-          member.resolvedOptionalReceiver = optionalResolvedType(unwrapped)
+          member.resolvedOptionalReceiver = unwrapped
         }
       } else if !member.optional && !member.force && hasNoneMember(state, union_) {
         // Member resolution skips the none arm so '?.' and '!.' can share
@@ -143,33 +143,20 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
   member.resolvedCallableField = selected.field
   memberValue = instantiateGenericReference(state, member, memberValue, expected, scope, calleePosition)
   // A function-valued member reached through '?.' is absent with its
-  // receiver. Only a call may short-circuit it as a whole.
-  if !calleePosition && memberValue.kind == "function" && member.optional && (weakReceiver != none || nullableReceiver) {
-    member.resolvedOptionalValue = optionalResolvedType(memberValue)
-    return finish(state, member, optionalAccessType(memberValue))
-  }
-  if weakReceiver != none {
-    case memberValue {
-      _: FunctionType -> { return finish(state, member, memberValue) }
-      _ -> {
-        if member.optional {
-          member.resolvedOptionalValue = optionalResolvedType(memberValue)
-          return finish(state, member, optionalAccessType(memberValue))
-        }
-      }
-    }
-  }
-  if nullableReceiver && memberValue.kind != "function" {
-    member.resolvedOptionalValue = optionalResolvedType(memberValue)
-    return finish(state, member, optionalAccessType(memberValue))
-  }
-  return finish(state, member, memberValue)
+  // receiver unless a call short-circuits it as a whole. Any other value read
+  // through an absent receiver, or through a weak one with '?.', is absent too.
+  optionalValue := if memberValue.kind == "function"
+    then !calleePosition && member.optional && (weakReceiver != none || nullableReceiver)
+    else nullableReceiver || (weakReceiver != none && member.optional)
+  if !optionalValue { return finish(state, member, memberValue) }
+  member.resolvedOptionalValue = memberValue
+  return finish(state, member, optionalAccessType(memberValue))
 }
 
 /** Checks 'object[index]', including '?[]' over absent receivers. */
 export function checkIndex(state: CheckerState, index: IndexExpression, scope: Scope): ResolvedType {
   let objectType = checkExpression(state, index.object, scope, none)
-  indexValueType := checkExpression(state, index.index, scope, optionalResolvedType(primitive("int")))
+  indexValueType := checkExpression(state, index.index, scope, primitive("int"))
   let optionalReceiver = false
   if index.optional {
     if hasFailureLayer(objectType) {
@@ -181,14 +168,14 @@ export function checkIndex(state: CheckerState, index: IndexExpression, scope: S
       index.object = optionalConversion(state, index.object, objectType)
       objectType = presentType(objectType)
       optionalReceiver = true
-      index.resolvedOptionalReceiver = optionalResolvedType(objectType)
+      index.resolvedOptionalReceiver = objectType
     } else {
       case objectType {
         union_: UnionResolvedType -> {
           if hasNoneMember(state, union_) {
             objectType = weakAccessTarget(union_)
             optionalReceiver = true
-            index.resolvedOptionalReceiver = optionalResolvedType(objectType)
+            index.resolvedOptionalReceiver = objectType
           }
         }
         _ -> { }
@@ -198,7 +185,7 @@ export function checkIndex(state: CheckerState, index: IndexExpression, scope: S
   resolved := indexType(state, objectType, indexValueType, index.span)
   if objectType.kind == "never" || indexValueType.kind == "never" { return finish(state, index, neverType()) }
   if optionalReceiver && resolved.kind != "unknown" {
-    index.resolvedOptionalValue = optionalResolvedType(resolved)
+    index.resolvedOptionalValue = resolved
     return finish(state, index, optionalAccessType(resolved))
   }
   return finish(state, index, resolved)
@@ -223,7 +210,7 @@ function explicitStaticReceiver(state: CheckerState, member: MemberExpression, o
               return objectType
             }
             if resolvedArgs.length != generic.typeParams.length {
-              typeError(state, "Generic class '" + generic.name + "' requires " + string(generic.typeParams.length) + " type argument" + (if generic.typeParams.length == 1 then "" else "s") + "; received " + string(resolvedArgs.length), member.span)
+              typeError(state, typeArgumentArityMessage("Generic class '" + generic.name + "'", generic.typeParams.length, resolvedArgs.length), member.span)
               return unknownType()
             }
             validateTypeArgumentConstraints(state, generic.typeParams, generic.typeParamConstraints, resolvedArgs, member.span, classModuleFor(state.result, class_.symbol), scope)
@@ -428,10 +415,7 @@ function checkUnionAliasJsonMember(state: CheckerState, member: MemberExpression
   }
   alias.needsJson = true
   member.resolvedJsonAlias = alias
-  decoder := functionType([
-    FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false },
-    FunctionParamType { name: "lenient", type_: primitive("bool"), hasDefault: true },
-  ], resultType(aliasType, primitive("string")))
+  decoder := serialDecodeType(aliasType)
   member.resolvedMember = CheckedMember { type_: decoder, modulePath: symbol.module, owner: aliasType }
   return finish(state, member, decoder)
 }

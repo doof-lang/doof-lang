@@ -13,7 +13,6 @@ import { checkDestructuring, declareUserBinding } from "./checker-statements"
 import { applyDeepReadonly, typeName } from "./checker-types"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
 import { resolveType } from "./checker-resolution"
-import { optionalResolvedType } from "./checker-symbols"
 import { deprecatedConstDeclaration, typeError } from "./checker-common"
 import { checkerSemanticSpan } from "./checker-validation"
 
@@ -56,10 +55,10 @@ export function checkTry(state: CheckerState, statement: TryStatement, scope: Sc
           typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(bindingType), statement.span)
         }
         case statement.binding {
-          declaration: ConstDeclaration -> { declaration.resolvedType = optionalResolvedType(bindingType) }
-          declaration: ReadonlyDeclaration -> { declaration.resolvedType = optionalResolvedType(bindingType) }
-          binding: ImmutableBinding -> { binding.resolvedType = optionalResolvedType(bindingType) }
-          declaration: LetDeclaration -> { declaration.resolvedType = optionalResolvedType(bindingType) }
+          declaration: ConstDeclaration -> { declaration.resolvedType = bindingType }
+          declaration: ReadonlyDeclaration -> { declaration.resolvedType = bindingType }
+          binding: ImmutableBinding -> { binding.resolvedType = bindingType }
+          declaration: LetDeclaration -> { declaration.resolvedType = bindingType }
           _ -> { }
         }
         if name != "_" {

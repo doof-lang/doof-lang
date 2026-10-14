@@ -268,3 +268,21 @@ export function testStringConversionAcceptsUnionsOfPrimitivesAndEnums(): none {
     Assert.equal(rejected.diagnostics[0].message, "Argument 1 has type " + argument + "; expected a primitive, enum, or union of them")
   }
 }
+
+export function testOptionalCallsShortCircuitAbsentReceivers(): none {
+  valid := checked("class A { read(): int => 1 }\nfunction f(a: A | none, w: weak A): none {\nlet r: int | none = a?.read()\nlet wr: int | none = w?.read() }")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+  rejected := checked("class A { read(): int => 1 }\nfunction f(a: A | none): int => a?.read()")
+  Assert.equal(rejected.diagnostics.length, 1)
+  Assert.stringContains(rejected.diagnostics[0].message, "int | none")
+}
+
+export function testGenericArityMismatchesReportExpectedAndReceivedCounts(): none {
+  call := checked("function keep<T>(value: T): T => value\nfunction main(): int => keep<int, string>(1)")
+  Assert.isTrue(call.diagnostics.length > 0)
+  Assert.equal(call.diagnostics[0].message, "Generic call requires 1 type argument; received 2")
+  construction := checked("class Pair<A, B> { first: A\nsecond: B }\nfunction main(): none { pair := Pair<int>(1, 2) }")
+  Assert.isTrue(construction.diagnostics.length > 0)
+  Assert.equal(construction.diagnostics[0].message, "Generic construction requires 2 type arguments; received 1")
+}

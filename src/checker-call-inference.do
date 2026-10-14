@@ -22,7 +22,7 @@ import { CallArgument, DotShorthand, Expression, LambdaExpression } from "./ast"
 import { FunctionType, ResolvedType, Scope, TypeParameterType } from "./semantic"
 import { functionType, sameType, substituteTypeParams, typeParameter, unknownType } from "./checker-types"
 import { CheckerState } from "./checker-state"
-import { typeError } from "./checker-common"
+import { discardDiagnosticsSince, typeError } from "./checker-common"
 import { checkExpression } from "./checker-expressions"
 import { functionParameterIndex } from "./checker-symbols"
 import { inferTypeArgument } from "./checker-generics"
@@ -81,7 +81,7 @@ export function inferCallTypeArguments(state: CheckerState, args: CallArgument[]
     inferred.push(found!)
   }
   if !evidence.consistent { return none }
-  while state.diagnostics.length > diagnosticMark { ignored := state.diagnostics.pop()! }
+  discardDiagnosticsSince(state, diagnosticMark)
   // Trailing lambdas are statement blocks for none-returning callbacks; one
   // cannot be what determines a generic callback's result.
   for i of 0..<args.length {

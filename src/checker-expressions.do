@@ -14,11 +14,11 @@ import { checkDotShorthand, checkIndex, checkMember } from "./checker-members"
 import { checkAs, checkBinary, checkUnary } from "./checker-operators"
 import { CheckerState } from "./checker-state"
 import { checkBlock, checkFunction } from "./checker-statements"
-import { builtinCallable, builtinSourceLocationType, currentThisType, declarationFor, declare, hasTypeParam, isBuiltinCallable, lookup, optionalResolvedType, resolveAnnotation, typeParamConstraint, typeParamConstraintName, valueUseDiagnostic } from "./checker-symbols"
-import { functionType, isStringInterpolatable, neverType, noneType, primitive, tupleType, typeName, typeParameter, unknownType } from "./checker-types"
+import { builtinCallable, builtinSourceLocationType, currentThisType, declarationFor, declare, hasTypeParam, isBuiltinCallable, lookup, methodSignature, typeParamConstraint, typeParamConstraintName, valueUseDiagnostic } from "./checker-symbols"
+import { isStringInterpolatable, neverType, noneType, primitive, tupleType, typeName, typeParameter, unknownType } from "./checker-types"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
-import { ActorType, Binding, ClassType, Diagnostic, FunctionParamType, PrimitiveType, ResolvedType, Scope, TupleResolvedType } from "./semantic"
+import { ActorType, Binding, ClassType, Diagnostic, PrimitiveType, ResolvedType, Scope, TupleResolvedType } from "./semantic"
 
 export function checkExpression(state: CheckerState, expression: Expression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   calleePosition := state.checkingCallee
@@ -31,7 +31,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         parent: scope,
         inValueYieldBlock: true,
         yieldExpectedType: expected,
-        yieldType: if expected == none then optionalResolvedType(unknownType()) else expected,
+        yieldType: if expected == none then unknownType() else expected,
       }
       completes := checkBlock(state, yieldBlock.body, yieldScope)
       if completes {
@@ -137,7 +137,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       for index of 0..<tuple.elements.length {
         item := tuple.elements[index]
         let itemExpected: ResolvedType | none = none
-        if expectedTuple != none && index < expectedTuple!.elements.length { itemExpected = optionalResolvedType(expectedTuple!.elements[index]) }
+        if expectedTuple != none && index < expectedTuple!.elements.length { itemExpected = expectedTuple!.elements[index] }
         itemType := checkExpression(state, item, scope, itemExpected)
         // An element assignable to its expected slot takes that type, as array
         // elements do, so a literal fits a tuple of unions or nullables.
@@ -152,7 +152,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
     }
     lambda: LambdaExpression -> { return checkLambda(state, lambda, scope, expected) }
     if_: IfExpression -> {
-      conditionType := checkExpression(state, if_.condition, scope, optionalResolvedType(primitive("bool")))
+      conditionType := checkExpression(state, if_.condition, scope, primitive("bool"))
       requireBool(state, conditionType, if_.condition.span)
       thenType := checkExpression(state, if_.then_, scope, expected)
       elseType := checkExpression(state, if_.else_, scope, expected)
@@ -171,14 +171,9 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
     }
     actorCreation: ActorCreationExpression -> { return checkActorCreation(state, actorCreation, scope) }
     this_: ThisExpression -> {
-      let current: Scope | none = scope
-      while current != none {
-        if current!.staticContext {
-          typeError(state, "Cannot use 'this' in a static method", this_.span)
-          return finish(state, expression, unknownType())
-        }
-        if current!.thisType != none { break }
-        current = current!.parent
+      if inStaticContext(scope) {
+        typeError(state, "Cannot use 'this' in a static method", this_.span)
+        return finish(state, expression, unknownType())
       }
       return finish(state, expression, currentThisType(scope))
     }
@@ -254,25 +249,11 @@ export function addClassMethods(state: CheckerState, scope: Scope, owner: ClassT
   case declaration! {
     class_: ClassDeclaration -> {
       for method of class_.methods {
-        let methodType: ResolvedType = unknownType()
-        if method.resolvedType != none {
-          methodType = method.resolvedType!
-        } else {
-          // Predeclare methods without decorating their annotations.  This
-          // helper runs while another method is being checked, so its scope
-          // does not contain the method's own type parameters.  The owning
-          // method check is the authority that decorates those annotations.
-          let methodTypeParams: string[] = []
-          for typeParam of class_.typeParams { methodTypeParams.push(typeParam) }
-          for typeParam of method.typeParams { methodTypeParams.push(typeParam) }
-          let parameters: FunctionParamType[] = []
-          for parameter of method.params {
-            parameterType := if parameter.type_ == none then unknownType() else resolveAnnotation(parameter.type_!, state.info!, state.result, methodTypeParams)
-            parameters.push(FunctionParamType { name: parameter.name, type_: parameterType, hasDefault: parameter.defaultValue != none })
-          }
-          returnType := if method.returnType == none then noneType() else resolveAnnotation(method.returnType!, state.info!, state.result, methodTypeParams)
-          methodType = functionType(parameters, returnType, method.typeParams)
-        }
+        // Predeclare unchecked methods without decorating their annotations.
+        // This helper runs while another method is being checked, so its scope
+        // does not contain the method's own type parameters. The owning method
+        // check is the authority that decorates those annotations.
+        methodType := method.resolvedType ?? methodSignature(method, state.info!, state.result, class_.typeParams)
         declare(scope, Binding {
           name: method.name, kind: "method", type_: methodType, mutable: false,
           span: checkerSemanticSpan(method.span), module: state.info!.path, symbol: owner.symbol,
@@ -281,4 +262,13 @@ export function addClassMethods(state: CheckerState, scope: Scope, owner: ClassT
     }
     _ -> { }
   }
+}
+
+/** Checks a parameter or field default, the only place '@caller' is valid. */
+export function checkCallerDefault(state: CheckerState, expression: Expression, scope: Scope, expected: ResolvedType | none): ResolvedType {
+  previous := state.allowsCaller
+  state.allowsCaller = true
+  checked := checkExpression(state, expression, scope, expected)
+  state.allowsCaller = previous
+  return checked
 }

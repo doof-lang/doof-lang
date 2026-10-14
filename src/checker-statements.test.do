@@ -312,3 +312,32 @@ export function testForOfRejectsClassesWithoutTheStreamProtocol(): none {
     Assert.stringContains(result.diagnostics[0].message, "For-of requires an array, map, set, Range, or Stream value")
   }
 }
+
+export function testYieldBlockReassignmentResolvesEnclosingBindings(): none {
+  valid := checked("function main(): int { let score = 1\nif true { score <- { yield score + 1 } }\nreturn score }")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+  missing := checked("function main(): none { total <- { yield 1 } }")
+  Assert.equal(missing.diagnostics.length, 1)
+  Assert.equal(missing.diagnostics[0].message, "Undefined identifier \"total\"")
+}
+
+export function testClassFieldBindingsCarryAssignmentModes(): none {
+  implicit := checked("class Counter {\ncount: int\nbump(): none { count = count + 1 }\n}")
+  Assert.equal(implicit.diagnostics.length, 1)
+  Assert.equal(implicit.diagnostics[0].message, "Cannot assign to immutable field 'Counter.count'; declare it with 'let' to allow reassignment")
+  readonly_ := checked("class Counter {\nreadonly count: int\nbump(): none { count = count + 1 }\n}")
+  Assert.equal(readonly_.diagnostics.length, 1)
+  Assert.equal(readonly_.diagnostics[0].message, "Cannot assign to immutable field 'Counter.count'")
+  mutable := checked("class Counter {\nlet count: int\nbump(): none { count = count + 1 }\n}")
+  Assert.equal(mutable.diagnostics.length, 0)
+}
+
+export function testWeakFieldDiagnosticsNameTheField(): none {
+  result := checked("class Node {}\nstruct Pair { weak left: Node | none }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].message, "Struct field \"left\" cannot be weak")
+  target := checked("class Holder { weak count: int }")
+  Assert.equal(target.diagnostics.length, 1)
+  Assert.equal(target.diagnostics[0].message, "Field \"count\" has type \"int\", which is not a valid weak reference target")
+}

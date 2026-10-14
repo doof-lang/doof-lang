@@ -9,10 +9,10 @@ import { checkExpression } from "./checker-expressions"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { memberType, resolveType, validateTypeArgumentConstraints } from "./checker-resolution"
 import { classModuleFor, findClassField, isAssignableWithInterfaces } from "./checker-interfaces"
-import { containsString, declarationFor, hasObjectProperty, methodSignature, optionalResolvedType, symbolFor, valueSymbolFor, valueUseDiagnostic } from "./checker-symbols"
+import { containsString, declarationFor, hasObjectProperty, methodSignature, symbolFor, valueSymbolFor, valueUseDiagnostic } from "./checker-symbols"
 import { actorType, classType, noneType, resultArmExpectation, resultArmType, resultType, sameType, substituteTypeParams, typeName, typeParameter, unknownType } from "./checker-types"
 import { inferCallTypeArguments } from "./checker-call-inference"
-import { finish, typeError } from "./checker-common"
+import { discardDiagnosticsSince, finish, typeError } from "./checker-common"
 import { checkPropertyValue, checkAssignableProperty, sameFixedFieldValue } from "./checker-properties"
 
 export function resolveConstructor(state: CheckerState, owner: ClassType, useFactory: bool = true): CheckedConstruction {
@@ -63,7 +63,7 @@ export function inferConstructionTypeArguments(state: CheckerState, args: CallAr
   signature := FunctionType { params: plan.signature.params, returnType: plan.signature.returnType, typeParams: declaration.typeParams }
   diagnosticMark := state.diagnostics.length
   inferred := inferCallTypeArguments(state, args, signature, scope, expected)
-  if inferred == none { while state.diagnostics.length > diagnosticMark { ignored := state.diagnostics.pop()! } }
+  if inferred == none { discardDiagnosticsSince(state, diagnosticMark) }
   return inferred
 }
 
@@ -108,7 +108,7 @@ export function insideConstructorFactory(scope: Scope, class_: ClassType): bool 
 export function checkConstruct(state: CheckerState, expression: ConstructExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   if expression.type_ == "Success" || expression.type_ == "Failure" {
     if expression.spread != none {
-      expression.resolvedSpreadType = optionalResolvedType(checkExpression(state, expression.spread!, scope, none))
+      expression.resolvedSpreadType = checkExpression(state, expression.spread!, scope, none)
       typeError(state, expression.type_ + " construction does not support field spread", expression.spread!.span)
     }
     // A surrounding Result or matching arm types the payload; otherwise the
@@ -163,7 +163,7 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
     validateTypeArgumentConstraints(state, expression.resolvedClass!.typeParams, expression.resolvedClass!.typeParamConstraints, resolvedTypeArgs, expression.span, classModuleFor(state.result, symbol!), scope)
   }
   constructed := classType(expression.type_, symbol!, resolvedTypeArgs)
-  expression.resolvedConstructedType = optionalResolvedType(constructed)
+  expression.resolvedConstructedType = constructed
   checkConstructionSpread(state, expression, scope)
   plan := resolveConstructor(state, constructed, !insideConstructorFactory(scope, constructed))
   expression.resolvedConstruction = plan
@@ -203,7 +203,7 @@ export function checkClassProperties(state: CheckerState, properties: ObjectProp
       continue
     }
     expected := memberType(state, constructed, property.name, property.span)
-    checkAssignableProperty(state, property, scope, optionalResolvedType(expected))
+    checkAssignableProperty(state, property, scope, expected)
     if structural && field!.const_ {
       if property.value == none || field!.defaultValue == none || !sameFixedFieldValue(property.value!, field!.defaultValue!) {
         typeError(state, "Field '" + property.name + "' must match its literal-valued declaration", property.span)
@@ -231,7 +231,7 @@ export function checkClassProperties(state: CheckerState, properties: ObjectProp
 function checkConstructionSpread(state: CheckerState, expression: ConstructExpression, scope: Scope): none {
   if expression.spread == none { return }
   spreadType := checkExpression(state, expression.spread!, scope, none)
-  expression.resolvedSpreadType = optionalResolvedType(spreadType)
+  expression.resolvedSpreadType = spreadType
   case spreadType {
     _: ClassType -> { }
     _: InterfaceType -> { }

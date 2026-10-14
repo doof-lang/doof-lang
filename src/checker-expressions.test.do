@@ -102,3 +102,40 @@ export function testTupleLiteralElementsTakeTheirExpectedUnionSlots(): none {
   Assert.equal(rejected.diagnostics.length, 1)
   Assert.equal(rejected.diagnostics[0].message, "Cannot assign (bool, int) to (int | string, int)")
 }
+
+export function testThisIsRejectedOnlyInsideStaticMethods(): none {
+  invalid := checked("class Counter {\nlet count = 0\nstatic make(): int {\nreturn this.count }\n}")
+  Assert.equal(invalid.diagnostics.length, 1)
+  Assert.equal(invalid.diagnostics[0].message, "Cannot use 'this' in a static method")
+  Assert.equal(invalid.diagnostics[0].span.start.line, 4)
+  // A lambda inside an instance method still sees the method's receiver.
+  valid := checked("class Counter {\nlet count = 0\nread(): int { get := (): int => this.count\nreturn get() }\n}")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+}
+
+export function testPredeclaredMethodsSeeOwnerAndMethodTypeParameters(): none {
+  // `first` calls `pick` before `pick` is checked, so the binding comes from
+  // the predeclared signature with both class and method type parameters.
+  result := checked("class Box<T> {\nvalue: T\nfirst(): T => pick<int>(value, 1)\npick<U>(left: T, right: U): T => left\n}")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  mismatched := checked("class Box<T> {\nvalue: T\nfirst(): int => pick<int>(value, 1)\npick<U>(left: T, right: U): T => left\n}")
+  Assert.equal(mismatched.diagnostics.length, 1)
+  Assert.stringContains(mismatched.diagnostics[0].message, "Cannot return T from function returning int")
+}
+
+export function testCallerIsAcceptedOnlyInDefaultValues(): none {
+  valid := checked(
+    "function where(source: SourceLocation = @caller): int => source.line\n" +
+    "class Origin { source: SourceLocation = @caller }\n" +
+    "class Inferred { source = @caller }",
+  )
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+  // The flag is restored after each default, so a later body cannot use it.
+  invalid := checked("function where(source: SourceLocation = @caller): int => source.line\nfunction main(): none { ignored := @caller }")
+  Assert.equal(invalid.diagnostics.length, 1)
+  Assert.equal(invalid.diagnostics[0].message, "@caller is only valid as a parameter or class-field default value")
+  Assert.equal(invalid.diagnostics[0].span.start.line, 2)
+}

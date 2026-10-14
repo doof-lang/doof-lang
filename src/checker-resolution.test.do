@@ -3,7 +3,9 @@ import { hasErrorDiagnostics } from "./diagnostics"
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
-import { CheckResult, SourceFile } from "./semantic"
+import { CheckResult, FunctionType, SourceFile } from "./semantic"
+import { serialDecodeType } from "./checker-resolution"
+import { primitive, typeName } from "./checker-types"
 
 function checked(source: string): CheckResult {
   analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
@@ -297,4 +299,28 @@ export function testAmbiguousPrimitiveUnionFieldsExplainTheirJsonKind(): none {
   Assert.equal(result.diagnostics.length, 1)
   Assert.equal(result.diagnostics[0].message, "Type \"Reading\" does not support automatic JSON deserialization (field \"value\" has union type \"int | double\", whose members int and double both decode from a JSON number)")
   Assert.equal(result.diagnostics[0].span.start.line, 3)
+}
+
+export function testSerialDecodeTypeWrapsTargetInResult(): none {
+  decoder := serialDecodeType(primitive("int")) as FunctionType else { panic("expected decoder function") }
+  Assert.equal(decoder.params.length, 2)
+  Assert.equal(decoder.params[0].name, "value")
+  Assert.equal(typeName(decoder.params[0].type_), "SerialValue")
+  Assert.isFalse(decoder.params[0].hasDefault)
+  Assert.equal(decoder.params[1].name, "lenient")
+  Assert.equal(typeName(decoder.params[1].type_), "bool")
+  Assert.isTrue(decoder.params[1].hasDefault)
+  Assert.equal(typeName(decoder.returnType), "Result<int, string>")
+}
+
+export function testCompilerProvidedDecodersShareOneSignature(): none {
+  result := checked(
+    "enum Color { Red, Green }\nclass Point { x: int = 0 }\ninterface Shape { kind: string }\nclass Square implements Shape { kind: \"square\" }\n" +
+    "function color(value: SerialValue): Result<Color, string> => Color.fromSerialValue(value, false)\n" +
+    "function point(value: SerialValue): Result<Point, string> => Point.fromSerialValue(value)\n" +
+    "function shape(value: SerialValue): Result<Shape, string> => Shape.fromSerialValue(value, true)\n" +
+    "function generic<T: Serializable>(value: SerialValue): Result<T, string> => T.fromSerialValue(value)",
+  )
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
 }

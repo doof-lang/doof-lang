@@ -1,12 +1,14 @@
 // Transitive mutable-global effect analysis for isolated and actor-dispatched code.
 
 import { AnalysisResult, ModuleInfo } from "./analyzer"
-import { ActorType, Binding, Diagnostic, InterfaceType, SemanticLocation, SemanticSpan } from "./semantic"
+import { ActorType, Binding, Diagnostic, InterfaceType, SemanticSpan } from "./semantic"
 import { ActorCreationExpression, AsyncExpression, Block, CallExpression, ClassDeclaration, ConstDeclaration, ExportDeclaration, Expression, FunctionDeclaration, Identifier, ImmutableBinding, InterfaceDeclaration, LetDeclaration, MemberExpression, ReadonlyDeclaration, SourceSpan, Statement } from "./ast"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { validateAsyncBlock } from "./checker-async"
 import { collectExpressionTree, collectBlockExpressions, collectStatementExpressions } from "./ast-walk"
 import { declarationFor } from "./checker-symbols"
+import { findModule } from "./checker-interfaces"
+import { pushDiagnostic } from "./checker-validation"
 
 export class IsolationReason {
   kind: string
@@ -69,11 +71,6 @@ function collectGraph(result: AnalysisResult, previous: IsolationGraph | none, r
     }
   }
   return graph
-}
-
-function findModule(result: AnalysisResult, path: string): ModuleInfo | none {
-  for module of result.modules { if module.path == path { return module } }
-  return none
 }
 
 function sameSpan(left: SourceSpan, right: SemanticSpan): bool {
@@ -302,17 +299,6 @@ function reasonText(reason: IsolationReason): string {
   if reason.kind == "static" { return "accesses mutable static field \"" + reason.name + "\"" }
   if reason.kind == "call" { return "calls non-isolated function \"" + reason.name + "\"" }
   return "uses bodyless function \"" + reason.name + "\" without an isolated contract"
-}
-
-function semanticSpan(span: SourceSpan): SemanticSpan {
-  return SemanticSpan {
-    start: SemanticLocation { line: span.start.line, column: span.start.column, offset: span.start.offset },
-    end: SemanticLocation { line: span.end.line, column: span.end.column, offset: span.end.offset },
-  }
-}
-
-function pushDiagnostic(diagnostics: Diagnostic[], module: string, span: SourceSpan, message: string): none {
-  diagnostics.push(Diagnostic { severity: "error", message, span: semanticSpan(span), module })
 }
 
 function probeReason(result: AnalysisResult, graph: IsolationGraph, expression: Expression): IsolationReason | none {

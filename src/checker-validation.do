@@ -5,7 +5,6 @@ import { AnalysisResult } from "./analyzer"
 import { CheckedConstruction, ArrayLiteral, ArrayType, AsExpression, AssignmentExpression, BinaryExpression, Block, CallExpression, ClassDeclaration, ConstructExpression, ConstDeclaration, DestructuringStatement, EnumDeclaration, ExportDeclaration, Expression, ExpressionStatement, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType, IfExpression, IfStatement, ImmutableBinding, Identifier, IndexExpression, InterfaceDeclaration, LetDeclaration, LambdaExpression, MemberExpression, NamedType, ObjectLiteral, ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral, TupleLiteral, TypeAliasDeclaration, TypeAnnotation, UnaryExpression, UnionType, WhileStatement, WithStatement, YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression, CaseExpression, CasePattern, CaseStatement, RangePattern, TypePattern, ValuePattern, WildcardPattern, TryStatement, AsyncExpression, RetireExpression, ActorCreationExpression, WeakType, TypeParameterConstraint } from "./ast"
 
 import { unionMutabilityConflict } from "./checker-types"
-import { optionalResolvedType } from "./checker-symbols"
 
 export function validateCheckedTypes(result: AnalysisResult): Diagnostic[] {
   let diagnostics: Diagnostic[] = []
@@ -206,7 +205,7 @@ export function validateExpression(expression: Expression, module: string, diagn
         addValidationError(module, call.span, "Resolved call target has no defining module", diagnostics)
       }
       for argument of call.typeArgs { validateTypeAnnotation(argument, module, diagnostics) }
-      for argument of call.resolvedGenericTypeArgs { validateResolved(optionalResolvedType(argument), call.span, module, "generic call argument", diagnostics) }
+      for argument of call.resolvedGenericTypeArgs { validateResolved(argument, call.span, module, "generic call argument", diagnostics) }
       for argument of call.args { validateExpression(argument.value, module, diagnostics) }
     }
     array: ArrayLiteral -> { for item of array.elements { validateExpression(item, module, diagnostics) } }
@@ -349,7 +348,7 @@ export function validateResolved(resolvedType: ResolvedType | none, span: Source
     result: ResultResolvedType -> { validateResolved(result.valueType, span, module, owner + " success", diagnostics); validateResolved(result.errorType, span, module, owner + " error", diagnostics) }
     success: SuccessResolvedType -> { validateResolved(success.valueType, span, module, owner + " success", diagnostics) }
     failure: FailureResolvedType -> { validateResolved(failure.errorType, span, module, owner + " error", diagnostics) }
-    actor: ActorType -> { validateResolved(optionalResolvedType(actor.innerClass), span, module, owner + " actor state", diagnostics) }
+    actor: ActorType -> { validateResolved(actor.innerClass, span, module, owner + " actor state", diagnostics) }
     promise: PromiseType -> { validateResolved(promise.valueType, span, module, owner + " promise value", diagnostics) }
     weak_: WeakResolvedType -> { validateResolved(weak_.inner, span, module, owner + " weak target", diagnostics) }
     tuple: TupleResolvedType -> { for item of tuple.elements { validateResolved(item, span, module, owner + " tuple element", diagnostics) } }
@@ -377,4 +376,8 @@ export function checkerSemanticSpan(span: SourceSpan): SemanticSpan {
     start: SemanticLocation { line: span.start.line, column: span.start.column, offset: span.start.offset },
     end: SemanticLocation { line: span.end.line, column: span.end.column, offset: span.end.offset },
   }
+}
+
+export function pushDiagnostic(diagnostics: Diagnostic[], module: string, span: SourceSpan, message: string): none {
+  diagnostics.push(Diagnostic { severity: "error", message, span: checkerSemanticSpan(span), module })
 }

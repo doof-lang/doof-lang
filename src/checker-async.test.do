@@ -1,6 +1,7 @@
 import { Assert } from "std/assert"
 import { AnalysisResult, createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
+import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 import { asyncResultViolation } from "./checker-async"
 import { arrayType, mapType, primitive, promiseType, resultType, tupleType, weakType } from "./checker-types"
@@ -44,4 +45,19 @@ export function testAsyncExpressionsRequireYieldingBlocksOrIsolatedCalls(): none
   notCall := asyncErrors("function run(): Promise<int> => async 4")
   Assert.equal(notCall.length, 1)
   Assert.stringContains(notCall[0], "`async` requires an actor method call or an inferrably isolated function call")
+}
+
+export function testAsyncThisCaptureReportsAtThis(): none {
+  // Async capture is validated by the graph-wide isolation phase, not per-module checking.
+  errors := compile([SourceFile { path: "/main.do", source: "class Worker { value: int = 1\nrun(): Promise<int> => async {\nyield this.value } }" }], "/main.do").diagnostics
+  let found = false
+  for diagnostic of errors {
+    if diagnostic.message.contains("Async blocks cannot capture 'this'") {
+      found = true
+      Assert.equal(diagnostic.span.start.line, 3)
+      Assert.equal(diagnostic.span.start.column, 7)
+    }
+  }
+  for diagnostic of errors { println(diagnostic.message) }
+  Assert.isTrue(found)
 }

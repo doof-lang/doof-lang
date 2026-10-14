@@ -9,7 +9,7 @@ import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interface
 import { CheckerState } from "./checker-state"
 
 import { deprecatedBuildReadonly, typeError } from "./checker-common"
-import { resolveAnnotation, methodSignature, declarationFor } from "./checker-symbols"
+import { classFieldBinding, resolveAnnotation, methodSignature, declarationFor } from "./checker-symbols"
 import { classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 import { arrayMemberType } from "./checker-array-methods"
@@ -116,11 +116,12 @@ export function resolveBoundStaticMember(state: CheckerState, object: ResolvedTy
   return none
 }
 
-function serialDecodeType(parameter: TypeParameterType): ResolvedType {
+/** Signature of the compiler-provided `fromSerialValue(value, lenient = true)` decoder for `target`. */
+export function serialDecodeType(target: ResolvedType): ResolvedType {
   return functionType([
     FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false },
     FunctionParamType { name: "lenient", type_: primitive("bool"), hasDefault: true },
-  ], resultType(parameter, primitive("string")))
+  ], resultType(target, primitive("string")))
 }
 
 export function memberType(state: CheckerState, object: ResolvedType, property: string, span: SourceSpan, validateVisibility: bool = true, declaredOnly: bool = false): ResolvedType {
@@ -347,10 +348,7 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
         )
       }
       if property == "fromSerialValue" {
-        return functionType([
-          FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false },
-          FunctionParamType { name: "lenient", type_: primitive("bool"), hasDefault: true },
-        ], resultType(enum_, primitive("string")))
+        return serialDecodeType(enum_)
       }
       if declaration != none {
         case declaration! {
@@ -417,10 +415,7 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
           }
           if property == "fromSerialValue" && canGenerateJsonDeserialization(classDeclaration, jsonPrograms(state.result)) {
             recordMember(selection, class_, class_.symbol.module, none, false, classDeclaration, false)
-            return functionType([
-              FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false },
-              FunctionParamType { name: "lenient", type_: primitive("bool"), hasDefault: true },
-            ], resultType(object, primitive("string")))
+            return serialDecodeType(object)
           }
           if property == "toSerialObject" || property == "fromSerialValue" {
             blocker := jsonUnionFieldBlocker(classDeclaration, jsonPrograms(state.result), property == "fromSerialValue")
@@ -491,10 +486,7 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
               typeError(state, "Cannot deserialize interface \"" + interface_.name + "\": all implementing classes must share a literal-valued string field with distinct values (e.g. kind: \"variant\")", span)
               return unknownType()
             }
-            return functionType([
-              FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false },
-              FunctionParamType { name: "lenient", type_: primitive("bool"), hasDefault: true },
-            ], resultType(object, primitive("string")))
+            return serialDecodeType(object)
           }
           if property == "toSerialObject" {
             if interface_.typeParams.length > 0 {
@@ -541,19 +533,7 @@ export function fieldAssignmentBinding(state: CheckerState, object: ResolvedType
         classDeclaration: ClassDeclaration -> {
           for field of classDeclaration.fields {
             for name of field.names {
-              if name == property {
-                return Binding {
-                  name,
-                  kind: "field",
-                  type_: fieldType,
-                  mutable: field.let_,
-                  span: checkerSemanticSpan(field.span),
-                  module: class_.symbol.module,
-                  symbol: class_.symbol,
-                  fieldMode: if field.readonly_ then "readonly" else if field.const_ then "const" else if field.let_ then "let" else "implicit",
-                  fieldOwner: classDeclaration.name,
-                }
-              }
+              if name == property { return classFieldBinding(field, name, classDeclaration, fieldType, class_.symbol.module, class_.symbol) }
             }
           }
         }

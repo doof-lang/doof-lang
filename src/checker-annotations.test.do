@@ -213,3 +213,12 @@ export function testOptionalWeakReferencesCompareWithNone(): none {
   Assert.equal(messages.length, 1)
   Assert.stringContains(messages[0], "Operator '==' is not defined for weak Node and none")
 }
+
+export function testGenericAliasArityReportsReceivedCount(): none {
+  missing := checkedMessages("type Items<T> = T[]\nfunction use(values: Items): none {}")
+  Assert.equal(missing.length, 1)
+  Assert.equal(missing[0], "Items requires 1 type argument; received 0")
+  extra := checkedMessages("class Box<T> { value: T }\nfunction use(box: Box<int, string>): none {}")
+  Assert.equal(extra.length, 1)
+  Assert.equal(extra[0], "Box requires 1 type argument; received 2")
+}

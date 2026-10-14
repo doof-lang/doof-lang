@@ -13,11 +13,11 @@ import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { CheckerState } from "./checker-state"
 import { checkExpression } from "./checker-expressions"
 import { resolveType, resolveCalleeTarget, validateTypeArgumentConstraints } from "./checker-resolution"
-import { finish, typeError } from "./checker-common"
-import { optionalResolvedType, functionParameterIndex, lookup, isBuiltinPrintlnCall, declarationFor } from "./checker-symbols"
+import { discardDiagnosticsSince, finish, typeArgumentArityMessage, typeError } from "./checker-common"
+import { functionParameterIndex, lookup, isBuiltinPrintlnCall, declarationFor } from "./checker-symbols"
 import { inferCallTypeArguments } from "./checker-call-inference"
 import { withCallbackArity } from "./checker-array-methods"
-import { classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
+import { classModuleFor, findModule, isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 import { optionalAccessType } from "./checker-absence"
 
@@ -41,7 +41,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         }
         if !supported { typeError(state, "Argument 1 has type " + typeName(actual) + "; expected a primitive, enum, or union of them", expression.args[0].span) }
         fn := functionType([FunctionParamType { name: "value", type_: actual, hasDefault: false }], primitive("string"))
-        identifier.resolvedType = optionalResolvedType(fn)
+        identifier.resolvedType = fn
         identifier.resolvedBinding = Binding { name: "string", kind: "builtin", type_: fn, mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
         return finish(state, expression, primitive("string"))
       }
@@ -63,7 +63,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         }
         produced: ResolvedType := expectation.result ?? resultArmType(identifier.name, valueType)
         callee := functionType([FunctionParamType { name: "value", type_: valueType, hasDefault: false }], produced)
-        identifier.resolvedType = optionalResolvedType(callee)
+        identifier.resolvedType = callee
         identifier.resolvedBinding = Binding { name: identifier.name, kind: "builtin", type_: callee, mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
         return finish(state, expression, produced)
       }
@@ -125,17 +125,14 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           case substituted {
             function_: FunctionType -> {
               effectiveFunction = FunctionType { params: function_.params, returnType: function_.returnType }
-              member.resolvedType = optionalResolvedType(effectiveFunction)
+              member.resolvedType = effectiveFunction
             }
             _ -> { }
           }
         }
       } else if expression.typeArgs.length > 0 {
         if expression.typeArgs.length != resolvedFunction.typeParams.length {
-          typeError(state, 
-            "Generic call requires " + string(resolvedFunction.typeParams.length) + " type argument" + (if resolvedFunction.typeParams.length == 1 then "" else "s") + "; received " + string(expression.typeArgs.length),
-            expression.span,
-          )
+          typeError(state, typeArgumentArityMessage("Generic call", resolvedFunction.typeParams.length, expression.typeArgs.length), expression.span)
         } else {
           let resolvedTypeArgs: ResolvedType[] = []
           for argument of expression.typeArgs { resolvedTypeArgs.push(resolveType(state, argument, state.info!, scope)) }
@@ -177,7 +174,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         let constraints: TypeParameterConstraint[] = if expression.resolvedClass == none then [] else expression.resolvedClass!.typeParamConstraints
         if declaration != none { case declaration! { classDeclaration: ClassDeclaration -> { declaredTypeParams = classDeclaration.typeParams; constraints = classDeclaration.typeParamConstraints } _ -> { } } }
         if expression.typeArgs.length != declaredTypeParams.length {
-          typeError(state, "Generic construction requires " + string(declaredTypeParams.length) + " type argument" + (if declaredTypeParams.length == 1 then "" else "s") + "; received " + string(expression.typeArgs.length), expression.span)
+          typeError(state, typeArgumentArityMessage("Generic construction", declaredTypeParams.length, expression.typeArgs.length), expression.span)
         } else {
           let resolvedTypeArgs: ResolvedType[] = []
           for argument of expression.typeArgs { resolvedTypeArgs.push(resolveType(state, argument, state.info!, scope)) }
@@ -256,7 +253,7 @@ function adaptArrayCallbackArity(state: CheckerState, expression: CallExpression
     if parameterIndex < 0 || parameterIndex >= adapted.params.length || adapted.params[parameterIndex].type_.kind != "function" { continue }
     diagnosticMark := state.diagnostics.length
     actual := checkExpression(state, argument.value, scope, none)
-    while state.diagnostics.length > diagnosticMark { ignored := state.diagnostics.pop()! }
+    discardDiagnosticsSince(state, diagnosticMark)
     case actual {
       function_: FunctionType -> {
         narrowed := withCallbackArity(adapted, parameterIndex, function_.params.length)
@@ -275,20 +272,15 @@ function checkedMemberCallReturnType(expression: CallExpression, returnType: Res
       if member.object.resolvedType != none && member.optional {
         // A Result receiver was already lowered to '(r?)', so every '?.' call
         // short-circuits to none; a Result-returning method keeps its Failure.
+        let absentReceiver = false
         case member.object.resolvedType! {
-          _: WeakResolvedType -> {
-            expression.resolvedOptionalValue = optionalResolvedType(returnType)
-            return optionalAccessType(returnType)
-          }
-          union_: UnionResolvedType -> {
-            for arm of union_.types {
-              if arm.kind == "none" {
-                expression.resolvedOptionalValue = optionalResolvedType(returnType)
-                return optionalAccessType(returnType)
-              }
-            }
-          }
+          _: WeakResolvedType -> { absentReceiver = true }
+          union_: UnionResolvedType -> { for arm of union_.types { if arm.kind == "none" { absentReceiver = true } } }
           _ -> { }
+        }
+        if absentReceiver {
+          expression.resolvedOptionalValue = returnType
+          return optionalAccessType(returnType)
         }
       }
     }
@@ -325,8 +317,7 @@ function callArgumentsDiverge(expression: CallExpression): bool {
 
 export function applyTypeArgumentConstraints(state: CheckerState, declaration: FunctionDeclaration | none, arguments: ResolvedType[], span: SourceSpan, scope: Scope, modulePath: string, callee: Expression): none {
   if declaration == none { return }
-  let module = state.info!
-  for candidate of state.result.modules { if candidate.path == modulePath { module = candidate } }
+  module := findModule(state.result, modulePath) ?? state.info!
   let ownerNames: string[] = []
   let ownerArguments: ResolvedType[] = []
   let receiver: ResolvedType | none = none

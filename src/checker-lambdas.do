@@ -8,7 +8,7 @@ import { checkBlock } from "./checker-statements"
 import { checkExpression } from "./checker-expressions"
 import { resolveType } from "./checker-resolution"
 import { finish, typeError } from "./checker-common"
-import { decorateAnnotationWithResolved, functionParameterIndex, optionalResolvedType, declare } from "./checker-symbols"
+import { decorateAnnotationWithResolved, functionParameterIndex, declare } from "./checker-symbols"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 
@@ -37,7 +37,7 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
   for i of 0..<expression.params.length {
     parameter := expression.params[i]
     parameterType := if parameter.type_ == none then if expectedFunction != none && i < expectedFunction!.params.length then expectedFunction!.params[i].type_ else unknownType() else resolveType(state, parameter.type_!, state.info!, lambdaScope)
-    parameter.resolvedType = optionalResolvedType(parameterType)
+    parameter.resolvedType = parameterType
     params.push(FunctionParamType { name: parameter.name, type_: parameterType, hasDefault: parameter.defaultValue != none })
     if parameter.name != "_" && !declare(lambdaScope, Binding { name: parameter.name, kind: "parameter", type_: parameterType, mutable: false, span: checkerSemanticSpan(parameter.span), module: state.info!.path }) {
       typeError(state, "Binding '" + parameter.name + "' is already declared in this scope", parameter.span)
@@ -71,7 +71,7 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
         // Return sites retain the final contextual carrier for the emitter,
         // including nullable and unit conversions. Do not recheck the body.
         for observation of inference.returns {
-          observation.statement.resolvedExpectedType = optionalResolvedType(returnType)
+          observation.statement.resolvedExpectedType = returnType
           if observation.statement.value == none && returnType.kind != "none" && returnType.kind != "unknown" {
             typeError(state, "Expected a return value of type " + displayTypeName(returnType), observation.statement.span)
           } else if !isAssignableWithInterfaces(state.result, observation.type_, returnType) {
@@ -87,7 +87,7 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
       // A declared or contextual return type is the lambda's signature, as it
       // is for block bodies; the body converts to it. Only an unknown return
       // type is inferred from the body.
-      bodyType := checkExpression(state, expressionBody, lambdaScope, optionalResolvedType(returnType))
+      bodyType := checkExpression(state, expressionBody, lambdaScope, returnType)
       if returnType.kind == "unknown" { returnType = bodyType }
       else if returnType.kind == "none" {
         // A none-returning body is an expression statement: its value is

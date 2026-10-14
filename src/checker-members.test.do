@@ -182,3 +182,28 @@ export function testExplicitGenericStaticReceivers(): none {
   Assert.isTrue(bounded.diagnostics.length > 0)
 }
 
+
+export function testOptionalMemberValuesFollowReceiverAbsence(): none {
+  valid := checked(
+    "class A { x: int = 0\nread(): int => x }\n" +
+    "function f(a: A | none, w: weak A): none {\n" +
+    "let x: int | none = a?.x\nlet bound: ((): int) | none = a?.read\nlet wx: int | none = w?.x\n" +
+    "let forced: int = w!.x\nlet direct: int = a!.x }",
+  )
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+  rejected := checked("class A { x: int = 0 }\nfunction f(a: A | none, w: weak A): none {\nlet x: int = a?.x\nlet wx: int = w?.x }")
+  Assert.equal(rejected.diagnostics.length, 2)
+  Assert.equal(rejected.diagnostics[0].message, "Cannot assign int | none to int")
+  Assert.equal(rejected.diagnostics[1].message, "Cannot assign int | none to int")
+}
+
+export function testUnionAliasDecoderSignature(): none {
+  result := checked(
+    "class Cat { kind: \"cat\" }\nclass Dog { kind: \"dog\" }\ntype Pet = Cat | Dog\n" +
+    "function load(value: SerialValue): Result<Pet, string> => Pet.fromSerialValue(value)\n" +
+    "function strict(value: SerialValue): Result<Pet, string> => Pet.fromSerialValue(value, false)",
+  )
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}

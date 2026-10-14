@@ -79,6 +79,10 @@ export function testImpliedInterfaceEncodingNamesTheBlockingImplementation(): no
   catalog := discoverInstantiations(analysis)
   Assert.equal(catalog.jsonErrors.length, 1)
   Assert.equal(catalog.jsonErrors[0].message, "Type \"Pet\" does not support automatic JSON serialization (implementing class \"Robot\" does not support it), required by 'toSerialObject' on type parameter \"T\"")
+  // The error points at the member access inside the generic body.
+  Assert.equal(catalog.jsonErrors[0].span.start.line, 6)
+  Assert.equal(catalog.jsonErrors[0].span.end.line, 6)
+  Assert.isTrue(catalog.jsonErrors[0].span.end.offset > catalog.jsonErrors[0].span.start.offset)
 }
 
 function joined(values: string[]): string {

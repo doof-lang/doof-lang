@@ -4,15 +4,18 @@
 // substitution. The same method may be called locally without crossing an
 // actor domain, while an Actor<T> receiver requires deeply immutable payloads.
 
-import { AnalysisResult, ModuleInfo } from "./analyzer"
+import { AnalysisResult } from "./analyzer"
 import {
   ActorType, ArrayResolvedType, ClassType, Diagnostic, EnumType, FunctionType, InterfaceType,
   SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType,
-  ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SemanticLocation, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType,
+  ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType,
   TypeParameterType, UnionResolvedType, UnknownType, WeakResolvedType,
 } from "./semantic"
-import { ClassDeclaration, ExportDeclaration, InterfaceDeclaration, SourceSpan, Statement } from "./ast"
+import { ClassDeclaration, ExportDeclaration, InterfaceDeclaration, Statement } from "./ast"
 import { classType, substituteTypeParams, typeName } from "./checker-types"
+import { findModule } from "./checker-interfaces"
+import { containsString, fieldDisplayName } from "./checker-symbols"
+import { checkerSemanticSpan } from "./checker-validation"
 
 export class ActorBoundaryViolation {
   reason: string
@@ -32,11 +35,11 @@ export function validateDeepReadonlyFields(result: AnalysisResult): Diagnostic[]
             if !field.readonly_ || field.resolvedType == none { continue }
             violation := findViolation(result, field.resolvedType!, [])
             if violation == none { continue }
-            name := if field.names.length == 0 then "<field>" else field.names[0]
+            name := fieldDisplayName(field)
             diagnostics.push(Diagnostic {
               severity: "error",
               message: "Readonly field \"" + class_.name + "." + name + "\" must be deeply immutable: " + violation!.reason,
-              span: semanticSpan(field.span),
+              span: checkerSemanticSpan(field.span),
               module: module.path,
             })
           }
@@ -49,7 +52,7 @@ export function validateDeepReadonlyFields(result: AnalysisResult): Diagnostic[]
             diagnostics.push(Diagnostic {
               severity: "error",
               message: "Readonly field \"" + interface_.name + "." + field.name + "\" must be deeply immutable: " + violation!.reason,
-              span: semanticSpan(field.span),
+              span: checkerSemanticSpan(field.span),
               module: module.path,
             })
           }
@@ -134,7 +137,7 @@ function findClassViolation(result: AnalysisResult, type_: ClassType, seen: stri
   for field of declaration!.fields {
     if field.static_ { continue }
     if field.let_ {
-      name := if field.names.length == 0 then "<field>" else field.names[0]
+      name := fieldDisplayName(field)
       return ActorBoundaryViolation { reason: "field \"" + name + "\" is mutable" }
     }
     fieldType := field.resolvedType
@@ -142,7 +145,7 @@ function findClassViolation(result: AnalysisResult, type_: ClassType, seen: stri
     effective := substituteTypeParams(fieldType!, declaration!.typeParams, type_.typeArgs)
     violation := findViolation(result, effective, nextSeen)
     if violation != none {
-      name := if field.names.length == 0 then "<field>" else field.names[0]
+      name := fieldDisplayName(field)
       return ActorBoundaryViolation { reason: "field \"" + name + "\" cannot cross actor boundaries: " + violation!.reason }
     }
   }
@@ -208,22 +211,5 @@ function unwrapExport(statement: Statement): Statement {
   case statement {
     export_: ExportDeclaration -> { return export_.declaration }
     _ -> { return statement }
-  }
-}
-
-function findModule(result: AnalysisResult, path: string): ModuleInfo | none {
-  for module of result.modules { if module.path == path { return module } }
-  return none
-}
-
-function containsString(values: string[], value: string): bool {
-  for item of values { if item == value { return true } }
-  return false
-}
-
-function semanticSpan(span: SourceSpan): SemanticSpan {
-  return SemanticSpan {
-    start: SemanticLocation { line: span.start.line, column: span.start.column, offset: span.start.offset },
-    end: SemanticLocation { line: span.end.line, column: span.end.column, offset: span.end.offset },
   }
 }

@@ -10,3 +10,19 @@ export function testSecondConsolidationIsolationNestedCallTraversal(): none {
   for diagnostic of result.diagnostics { if diagnostic.message.contains("non-isolated") || diagnostic.message.contains("mutable module") { found = true } }
   Assert.isTrue(found)
 }
+
+export function testIsolationDiagnosticsPointIntoTheIsolatedFunction(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "let shared = 0\nfunction unsafe(): int { shared = shared + 1\nreturn shared }\nisolated function nested(): int =>\n1 + unsafe()",
+  }], "/main.do")
+  let found = false
+  for diagnostic of result.diagnostics {
+    if diagnostic.message.contains("non-isolated") || diagnostic.message.contains("mutable module") {
+      found = true
+      Assert.equal(diagnostic.severity, "error")
+      Assert.equal(diagnostic.module, "/main.do")
+      Assert.isTrue(diagnostic.span.start.line >= 4)
+    }
+  }
+  Assert.isTrue(found)
+}

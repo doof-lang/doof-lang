@@ -7,10 +7,9 @@ import {
 import { ClassField, ConstDeclaration, Expression, FunctionDeclaration, SourceSpan } from "./ast"
 import { typeName } from "./checker-types"
 import { CheckerState } from "./checker-state"
-import { optionalResolvedType } from "./checker-symbols"
 import { checkerSemanticSpan } from "./checker-validation"
 
-export function finish(state: CheckerState, expression: Expression, resolvedType: ResolvedType): ResolvedType { expression.resolvedType = optionalResolvedType(resolvedType); return resolvedType }
+export function finish(state: CheckerState, expression: Expression, resolvedType: ResolvedType): ResolvedType { expression.resolvedType = resolvedType; return resolvedType }
 export function typeError(state: CheckerState, message: string, span: SourceSpan): none { state.diagnostics.push(Diagnostic { severity: "error", message, span: checkerSemanticSpan(span), module: state.info!.path }) }
 export function deprecatedNoneAlias(state: CheckerState, spelling: string, span: SourceSpan, module: string = ""): none {
   state.diagnostics.push(Diagnostic {
@@ -78,4 +77,13 @@ export function requireBool(state: CheckerState, resolvedType: ResolvedType, spa
 
 export function retainEditorScope(state: CheckerState, scope: Scope, span: SourceSpan): none {
   if state.editorMode { state.info!.editorScopes.push(EditorScope { scope, span: checkerSemanticSpan(span) }) }
+}
+
+export function typeArgumentArityMessage(subject: string, expected: int, actual: int): string {
+  return subject + " requires " + string(expected) + " type argument" + (if expected == 1 then "" else "s") + "; received " + string(actual)
+}
+
+/** Drops the diagnostics a speculative check reported after `mark`. */
+export function discardDiagnosticsSince(state: CheckerState, mark: int): none {
+  while state.diagnostics.length > mark { ignored := state.diagnostics.pop()! }
 }

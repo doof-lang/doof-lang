@@ -2,15 +2,16 @@
 // result validation.
 
 import { AnalysisResult } from "./analyzer"
-import { ActorType, ArrayResolvedType, ClassType, Diagnostic, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, Scope, SuccessResolvedType, FailureResolvedType, SemanticLocation, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ActorType, ArrayResolvedType, ClassType, Diagnostic, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, Scope, SuccessResolvedType, FailureResolvedType, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { AsyncExpression, Block, CallExpression, ClassDeclaration, Expression, Identifier, InterfaceDeclaration, MemberExpression, SourceSpan, ThisExpression } from "./ast"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { collectBlockExpressions, collectExpressionTree } from "./ast-walk"
-import { declarationFor, optionalResolvedType } from "./checker-symbols"
+import { declarationFor, fieldDisplayName } from "./checker-symbols"
 import { neverType, promiseType, substituteTypeParams, typeName, unknownType } from "./checker-types"
 import { finish, typeError } from "./checker-common"
 import { checkExpression } from "./checker-expressions"
 import { CheckerState } from "./checker-state"
+import { pushDiagnostic } from "./checker-validation"
 import { checkBlock } from "./checker-statements"
 
 class AsyncBoundaryViolation {
@@ -32,7 +33,7 @@ export function checkAsync(state: CheckerState, async_: AsyncExpression, scope: 
         parent: scope,
         inValueYieldBlock: true,
         yieldExpectedType: expectedValue,
-        yieldType: if expectedValue == none then optionalResolvedType(unknownType()) else expectedValue,
+        yieldType: if expectedValue == none then unknownType() else expectedValue,
       }
       completes := checkBlock(state, block, asyncScope)
       if completes { typeError(state, "Async blocks must yield a value on every path", block.span) }
@@ -238,7 +239,7 @@ function findClassAsyncViolation(result: AnalysisResult, type_: ClassType, seen:
         effective := substituteTypeParams(field.resolvedType!, class_.typeParams, type_.typeArgs)
         reason := findAsyncViolation(result, effective, next, safe, resultMode)
         if reason != none {
-          name := if field.names.length == 0 then "<field>" else field.names[0]
+          name := fieldDisplayName(field)
           return AsyncBoundaryViolation { reason: "field \"" + name + "\" cannot cross the async boundary: " + reason! }
         }
       }
@@ -287,15 +288,4 @@ function appended(values: string[], value: string): string[] {
   for item of values { result.push(item) }
   result.push(value)
   return result
-}
-
-function semanticSpan(span: SourceSpan): SemanticSpan {
-  return SemanticSpan {
-    start: SemanticLocation { line: span.start.line, column: span.start.column, offset: span.start.offset },
-    end: SemanticLocation { line: span.end.line, column: span.end.column, offset: span.end.offset },
-  }
-}
-
-function pushDiagnostic(diagnostics: Diagnostic[], module: string, span: SourceSpan, message: string): none {
-  diagnostics.push(Diagnostic { severity: "error", message, span: semanticSpan(span), module })
 }

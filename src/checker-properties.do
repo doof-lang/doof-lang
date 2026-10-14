@@ -4,7 +4,7 @@ import { ObjectProperty, Expression, StringLiteral, IntLiteral, LongLiteral, Flo
 import { ResolvedType, Scope } from "./semantic"
 import { CheckerState } from "./checker-state"
 import { checkExpression } from "./checker-expressions"
-import { lookup, optionalResolvedType } from "./checker-symbols"
+import { lookup } from "./checker-symbols"
 import { displayTypeName, unknownType } from "./checker-types"
 import { typeError } from "./checker-common"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
@@ -17,7 +17,7 @@ export function checkPropertyValue(state: CheckerState, property: ObjectProperty
     if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span) }
     else { property.resolvedBinding = binding; actual = binding!.type_ }
   }
-  property.resolvedType = optionalResolvedType(actual)
+  property.resolvedType = actual
   return actual
 }
 
