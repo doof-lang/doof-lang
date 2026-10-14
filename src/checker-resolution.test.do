@@ -274,3 +274,16 @@ export function testInterfaceFieldsDecodeOnlyWithADiscriminator(): none {
   Assert.equal(result.diagnostics[0].message, "Type \"Kennel\" does not support automatic JSON deserialization")
   Assert.equal(result.diagnostics[0].span.start.line, 8)
 }
+
+export function testObjectUnionFieldsExplainAMissingDiscriminator(): none {
+  result := checked(
+    "class Circle { radius: double }\n" +
+    "class Note { text: string }\n" +
+    "class Loose { pick: Circle | Note }\n" +
+    "function encode(loose: Loose): SerialObject => loose.toSerialObject()\n" +
+    "function decode(json: SerialValue): Result<Loose, string> => Loose.fromSerialValue(json)",
+  )
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].message, "Type \"Loose\" does not support automatic JSON deserialization (field \"pick\" has union type \"Circle | Note\", whose member classes must be non-generic and share a literal-valued string field with distinct values)")
+  Assert.equal(result.diagnostics[0].span.start.line, 5)
+}

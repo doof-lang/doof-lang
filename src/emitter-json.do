@@ -16,7 +16,7 @@ import { ArrayResolvedType, ClassType, EnumType, InterfaceType, SerialValueResol
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitClassInnerType, emitContextType, usesVariantRepresentation } from "./emitter-types"
-import { JsonDiscriminator, interfaceJsonDiscriminator, jsonInterfaceKey, jsonOwnerKey, nullableJsonMember, unionAliasJsonDiscriminator } from "./json-semantics"
+import { JsonDiscriminator, interfaceJsonDiscriminator, jsonInterfaceKey, jsonOwnerKey, nullableJsonMember, objectUnionJsonDiscriminator, unionAliasJsonDiscriminator } from "./json-semantics"
 
 export function emitInterfaceJsonDeclaration(owner: InterfaceDeclaration, context: EmitContext): string {
   if !containsJsonDemand(context.jsonDeserializationKeys, jsonInterfaceKey(owner)) { return "" }
@@ -245,7 +245,9 @@ export function emitJsonTypeCheck(json: string, type_: ResolvedType, context: Em
     tuple: TupleResolvedType -> { return "doof::serial_is_array(" + json + ") && doof::serial_as_array(" + json + ")->size() == " + string(tuple.elements.length) }
     _: MapResolvedType -> { return "doof::serial_is_object(" + json + ")" }
     union_: UnionResolvedType -> {
-      inner := nullableJsonMember(union_)!
+      inner := nullableJsonMember(union_) else {
+        return if carrierOf(union_).hasNone then "(doof::serial_is_null(" + json + ") || doof::serial_is_object(" + json + "))" else "doof::serial_is_object(" + json + ")"
+      }
       return "doof::serial_is_null(" + json + ") || " + emitJsonTypeCheck(json, inner, context)
     }
     _ -> { return "false" }
@@ -292,7 +294,7 @@ export function emitJsonRead(json: string, type_: ResolvedType, context: EmitCon
       return "[&]() { " + emitJsonContainerRead(json, "_object_value", true) + "auto _values = std::make_shared<doof::ordered_map<std::string, " + valueType + ">>(); for (const auto& _entry : *_object_value) { (*_values)[_entry.first] = doof::serial_decode_at(std::string(\".\") + _entry.first, [&]() { return " + entryValue + "; }); } return _values; }()"
     }
     union_: UnionResolvedType -> {
-      inner := nullableJsonMember(union_)!
+      inner := nullableJsonMember(union_) else { return emitObjectUnionJsonRead(json, union_, context) }
       if usesVariantRepresentation(type_) {
         optionalType := emitContextType(type_, context)
         // A decoded interface variant spreads into the flattened union's arms.
@@ -309,6 +311,24 @@ export function emitJsonRead(json: string, type_: ResolvedType, context: EmitCon
     _ -> { return "{}" }
   }
   return "{}"
+}
+
+// Decodes an object union by the discriminator shared by every class it flattens
+// to, promoting the decoded class into the union's variant; null is none.
+function emitObjectUnionJsonRead(json: string, union_: UnionResolvedType, context: EmitContext): string {
+  discriminator := objectUnionJsonDiscriminator(union_, context.allPrograms, context.jsonEligibility) else { panic("Object union JSON decoding has no discriminator") }
+  unionCpp := emitContextType(union_, context)
+  let result = "[&]() -> " + unionCpp + " { "
+  if carrierOf(union_).hasNone { result = result + "if (doof::serial_is_null(" + json + ")) return " + unionCpp + "{std::monostate{}}; " }
+  result = result + emitJsonContainerRead(json, "_union_object", true)
+  if discriminator.entries.length == 0 { return result + "throw doof::JsonDecodeError(\"Union has no member classes\"); }()" }
+  field := discriminator.fieldName
+  result = result + "auto _union_field = _union_object->find(\"" + field + "\"); if (_union_field == _union_object->end() || !doof::serial_is_string(_union_field->second)) throw doof::JsonDecodeError(\"Missing or invalid discriminator field \\\"" + field + "\\\"\"); auto _union_discriminator = doof::serial_as_string(_union_field->second); "
+  for entry of discriminator.entries {
+    className := emitClassInnerType(ClassType { name: entry.declaration.name, symbol: entry.declaration.resolvedSymbol! }, context.modulePath, context.names)
+    result = result + "if (_union_discriminator == \"" + entry.value + "\") return doof::variant_promote<" + unionCpp + ">(doof::serial_decode_value(" + className + "::fromSerialValue(" + json + ", _lenient))); "
+  }
+  return result + "throw doof::JsonDecodeError(\"Unknown " + field + ": \\\"\" + _union_discriminator + \"\\\"\"); }()"
 }
 
 function emitPrimitiveJsonRead(json: string, name: string): string {
@@ -341,7 +361,10 @@ export function jsonTypeName(type_: ResolvedType, context: EmitContext | none = 
     _: ArrayResolvedType -> { return "array" }
     _: TupleResolvedType -> { return "array" }
     _: MapResolvedType -> { return "object" }
-    union_: UnionResolvedType -> { return jsonTypeName(nullableJsonMember(union_)!, context) + " or null" }
+    union_: UnionResolvedType -> {
+      inner := nullableJsonMember(union_) else { return if carrierOf(union_).hasNone then "object or null" else "object" }
+      return jsonTypeName(inner, context) + " or null"
+    }
     _ -> { return "value" }
   }
   return "value"
@@ -368,7 +391,8 @@ export function emitJsonField(value: string, resolvedType: ResolvedType, context
       return emitContextType(enum_, context) + "_toSerialValue(" + value + ")"
     }
     union_: UnionResolvedType -> {
-      inner := nullableJsonMember(union_)!
+      // An object union visits its flattened class arms; none encodes as null.
+      inner := nullableJsonMember(union_) else { return "doof::serial_union_value(" + value + ")" }
       if usesVariantRepresentation(resolvedType) {
         // An interface member's implementors are flattened beside none, so
         // removing none yields the interface variant rather than one arm.

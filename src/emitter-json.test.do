@@ -181,3 +181,21 @@ export function testNullableInterfaceFieldCodesThroughTheFlattenedInterface(): n
   Assert.stringContains(module.source, "}, doof::unwrap_optional(this->focus))")
   Assert.stringNotContains(module.source, "std::get<Shape>")
 }
+
+export function testObjectUnionFieldsEncodeByArmAndDecodeByDiscriminator(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "interface Shape { area(): int }\n" +
+    "class Square implements Shape { kind: \"square\"\nside: int\narea(): int => side }\n" +
+    "class Note { kind: \"note\"\ntext: string }\n" +
+    "class Scene { focus: Shape | Note | none = none }\n" +
+    "function encode(scene: Scene): SerialObject => scene.toSerialObject()\n" +
+    "function decode(json: SerialValue): Result<Scene, string> => Scene.fromSerialValue(json)",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "(*_json)[\"focus\"] = doof::serial_union_value(this->focus);")
+  Assert.stringContains(source, "if (doof::serial_is_null(_iterator_focus->second)) return doof::union_t<std::monostate, doof::arms<Shape>, std::shared_ptr<Note>>{std::monostate{}};")
+  Assert.stringContains(source, "if (_union_discriminator == \"square\") return doof::variant_promote<doof::union_t<std::monostate, doof::arms<Shape>, std::shared_ptr<Note>>>(doof::serial_decode_value(Square::fromSerialValue(_iterator_focus->second, _lenient)));")
+  Assert.stringContains(source, "Field \\\"focus\\\" expected object or null but got")
+}

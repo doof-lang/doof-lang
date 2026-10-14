@@ -1,11 +1,12 @@
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
-import { InterfaceDeclaration, Program } from "./ast"
+import { ClassDeclaration, InterfaceDeclaration, Program } from "./ast"
 import { createChecker } from "./checker"
 import {
-  canGenerateInterfaceJsonSerialization, interfaceJsonDiscriminator, interfaceJsonSerializationBlocker, isGeneratedJsonType,
+  canGenerateInterfaceJsonSerialization, canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, interfaceJsonSerializationBlocker, isGeneratedJsonType,
+  objectUnionJsonDecodeBlocker, objectUnionJsonDiscriminator, objectUnionJsonMembers,
 } from "./json-semantics"
-import { InterfaceType, SourceFile } from "./semantic"
+import { InterfaceType, PrimitiveType, ResolvedType, SourceFile, UnionResolvedType } from "./semantic"
 
 class CheckedInterfaces {
   programs: Program[]
@@ -82,4 +83,75 @@ export function testGenericInterfacesAreNotJsonTypes(): none {
   )
   box := named(checked, "Box")
   Assert.isFalse(canGenerateInterfaceJsonSerialization(box, checked.programs))
+}
+
+function ownerClass(checked: CheckedInterfaces, name: string): ClassDeclaration {
+  for program of checked.programs {
+    for statement of program.statements {
+      case statement {
+        class_: ClassDeclaration -> { if class_.name == name { return class_ } }
+        _ -> { }
+      }
+    }
+  }
+  panic("missing class " + name)
+}
+
+function fieldType(checked: CheckedInterfaces, owner: string, field: string): ResolvedType {
+  for candidate of ownerClass(checked, owner).fields {
+    if candidate.names.contains(field) { return candidate.resolvedType! }
+  }
+  panic("missing field " + owner + "." + field)
+}
+
+export function testObjectUnionsDecodeThroughOneFlattenedDiscriminator(): none {
+  checked := checkedInterfaces(
+    "interface Shape { area(): double }\n" +
+    "interface Named { name(): string }\n" +
+    "class Circle implements Shape { kind: \"circle\"\nradius: double\narea(): double => radius }\n" +
+    "class Badge implements Shape, Named { kind: \"badge\"\narea(): double => 1.0\nname(): string => \"b\" }\n" +
+    "class Tag implements Named { kind: \"tag\"\ntext: string\nname(): string => text }\n" +
+    "class Note { kind: \"note\"\ntext: string }\n" +
+    "class Holder { both: Shape | Named | none = none\nmixed: Circle | Note\noverlap: Shape | Circle }",
+  )
+  both := fieldType(checked, "Holder", "both")
+  Assert.equal(objectUnionJsonMembers(both)!.length, 2)
+  // Badge reaches the union through both interfaces but is one candidate.
+  discriminator := objectUnionJsonDiscriminator(both, checked.programs)!
+  Assert.equal(discriminator.fieldName, "kind")
+  Assert.equal(discriminator.entries.length, 3)
+  Assert.equal(objectUnionJsonDiscriminator(fieldType(checked, "Holder", "overlap"), checked.programs)!.entries.length, 2)
+  Assert.isTrue(isGeneratedJsonType(fieldType(checked, "Holder", "mixed"), checked.programs))
+  Assert.isTrue(canGenerateJsonDeserialization(ownerClass(checked, "Holder"), checked.programs))
+  Assert.equal(objectUnionJsonDecodeBlocker(ownerClass(checked, "Holder"), checked.programs), none)
+}
+
+export function testObjectUnionsWithoutADiscriminatorOnlyEncode(): none {
+  checked := checkedInterfaces(
+    "class Circle { radius: double }\n" +
+    "class Note { text: string }\n" +
+    "class Loose { pick: Circle | Note }",
+  )
+  pick := fieldType(checked, "Loose", "pick")
+  Assert.equal(objectUnionJsonDiscriminator(pick, checked.programs), none)
+  Assert.isTrue(canGenerateJsonSerialization(ownerClass(checked, "Loose"), checked.programs))
+  Assert.isFalse(canGenerateJsonDeserialization(ownerClass(checked, "Loose"), checked.programs))
+  Assert.stringContains(objectUnionJsonDecodeBlocker(ownerClass(checked, "Loose"), checked.programs)!, "field \"pick\" has union type \"Circle | Note\"")
+}
+
+export function testOnlyClassAndInterfaceUnionsAreObjectUnions(): none {
+  integer := PrimitiveType { name: "int" }
+  Assert.equal(objectUnionJsonMembers(UnionResolvedType { types: [integer, PrimitiveType { name: "string" }] }), none)
+  checked := checkedInterfaces("class Circle { kind: \"c\" }\nclass Holder { single: Circle | none = none }")
+  // One member with none stays a nullable value, not an object union.
+  Assert.equal(objectUnionJsonMembers(fieldType(checked, "Holder", "single")), none)
+}
+
+export function testRecursiveObjectUnionsTerminate(): none {
+  checked := checkedInterfaces(
+    "class Leaf { kind: \"leaf\"\nvalue: int }\n" +
+    "class Branch { kind: \"branch\"\nchildren: (Leaf | Branch)[] }",
+  )
+  Assert.isTrue(canGenerateJsonDeserialization(ownerClass(checked, "Branch"), checked.programs))
+  Assert.isTrue(canGenerateJsonSerialization(ownerClass(checked, "Branch"), checked.programs))
 }

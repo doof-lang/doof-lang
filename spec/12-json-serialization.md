@@ -91,6 +91,7 @@ println(formatJsonValue(u.toSerialObject()))
 | `Map<string, T>` | JSON object when `T` is serializable |
 | Enums | JSON backing value (int or string) |
 | `T | none` | Value or JSON `null` |
+| Unions of classes and interfaces | The member class's JSON object, or `null` for `none` (see [Union-Typed Fields](#union-typed-fields)) |
 | `SerialValue` | Preserved as-is |
 
 ### Non-Serializable Types
@@ -428,6 +429,53 @@ println(restored.isSuccess())  // true
 An unknown discriminator inside a nested value reports its path, for example
 `Field "root": Field "children": [0]: Unknown kind: "twig"` for a `Tree` whose
 first child has `kind: "twig"`.
+
+### Union-Typed Fields
+
+A field, array element, map value, or tuple element may be a union of two or
+more classes and interfaces, optionally with `none`. Each interface member
+stands for its implementing classes, and a class reached through several
+members counts once. Encoding writes the held class's own JSON object, or
+`null` for `none`, and needs every member to be encodable. Decoding needs every
+class the union stands for to be non-generic and to share a literal-valued
+string discriminator with distinct values, the same rule as interfaces:
+
+```doof check
+interface Shape { area(): double }
+
+class Circle implements Shape {
+  kind: "circle"
+  radius: double
+  area(): double => radius * 2.0
+}
+
+class Note {
+  kind: "note"
+  text: string
+}
+
+class Canvas {
+  focus: Shape | Note | none = none
+}
+
+canvas := Canvas { focus: Circle { radius: 1.0 } }
+restored := Canvas.fromSerialValue(canvas.toSerialObject())
+println(restored.isSuccess())  // true
+```
+
+A union without a shared discriminator still encodes, but decoding it is a
+compile error that names the field:
+
+```doof reject
+class Circle { radius: double }
+class Note { text: string }
+class Loose { pick: Circle | Note }
+
+Loose { pick: Note { text: "n" } }.toSerialObject()
+Loose.fromSerialValue({ pick: { text: "n" } })  // ❌ field "pick" needs a shared discriminator
+```
+
+Unions with primitive members, such as `int | string`, are not JSON types.
 
 ## Named Union Alias Deserialization
 

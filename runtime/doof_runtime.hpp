@@ -1714,6 +1714,22 @@ T serial_decode_value(Result<T, std::string> result) {
     return std::move(success_value(result));
 }
 
+// Encodes a flattened object union: each class arm through its own
+// toSerialObject, and none as null.
+template <typename... Arms>
+SerialValue serial_union_value(const std::variant<Arms...>& value) {
+    return std::visit([](const auto& item) -> SerialValue {
+        using Item = std::decay_t<decltype(item)>;
+        if constexpr (std::is_same_v<Item, std::monostate>) {
+            return SerialValue(nullptr);
+        } else if constexpr (std::is_same_v<Item, NoImplementations>) {
+            return no_implementations<SerialValue>("union member");
+        } else {
+            return serial_value(item->toSerialObject());
+        }
+    }, value);
+}
+
 // ============================================================================
 // String utilities
 // ============================================================================

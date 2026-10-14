@@ -350,8 +350,20 @@ void test_collection_indexing() {
     require(doof::array_at(values, 0, "runtime-test", 1) == 2, "ordinary array indexing changed");
 }
 
+struct UnionJsonArm {
+    doof::SerialObject toSerialObject() const {
+        auto object = std::make_shared<doof::ordered_map<std::string, doof::SerialValue>>();
+        (*object)["kind"] = doof::serial_value(std::string("arm"));
+        return object;
+    }
+};
+
 void test_serial_integers() {
     using doof::SerialValue;
+    using UnionJson = std::variant<std::monostate, std::shared_ptr<UnionJsonArm>>;
+    require(doof::serial_is_null(doof::serial_union_value(UnionJson{})), "an absent union arm did not encode as null");
+    auto encodedArm = doof::serial_union_value(UnionJson{std::make_shared<UnionJsonArm>()});
+    require(doof::serial_is_object(encodedArm) && doof::serial_as_string(doof::serial_object(encodedArm)->find("kind")->second) == "arm", "a union class arm did not encode through its own object");
     require(doof::serial_fits_int(SerialValue{int32_t{3}}), "int storage did not fit int");
     require(doof::serial_fits_int(SerialValue{3.0}), "whole double did not fit int");
     require(doof::serial_fits_int(SerialValue{-2147483648.0}), "int minimum did not fit int");

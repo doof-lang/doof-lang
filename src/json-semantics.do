@@ -8,6 +8,7 @@ import {
   ExportDeclaration, IntLiteral, InterfaceDeclaration, LongLiteral, NamedType, Program, Statement, StringLiteral, TypeAliasDeclaration, TypeAnnotation, UnionType,
 } from "./ast"
 import { ArrayResolvedType, ClassType, EnumType, InterfaceType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, Symbol, TupleResolvedType, UnionResolvedType } from "./semantic"
+import { typeName } from "./checker-types"
 
 export class JsonDiscriminatorEntry {
   value: string
@@ -265,7 +266,8 @@ export function isGeneratedJsonType(type_: ResolvedType, programs: Program[] = [
     }
     union_: UnionResolvedType -> {
       inner := nullableJsonMemberUnchecked(union_)
-      return inner != none && isGeneratedJsonType(inner!, programs, visited)
+      if inner == none { return objectUnionDecodes(union_, programs, visited) }
+      return isGeneratedJsonType(inner!, programs, visited)
     }
     _ -> { return false }
   }
@@ -299,7 +301,7 @@ function isGeneratedJsonSerializationType(type_: ResolvedType, programs: Program
     }
     union_: UnionResolvedType -> {
       inner := nullableJsonMemberUnchecked(union_)
-      if inner == none { return false }
+      if inner == none { return objectUnionEncodes(union_, programs, visited) }
       case inner! {
         _: ClassType -> { return isGeneratedJsonSerializationType(inner!, programs, visited) }
         _: InterfaceType -> { return isGeneratedJsonSerializationType(inner!, programs, visited) }
@@ -401,6 +403,8 @@ function isGeneratedJsonDeserializationAnnotation(annotation: TypeAnnotation, pr
       return isGeneratedJsonDeserializationAnnotation(array.elementType, programs, visited)
     }
     union_: UnionType -> {
+      objectUnion := objectUnionAnnotationType(union_)
+      if objectUnion != none { return isGeneratedJsonType(objectUnion!, programs, visited) }
       if union_.types.length != 2 { return false }
       let hasNull = false
       let hasPrimitive = false
@@ -424,6 +428,10 @@ function isGeneratedJsonDeserializationAnnotation(annotation: TypeAnnotation, pr
 function isGeneratedJsonSerializationAnnotation(annotation: TypeAnnotation, programs: Program[], visited: string[]): bool {
   if annotation.resolvedType != none { return isGeneratedJsonSerializationType(annotation.resolvedType!, programs, visited) }
   case annotation {
+    union_: UnionType -> {
+      objectUnion := objectUnionAnnotationType(union_)
+      if objectUnion != none { return isGeneratedJsonSerializationType(objectUnion!, programs, visited) }
+    }
     named: NamedType -> {
       if named.name == "Tuple" {
         if named.typeArgs.length == 0 { return false }
@@ -547,4 +555,124 @@ function hasDedicatedConstructor(owner: ClassDeclaration): bool {
     if method.static_ && method.name == "constructor" { return true }
   }
   return false
+}
+
+/**
+ * The present members of an object union: two or more class or interface
+ * members, optionally with none. A single member with none is a nullable value
+ * instead (see nullableJsonMember).
+ */
+export function objectUnionJsonMembers(type_: ResolvedType): ResolvedType[] | none {
+  union_ := type_ as UnionResolvedType else { return none }
+  let members: ResolvedType[] = []
+  let noneCount = 0
+  for member of union_.types {
+    case member {
+      _: NoneType -> { noneCount += 1 }
+      class_: ClassType -> {
+        if class_.symbol.kind != "class" { return none }
+        members.push(member)
+      }
+      _: InterfaceType -> { members.push(member) }
+      _ -> { return none }
+    }
+  }
+  if members.length < 2 || noneCount > 1 { return none }
+  return members
+}
+
+/**
+ * Decodes an object union by one string discriminator shared by every class it
+ * flattens to, each interface member contributing its implementing classes.
+ * A union whose interfaces have no implementations decodes only `null`, so its
+ * discriminator has no entries.
+ */
+export function objectUnionJsonDiscriminator(
+  type_: ResolvedType,
+  programs: Program[],
+  cache: JsonEligibilityCache | none = none,
+): JsonDiscriminator | none {
+  let visited: string[] = []
+  return objectUnionJsonDiscriminatorInner(type_, programs, cache, visited)
+}
+
+function objectUnionJsonDiscriminatorInner(
+  type_: ResolvedType,
+  programs: Program[],
+  cache: JsonEligibilityCache | none,
+  visited: string[],
+): JsonDiscriminator | none {
+  members := objectUnionJsonMembers(type_) else { return none }
+  let classes: ClassDeclaration[] = []
+  for member of members {
+    case member {
+      class_: ClassType -> {
+        if class_.typeArgs.length > 0 || !addUnionJsonClass(classes, class_.symbol, programs) { return none }
+      }
+      interface_: InterfaceType -> {
+        if interface_.typeArgs.length > 0 { return none }
+        for implementation of interface_.symbol.implementations {
+          if !addUnionJsonClass(classes, implementation, programs) { return none }
+        }
+      }
+      _ -> { return none }
+    }
+  }
+  if classes.length == 0 { return JsonDiscriminator { fieldName: "" } }
+  return classesJsonDiscriminator(classes, programs, cache, visited)
+}
+
+// A class reached through several members (directly and through an interface,
+// or through two interfaces) is one decoding candidate.
+function addUnionJsonClass(classes: ClassDeclaration[], symbol: Symbol, programs: Program[]): bool {
+  if symbol.native_ || symbol.typeParams.length > 0 { return false }
+  declaration := findJsonClassDeclaration(programs, symbol) else { return false }
+  for existing of classes { if jsonOwnerKey(existing) == jsonOwnerKey(declaration) { return true } }
+  classes.push(declaration)
+  return true
+}
+
+function objectUnionDecodes(type_: ResolvedType, programs: Program[], visited: string[]): bool {
+  if programs.length == 0 { return objectUnionJsonMembers(type_) != none }
+  return objectUnionJsonDiscriminatorInner(type_, programs, none, visited) != none
+}
+
+function objectUnionEncodes(type_: ResolvedType, programs: Program[], visited: string[]): bool {
+  members := objectUnionJsonMembers(type_) else { return false }
+  for member of members {
+    if !isGeneratedJsonSerializationType(member, programs, visited) { return false }
+  }
+  return true
+}
+
+// Static member lookup can see a union annotation before it is resolved; its
+// named class and interface members resolve the same way the checker will.
+function objectUnionAnnotationType(union_: UnionType): ResolvedType | none {
+  let members: ResolvedType[] = []
+  for member of union_.types {
+    named := member as NamedType else { return none }
+    if named.name == "none" || named.name == "null" { members.push(NoneType {}); continue }
+    if named.typeArgs.length > 0 || named.resolvedSymbol == none { return none }
+    symbol := named.resolvedSymbol!
+    if symbol.kind == "class" { members.push(ClassType { name: symbol.name, symbol }) }
+    else if symbol.kind == "interface" { members.push(InterfaceType { name: symbol.name, symbol }) }
+    else { return none }
+  }
+  resolved := UnionResolvedType { types: members }
+  return if objectUnionJsonMembers(resolved) == none then none else resolved
+}
+
+/**
+ * Explains a direct field whose object union cannot decode, for diagnostics.
+ * Other blockers keep the owner's general message.
+ */
+export function objectUnionJsonDecodeBlocker(owner: ClassDeclaration, programs: Program[]): string | none {
+  for field of owner.fields {
+    if field.static_ || field.const_ || field.resolvedType == none { continue }
+    if objectUnionJsonMembers(field.resolvedType!) == none { continue }
+    if objectUnionJsonDiscriminator(field.resolvedType!, programs) != none { continue }
+    name := if field.names.length == 0 then "<field>" else field.names[0]
+    return "field \"" + name + "\" has union type \"" + typeName(field.resolvedType!) + "\", whose member classes must be non-generic and share a literal-valued string field with distinct values"
+  }
+  return none
 }

@@ -1,5 +1,6 @@
 import { Shape, Tagged } from "./shapes"
 import { Circle } from "./circle"
+import { Marker } from "./marker"
 
 export class Scene {
   let focus: Shape | none = none
@@ -8,6 +9,7 @@ export class Scene {
 
 export class Snapshot {
   focus: Tagged | none = none
+  mark: Tagged | Marker | none = none
 }
 
 export class Watcher {

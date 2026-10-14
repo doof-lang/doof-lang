@@ -4,6 +4,7 @@
 import { Shape } from "./shapes"
 import { Circle } from "./circle"
 import { Boxed } from "./boxed"
+import { Marker } from "./marker"
 import { Scene, Snapshot, Watcher, focusArea, narrow } from "./scene"
 
 function check(condition: bool, message: string): none {
@@ -32,6 +33,10 @@ function main(): int {
   restored := Snapshot.fromSerialValue(snapshot.toSerialObject())!
   check(restored.focus?.label() == "circle" && (restored.focus as Circle)!.radius == 1.25, "a cross-module nullable interface round-trips through JSON")
   check(Snapshot.fromSerialValue(Snapshot {}.toSerialObject())!.focus == none, "an absent interface round-trips as null")
+  marked := Snapshot.fromSerialValue(Snapshot { mark: Marker { note: "m" } }.toSerialObject())!
+  check((marked.mark as Marker)!.note == "m", "a cross-module object union decodes its class arm")
+  tagged := Snapshot.fromSerialValue(Snapshot { mark: Circle { radius: 0.5 } }.toSerialObject())!
+  check((tagged.mark as Circle)!.radius == 0.5, "a cross-module object union decodes an interface implementor")
 
   watcher := Watcher {}
   watch(watcher)

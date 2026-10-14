@@ -76,6 +76,10 @@ export function testInterfaceUnionsAcrossModulesNative(): none {
   runNativeFixture("interface-unions-modules", "interface unions modules ok")
 }
 
+export function testUnionJsonNative(): none {
+  runNativeFixture("union-json", "union json ok")
+}
+
 function runNativeFixture(fixture: string, expectedOutput: string = "", expectedExitCode: int = 0): none {
   root := join([tempDirectory(), "doof-native-" + fixture])
   clearNativeMatrix(root)
