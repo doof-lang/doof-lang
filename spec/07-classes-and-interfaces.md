@@ -750,6 +750,21 @@ value is an ordinary parenthesized expression, not a one-field construction.
 Without such an expected type, including a union of several classes, the
 literal is a `Tuple`.
 
+The expected class may be generic over the enclosing declaration's own type
+parameters, which are fixed inside its body. While a call is still inferring
+its type arguments, a parameter that mentions them gives the literal no
+expected class, so the literal cannot determine them. Write the type arguments
+explicitly in that case.
+
+```doof check
+class Pair<A, B> { first: A; second: B }
+
+function tagged<T>(value: T): Pair<T, int> => (value, 1)
+function first<T>(pair: Pair<T, int>): T => pair.first
+
+function label(): string => first<string>(("a", 1))
+```
+
 ### Default Values
 
 ```doof check

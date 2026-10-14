@@ -3,6 +3,7 @@ import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
 import { SourceFile } from "./semantic"
 import { discoverInstantiations } from "./checked-instantiations"
+import { containsTypeParameter } from "./checker-types"
 
 export function testCallbackGenericSignaturesStayDistinct(): none {
   analysis := createAnalyzer([SourceFile { path: "/main.do", source:
@@ -89,4 +90,25 @@ function joined(values: string[]): string {
   let result = ""
   for value of values { result = if result == "" then value else result + "," + value }
   return result
+}
+
+export function testMetadataTypeArgumentsAreSpecializedPerCaller(): none {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source:
+    "class Point { x: int = 0 }\nclass Line { length: int = 0 }\n" +
+    "function keep<V>(value: V): V => value\n" +
+    "function describe<T: Reflectable>(): string => keep(T.metadata).name\n" +
+    "function main(): none { a := describe<Point>()\nb := describe<Line>() }" }]).analyze("/main.do")
+  Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
+  catalog := discoverInstantiations(analysis)
+  let keys: string[] = []
+  for function_ of catalog.functions {
+    if function_.declaration.name == "keep" { keys.push(function_.key) }
+    // No instantiation may still mention the caller's type parameter.
+    for argument of function_.substitution.arguments {
+      if containsTypeParameter(argument) { panic("unspecialized instantiation " + function_.key) }
+    }
+  }
+  Assert.equal(keys.length, 2)
+  Assert.stringContains(joined(keys), "Point")
+  Assert.stringContains(joined(keys), "Line")
 }

@@ -16,7 +16,7 @@ import {
 } from "./ast"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, interfaceJsonSerializationBlocker } from "./json-semantics"
 import { AnalysisResult } from "./analyzer"
-import { sameType, substituteTypeParams, typeName } from "./checker-types"
+import { containsTypeParameters, sameType, substituteTypeParams, typeName } from "./checker-types"
 import { classSatisfiesConcreteInterface } from "./checker-interfaces"
 import { containsString } from "./checker-symbols"
 import { checkerSemanticSpan } from "./checker-validation"
@@ -703,37 +703,6 @@ function classFromStatement(statement: Statement, name: string): ClassDeclaratio
 function specialize(type_: ResolvedType, names: string[], arguments: ResolvedType[]): ResolvedType {
   if names.length == 0 { return type_ }
   return substituteTypeParams(type_, names, arguments)
-}
-
-function containsTypeParameters(types: ResolvedType[]): bool {
-  for type_ of types { if containsTypeParameter(type_) { return true } }
-  return false
-}
-
-function containsTypeParameter(type_: ResolvedType): bool {
-  case type_ {
-    _: TypeParameterType -> { return true }
-    class_: ClassType -> { return containsTypeParameters(class_.typeArgs) }
-    interface_: InterfaceType -> { return containsTypeParameters(interface_.typeArgs) }
-    array: ArrayResolvedType -> { return containsTypeParameter(array.elementType) }
-    map: MapResolvedType -> { return containsTypeParameter(map.keyType) || containsTypeParameter(map.valueType) }
-    set_: SetResolvedType -> { return containsTypeParameter(set_.elementType) }
-    stream: StreamResolvedType -> { return containsTypeParameter(stream.elementType) }
-    result: ResultResolvedType -> { return containsTypeParameter(result.valueType) || containsTypeParameter(result.errorType) }
-    success: SuccessResolvedType -> { return containsTypeParameter(success.valueType) }
-    failure: FailureResolvedType -> { return containsTypeParameter(failure.errorType) }
-    actor: ActorType -> { return containsTypeParameter(actor.innerClass) }
-    promise: PromiseType -> { return containsTypeParameter(promise.valueType) }
-    tuple: TupleResolvedType -> { return containsTypeParameters(tuple.elements) }
-    union_: UnionResolvedType -> { return containsTypeParameters(union_.types) }
-    weak_: WeakResolvedType -> { return containsTypeParameter(weak_.inner) }
-    function_: FunctionType -> {
-      for parameter of function_.params { if containsTypeParameter(parameter.type_) { return true } }
-      return containsTypeParameter(function_.returnType)
-    }
-    _ -> { return false }
-  }
-  return false
 }
 
 function concreteTypeListKey(types: ResolvedType[]): string {

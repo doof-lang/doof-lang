@@ -88,6 +88,10 @@ Rules:
 - A positional literal constructs its expected class or struct: `let p: Point = (1.0, 2.0)`,
   `draw((1.0, 2.0))`, `points.push((1.0, 2.0))`. Without a single expected class
   (including unions of several classes) `(a, b)` is a `Tuple`; `(a)` is just parentheses.
+  Inside a generic body the expected class may use the body's own type parameters:
+  `function tag<T>(v: T): Pair<T, int> => (v, 1)`. A call that is still inferring
+  its type arguments gives the literal no class context; write them explicitly,
+  as in `first<string>(("a", 1))`.
 - If a class or struct has a static `constructor` method returning that type, or
   `Result<ThatType, E>` for fallible construction, direct construction delegates
   to `constructor`, uses its parameters for validation, and has the constructor

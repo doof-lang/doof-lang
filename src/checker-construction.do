@@ -272,13 +272,15 @@ export function validateFieldArguments(state: CheckerState, plan: CheckedConstru
 /**
  * The class or struct a positional literal `(a, b)` constructs when its
  * expected type names one, directly or as the present arm of `T | none`.
- * Anything else (unions of several classes, interfaces, tuples, generic
- * contexts still being inferred) leaves the literal an ordinary Tuple.
+ * Anything else (unions of several classes, interfaces, tuples) leaves the
+ * literal an ordinary Tuple. The expected class may mention the enclosing
+ * declaration's own type parameters; call inference never supplies an
+ * expected type that still mentions a parameter it is inferring.
  */
 export function positionalLiteralClass(expected: ResolvedType | none): ClassType | none {
   if expected == none { return none }
   case expected! {
-    class_: ClassType -> { return if containsTypeParameter(class_) then none else class_ }
+    class_: ClassType -> { return class_ }
     union_: UnionResolvedType -> {
       let found: ClassType | none = none
       for member of union_.types {
@@ -291,21 +293,10 @@ export function positionalLiteralClass(expected: ResolvedType | none): ClassType
           _ -> { return none }
         }
       }
-      return if found == none || containsTypeParameter(found!) then none else found
+      return found
     }
     _ -> { return none }
   }
-}
-
-function containsTypeParameter(class_: ClassType): bool {
-  for argument of class_.typeArgs {
-    case argument {
-      _: TypeParameterType -> { return true }
-      nested: ClassType -> { if containsTypeParameter(nested) { return true } }
-      _ -> { }
-    }
-  }
-  return false
 }
 
 /** Checks `(a, b)` against an expected class exactly like the positional call `Point(a, b)`. */

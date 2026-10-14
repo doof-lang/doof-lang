@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
-import { FunctionParamType, InterfaceType, Symbol } from "./semantic"
-import { applyDeepReadonly, interfaceBoundReceiver, isWeakReferenceTarget, arrayType, classType, displayTypeName, failureType, functionType, isAssignable, mapType, noneType, primitive, promiseType, resultArmExpectation, resultType, sameType, streamType, substituteTypeParams, successType, typeName, typeParameter, mixedWeakUnionMessage, unionMutabilityConflict, unionType, weakType } from "./checker-types"
+import { ClassType, FunctionParamType, InterfaceType, ResolvedType, Symbol } from "./semantic"
+import { actorType, classMetadataType, containsTypeParameter, containsTypeParameters, methodReflectionType, setType, tupleType, applyDeepReadonly, interfaceBoundReceiver, isWeakReferenceTarget, arrayType, classType, displayTypeName, failureType, functionType, isAssignable, mapType, noneType, primitive, promiseType, resultArmExpectation, resultType, sameType, streamType, substituteTypeParams, successType, typeName, typeParameter, mixedWeakUnionMessage, unionMutabilityConflict, unionType, weakType } from "./checker-types"
 
 export function testResultArmAssignabilityUsesOnlyItsPayloadChannel(): none {
   success := successType(primitive("int"))
@@ -293,4 +293,49 @@ export function testInterfacesAreWeakReferenceTargets(): none {
   Assert.isTrue(isWeakReferenceTarget(shape))
   Assert.isTrue(isWeakReferenceTarget(unionType([shape, noneType()])))
   Assert.isFalse(isWeakReferenceTarget(unionType([shape, primitive("int")])))
+}
+
+function boxClass(): ClassType {
+  return classType("Box", Symbol { kind: "class", name: "Box", module: "/main.do", exported: false })
+}
+
+export function testSubstituteTypeParamsReachesMetadataAndReflection(): none {
+  t := typeParameter("T")
+  metadata := substituteTypeParams(classMetadataType(t), ["T"], [primitive("int")])
+  Assert.equal(typeName(metadata), "ClassMetadata<int>")
+  reflection := substituteTypeParams(methodReflectionType(classType("Box", boxClass().symbol, [t])), ["T"], [primitive("string")])
+  Assert.equal(typeName(reflection), "MethodReflection<Box<string>>")
+  // Unrelated names leave the parameter in place.
+  Assert.equal(typeName(substituteTypeParams(classMetadataType(t), ["U"], [primitive("int")])), "ClassMetadata<T>")
+}
+
+export function testApplyDeepReadonlyReachesMetadataAndReflection(): none {
+  inner := classType("Box", boxClass().symbol, [arrayType(primitive("int"))])
+  Assert.equal(typeName(applyDeepReadonly(classMetadataType(inner))), "ClassMetadata<Box<readonly int[]>>")
+  Assert.equal(typeName(applyDeepReadonly(methodReflectionType(inner))), "MethodReflection<Box<readonly int[]>>")
+}
+
+export function testContainsTypeParameterSeesEveryNestedPosition(): none {
+  t := typeParameter("T")
+  int_ := primitive("int")
+  holder := classType("Box", boxClass().symbol, [t])
+  generic: ResolvedType[] := [
+    t, holder, arrayType(t), mapType(primitive("string"), t), setType(t), streamType(t),
+    resultType(int_, t), successType(t), failureType(t), actorType(holder), promiseType(t),
+    classMetadataType(t), methodReflectionType(holder), tupleType([int_, t]), unionType([t, noneType()]),
+    weakType(holder), functionType([FunctionParamType { name: "value", type_: t, hasDefault: false }], int_), functionType([], t),
+  ]
+  for type_ of generic {
+    if !containsTypeParameter(type_) { panic("expected a type parameter in " + typeName(type_)) }
+  }
+  concrete := classType("Box", boxClass().symbol, [int_])
+  concreteTypes: ResolvedType[] := [
+    int_, concrete, arrayType(int_), mapType(primitive("string"), int_), promiseType(int_), actorType(concrete),
+    classMetadataType(concrete), methodReflectionType(concrete), functionType([], int_), unionType([int_, noneType()]),
+  ]
+  for type_ of concreteTypes {
+    if containsTypeParameter(type_) { panic("expected no type parameter in " + typeName(type_)) }
+  }
+  Assert.isFalse(containsTypeParameters([]))
+  Assert.isTrue(containsTypeParameters([int_, promiseType(t)]))
 }

@@ -238,6 +238,8 @@ export function applyDeepReadonly(type_: ResolvedType): ResolvedType {
       return actorType(classType(actor.innerClass.name, actor.innerClass.symbol, typeArgs))
     }
     promise: PromiseType -> { return promiseType(applyDeepReadonly(promise.valueType)) }
+    metadata: ClassMetadataResolvedType -> { return classMetadataType(applyDeepReadonly(metadata.classType)) }
+    reflection: MethodReflectionResolvedType -> { return methodReflectionType(applyDeepReadonly(reflection.classType)) }
     tuple: TupleResolvedType -> {
       let elements: ResolvedType[] = []
       for element of tuple.elements { elements.push(applyDeepReadonly(element)) }
@@ -287,6 +289,8 @@ export function substituteTypeParams(type_: ResolvedType, names: string[], argum
       return actorType(classType(actor.innerClass.name, actor.innerClass.symbol, typeArgs))
     }
     promise: PromiseType -> { return promiseType(substituteTypeParams(promise.valueType, names, arguments)) }
+    metadata: ClassMetadataResolvedType -> { return classMetadataType(substituteTypeParams(metadata.classType, names, arguments)) }
+    reflection: MethodReflectionResolvedType -> { return methodReflectionType(substituteTypeParams(reflection.classType, names, arguments)) }
     tuple: TupleResolvedType -> {
       let elements: ResolvedType[] = []
       for element of tuple.elements { elements.push(substituteTypeParams(element, names, arguments)) }
@@ -317,6 +321,41 @@ export function substituteTypeParams(type_: ResolvedType, names: string[], argum
     _ -> { return type_ }
   }
   return type_
+}
+
+
+/** Whether any type parameter remains anywhere inside `type_`; a concrete type has none. */
+export function containsTypeParameter(type_: ResolvedType): bool {
+  case type_ {
+    _: TypeParameterType -> { return true }
+    class_: ClassType -> { return containsTypeParameters(class_.typeArgs) }
+    interface_: InterfaceType -> { return containsTypeParameters(interface_.typeArgs) }
+    array: ArrayResolvedType -> { return containsTypeParameter(array.elementType) }
+    map: MapResolvedType -> { return containsTypeParameter(map.keyType) || containsTypeParameter(map.valueType) }
+    set_: SetResolvedType -> { return containsTypeParameter(set_.elementType) }
+    stream: StreamResolvedType -> { return containsTypeParameter(stream.elementType) }
+    result: ResultResolvedType -> { return containsTypeParameter(result.valueType) || containsTypeParameter(result.errorType) }
+    success: SuccessResolvedType -> { return containsTypeParameter(success.valueType) }
+    failure: FailureResolvedType -> { return containsTypeParameter(failure.errorType) }
+    actor: ActorType -> { return containsTypeParameter(actor.innerClass) }
+    promise: PromiseType -> { return containsTypeParameter(promise.valueType) }
+    metadata: ClassMetadataResolvedType -> { return containsTypeParameter(metadata.classType) }
+    reflection: MethodReflectionResolvedType -> { return containsTypeParameter(reflection.classType) }
+    tuple: TupleResolvedType -> { return containsTypeParameters(tuple.elements) }
+    union_: UnionResolvedType -> { return containsTypeParameters(union_.types) }
+    weak_: WeakResolvedType -> { return containsTypeParameter(weak_.inner) }
+    function_: FunctionType -> {
+      for parameter of function_.params { if containsTypeParameter(parameter.type_) { return true } }
+      return containsTypeParameter(function_.returnType)
+    }
+    _ -> { return false }
+  }
+  return false
+}
+
+export function containsTypeParameters(types: ResolvedType[]): bool {
+  for type_ of types { if containsTypeParameter(type_) { return true } }
+  return false
 }
 
 // Member lookup borrows an interface contract without erasing the receiver's T.

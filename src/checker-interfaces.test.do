@@ -127,3 +127,32 @@ export function testImpliedJsonMembersKeepStaticAndInstanceReceivers(): none {
     Assert.stringContains(diagnosticMessages(valueReceiver), "Static member 'fromSerialValue' cannot be accessed through a value; use 'T.fromSerialValue'")
   }
 }
+
+// Only fully concrete interface uses may record nominal conformance; a name
+// such as "Maker<Promise<T>>" would match any other scope's T.
+export function testConcreteInterfaceRegistrationSkipsTypeParameters(): none {
+  for wrapper of ["T[]", "Promise<T>", "Actor<Box<T>>", "Box<T>"] {
+    source := "interface Maker<V> { make(p: V): V }\nclass Box<V> { value: V }\n" +
+      "class Factory { make<T>(p: " + wrapper + "): " + wrapper + " => p }\n" +
+      "function use<T>(m: Maker<" + wrapper + ">): none {}"
+    analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+    Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
+    for symbol of analysis.modules[0].symbols {
+      if symbol.name == "Factory" && symbol.implementedInterfaceTypes.length > 0 {
+        panic("Factory recorded " + symbol.implementedInterfaceTypes[0] + " for " + wrapper)
+      }
+    }
+  }
+}
+
+export function testConcreteInterfaceRegistrationStillRecordsConcreteUses(): none {
+  source := "interface Maker<V> { make(p: V): V }\nclass Factory { make(p: Promise<int>): Promise<int> => p }\n" +
+    "function use(m: Maker<Promise<int>>): none {}"
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
+  let recorded = ""
+  for symbol of analysis.modules[0].symbols {
+    if symbol.name == "Factory" && symbol.implementedInterfaceTypes.length > 0 { recorded = symbol.implementedInterfaceTypes[0] }
+  }
+  Assert.equal(recorded, "Maker<Promise<int>>")
+}

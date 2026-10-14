@@ -4,13 +4,13 @@ import { memberType } from "./checker-resolution"
 import { ClassType, FunctionParamType, ResolvedType, Scope, Symbol, TypeParameterType, ResolvedTypeConstraint } from "./semantic"
 import { AnalysisResult, ModuleInfo, unknownTypeMessage } from "./analyzer"
 import { ArrayType, ClassDeclaration, AstFunctionType, InterfaceDeclaration, NamedType, SourceSpan, TypeAliasDeclaration, TypeAnnotation, UnionType, WeakType, TypeParameterConstraint } from "./ast"
-import { actorType, arrayType, classType, enumType, failureType, functionType, successType, interfaceType, isSupportedHashCollectionType, jsonObjectType, mixedWeakUnionMessage, jsonValueType, mapType, resultType, setType, streamType, neverType, noneType, primitive, promiseType, rangeType, tupleType, typeName, unionMutabilityConflict, unionType, isWeakReferenceTarget, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType } from "./checker-types"
+import { actorType, arrayType, classType, containsTypeParameters, enumType, failureType, functionType, successType, interfaceType, isSupportedHashCollectionType, jsonObjectType, mixedWeakUnionMessage, jsonValueType, mapType, resultType, setType, streamType, neverType, noneType, primitive, promiseType, rangeType, tupleType, typeName, unionMutabilityConflict, unionType, isWeakReferenceTarget, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType } from "./checker-types"
 
 import { CheckerState } from "./checker-state"
 import { isNumericConstraint, satisfiesNumericConstraint } from "./checker-numeric"
 import { deprecatedNoneAlias, typeArgumentArityMessage, typeError } from "./checker-common"
 import { builtinSourceLocationType, declaredSymbolName, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
-import { registerConcreteInterfaceImplementations, concreteTypes, classModuleFor, isAssignableWithInterfaces, satisfiesInterfaceBound, satisfiesInterfaceInstanceBound } from "./checker-interfaces"
+import { registerConcreteInterfaceImplementations, classModuleFor, isAssignableWithInterfaces, satisfiesInterfaceBound, satisfiesInterfaceInstanceBound } from "./checker-interfaces"
 
 class AnnotationResolution {
   state: CheckerState
@@ -190,7 +190,7 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
           }
         }
         concreteInterface := interfaceType(declaredSymbolName(symbol!), symbol!, typeArgs)
-        if resolution.commit && concreteTypes(typeArgs) { registerConcreteInterfaceImplementations(state.result, concreteInterface) }
+        if resolution.commit && !containsTypeParameters(typeArgs) { registerConcreteInterfaceImplementations(state.result, concreteInterface) }
         return finishAnnotation(resolution, annotation, concreteInterface)
       }
       if symbol!.kind == "enum" {

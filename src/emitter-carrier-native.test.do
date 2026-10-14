@@ -159,3 +159,7 @@ export function testNullableInterfaceNative(): none {
 export function testPositionalClassLiteralsNative(): none {
   runNativeFixture("positional-class-literals")
 }
+
+export function testGenericClassMetadataNative(): none {
+  runNativeFixture("generic-class-metadata", "metadata Point,Line")
+}

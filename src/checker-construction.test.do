@@ -142,3 +142,33 @@ export function testActorCreationRequiresAClassAndCrossableArguments(): none {
   for message of crossing { println(message) }
   Assert.isTrue(found)
 }
+
+export function testPositionalLiteralsConstructClassesOverEnclosingTypeParameters(): none {
+  pair := "class Box<V> { value: V }\nclass Pair<A, B> { first: A\nsecond: B }\n"
+  for case_ of [
+    "function make<T>(value: T): Pair<T, int> => (value, 1)",
+    "function make<T>(value: T): Pair<Box<T>, int> => (Box<T> { value }, 1)",
+    "function make<T>(value: T): Pair<T[], int> => ([value], 1)",
+    "function make<T>(value: T): Pair<T | none, int> => (value, 1)",
+    "function make<T>(value: T): Pair<Map<string, T>, int> => ({ \"key\": value }, 1)",
+    "function make<T>(value: T): Pair<T, int> | none => (value, 1)",
+    "class Holder<T> { value: T\npair(): Pair<T, int> => (value, 1) }",
+  ] {
+    errors := constructionErrors(pair + case_)
+    for error of errors { println(case_ + ": " + error) }
+    Assert.equal(errors.length, 0)
+  }
+  // A literal whose elements do not fit the enclosing parameter is still rejected.
+  mismatched := constructionErrors(pair + "function make<T>(value: T): Pair<T, int> => (1, 1)")
+  Assert.isTrue(mismatched.length > 0)
+}
+
+export function testPositionalLiteralsStayTuplesWhileACallInfersItsTypeArguments(): none {
+  // The callee's own T is open during inference, so `(1, 2)` gets no class
+  // context and cannot determine T, exactly as before.
+  errors := constructionErrors("class Pair<A, B> { first: A\nsecond: B }\nfunction wrap<T>(pair: Pair<T, int>): T => pair.first\nfunction main(): none { value := wrap((1, 2)) }")
+  Assert.equal(errors.length, 1)
+  Assert.equal(errors[0], "Cannot infer consistent type arguments for generic call; provide explicit type arguments")
+  // With explicit type arguments the parameter is concrete and the literal constructs it.
+  Assert.equal(constructionErrors("class Pair<A, B> { first: A\nsecond: B }\nfunction wrap<T>(pair: Pair<T, int>): T => pair.first\nfunction main(): none { value: int := wrap<int>((1, 2)) }").length, 0)
+}
