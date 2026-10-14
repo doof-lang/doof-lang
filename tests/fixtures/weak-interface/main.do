@@ -38,6 +38,14 @@ function tag(value: weak Shape | Label | none): string {
   }
 }
 
+function viaShape(value: weak Shape): double | none => value?.area()
+
+function expire(): weak Circle | none {
+  temporary := Circle { radius: 1.0 }
+  held: weak Circle | none := temporary
+  return held
+}
+
 function live(canvas: Canvas): int {
   let count = 0
   for watcher of canvas.watchers {
@@ -85,6 +93,20 @@ function main(): int {
   assert(slot.held?.area() == 4.0, "a weak type parameter accepts an interface")
   canvas.tagged = label
   assert(tag(canvas.tagged) == "label x", "a weak union keeps its class arm")
+
+  // Weak references widen wherever the referent keeps its identity.
+  weakCircle: weak Circle := kept
+  assert(viaShape(weakCircle) == 3.0, "a weak class widens to its weak interface")
+  pair: weak Circle | Label := weakCircle
+  wider: weak Circle | Label | Square := pair
+  assert(tag(wider) == "shape 3", "a weak union widens to a wider weak union")
+  canvas.selection = weakCircle
+  canvas.tagged = canvas.selection
+  assert(tag(canvas.tagged) == "shape 3", "an optional weak interface widens to a wider optional")
+  canvas.selection = none
+  canvas.tagged = canvas.selection
+  assert(tag(canvas.tagged) == "absent", "absence stays absent when widening")
+  assert(tag(expire()) == "expired", "expiry survives widening")
   println("weak interface ok")
   return 0
 }

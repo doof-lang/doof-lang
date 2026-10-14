@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 import { EmitContext } from "./emitter-context"
 import { emitCarrierAbsence, emitCarrierConversion } from "./emitter-carrier-values"
-import { FailureResolvedType, InterfaceType, NoneType, PrimitiveType, ResultResolvedType, SuccessResolvedType, Symbol, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ClassType, FailureResolvedType, InterfaceType, NoneType, PrimitiveType, ResultResolvedType, SuccessResolvedType, Symbol, UnionResolvedType, WeakResolvedType } from "./semantic"
 
 export function testCarrierModelValueConversionAndInvalidAbsence(): none {
   context := EmitContext {}
@@ -36,4 +36,15 @@ export function testStrongInterfaceValuesWeakPromoteIntoOptionalWeakVariants(): 
   target := WeakResolvedType { inner: UnionResolvedType { types: [shape, NoneType {}] } }
   Assert.equal(emitCarrierConversion("shape", shape, target, context), "doof::weak_promote<std::optional<doof::union_t<doof::weak_arms<Shape>>>>(shape)")
   Assert.equal(emitCarrierConversion("held", target, target, context), "held")
+}
+
+export function testWeakReferencesWidenThroughTheirWeakCarriers(): none {
+  context := EmitContext { modulePath: "/main.do" }
+  shape := InterfaceType { name: "Shape", symbol: Symbol { kind: "interface", name: "Shape", module: "/main.do", exported: false } }
+  circle := ClassType { name: "Circle", symbol: Symbol { kind: "class", name: "Circle", module: "/main.do", exported: false } }
+  label := ClassType { name: "Label", symbol: Symbol { kind: "class", name: "Label", module: "/main.do", exported: false } }
+  optionalShape := WeakResolvedType { inner: UnionResolvedType { types: [shape, NoneType {}] } }
+  wider := WeakResolvedType { inner: UnionResolvedType { types: [shape, label, NoneType {}] } }
+  Assert.equal(emitCarrierConversion("held", optionalShape, wider, context), "doof::weak_promote<std::optional<doof::union_t<doof::weak_arms<Shape>, std::weak_ptr<Label>>>>(held)")
+  Assert.equal(emitCarrierConversion("held", WeakResolvedType { inner: circle }, WeakResolvedType { inner: shape }, context), "doof::variant_promote<doof::union_t<doof::weak_arms<Shape>>>(held)")
 }

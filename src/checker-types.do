@@ -738,8 +738,7 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
     }
     valueWeak: WeakResolvedType -> {
       case target {
-        // Absence widens: `weak T` fits an optional `weak (T | none)` slot.
-        targetWeak: WeakResolvedType -> { return sameType(valueWeak.inner, targetWeak.inner) || sameType(unionType([valueWeak.inner, noneType()]), targetWeak.inner) }
+        targetWeak: WeakResolvedType -> { return weakTargetWidens(valueWeak.inner, targetWeak.inner) }
         _ -> { }
       }
     }
@@ -847,6 +846,32 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
     _ -> { }
   }
   return false
+}
+
+// A weak reference is a read-only handle, so it widens like the strong value
+// it holds wherever the referent keeps its identity: absence, and class or
+// interface arms into a target union or interface that holds them. A
+// collection arm must appear unchanged, since converting it would allocate a
+// new referent that nothing keeps alive.
+export function weakTargetWidens(value: ResolvedType, target: ResolvedType): bool {
+  if sameType(value, target) { return true }
+  let targetMembers: ResolvedType[] = [target]
+  case target { union_: UnionResolvedType -> { targetMembers = union_.types } _ -> { } }
+  let valueMembers: ResolvedType[] = [value]
+  case value { union_: UnionResolvedType -> { valueMembers = union_.types } _ -> { } }
+  for member of valueMembers {
+    let widens = false
+    for candidate of targetMembers { if sameType(member, candidate) { widens = true } }
+    if !widens {
+      case member {
+        class_: ClassType -> { widens = class_.symbol.kind == "class" && isAssignable(member, target) }
+        _: InterfaceType -> { widens = isAssignable(member, target) }
+        _ -> { }
+      }
+    }
+    if !widens { return false }
+  }
+  return true
 }
 
 export function isWeakReferenceTarget(type_: ResolvedType): bool {

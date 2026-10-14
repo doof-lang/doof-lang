@@ -69,6 +69,21 @@ export function testRequiresInvariantWeakReferenceTargets(): none {
   Assert.isFalse(isAssignable(weakType(primitive("int")), weakType(primitive("long"))))
 }
 
+export function testWeakReferencesWidenOnlyWhereTheReferentKeepsItsIdentity(): none {
+  circle := classType("Circle", symbol("Circle", "/main.do"))
+  label := classType("Label", symbol("Label", "/main.do"))
+  square := classType("Square", symbol("Square", "/main.do"))
+  pair := unionType([circle, label])
+  Assert.isTrue(isAssignable(weakType(circle), weakType(pair)))
+  Assert.isTrue(isAssignable(weakType(pair), weakType(unionType([circle, label, square]))))
+  Assert.isTrue(isAssignable(weakType(unionType([circle, noneType()])), weakType(unionType([circle, label, noneType()]))))
+  Assert.isFalse(isAssignable(weakType(pair), weakType(circle)))
+  Assert.isFalse(isAssignable(weakType(unionType([circle, noneType()])), weakType(pair)))
+  Assert.isFalse(isAssignable(weakType(circle), weakType(square)))
+  Assert.isTrue(isAssignable(weakType(arrayType(circle)), weakType(unionType([arrayType(circle), label]))))
+  Assert.isFalse(isAssignable(weakType(arrayType(circle)), weakType(arrayType(circle, true))))
+}
+
 export function testDoesNotAssignConcreteValuesToUnconstrainedTypeParameters(): none {
   Assert.isFalse(isAssignable(primitive("int"), typeParameter("T")))
 }

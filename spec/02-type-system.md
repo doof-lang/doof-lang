@@ -1855,6 +1855,25 @@ function select(canvas: Canvas, shape: Shape): double | none {
 }
 ```
 
+A weak reference is a read-only handle, so it widens wherever its referent
+keeps its identity: `weak T` fits `weak (T | none)`, a class or interface arm
+fits a wider weak union or a weak interface that holds it, and an absent or
+expired reference stays absent or expired. A collection arm must match
+exactly, and a weak reference never narrows:
+
+```doof reject
+interface Shape { area(): double }
+class Circle implements Shape { radius: double; area(): double => radius * 2.0 }
+class Label { text: string }
+
+function widen(circle: weak Circle, maybe: weak Shape | none, circles: weak (Circle[])): none {
+    shape: weak Shape := circle                    // ✅ class into its interface
+    tagged: weak Shape | Label | none := maybe     // ✅ wider optional union
+    narrowed: weak Shape := maybe                  // ❌ Error: drops none
+    frozen: weak (readonly Circle[]) := circles    // ❌ Error: collections never convert
+}
+```
+
 Primitives, strings, structs, enums, tuples, callbacks, and Results are not
 weak targets:
 
