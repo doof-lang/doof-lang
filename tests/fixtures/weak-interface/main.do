@@ -5,6 +5,13 @@ class Circle implements Shape { radius: double; area(): double => radius * 2.0 }
 class Square implements Shape { side: double; area(): double => side * side }
 class Label { text: string }
 interface Plugin { run(): int }
+interface Named { name(): string }
+interface Solo { solo(): int }
+interface Source<T> { pull(): T }
+class Badge implements Shape, Named { area(): double => 1.0; name(): string => "badge" }
+class Tag implements Named { text: string; name(): string => text }
+class Only implements Solo { solo(): int => 7 }
+class Counter implements Source<int> { let count: int = 0; pull(): int { count += 1; return count } }
 
 class Canvas {
   let weak focus: Shape = Circle { radius: 0.0 }
@@ -44,6 +51,43 @@ function expire(): weak Circle | none {
   temporary := Circle { radius: 1.0 }
   held: weak Circle | none := temporary
   return held
+}
+
+// A weak union of two interfaces shares the arm of a class implementing both.
+function weakName(value: weak Shape | Named | none): string {
+  return case value {
+    s: Success -> case s.value {
+      badge: Badge -> "badge",
+      named: Named -> "named " + named.name(),
+      shape: Shape -> "shape " + string(shape.area()),
+      _ -> "absent"
+    },
+    _: Failure -> "expired"
+  }
+}
+
+function weakTwoInterfaces(): none {
+  badge := Badge {}
+  tag := Tag { text: "t" }
+  let held: weak Shape | Named | none = badge
+  assert(weakName(held) == "badge", "a shared implementor is one weak arm")
+  held = tag
+  assert(weakName(held) == "named t", "a second interface arm stays weak")
+  held = Circle { radius: 1.0 }
+  assert(weakName(held) == "expired", "a temporary stored weakly expires at once")
+}
+
+function weakSingleAndGeneric(): none {
+  only := Only {}
+  solo: weak Solo := only
+  assert(solo?.solo() == 7, "a single-implementor weak interface")
+  counter := Counter {}
+  source: weak Source<int> | none := counter
+  assert(source?.pull() == 1 && source!.pull() == 2 && counter.count == 2, "a weak generic interface reaches the shared referent")
+  byName: Map<string, weak Shape> := {}
+  square := Square { side: 2.0 }
+  byName.set("square", square)
+  assert(byName.get("square")!?.area() == 4.0, "weak interface map values stay live while held")
 }
 
 function live(canvas: Canvas): int {
@@ -107,6 +151,8 @@ function main(): int {
   canvas.tagged = canvas.selection
   assert(tag(canvas.tagged) == "absent", "absence stays absent when widening")
   assert(tag(expire()) == "expired", "expiry survives widening")
+  weakTwoInterfaces()
+  weakSingleAndGeneric()
   println("weak interface ok")
   return 0
 }

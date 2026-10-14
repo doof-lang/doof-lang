@@ -68,12 +68,25 @@ export function testWeakInterfaceNative(): none {
   runNativeFixture("weak-interface", "weak interface ok")
 }
 
+export function testInterfaceUnionsNative(): none {
+  runNativeFixture("interface-unions", "interface unions ok")
+}
+
+export function testInterfaceUnionsAcrossModulesNative(): none {
+  runNativeFixture("interface-unions-modules", "interface unions modules ok")
+}
+
 function runNativeFixture(fixture: string, expectedOutput: string = "", expectedExitCode: int = 0): none {
   root := join([tempDirectory(), "doof-native-" + fixture])
   clearNativeMatrix(root)
   mkdir(root)!
-  source := readText("tests/fixtures/" + fixture + "/main.do")!
-  compiled := compile([SourceFile { path: "/main.do", source }], "/main.do")
+  // Every module in the fixture directory compiles together; main.do is the entry.
+  directory := "tests/fixtures/" + fixture
+  let sources: SourceFile[] = []
+  for entry of readDir(directory)! {
+    if entry.name.endsWith(".do") { sources.push(SourceFile { path: "/" + entry.name, source: readText(join([directory, entry.name]))! }) }
+  }
+  compiled := compile(sources, "/main.do")
   for diagnostic of compiled.diagnostics { println(diagnostic.message) }
   Assert.equal(compiled.diagnostics.length, 0)
   Assert.isTrue(compiled.emission != none)
