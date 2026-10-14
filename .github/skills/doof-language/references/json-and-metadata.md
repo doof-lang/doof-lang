@@ -135,11 +135,14 @@ A named alias of a class union uses the same rule: with `type Shape = Circle | R
 `Shape.fromSerialValue(json)` returns `Result<Shape, string>`. Generic aliases and
 unions containing non-class members are compile errors.
 
-Union-typed fields of two or more classes and interfaces (with optional `none`) encode
-the held class and decode through one discriminator shared by every class the union
-stands for (interfaces expand to their implementors). Without that discriminator they
-still encode; decoding is a compile error naming the field. Primitive unions such as
-`int | string` are not JSON types.
+Union-typed fields (with optional `none`) encode the held member and decode by the JSON
+value's kind: string (`string`, `char`, string enums), number (numerics, int enums),
+boolean, array (arrays, tuples), or object (classes, interfaces, `Map<string, T>`).
+Each kind may have one member, so `int | string` decodes but `int | double` or
+`char | string` is a decode-time compile error naming the field (encoding still works).
+Classes and interfaces may share the object kind through one discriminator shared by
+every class they stand for (interfaces expand to their implementors). `SerialValue`
+and structs cannot be union members.
 
 ### Reserved Names
 

@@ -16,7 +16,7 @@ import { ArrayResolvedType, ClassType, EnumType, InterfaceType, SerialValueResol
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitClassInnerType, emitContextType, usesVariantRepresentation } from "./emitter-types"
-import { JsonDiscriminator, interfaceJsonDiscriminator, jsonInterfaceKey, jsonOwnerKey, nullableJsonMember, objectUnionJsonDiscriminator, unionAliasJsonDiscriminator } from "./json-semantics"
+import { JsonDiscriminator, JsonUnionLayout, interfaceJsonDiscriminator, jsonInterfaceKey, jsonOwnerKey, jsonUnionClassMembers, jsonUnionLayout, nullableJsonMember, objectUnionJsonDiscriminator, unionAliasJsonDiscriminator } from "./json-semantics"
 
 export function emitInterfaceJsonDeclaration(owner: InterfaceDeclaration, context: EmitContext): string {
   if !containsJsonDemand(context.jsonDeserializationKeys, jsonInterfaceKey(owner)) { return "" }
@@ -245,9 +245,7 @@ export function emitJsonTypeCheck(json: string, type_: ResolvedType, context: Em
     tuple: TupleResolvedType -> { return "doof::serial_is_array(" + json + ") && doof::serial_as_array(" + json + ")->size() == " + string(tuple.elements.length) }
     _: MapResolvedType -> { return "doof::serial_is_object(" + json + ")" }
     union_: UnionResolvedType -> {
-      inner := nullableJsonMember(union_) else {
-        return if carrierOf(union_).hasNone then "(doof::serial_is_null(" + json + ") || doof::serial_is_object(" + json + "))" else "doof::serial_is_object(" + json + ")"
-      }
+      inner := nullableJsonMember(union_) else { return emitJsonUnionTypeCheck(json, union_, context) }
       return "doof::serial_is_null(" + json + ") || " + emitJsonTypeCheck(json, inner, context)
     }
     _ -> { return "false" }
@@ -277,24 +275,24 @@ export function emitJsonRead(json: string, type_: ResolvedType, context: EmitCon
     }
     array: ArrayResolvedType -> {
       elementType := emitContextType(array.elementType, context)
-      elementValue := emitJsonRead("_element", array.elementType, context)
+      elementValue := emitNestedJsonRead("_element", array.elementType, context)
       return "[&]() { " + emitJsonContainerRead(json, "_array", false) + "auto _values = std::make_shared<std::vector<" + elementType + ">>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::serial_decode_at(std::string(\"[\") + doof::to_string(_index) + \"]\", [&]() { return " + elementValue + "; })); } return _values; }()"
     }
     tuple: TupleResolvedType -> {
       let elements = ""
       for i of 0..<tuple.elements.length {
         if i > 0 { elements = elements + ", " }
-        elements = elements + "doof::serial_decode_at(\"[" + string(i) + "]\", [&]() { return " + emitJsonRead("(*_tuple)[" + string(i) + "]", tuple.elements[i], context) + "; })"
+        elements = elements + "doof::serial_decode_at(\"[" + string(i) + "]\", [&]() { return " + emitNestedJsonRead("(*_tuple)[" + string(i) + "]", tuple.elements[i], context) + "; })"
       }
       return "[&]() { " + emitJsonContainerRead(json, "_tuple", false) + "if (_tuple->size() != " + string(tuple.elements.length) + ") throw doof::JsonDecodeError(\"Expected tuple of length " + string(tuple.elements.length) + "\"); return std::make_tuple(" + elements + "); }()"
     }
     map: MapResolvedType -> {
       valueType := emitContextType(map.valueType, context)
-      entryValue := emitJsonRead("_entry.second", map.valueType, context)
+      entryValue := emitNestedJsonRead("_entry.second", map.valueType, context)
       return "[&]() { " + emitJsonContainerRead(json, "_object_value", true) + "auto _values = std::make_shared<doof::ordered_map<std::string, " + valueType + ">>(); for (const auto& _entry : *_object_value) { (*_values)[_entry.first] = doof::serial_decode_at(std::string(\".\") + _entry.first, [&]() { return " + entryValue + "; }); } return _values; }()"
     }
     union_: UnionResolvedType -> {
-      inner := nullableJsonMember(union_) else { return emitObjectUnionJsonRead(json, union_, context) }
+      inner := nullableJsonMember(union_) else { return emitJsonUnionRead(json, union_, context) }
       if usesVariantRepresentation(type_) {
         optionalType := emitContextType(type_, context)
         // A decoded interface variant spreads into the flattened union's arms.
@@ -313,22 +311,96 @@ export function emitJsonRead(json: string, type_: ResolvedType, context: EmitCon
   return "{}"
 }
 
-// Decodes an object union by the discriminator shared by every class it flattens
-// to, promoting the decoded class into the union's variant; null is none.
-function emitObjectUnionJsonRead(json: string, union_: UnionResolvedType, context: EmitContext): string {
-  discriminator := objectUnionJsonDiscriminator(union_, context.allPrograms, context.jsonEligibility) else { panic("Object union JSON decoding has no discriminator") }
+function requiredJsonUnionLayout(union_: UnionResolvedType, context: EmitContext): JsonUnionLayout {
+  layout := jsonUnionLayout(union_, context.allPrograms) else { panic("Union JSON coding has no layout for " + context.modulePath) }
+  return layout
+}
+
+function jsonKindCheck(json: string, jsonKind: string): string {
+  return "doof::serial_is_" + jsonKind + "(" + json + ")"
+}
+
+// A union accepts exactly the JSON kinds of its members, before any lenient
+// conversion, matching the dispatch in emitJsonUnionRead.
+function emitJsonUnionTypeCheck(json: string, union_: UnionResolvedType, context: EmitContext | none): string {
+  layout := jsonUnionLayout(union_, if context == none then [] else context!.allPrograms) else { return "false" }
+  let kinds: string[] = []
+  if layout.hasNone { kinds.push("null") }
+  for arm of layout.arms { if !kinds.contains(arm.jsonKind) { kinds.push(arm.jsonKind) } }
+  if kinds.length == 1 { return jsonKindCheck(json, kinds[0]) }
+  let check = ""
+  for kind of kinds { check = check + (if check == "" then "" else " || ") + jsonKindCheck(json, kind) }
+  return "(" + check + ")"
+}
+
+// Decodes a union by the JSON value's own kind, each kind having one member;
+// several class members share the object kind through their discriminator.
+// The decoded member is promoted into the union's variant; null is none.
+function emitJsonUnionRead(json: string, union_: UnionResolvedType, context: EmitContext): string {
+  layout := requiredJsonUnionLayout(union_, context)
+  classMembers := jsonUnionClassMembers(layout)
   unionCpp := emitContextType(union_, context)
   let result = "[&]() -> " + unionCpp + " { "
-  if carrierOf(union_).hasNone { result = result + "if (doof::serial_is_null(" + json + ")) return " + unionCpp + "{std::monostate{}}; " }
-  result = result + emitJsonContainerRead(json, "_union_object", true)
-  if discriminator.entries.length == 0 { return result + "throw doof::JsonDecodeError(\"Union has no member classes\"); }()" }
+  if layout.hasNone { result = result + "if (doof::serial_is_null(" + json + ")) return " + unionCpp + "{std::monostate{}}; " }
+  let classesRead = false
+  for arm of layout.arms {
+    if classMembers.length > 1 && classMembers.contains(arm.member) {
+      if classesRead { continue }
+      classesRead = true
+      result = result + "if (doof::serial_is_object(" + json + ")) { " + emitJsonUnionClassesRead(json, union_, unionCpp, context) + " } "
+      continue
+    }
+    result = result + "if (" + jsonKindCheck(json, arm.jsonKind) + ") return doof::variant_promote<" + unionCpp + ">(" + emitNestedJsonRead(json, arm.member, context) + "); "
+  }
+  return result + "throw doof::JsonDecodeError(std::string(\"Expected " + jsonUnionTypeName(union_, context) + " but got \") + doof::serial_type_name(" + json + ")); }()"
+}
+
+function emitJsonUnionClassesRead(json: string, union_: UnionResolvedType, unionCpp: string, context: EmitContext): string {
+  discriminator := objectUnionJsonDiscriminator(union_, context.allPrograms, context.jsonEligibility) else { panic("Union JSON decoding has no discriminator") }
+  let result = emitJsonContainerRead(json, "_union_object", true)
+  if discriminator.entries.length == 0 { return result + "throw doof::JsonDecodeError(\"Union has no member classes\");" }
   field := discriminator.fieldName
   result = result + "auto _union_field = _union_object->find(\"" + field + "\"); if (_union_field == _union_object->end() || !doof::serial_is_string(_union_field->second)) throw doof::JsonDecodeError(\"Missing or invalid discriminator field \\\"" + field + "\\\"\"); auto _union_discriminator = doof::serial_as_string(_union_field->second); "
   for entry of discriminator.entries {
     className := emitClassInnerType(ClassType { name: entry.declaration.name, symbol: entry.declaration.resolvedSymbol! }, context.modulePath, context.names)
     result = result + "if (_union_discriminator == \"" + entry.value + "\") return doof::variant_promote<" + unionCpp + ">(doof::serial_decode_value(" + className + "::fromSerialValue(" + json + ", _lenient))); "
   }
-  return result + "throw doof::JsonDecodeError(\"Unknown " + field + ": \\\"\" + _union_discriminator + \"\\\"\"); }()"
+  return result + "throw doof::JsonDecodeError(\"Unknown " + field + ": \\\"\" + _union_discriminator + \"\\\"\");"
+}
+
+function jsonUnionTypeName(union_: UnionResolvedType, context: EmitContext | none): string {
+  layout := jsonUnionLayout(union_, if context == none then [] else context!.allPrograms) else { return "value" }
+  let names: string[] = []
+  for arm of layout.arms {
+    name := jsonTypeName(arm.member, context)
+    if !names.contains(name) { names.push(name) }
+  }
+  if layout.hasNone { names.push("null") }
+  let result = ""
+  for name of names { result = result + (if result == "" then "" else " or ") + name }
+  return result
+}
+
+// Class arms, including an interface's flattened implementors, encode through
+// the runtime; every other arm encodes by its own Doof type.
+function emitJsonUnionField(value: string, union_: UnionResolvedType, context: EmitContext): string {
+  layout := requiredJsonUnionLayout(union_, context)
+  classMembers := jsonUnionClassMembers(layout)
+  if classMembers.length == layout.arms.length { return "doof::serial_union_value(" + value + ")" }
+  let branches = ""
+  for arm of layout.arms {
+    if classMembers.contains(arm.member) { continue }
+    branches = branches + "if constexpr (std::is_same_v<_Arm, " + emitContextType(arm.member, context) + ">) { return " + emitJsonField("_arm", arm.member, context) + "; } else "
+  }
+  return "std::visit([&](const auto& _arm) -> doof::SerialValue { using _Arm = std::decay_t<decltype(_arm)>; " + branches + "{ return doof::serial_union_arm(_arm); } }, " + value + ")"
+}
+
+// A field is validated before its read, but container elements and union
+// arms are not: their primitives validate here so malformed input becomes a
+// decode failure rather than a conversion panic.
+function emitNestedJsonRead(json: string, type_: ResolvedType, context: EmitContext): string {
+  primitive := type_ as PrimitiveType else { return emitJsonRead(json, type_, context) }
+  return "[&]() { if (!(" + emitJsonTypeCheck(json, primitive, context) + ")) throw doof::JsonDecodeError(std::string(\"Expected " + jsonTypeName(primitive, context) + " but got \") + doof::serial_type_name(" + json + ")); return " + emitPrimitiveJsonRead(json, primitive.name) + "; }()"
 }
 
 function emitPrimitiveJsonRead(json: string, name: string): string {
@@ -362,7 +434,7 @@ export function jsonTypeName(type_: ResolvedType, context: EmitContext | none = 
     _: TupleResolvedType -> { return "array" }
     _: MapResolvedType -> { return "object" }
     union_: UnionResolvedType -> {
-      inner := nullableJsonMember(union_) else { return if carrierOf(union_).hasNone then "object or null" else "object" }
+      inner := nullableJsonMember(union_) else { return jsonUnionTypeName(union_, context) }
       return jsonTypeName(inner, context) + " or null"
     }
     _ -> { return "value" }
@@ -391,8 +463,7 @@ export function emitJsonField(value: string, resolvedType: ResolvedType, context
       return emitContextType(enum_, context) + "_toSerialValue(" + value + ")"
     }
     union_: UnionResolvedType -> {
-      // An object union visits its flattened class arms; none encodes as null.
-      inner := nullableJsonMember(union_) else { return "doof::serial_union_value(" + value + ")" }
+      inner := nullableJsonMember(union_) else { return emitJsonUnionField(value, union_, context) }
       if usesVariantRepresentation(resolvedType) {
         // An interface member's implementors are flattened beside none, so
         // removing none yields the interface variant rather than one arm.

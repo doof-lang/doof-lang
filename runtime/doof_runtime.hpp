@@ -1714,20 +1714,23 @@ T serial_decode_value(Result<T, std::string> result) {
     return std::move(success_value(result));
 }
 
-// Encodes a flattened object union: each class arm through its own
-// toSerialObject, and none as null.
+// Encodes one class arm of a flattened union through its own toSerialObject,
+// and none as null. Generated code encodes other arms by their Doof type.
+template <typename Item>
+SerialValue serial_union_arm(const Item& item) {
+    if constexpr (std::is_same_v<Item, std::monostate>) {
+        return SerialValue(nullptr);
+    } else if constexpr (std::is_same_v<Item, NoImplementations>) {
+        return no_implementations<SerialValue>("union member");
+    } else {
+        return serial_value(item->toSerialObject());
+    }
+}
+
+// Encodes a flattened union whose present arms are all classes.
 template <typename... Arms>
 SerialValue serial_union_value(const std::variant<Arms...>& value) {
-    return std::visit([](const auto& item) -> SerialValue {
-        using Item = std::decay_t<decltype(item)>;
-        if constexpr (std::is_same_v<Item, std::monostate>) {
-            return SerialValue(nullptr);
-        } else if constexpr (std::is_same_v<Item, NoImplementations>) {
-            return no_implementations<SerialValue>("union member");
-        } else {
-            return serial_value(item->toSerialObject());
-        }
-    }, value);
+    return std::visit([](const auto& item) -> SerialValue { return serial_union_arm(item); }, value);
 }
 
 // ============================================================================

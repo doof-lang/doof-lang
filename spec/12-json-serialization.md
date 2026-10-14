@@ -91,7 +91,7 @@ println(formatJsonValue(u.toSerialObject()))
 | `Map<string, T>` | JSON object when `T` is serializable |
 | Enums | JSON backing value (int or string) |
 | `T | none` | Value or JSON `null` |
-| Unions of classes and interfaces | The member class's JSON object, or `null` for `none` (see [Union-Typed Fields](#union-typed-fields)) |
+| Unions with one member per JSON kind | The held member's JSON value, or `null` for `none` (see [Union-Typed Fields](#union-typed-fields)) |
 | `SerialValue` | Preserved as-is |
 
 ### Non-Serializable Types
@@ -433,12 +433,24 @@ first child has `kind: "twig"`.
 ### Union-Typed Fields
 
 A field, array element, map value, or tuple element may be a union of two or
-more classes and interfaces, optionally with `none`. Each interface member
-stands for its implementing classes, and a class reached through several
-members counts once. Encoding writes the held class's own JSON object, or
-`null` for `none`, and needs every member to be encodable. Decoding needs every
-class the union stands for to be non-generic and to share a literal-valued
-string discriminator with distinct values, the same rule as interfaces:
+more members, optionally with `none`. Each member must have one JSON kind:
+
+| Member | JSON kind |
+|---|---|
+| `string`, `char`, string-backed enums | string |
+| `byte`, `int`, `long`, `float`, `double`, int-backed enums | number |
+| `bool` | boolean |
+| Arrays and tuples | array |
+| Classes, interfaces, and `Map<string, T>` | object |
+
+`SerialValue` and structs cannot be union members. Encoding writes the held
+member's own JSON value, or `null` for `none`. Decoding dispatches on the JSON
+value's kind before any lenient conversion, so each kind may have only one
+member. The exception is classes and interfaces: each interface member stands
+for its implementing classes, a class reached through several members counts
+once, and all of them may share the object kind when every class is
+non-generic and has a literal-valued string discriminator with distinct
+values, the same rule as interfaces:
 
 ```doof check
 interface Shape { area(): double }
@@ -455,27 +467,36 @@ class Note {
 }
 
 class Canvas {
-  focus: Shape | Note | none = none
+  id: int | string
+  focus: Shape | Note | string | none = none
 }
 
-canvas := Canvas { focus: Circle { radius: 1.0 } }
+canvas := Canvas { id: "main", focus: Circle { radius: 1.0 } }
 restored := Canvas.fromSerialValue(canvas.toSerialObject())
 println(restored.isSuccess())  // true
 ```
 
-A union without a shared discriminator still encodes, but decoding it is a
-compile error that names the field:
+A JSON value whose kind has no member fails with the expected kinds, as in
+`Field "id" expected int or string but got boolean`. A member that rejects a
+value of its kind reports its own error, such as `Field "id": Expected int but
+got number` for `1.5`.
+
+A union with two members of one JSON kind, such as `int | double`,
+`char | string`, or `Map<string, int> | Note`, or with classes that lack a
+shared discriminator, still encodes. Decoding it is a compile error that
+names the field and the clash:
 
 ```doof reject
 class Circle { radius: double }
 class Note { text: string }
 class Loose { pick: Circle | Note }
+class Reading { value: int | double }
 
 Loose { pick: Note { text: "n" } }.toSerialObject()
+Reading { value: 1 }.toSerialObject()
 Loose.fromSerialValue({ pick: { text: "n" } })  // ❌ field "pick" needs a shared discriminator
+Reading.fromSerialValue({ value: 1 })           // ❌ int and double both decode from a JSON number
 ```
-
-Unions with primitive members, such as `int | string`, are not JSON types.
 
 ## Named Union Alias Deserialization
 

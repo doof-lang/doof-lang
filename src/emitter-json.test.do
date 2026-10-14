@@ -199,3 +199,33 @@ export function testObjectUnionFieldsEncodeByArmAndDecodeByDiscriminator(): none
   Assert.stringContains(source, "if (_union_discriminator == \"square\") return doof::variant_promote<doof::union_t<std::monostate, doof::arms<Shape>, std::shared_ptr<Note>>>(doof::serial_decode_value(Square::fromSerialValue(_iterator_focus->second, _lenient)));")
   Assert.stringContains(source, "Field \\\"focus\\\" expected object or null but got")
 }
+
+export function testPrimitiveUnionFieldsDispatchOnJsonKind(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "enum Level { Low = \"low\" }\n" +
+    "class Rec { id: int | string\nflag: Level | bool | none = none }\n" +
+    "function encode(rec: Rec): SerialObject => rec.toSerialObject()\n" +
+    "function decode(json: SerialValue): Result<Rec, string> => Rec.fromSerialValue(json)",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "std::visit([&](const auto& _arm) -> doof::SerialValue { using _Arm = std::decay_t<decltype(_arm)>; if constexpr (std::is_same_v<_Arm, int32_t>) { return doof::serial_value(_arm); } else if constexpr (std::is_same_v<_Arm, std::string>) { return doof::serial_value(_arm); } else { return doof::serial_union_arm(_arm); } }, this->id)")
+  Assert.stringContains(source, "Field \\\"id\\\" expected int or string but got")
+  Assert.stringContains(source, "if (!((doof::serial_is_number(_iterator_id->second) || doof::serial_is_string(_iterator_id->second))))")
+  Assert.stringContains(source, "if (doof::serial_is_number(_iterator_id->second)) return doof::variant_promote<std::variant<int32_t, std::string>>([&]() { if (!((_lenient ? doof::serial_fits_int_lenient(_iterator_id->second) : doof::serial_fits_int(_iterator_id->second)))) throw doof::JsonDecodeError(std::string(\"Expected int but got \")")
+  Assert.stringContains(source, "Field \\\"flag\\\" expected string or boolean or null but got")
+}
+
+export function testNestedPrimitivesValidateBeforeConversion(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Grid { rows: int[][]\nlabels: Map<string, bool>\npair: Tuple<long, string> }\n" +
+    "function decode(json: SerialValue): Result<Grid, string> => Grid.fromSerialValue(json)",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "throw doof::JsonDecodeError(std::string(\"Expected int but got \") + doof::serial_type_name(_element));")
+  Assert.stringContains(source, "throw doof::JsonDecodeError(std::string(\"Expected boolean but got \") + doof::serial_type_name(_entry.second));")
+  Assert.stringContains(source, "throw doof::JsonDecodeError(std::string(\"Expected long but got \") + doof::serial_type_name((*_tuple)[0]));")
+}

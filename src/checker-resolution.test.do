@@ -287,3 +287,14 @@ export function testObjectUnionFieldsExplainAMissingDiscriminator(): none {
   Assert.equal(result.diagnostics[0].message, "Type \"Loose\" does not support automatic JSON deserialization (field \"pick\" has union type \"Circle | Note\", whose member classes must be non-generic and share a literal-valued string field with distinct values)")
   Assert.equal(result.diagnostics[0].span.start.line, 5)
 }
+
+export function testAmbiguousPrimitiveUnionFieldsExplainTheirJsonKind(): none {
+  result := checked(
+    "class Reading { value: int | double }\n" +
+    "function encode(reading: Reading): SerialObject => reading.toSerialObject()\n" +
+    "function decode(json: SerialValue): Result<Reading, string> => Reading.fromSerialValue(json)",
+  )
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].message, "Type \"Reading\" does not support automatic JSON deserialization (field \"value\" has union type \"int | double\", whose members int and double both decode from a JSON number)")
+  Assert.equal(result.diagnostics[0].span.start.line, 3)
+}

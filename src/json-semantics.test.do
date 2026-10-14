@@ -4,9 +4,9 @@ import { ClassDeclaration, InterfaceDeclaration, Program } from "./ast"
 import { createChecker } from "./checker"
 import {
   canGenerateInterfaceJsonSerialization, canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, interfaceJsonSerializationBlocker, isGeneratedJsonType,
-  objectUnionJsonDecodeBlocker, objectUnionJsonDiscriminator, objectUnionJsonMembers,
+  jsonUnionFieldBlocker, jsonUnionLayout, objectUnionJsonDiscriminator,
 } from "./json-semantics"
-import { InterfaceType, PrimitiveType, ResolvedType, SourceFile, UnionResolvedType } from "./semantic"
+import { InterfaceType, NoneType, PrimitiveType, ResolvedType, SerialValueResolvedType, SourceFile, UnionResolvedType } from "./semantic"
 
 class CheckedInterfaces {
   programs: Program[]
@@ -115,7 +115,7 @@ export function testObjectUnionsDecodeThroughOneFlattenedDiscriminator(): none {
     "class Holder { both: Shape | Named | none = none\nmixed: Circle | Note\noverlap: Shape | Circle }",
   )
   both := fieldType(checked, "Holder", "both")
-  Assert.equal(objectUnionJsonMembers(both)!.length, 2)
+  Assert.equal(jsonUnionLayout(both, checked.programs)!.arms.length, 2)
   // Badge reaches the union through both interfaces but is one candidate.
   discriminator := objectUnionJsonDiscriminator(both, checked.programs)!
   Assert.equal(discriminator.fieldName, "kind")
@@ -123,7 +123,7 @@ export function testObjectUnionsDecodeThroughOneFlattenedDiscriminator(): none {
   Assert.equal(objectUnionJsonDiscriminator(fieldType(checked, "Holder", "overlap"), checked.programs)!.entries.length, 2)
   Assert.isTrue(isGeneratedJsonType(fieldType(checked, "Holder", "mixed"), checked.programs))
   Assert.isTrue(canGenerateJsonDeserialization(ownerClass(checked, "Holder"), checked.programs))
-  Assert.equal(objectUnionJsonDecodeBlocker(ownerClass(checked, "Holder"), checked.programs), none)
+  Assert.equal(jsonUnionFieldBlocker(ownerClass(checked, "Holder"), checked.programs, true), none)
 }
 
 export function testObjectUnionsWithoutADiscriminatorOnlyEncode(): none {
@@ -136,15 +136,50 @@ export function testObjectUnionsWithoutADiscriminatorOnlyEncode(): none {
   Assert.equal(objectUnionJsonDiscriminator(pick, checked.programs), none)
   Assert.isTrue(canGenerateJsonSerialization(ownerClass(checked, "Loose"), checked.programs))
   Assert.isFalse(canGenerateJsonDeserialization(ownerClass(checked, "Loose"), checked.programs))
-  Assert.stringContains(objectUnionJsonDecodeBlocker(ownerClass(checked, "Loose"), checked.programs)!, "field \"pick\" has union type \"Circle | Note\"")
+  Assert.stringContains(jsonUnionFieldBlocker(ownerClass(checked, "Loose"), checked.programs, true)!, "field \"pick\" has union type \"Circle | Note\"")
 }
 
-export function testOnlyClassAndInterfaceUnionsAreObjectUnions(): none {
-  integer := PrimitiveType { name: "int" }
-  Assert.equal(objectUnionJsonMembers(UnionResolvedType { types: [integer, PrimitiveType { name: "string" }] }), none)
+export function testJsonUnionsAssignEachMemberAJsonKind(): none {
+  layout := jsonUnionLayout(UnionResolvedType { types: [PrimitiveType { name: "int" }, PrimitiveType { name: "string" }, NoneType {}] })!
+  Assert.equal(layout.arms.length, 2)
+  Assert.equal(layout.arms[0].jsonKind, "number")
+  Assert.equal(layout.arms[1].jsonKind, "string")
+  Assert.isTrue(layout.hasNone)
+  // SerialValue spans every kind, so it cannot share a union.
+  Assert.equal(jsonUnionLayout(UnionResolvedType { types: [PrimitiveType { name: "int" }, SerialValueResolvedType {}] }), none)
   checked := checkedInterfaces("class Circle { kind: \"c\" }\nclass Holder { single: Circle | none = none }")
-  // One member with none stays a nullable value, not an object union.
-  Assert.equal(objectUnionJsonMembers(fieldType(checked, "Holder", "single")), none)
+  // One member with none stays a nullable value, not a JSON union.
+  Assert.equal(jsonUnionLayout(fieldType(checked, "Holder", "single"), checked.programs), none)
+}
+
+export function testPrimitiveUnionsDecodeWithOneMemberPerJsonKind(): none {
+  checked := checkedInterfaces(
+    "enum Level { Low = \"low\", High = \"high\" }\n" +
+    "class Note { kind: \"note\"\ntext: string }\n" +
+    "class Holder { id: int | string\nflag: bool | Level | none = none\nitems: (double | string)[] = []\nnote: Note | int[] | string = \"\" }\n" +
+    "class Numbers { value: int | double }\n" +
+    "class Strings { value: Level | string }\n" +
+    "class Objects { value: Map<string, int> | Note }",
+  )
+  Assert.isTrue(canGenerateJsonDeserialization(ownerClass(checked, "Holder"), checked.programs))
+  Assert.isTrue(canGenerateJsonSerialization(ownerClass(checked, "Holder"), checked.programs))
+  Assert.equal(jsonUnionLayout(fieldType(checked, "Holder", "flag"), checked.programs)!.arms[1].jsonKind, "string")
+  Assert.equal(jsonUnionFieldBlocker(ownerClass(checked, "Holder"), checked.programs, true), none)
+  for owner of ["Numbers", "Strings", "Objects"] {
+    // Ambiguous unions still encode the member they hold.
+    Assert.isTrue(canGenerateJsonSerialization(ownerClass(checked, owner), checked.programs))
+    Assert.isFalse(canGenerateJsonDeserialization(ownerClass(checked, owner), checked.programs))
+  }
+  Assert.equal(jsonUnionFieldBlocker(ownerClass(checked, "Numbers"), checked.programs, true)!, "field \"value\" has union type \"int | double\", whose members int and double both decode from a JSON number")
+  Assert.equal(jsonUnionFieldBlocker(ownerClass(checked, "Strings"), checked.programs, true)!, "field \"value\" has union type \"Level | string\", whose members Level and string both decode from a JSON string")
+  Assert.equal(jsonUnionFieldBlocker(ownerClass(checked, "Objects"), checked.programs, true)!, "field \"value\" has union type \"Map<string, int> | Note\", whose members Map<string, int> and Note both decode from a JSON object")
+  Assert.equal(jsonUnionFieldBlocker(ownerClass(checked, "Numbers"), checked.programs, false), none)
+}
+
+export function testNestedAmbiguousUnionsNameTheirField(): none {
+  checked := checkedInterfaces("class Holder { values: Map<string, (int | long)[]> }\nclass Loose { value: int | SerialValue }")
+  Assert.equal(jsonUnionFieldBlocker(ownerClass(checked, "Holder"), checked.programs, true)!, "field \"values\" has union type \"int | long\", whose members int and long both decode from a JSON number")
+  Assert.equal(jsonUnionFieldBlocker(ownerClass(checked, "Loose"), checked.programs, false)!, "field \"value\" has union type \"int | SerialValue\", whose member SerialValue has no single JSON kind")
 }
 
 export function testRecursiveObjectUnionsTerminate(): none {

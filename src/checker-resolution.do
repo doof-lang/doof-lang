@@ -4,7 +4,7 @@ import { ActorType, ArrayResolvedType, Binding, ClassMetadataResolvedType, Class
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { CheckedMember, ClassDeclaration, DotShorthand, EnumDeclaration, Expression, FunctionDeclaration, Identifier, InterfaceDeclaration, MemberExpression, Program, SourceSpan, TypeAnnotation, Parameter, TypeParameterConstraint } from "./ast"
 import { interfaceBoundReceiver, applyDeepReadonly, arrayType, classMetadataType, classType, functionType, joinTypes, jsonObjectType, jsonValueType, mapType, resultType, setType, noneType, primitive, promiseType, sameType, typeName, unionType, methodReflectionType, substituteTypeParams, typeParameter, unknownType } from "./checker-types"
-import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, interfaceJsonSerializationBlocker, isGeneratedJsonType, objectUnionJsonDecodeBlocker } from "./json-semantics"
+import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, interfaceJsonSerializationBlocker, isGeneratedJsonType, jsonUnionFieldBlocker } from "./json-semantics"
 
 import { CheckerState } from "./checker-state"
 
@@ -423,7 +423,7 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
             ], resultType(object, primitive("string")))
           }
           if property == "toSerialObject" || property == "fromSerialValue" {
-            blocker := if property == "fromSerialValue" then objectUnionJsonDecodeBlocker(classDeclaration, jsonPrograms(state.result)) else none
+            blocker := jsonUnionFieldBlocker(classDeclaration, jsonPrograms(state.result), property == "fromSerialValue")
             reason := if blocker == none then "" else " (" + blocker! + ")"
             typeError(state, "Type \"" + classDeclaration.name + "\" does not support automatic JSON " + (if property == "toSerialObject" then "serialization" else "deserialization") + reason, span)
             return unknownType()

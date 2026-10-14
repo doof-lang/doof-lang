@@ -86,7 +86,7 @@ modules own the following decisions:
 | `checker-async.do` | `async` block and call checking; one recursive async boundary walk with direction-specific handle rules; capture decoration |
 | `checker-isolation.do` | Graph-wide transitive mutable-global effect validation |
 | `checker-validation.do` | Final graph walk proving the AST is decorated and safe to emit |
-| `json-semantics.do` | Shared eligibility contract for generated JSON methods, including object unions decoded through one discriminator over the classes their members flatten to |
+| `json-semantics.do` | Shared eligibility contract for generated JSON methods, including unions decoded by JSON kind with one member per kind and classes sharing the object kind through one discriminator |
 
 When a check produces information needed for lowering, add an explicit
 decoration to `ast.do`, populate it in the owning checker module, require it in
@@ -175,7 +175,7 @@ emitter or individual expression branch.
 | `emitter-carrier-values.do` | Shared absence construction and native carrier conversion, with exactly-once evaluation |
 | `emitter-carrier-native.test.do` | Compiles current-source emitter output and executes the durable native carrier matrix in the normal suite |
 | `emitter-types.do` | C++ type spelling and generic specialization using the shared carrier classification; unions splice interface members into one flat `doof::union_t` variant |
-| `emitter-json.do` | Demand-gated generated JSON reads, writes, enum backing values, paths, and interface and object-union discriminator dispatch; unit decoding validates null and all nested containers validate shape before access |
+| `emitter-json.do` | Demand-gated generated JSON reads, writes, enum backing values, paths, and interface and union dispatch (JSON kind, then discriminator for classes); unit decoding validates null, nested containers validate shape, and nested primitives validate before conversion |
 | `emitter-metadata.do` | Reflection metadata, backing-value JSON Schema, and JSON invocation |
 | `emitter-wasm.do` | JSON-over-C-ABI WebAssembly wrapper generation |
 | `emitter-project.do` | Generated project shape, observer define selection, and reached-package native input collation; root-first, logical-prefix package ordering stabilizes native build arguments while preserving manifest input order |
