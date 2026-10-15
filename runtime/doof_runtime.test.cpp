@@ -350,6 +350,37 @@ void test_collection_indexing() {
     require(doof::array_at(values, 0, "runtime-test", 1) == 2, "ordinary array indexing changed");
 }
 
+struct HashKeyStruct {
+    int32_t id;
+    std::string label;
+    template <typename _DoofOther = HashKeyStruct>
+    bool operator==(const _DoofOther& other) const { return id == other.id && label == other.label; }
+    template <typename _DoofSelf = HashKeyStruct>
+    std::size_t doof_hash_value() const {
+        const _DoofSelf& self = *this;
+        std::size_t seed = 0;
+        doof::key_hash_combine(seed, doof::key_hash<int32_t>{}(self.id));
+        doof::key_hash_combine(seed, doof::key_hash<std::string>{}(self.label));
+        return seed;
+    }
+};
+
+void test_key_hashing() {
+    using Key = std::tuple<int32_t, std::optional<HashKeyStruct>, std::variant<std::monostate, std::string, std::shared_ptr<int>>>;
+    auto node = std::make_shared<int>(1);
+    doof::ordered_set<Key> keys;
+    keys.insert(Key{1, HashKeyStruct{2, "a"}, std::string("x")});
+    keys.insert(Key{1, HashKeyStruct{2, "a"}, std::string("x")});
+    keys.insert(Key{1, std::nullopt, std::monostate{}});
+    keys.insert(Key{1, std::nullopt, node});
+    keys.insert(Key{1, std::nullopt, std::make_shared<int>(1)});
+    require(keys.size() == 4, "composite keys did not follow member equality and reference identity");
+    require(keys.count(Key{1, HashKeyStruct{2, "a"}, std::string("x")}) == 1, "equal composite key was not found");
+    require(keys.count(Key{1, std::nullopt, node}) == 1, "identity key was not found by the same reference");
+    require(doof::key_hash<HashKeyStruct>{}(HashKeyStruct{2, "a"}) == doof::key_hash<HashKeyStruct>{}(HashKeyStruct{2, "a"}), "equal structs hashed differently");
+    require(doof::key_hash<std::variant<int32_t, std::string>>{}(0) != doof::key_hash<std::variant<int32_t, std::string>>{}(std::string()), "union arms did not contribute their index");
+}
+
 struct UnionJsonArm {
     doof::SerialObject toSerialObject() const {
         auto object = std::make_shared<doof::ordered_map<std::string, doof::SerialValue>>();
@@ -773,7 +804,7 @@ int main(int argc, char** argv) {
     else if (mode == "release") test_token_release_and_retirement();
     else if (mode == "priority") test_reacquire_priority();
     else if (mode == "configuration") test_configuration();
-    else if (mode == "collections") test_collection_indexing();
+    else if (mode == "collections") { test_collection_indexing(); test_key_hashing(); }
     else if (mode == "nulls") test_null_carriers();
     else if (mode == "serial-integers") test_serial_integers();
     else if (mode == "string-builder") test_string_builder();

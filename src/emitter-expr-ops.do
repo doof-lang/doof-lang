@@ -224,8 +224,8 @@ function emitAssignmentTarget(target: Expression, context: EmitContext): string 
       objectType := decoratedExpressionType(index.object)
       if objectType != none {
         case objectType! {
-          _: MapResolvedType -> {
-            return "doof::map_index(" + emitExpression(index.object, context) + ", " + emitExpression(index.index, context) + ", " + quote(moduleDiagnosticPath(context.modulePath, true, context.names)) + ", " + string(index.span.start.line) + ")"
+          map: MapResolvedType -> {
+            return "doof::map_index(" + emitExpression(index.object, context) + ", " + emitExpression(index.index, context, map.keyType) + ", " + quote(moduleDiagnosticPath(context.modulePath, true, context.names)) + ", " + string(index.span.start.line) + ")"
           }
           _ -> { }
         }
@@ -574,10 +574,18 @@ function emitWeakFieldAccess(expression: MemberExpression, object: string, conte
 export function emitIndex(expression: IndexExpression, context: EmitContext): string {
   if expression.resolvedOptionalReceiver != none && expression.resolvedOptionalValue != none { return emitOptionalIndex(expression, context) }
   object := emitExpression(expression.object, context)
-  index := emitExpression(expression.index, context)
+  objectType := decoratedExpressionType(expression.object)
+  // Map keys convert to the key representation, e.g. a member into a union key.
+  let indexTarget: ResolvedType | none = none
+  if objectType != none {
+    case objectType! {
+      map: MapResolvedType -> { indexTarget = map.keyType }
+      _ -> { }
+    }
+  }
+  index := emitExpression(expression.index, context, indexTarget)
   sourcePath := quote(moduleDiagnosticPath(context.modulePath, true, context.names))
   sourceLine := string(expression.span.start.line)
-  objectType := decoratedExpressionType(expression.object)
   if objectType != none {
     case objectType! {
       _: ArrayResolvedType -> { return "doof::array_at(" + object + ", " + index + ", " + sourcePath + ", " + sourceLine + ")" }

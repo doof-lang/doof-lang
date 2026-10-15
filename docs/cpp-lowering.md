@@ -51,6 +51,13 @@ one exception: its refresh pipeline removes emitted `#line` directives after
 fixed-point verification so source-line-only changes do not churn the trust
 root. This canonicalization does not change ordinary compiler emission.
 
+Map and Set lower to `doof::ordered_map` and `doof::ordered_set`, whose lookup
+index hashes keys with `doof::key_hash`: `std::hash` for scalars, strings, enums,
+and `shared_ptr` identity; member-wise for tuples, optionals, and variants; and a
+generated, lazily instantiated `doof_hash_value()` for structs over the fields
+their `operator==` compares. Emitters convert every key operand (literal
+entries, brackets, and `has`/`get`/`set`/`add`/`delete`) to the key type.
+
 Doof primitives map to fixed-width C++ values. Classes use shared ownership,
 structs use value semantics, weak class references use `std::weak_ptr`, and
 closed-world interfaces lower to variants of known implementors. Nullable and

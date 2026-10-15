@@ -51,7 +51,7 @@ export function emitArray(expression: ArrayLiteral, context: EmitContext, expect
         let values = ""
         for i of 0..<expression.elements.length {
           if i > 0 { values = values + ", " }
-          values = values + emitExpression(expression.elements[i], context)
+          values = values + emitExpression(expression.elements[i], context, set_.elementType)
         }
         return "std::make_shared<doof::ordered_set<" + elementType + ">>(doof::ordered_set<" + elementType + ">{" + values + "})"
       }

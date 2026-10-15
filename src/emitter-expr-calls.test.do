@@ -349,3 +349,30 @@ export function testWeakMethodCallVisitsInterfaceArmsOrIsUnreachableWithoutThem(
   Assert.equal(empty.diagnostics.length, 0)
   Assert.stringContains(empty.emission!.modules[0].source, "(static_cast<void>(_weak_value_1), doof::no_implementations<double>(\"Shape\"))")
 }
+
+interface HashCallNamed { name: string }
+class HashCallPerson { name: string }
+class HashCallPet { name: string }
+
+export function testHashCollectionMethodsConvertKeysToTheKeyRepresentation(): none {
+  let optional: Set<string | none> = ["a", none]
+  Assert.isTrue(optional.has(none))
+  optional.delete(none)
+  Assert.isFalse(optional.has(none))
+  optional.add(none)
+  Assert.equal(optional.size, 2)
+
+  let unions: Map<int | string, int> = {}
+  unions.set(1, 10)
+  Assert.isTrue(unions.has(1))
+  Assert.isFalse(unions.has("1"))
+  Assert.equal(unions.get(1)!, 10)
+  unions.delete(1)
+  Assert.equal(unions.size, 0)
+
+  person := HashCallPerson { name: "a" }
+  let named: Set<HashCallNamed> = [person, HashCallPet { name: "a" }, person]
+  Assert.equal(named.size, 2)
+  Assert.isTrue(named.has(person))
+  Assert.isFalse(named.has(HashCallPerson { name: "a" }))
+}

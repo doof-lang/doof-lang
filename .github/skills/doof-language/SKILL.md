@@ -68,7 +68,7 @@ Key reminders:
 - `if` expressions use `then`: `if ready then start() else wait()`.
 - `for-of` evaluates its iterable once and retains returned temporaries through the loop.
 - `/` requires a floating operand. Use `\` for integer division.
-- `Map<K, V>` literals use `{ key: value }`. `Set<T>` literals use `[a, b, c]`.
+- `Map<K, V>` literals use `{ key: value }` (parenthesize tuple or object keys: `{ (1, 2): v }`). `Set<T>` literals use `[a, b, c]`. Keys may be scalars, enums, class/interface references (identity), or tuples, unions, and structs of those; never float/double.
 - Mutable arrays support `.reserve(capacity)` to pre-size backing storage without changing their length.
 - Runtime counters use `metricsIncrement(name: string, value: long)` and `metricsSnapshotPrometheus()`.
 - Native free functions callable from actor-dispatched code require an explicit `import isolated function` contract.

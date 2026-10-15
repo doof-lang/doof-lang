@@ -158,20 +158,21 @@ function mapKeyErrors(source: string): string[] {
 export function testRejectsUnsupportedMapKeyAnnotations(): none {
   floating := mapKeyErrors("function main(): none { let m: Map<float, int> = {} }")
   Assert.equal(floating.length, 1)
-  Assert.stringContains(floating[0], "Map key type \"float\" is not supported; map keys must be byte, string, int, long, char, bool, or enum")
+  Assert.equal(floating[0], "Map key type \"float\" is not supported; Map keys and Set elements may be byte, string, int, long, char, bool, enums, class or interface references, or tuples, unions, and structs of those")
 
-  tuple := mapKeyErrors("function use(m: ReadonlyMap<Tuple<int, string>, int>): none {}")
+  tuple := mapKeyErrors("function use(m: ReadonlyMap<Tuple<int, double>, int>): none {}")
   Assert.equal(tuple.length, 1)
-  Assert.stringContains(tuple[0], "is not supported")
+  Assert.stringContains(tuple[0], "Map key type \"(int, double)\" is not supported (contains \"double\")")
 
-  nominal := mapKeyErrors("class Point { x: int }\nclass Holder { points: Map<Point, int> = {} }")
-  Assert.equal(nominal.length, 1)
-  Assert.stringContains(nominal[0], "Map key type \"Point\" is not supported")
+  structKey := mapKeyErrors("struct Point { x: int\ny: float }\nclass Holder { points: Map<Point, int> = {} }")
+  Assert.equal(structKey.length, 1)
+  Assert.stringContains(structKey[0], "Map key type \"Point\" is not supported (field \"y\" of \"Point\" has type \"float\")")
 }
 
 export function testAcceptsSupportedMapKeyAnnotations(): none {
   Assert.equal(mapKeyErrors("enum Suit { Spades, Hearts }\nfunction use(a: Map<string, int>, b: Map<int, int>, c: Map<long, int>, d: Map<char, int>, e: Map<bool, int>, f: Map<byte, int>, g: Map<Suit, int>): none {}").length, 0)
   Assert.equal(mapKeyErrors("function count<K>(m: Map<K, int>): int => m.size").length, 0)
+  Assert.equal(mapKeyErrors("class Node {}\ninterface Named { name: string }\nstruct Point { x: int\nlabel: string | none }\nfunction use(a: Map<Node, int>, b: Map<Named, int>, c: Map<Point, int>, d: Map<Tuple<int, string>, int>, e: Map<int | string, int>, f: Map<string | none, int>): none {}").length, 0)
 }
 
 export function testReportsLocalSetElementAnnotationOnce(): none {

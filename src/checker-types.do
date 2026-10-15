@@ -1015,21 +1015,6 @@ export function isStringInterpolatable(type_: ResolvedType): bool {
   return false
 }
 
-/** Hash collections deliberately support only stable primitive and enum keys. */
-export function isSupportedHashCollectionType(type_: ResolvedType): bool {
-  case type_ {
-    primitive_: PrimitiveType -> {
-      return primitive_.name == "byte" || primitive_.name == "string" || primitive_.name == "int" || primitive_.name == "long" ||
-        primitive_.name == "char" || primitive_.name == "bool"
-    }
-    _: EnumType -> { return true }
-    _: TypeParameterType -> { return true }
-    _: UnknownType -> { return true }
-    _ -> { return false }
-  }
-  return false
-}
-
 export function numericResult(left: ResolvedType, right: ResolvedType): ResolvedType {
   if typeName(left) == "double" || typeName(right) == "double" { return primitive("double") }
   if typeName(left) == "float" || typeName(right) == "float" { return primitive("float") }

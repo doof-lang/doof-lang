@@ -6,9 +6,10 @@ import { checkPropertyValue, checkAssignableProperty } from "./checker-propertie
 import { ArrayResolvedType, ClassType, InterfaceType, SerialValueResolvedType, MapResolvedType, NoneType, ResolvedType, ResultResolvedType, Scope, SetResolvedType, UnionResolvedType, UnknownType } from "./semantic"
 
 import { ArrayLiteral, ClassDeclaration, Expression, NamedType, ObjectLiteral, TypeAnnotation } from "./ast"
-import { arrayType, joinTypes, isJsonValueType, isSupportedHashCollectionType, jsonValueType, mapType, setType, primitive, sameType, typeName, unknownType } from "./checker-types"
+import { arrayType, joinTypes, isJsonValueType, jsonValueType, mapType, setType, primitive, sameType, typeName, unknownType } from "./checker-types"
 
 import { CheckerState } from "./checker-state"
+import { reportUnsupportedHashKey } from "./checker-hash-keys"
 import { checkExpression } from "./checker-expressions"
 
 import { finish, typeError } from "./checker-common"
@@ -38,9 +39,7 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
                   _: UnionResolvedType -> { hasConcreteElement = false; typeError(state, "Cannot infer " + named.name + " element type from heterogeneous set elements; provide a full " + named.name + "<T> annotation", array.span) }
                   _ -> { }
                 }
-                if hasConcreteElement && !isSupportedHashCollectionType(arrayType_.elementType) {
-                  typeError(state, "Set element type \"" + typeName(arrayType_.elementType) + "\" is not supported; set elements must be byte, string, int, long, char, bool, or enum", array.span)
-                }
+                if hasConcreteElement { reportUnsupportedHashKey(state, arrayType_.elementType, "Set element", array.span) }
                 return finish(state, expression, setType(arrayType_.elementType, named.name == "ReadonlySet"))
               }
               _ -> { return finish(state, expression, setType(unknownType(), named.name == "ReadonlySet")) }
@@ -79,7 +78,7 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
               _: UnknownType -> { typeError(state, "Cannot infer " + named.name + " key type from this map literal; provide a full " + named.name + "<K, V> annotation", object.span) }
               _: UnionResolvedType -> { typeError(state, "Cannot infer " + named.name + " key type from heterogeneous map keys; provide a full " + named.name + "<K, V> annotation", object.span) }
               _ -> {
-                if !isSupportedHashCollectionType(keyType) { typeError(state, "Map key type \"" + typeName(keyType) + "\" is not supported; map keys must be byte, string, int, long, char, bool, or enum", object.span) }
+                reportUnsupportedHashKey(state, keyType, "Map key", object.span)
               }
             }
             case valueType {

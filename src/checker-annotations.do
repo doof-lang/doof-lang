@@ -4,9 +4,10 @@ import { memberType } from "./checker-resolution"
 import { ClassType, FunctionParamType, ResolvedType, Scope, Symbol, TypeParameterType, ResolvedTypeConstraint } from "./semantic"
 import { AnalysisResult, ModuleInfo, unknownTypeMessage } from "./analyzer"
 import { ArrayType, ClassDeclaration, AstFunctionType, InterfaceDeclaration, NamedType, SourceSpan, TypeAliasDeclaration, TypeAnnotation, UnionType, WeakType, TypeParameterConstraint } from "./ast"
-import { actorType, arrayType, classType, containsTypeParameters, enumType, failureType, functionType, successType, interfaceType, isSupportedHashCollectionType, jsonObjectType, mixedWeakUnionMessage, jsonValueType, mapType, resultType, setType, streamType, neverType, noneType, primitive, promiseType, rangeType, tupleType, typeName, unionMutabilityConflict, unionType, isWeakReferenceTarget, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType } from "./checker-types"
+import { actorType, arrayType, classType, containsTypeParameters, enumType, failureType, functionType, successType, interfaceType, jsonObjectType, mixedWeakUnionMessage, jsonValueType, mapType, resultType, setType, streamType, neverType, noneType, primitive, promiseType, rangeType, tupleType, typeName, unionMutabilityConflict, unionType, isWeakReferenceTarget, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType } from "./checker-types"
 
 import { CheckerState } from "./checker-state"
+import { reportUnsupportedHashKey } from "./checker-hash-keys"
 import { isNumericConstraint, satisfiesNumericConstraint } from "./checker-numeric"
 import { deprecatedNoneAlias, typeArgumentArityMessage, typeError } from "./checker-common"
 import { builtinSourceLocationType, declaredSymbolName, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
@@ -181,15 +182,11 @@ function genericBuiltinType(state: CheckerState, named: NamedType, args: Resolve
   case named.name {
     "Tuple" -> { return tupleType(args) }
     "Map" | "ReadonlyMap" -> {
-      if !isSupportedHashCollectionType(args[0]) {
-        typeError(state, "Map key type \"" + typeName(args[0]) + "\" is not supported; map keys must be byte, string, int, long, char, bool, or enum", named.typeArgs[0].span)
-      }
+      reportUnsupportedHashKey(state, args[0], "Map key", named.typeArgs[0].span)
       return mapType(args[0], args[1], named.name == "ReadonlyMap")
     }
     "Set" | "ReadonlySet" -> {
-      if !isSupportedHashCollectionType(args[0]) {
-        typeError(state, "Set element type \"" + typeName(args[0]) + "\" is not supported; set elements must be byte, string, int, long, char, bool, or enum", named.typeArgs[0].span)
-      }
+      reportUnsupportedHashKey(state, args[0], "Set element", named.typeArgs[0].span)
       return setType(args[0], named.name == "ReadonlySet")
     }
     "Stream" -> { return streamType(args[0]) }

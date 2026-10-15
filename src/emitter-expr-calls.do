@@ -162,21 +162,21 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
           map: MapResolvedType -> {
             if member.property == "has" {
               temporary := context.temporary("_map_has_")
-              return "[&]() -> bool { auto " + temporary + " = " + emitExpression(member.object, context) + "; return " + temporary + "->find(" + emitExpression(expression.args[0].value, context) + ") != " + temporary + "->end(); }()"
+              return "[&]() -> bool { auto " + temporary + " = " + emitExpression(member.object, context) + "; return " + temporary + "->find(" + emitExpression(expression.args[0].value, context, map.keyType) + ") != " + temporary + "->end(); }()"
             }
             if member.property == "set" { return "doof::map_set<" + emitContextType(map.keyType, context) + ", " + emitContextType(map.valueType, context) + ">(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context, map.keyType) + ", " + emitExpression(expression.args[1].value, context, map.valueType) + ", \"\", 0)" }
             if member.property == "delete" { return emitExpression(member.object, context) + "->erase(" + emitExpression(expression.args[0].value, context, map.keyType) + ")" }
-            if member.property == "get" && expression.args.length > 0 { return "doof::map_get(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", \"\", 0)" }
+            if member.property == "get" && expression.args.length > 0 { return "doof::map_get(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context, map.keyType) + ", \"\", 0)" }
             if member.property == "keys" { return "doof::map_keys(" + emitExpression(member.object, context) + ", \"\", 0)" }
             if member.property == "values" { return "doof::map_values(" + emitExpression(member.object, context) + ", \"\", 0)" }
             if member.property == "buildReadonly" || member.property == "drainToReadonly" { return "doof::map_drainToReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
             if member.property == "cloneReadonly" { return "doof::map_cloneReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
             if member.property == "cloneMutable" { return "doof::map_cloneMutable(" + emitExpression(member.object, context) + ", \"\", 0)" }
           }
-          _: SetResolvedType -> {
-            if member.property == "has" { return "(" + emitExpression(member.object, context) + "->count(" + emitExpression(expression.args[0].value, context) + ") > 0)" }
-            if member.property == "add" { return emitExpression(member.object, context) + "->insert(" + emitExpression(expression.args[0].value, context) + ")" }
-            if member.property == "delete" { return emitExpression(member.object, context) + "->erase(" + emitExpression(expression.args[0].value, context) + ")" }
+          set_: SetResolvedType -> {
+            if member.property == "has" { return "(" + emitExpression(member.object, context) + "->count(" + emitExpression(expression.args[0].value, context, set_.elementType) + ") > 0)" }
+            if member.property == "add" { return emitExpression(member.object, context) + "->insert(" + emitExpression(expression.args[0].value, context, set_.elementType) + ")" }
+            if member.property == "delete" { return emitExpression(member.object, context) + "->erase(" + emitExpression(expression.args[0].value, context, set_.elementType) + ")" }
             if member.property == "values" { return "doof::set_values(" + emitExpression(member.object, context) + ", \"\", 0)" }
             if member.property == "buildReadonly" || member.property == "drainToReadonly" { return "doof::set_drainToReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
             if member.property == "cloneReadonly" { return "doof::set_cloneReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }

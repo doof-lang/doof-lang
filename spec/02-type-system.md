@@ -1373,7 +1373,7 @@ let explicit: Map<string, int> = { "Alice": 100 }      // Also valid
 
 Both map type arguments must be omitted together. Partial annotations such as `Map<string>` and `ReadonlyMap<string>` are compile errors.
 
-Supported key types are `string`, `int`, `long`, `char`, `bool`, and enum types. In practice, the common supported forms are string keys, integer keys, long keys, and enum keys.
+Map keys and set elements are compared with Doof `==` (see [Hash Collection Keys](#hash-collection-keys)): `byte`, `string`, `int`, `long`, `char`, `bool`, and enums by value; class and interface references by identity; and tuples, unions (including optionals), and structs built from those by their members.
 
 ```doof reject
 enum Suit { Spades, Hearts, Diamonds, Clubs }
@@ -1399,6 +1399,10 @@ let empty: Map<int, string> = {}
 unknown: Map := {}               // ❌ Error: cannot infer K and V from an empty map
 ```
 
+A parenthesized key admits any expression, such as a tuple, a construction, or a
+variable holding an object: `{ (1, "a"): 1, (node): 2 }`. The colon after the
+closing parenthesis always starts the value.
+
 The same key restrictions apply in all map initialization contexts, including declaration initializers, return-context literals, argument-context literals, parameter defaults, and field defaults.
 
 Bare map inference is limited to same-site literals on declarations and defaults. For example, `function getMap(): Map { ... }` is rejected because there is no same-site literal attached to the return type annotation.
@@ -1413,20 +1417,74 @@ Integer literals are contextually widened when a `long` key type is expected, so
 let counts: Map<long, int> = { 1: 10, 2: 20 }
 ```
 
-Floating-point keys are rejected even though they parse, to avoid surprising hash/equality behavior around exact comparison and `NaN` values.
+#### Hash Collection Keys
 
-```doof reject
-let bad: Map<float, int> = {}          // ❌ Error
-let alsoBad = { 1.5: "value" }       // ❌ Error
+`Map` keys and `Set` elements hash and compare with the same rules as Doof
+`==`:
+
+| Key type | Compared by |
+|----------|-------------|
+| `byte`, `string`, `int`, `long`, `char`, `bool`, enums | Value |
+| Classes and interfaces | Reference identity |
+| Tuples | Each element |
+| Unions, including optionals such as `string \| none` | The present member and its value |
+| Structs | Each instance field, as in struct equality |
+
+Composite keys are supported when every part is supported, so
+`Tuple<Suit, Point | none>` is a valid key when `Point` is a struct of
+supported fields. Two distinct class instances are different keys even when
+their fields match; a map holds a strong reference to each class key.
+
+```doof check
+enum Suit { Spades, Hearts }
+struct Card { suit: Suit; rank: int }
+class Player { name: string }
+
+function main(): none {
+    let seen: Set<Card> = [Card { suit: .Spades, rank: 1 }, Card { suit: .Spades, rank: 1 }]
+    println(seen.size) // 1
+
+    alice := Player { name: "Alice" }
+    let scores: Map<Player, int> = { (alice): 10 }
+    scores[Player { name: "Alice" }] = 20
+    println(scores.size) // 2 — keyed by identity
+
+    let grid: Map<Tuple<int, int>, string> = { (0, 0): "origin" }
+    grid[(1, 2)] = "point"
+    println(grid[(0, 0)])
+
+    let maybe: Set<string | none> = ["a", none, "a"]
+    println(maybe.has(none))
+}
 ```
 
-Tuple, class-instance, and other non-scalar key types are also rejected.
+Floating-point keys are rejected even though they parse, to avoid surprising
+hash/equality behavior around exact comparison and `NaN` values. The rule
+applies at any depth: a tuple, union, or struct containing `float` or `double`
+is rejected too. Arrays, maps, sets, callbacks, weak references, actors, and
+`Result` values are also rejected rather than keyed by reference.
 
 ```doof reject
-class Point { x: int }
+struct Sample { ratio: double }
 
-let badTuple: Map<Tuple<int, string>, int> = {}  // ❌ Error
-let badPoint: Map<Point, int> = {}               // ❌ Error
+let bad: Map<float, int> = {}                     // ❌ Error
+let alsoBad = { 1.5: "value" }                  // ❌ Error
+let badTuple: Set<Tuple<int, double>> = []       // ❌ Error
+let badStruct: Map<Sample, int> = {}            // ❌ Error
+let badArray: Map<int[], int> = {}              // ❌ Error
+```
+
+Generic code may use a type parameter as a key. Each concrete instantiation is
+checked: `Map<T, V>` is rejected where `T` is instantiated with an unsupported
+type, and the diagnostic names the binding (`when T = double`).
+
+```doof reject
+function index<T>(key: T): Map<T, int> => { (key): 1 }   // ❌ Error: Map key type "T" is not supported when T = double
+
+function main(): none {
+    index("ok")
+    index(1.5)
+}
 ```
 
 ### Set Type
@@ -1465,9 +1523,9 @@ and therefore turns an inferred bare `Set` into `ReadonlySet<T>`.
 
 Extra type arguments such as `Set<int, string>` or `ReadonlySet<int, string>` are compile errors.
 
-Supported set element types are `string`, `int`, `long`, `char`, `bool`, and enums. The same rule applies to declaration initializers, return-context literals, argument-context literals, parameter defaults, and field defaults.
+Set elements follow the same rules as map keys (see [Hash Collection Keys](#hash-collection-keys)). The rule applies to declaration initializers, return-context literals, argument-context literals, parameter defaults, and field defaults.
 
-`float`, `double`, tuples, class instances, and other non-supported element types are rejected by the checker with an explicit set-element diagnostic.
+`float`, `double`, collections, callbacks, and composites containing them are rejected by the checker with an explicit set-element diagnostic.
 
 Set iteration order is defined by first insertion order. `.values()`, `for value of set`, and direct set printing follow that order.
 
@@ -1550,6 +1608,22 @@ m["b"] = 2    // inserts new entry
 Reading a missing key with bracket access panics at the access site. Use
 `.get(key)` when absence is expected. Bracket assignment remains an
 insert-or-update operation.
+
+The index is checked against the key type, so enum shorthand, tuple, and union
+keys work inside brackets as they do in map literals:
+
+```doof check
+enum Suit { Spades, Hearts }
+
+function main(): none {
+    let counts: Map<Suit, int> = {}
+    counts[.Spades] = 1
+    let cells: Map<Tuple<int, int>, string> = {}
+    cells[(0, 1)] = "x"
+    let ids: Map<int | string, bool> = {}
+    ids[7] = true
+}
+```
 
 ### Tuple Type
 

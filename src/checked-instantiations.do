@@ -11,12 +11,13 @@ import {
   ClassDeclaration, ConstDeclaration, ConstructExpression, DestructuringStatement, ExportDeclaration, Expression,
   ExpressionStatement, ForOfStatement, ForStatement, FunctionDeclaration, Identifier, IfExpression, IfStatement,
   ImmutableBinding, IndexExpression, InterfaceDeclaration, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral,
-  RangePattern, ReadonlyDeclaration, RetireExpression, ReturnStatement, Statement, StringLiteral, TryStatement, TupleLiteral, TypePattern, UnaryExpression, ValuePattern,
+  RangePattern, ReadonlyDeclaration, RetireExpression, ReturnStatement, SourceSpan, Statement, StringLiteral, TryStatement, TupleLiteral, TypePattern, UnaryExpression, ValuePattern,
   WhileStatement, WithStatement, YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression, Program,
 } from "./ast"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, interfaceJsonSerializationBlocker } from "./json-semantics"
 import { AnalysisResult } from "./analyzer"
 import { containsTypeParameters, sameType, substituteTypeParams, typeName } from "./checker-types"
+import { hashKeyDiagnostic } from "./checker-hash-keys"
 import { classSatisfiesConcreteInterface } from "./checker-interfaces"
 import { containsString } from "./checker-symbols"
 import { checkerSemanticSpan } from "./checker-validation"
@@ -81,7 +82,7 @@ export class CheckedInstantiations {
   // Implied JSON members used through a type parameter whose concrete argument
   // cannot provide them, reported at the member access. Serializable bounds are
   // rejected at the call site instead.
-  jsonErrors: Diagnostic[] = []
+  errors: Diagnostic[] = []
 }
 
 export function discoverInstantiations(result: AnalysisResult): CheckedInstantiations {
@@ -143,7 +144,7 @@ export function methodInstantiationKey(ownerKey: string, name: string, typeArgs:
 
 function collectFunctionBody(fn: FunctionDeclaration, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
   for parameter of fn.params {
-    if parameter.resolvedType != none { collectType(specialize(parameter.resolvedType!, names, arguments), analysis, plan) }
+    if parameter.resolvedType != none { collectType(specialize(parameter.resolvedType!, names, arguments), analysis, plan); validateSpecializedHashKeys(parameter.resolvedType!, names, arguments, parameter.span, modulePath, analysis, plan) }
     if parameter.defaultValue != none { collectExpression(parameter.defaultValue!, modulePath, analysis, plan, names, arguments) }
   }
   if fn.resolvedType != none { collectType(specialize(fn.resolvedType!, names, arguments), analysis, plan) }
@@ -155,7 +156,7 @@ function collectFunctionBody(fn: FunctionDeclaration, modulePath: string, analys
 
 function collectClassBody(class_: ClassDeclaration, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
   for field of class_.fields {
-    if field.resolvedType != none { collectType(specialize(field.resolvedType!, names, arguments), analysis, plan) }
+    if field.resolvedType != none { collectType(specialize(field.resolvedType!, names, arguments), analysis, plan); validateSpecializedHashKeys(field.resolvedType!, names, arguments, field.span, modulePath, analysis, plan) }
     if field.defaultValue != none { collectExpression(field.defaultValue!, modulePath, analysis, plan, names, arguments) }
   }
   for method of class_.methods {
@@ -258,8 +259,9 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
       for argument of call.args { collectExpression(argument.value, modulePath, analysis, plan, names, arguments) }
       if call.resolvedFunction != none { collectGenericTarget(call.callee, call.resolvedFunction!, call.resolvedFunctionModule, call.resolvedGenericTypeArgs, analysis, plan, names, arguments) }
     }
-    array: ArrayLiteral -> { for item of array.elements { collectExpression(item, modulePath, analysis, plan, names, arguments) } }
+    array: ArrayLiteral -> { validateSpecializedLiteral(array, names, arguments, modulePath, analysis, plan); for item of array.elements { collectExpression(item, modulePath, analysis, plan, names, arguments) } }
     object: ObjectLiteral -> {
+      validateSpecializedLiteral(object, names, arguments, modulePath, analysis, plan)
       if object.spread != none { collectExpression(object.spread!, modulePath, analysis, plan, names, arguments) }
       for property of object.properties {
         if property.key != none { collectExpression(property.key!, modulePath, analysis, plan, names, arguments) }
@@ -444,12 +446,77 @@ function validateImpliedJsonMember(member: MemberExpression, receiver: ResolvedT
   }
   if supported { return }
   message := "Type \"" + typeName(receiver) + "\" does not support automatic JSON " + (if member.property == "toSerialObject" then "serialization" else "deserialization") + reason + ", required by '" + member.property + "' on type parameter \"" + typeName(member.object.resolvedType!) + "\""
-  span := checkerSemanticSpan(member.span)
-  // A generic body instantiated repeatedly with the same argument reports once.
-  for existing of plan.jsonErrors {
+  reportInstantiationError(plan, modulePath, member.span, message)
+}
+
+// A generic body instantiated repeatedly with the same argument reports once.
+function reportInstantiationError(plan: CheckedInstantiations, modulePath: string, sourceSpan: SourceSpan, message: string): none {
+  span := checkerSemanticSpan(sourceSpan)
+  for existing of plan.errors {
     if existing.module == modulePath && existing.span.start.offset == span.start.offset && existing.message == message { return }
   }
-  plan.jsonErrors.push(Diagnostic { severity: "error", message, span, module: modulePath })
+  plan.errors.push(Diagnostic { severity: "error", message, span, module: modulePath })
+}
+
+// Map and Set literals are where generic bodies construct hash collections.
+function validateSpecializedLiteral(literal: Expression, names: string[], arguments: ResolvedType[], modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations): none {
+  if literal.resolvedType == none { return }
+  case literal.resolvedType! {
+    map: MapResolvedType -> { validateSpecializedHashKey(HashKeyCandidate { key: map.keyType, role: "Map key" }, names, arguments, literal.span, modulePath, analysis, plan) }
+    set_: SetResolvedType -> { validateSpecializedHashKey(HashKeyCandidate { key: set_.elementType, role: "Set element" }, names, arguments, literal.span, modulePath, analysis, plan) }
+    _ -> { }
+  }
+}
+
+// Generic bodies accept type-parameter keys; each concrete instantiation
+// validates the Map keys and Set elements its substitution produces.
+function validateSpecializedHashKeys(type_: ResolvedType, names: string[], arguments: ResolvedType[], span: SourceSpan, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations): none {
+  for part of specializedHashKeyCandidates(type_) { validateSpecializedHashKey(part, names, arguments, span, modulePath, analysis, plan) }
+}
+
+function validateSpecializedHashKey(part: HashKeyCandidate, names: string[], arguments: ResolvedType[], span: SourceSpan, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations): none {
+  if names.length == 0 || !containsTypeParameters([part.key]) { return }
+  let bindings = ""
+  for index of 0..<names.length {
+    if index < arguments.length { bindings = bindings + (if bindings == "" then "" else ", ") + names[index] + " = " + typeName(arguments[index]) }
+  }
+  message := hashKeyDiagnostic(analysis, specialize(part.key, names, arguments), part.role, part.key, bindings)
+  if message != none { reportInstantiationError(plan, modulePath, span, message!) }
+}
+
+class HashKeyCandidate {
+  key: ResolvedType
+  role: string
+}
+
+function specializedHashKeyCandidates(type_: ResolvedType): HashKeyCandidate[] {
+  let found: HashKeyCandidate[] = []
+  collectHashKeyCandidates(type_, found)
+  return found
+}
+
+function collectHashKeyCandidates(type_: ResolvedType, found: HashKeyCandidate[]): none {
+  case type_ {
+    map: MapResolvedType -> { found.push(HashKeyCandidate { key: map.keyType, role: "Map key" }); collectHashKeyCandidates(map.keyType, found); collectHashKeyCandidates(map.valueType, found) }
+    set_: SetResolvedType -> { found.push(HashKeyCandidate { key: set_.elementType, role: "Set element" }); collectHashKeyCandidates(set_.elementType, found) }
+    array: ArrayResolvedType -> { collectHashKeyCandidates(array.elementType, found) }
+    class_: ClassType -> { for argument of class_.typeArgs { collectHashKeyCandidates(argument, found) } }
+    interface_: InterfaceType -> { for argument of interface_.typeArgs { collectHashKeyCandidates(argument, found) } }
+    stream: StreamResolvedType -> { collectHashKeyCandidates(stream.elementType, found) }
+    result: ResultResolvedType -> { collectHashKeyCandidates(result.valueType, found); collectHashKeyCandidates(result.errorType, found) }
+    success: SuccessResolvedType -> { collectHashKeyCandidates(success.valueType, found) }
+    failure: FailureResolvedType -> { collectHashKeyCandidates(failure.errorType, found) }
+    actor: ActorType -> { collectHashKeyCandidates(actor.innerClass, found) }
+    promise: PromiseType -> { collectHashKeyCandidates(promise.valueType, found) }
+    tuple: TupleResolvedType -> { for element of tuple.elements { collectHashKeyCandidates(element, found) } }
+    union_: UnionResolvedType -> { for member of union_.types { collectHashKeyCandidates(member, found) } }
+    weak_: WeakResolvedType -> { collectHashKeyCandidates(weak_.inner, found) }
+    function_: FunctionType -> {
+      for parameter of function_.params { collectHashKeyCandidates(parameter.type_, found) }
+      collectHashKeyCandidates(function_.returnType, found)
+    }
+    _ -> { }
+  }
 }
 
 function addJsonSerializationDemand(plan: CheckedInstantiations, type_: ResolvedType, analysis: AnalysisResult): none {

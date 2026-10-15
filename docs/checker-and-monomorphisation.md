@@ -97,6 +97,13 @@ crosses these layers:
 Inference is a checker concern. Reachability is a monomorphiser concern. C++
 overload resolution is not used to finish either job.
 
+Some rules cannot be decided while a type parameter is still open. The checker
+accepts `Map<T, V>` and `Set<T>` keys, then `checked-instantiations.do`
+validates each concrete substitution at parameters, fields, and map/set
+literals with the checker's own `hashKeyDiagnostic`. Those diagnostics, like
+implied JSON member errors, are produced by discovery, so `doof check` runs
+discovery after a clean check (without naming or emission).
+
 ## Slice: a generic class or struct
 
 For `Box<int>`:

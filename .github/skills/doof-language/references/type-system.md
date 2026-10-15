@@ -403,7 +403,20 @@ ids: Map<long, string> := { 1L: "one", 2L: "two" }
 frozenScores: ReadonlyMap := { "Alice": 100 }
 ```
 
-Supported key types are `string`, `int`, `long`, `char`, `bool`, and enums.
+Keys follow Doof `==`: `byte`, `string`, `int`, `long`, `char`, `bool`, and enums by
+value; class and interface references by identity; tuples, unions (including
+`T | none`), and structs of those by their members. `float`/`double` (at any
+depth), arrays, maps, sets, callbacks, and weak references are rejected. Generic
+`Map<T, V>` is checked per instantiation (`when T = double`).
+
+Wrap non-literal keys in parentheses in map literals; brackets take the key type
+as context:
+
+```doof
+grid: Map<Tuple<int, int>, string> := { (0, 0): "origin", (node.x, node.y): "here" }
+owners: Map<Player, int> := { (alice): 1 }
+counts[.Spades] = 1
+```
 
 Rules:
 
@@ -444,7 +457,8 @@ view: readonly Set := [1, 2, 3]
 readonly deepIds: Set = [1, 2, 3]
 ```
 
-Supported element types are `string`, `int`, `long`, `char`, `bool`, and enums.
+Element types follow the map key rules above (tuples, structs, unions, and
+class/interface identity included; floating point excluded).
 
 Rules:
 

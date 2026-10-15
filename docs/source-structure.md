@@ -61,6 +61,7 @@ modules own the following decisions:
 | `checker-try.do` | Result propagation boundaries, error compatibility, and success declaration and assignment (`try target = expr`) checking |
 | `checker-absence.do` | Types of postfix `?`, optional access, and the postfix `?`/`!` receiver nodes that lower Result receivers of `?.`, `?[]`, `!.`, and `??` |
 | `checker-struct-layout.do` | Struct value-layout validation, rejecting structs that contain themselves by value |
+| `checker-hash-keys.do` | Map key and Set element validation: scalars and enums, class/interface identity, and tuples, unions, and structs of those; never floating point |
 | `checker-numeric.do` | Numeric bound membership, operator capabilities, and correlated promotion |
 | `checker-constants.do` | Compile-time evaluation of constant int expressions, shared by enum backing values and range bound checks |
 | `checker-inference.do` | Contextual path validation and common-type inference; only optional unions are synthesized for value paths |
@@ -141,7 +142,7 @@ emitter or individual expression branch.
 | `emitter-declarations.do` | One per-graph index of programs, modules, and top-level declarations keyed by defining module and name; shared by the context, worldview, module, and Wasm emitters |
 | `emitter-names.do` | Immutable per-compilation namespace snapshots; pure stable filenames, diagnostics and native paths; shared C++ keyword escaping; package top-level namespaces avoid C globals |
 | `emitter-reserved-globals.do` | C and POSIX global names that a package's top-level namespace must not reuse |
-| `checked-instantiations.do` | Semantic specialization fixed point and shared JSON demand traversal |
+| `checked-instantiations.do` | Semantic specialization fixed point and shared JSON demand traversal, plus per-instantiation validation the checker defers for type parameters (hash-collection keys, implied JSON members) |
 | `emitter-monomorphize.do` | C++ naming adapter over semantic specialization discovery |
 | `emitter-dependencies.do` | Immutable ordered direct-dependency extraction from checked surfaces, root bodies and concrete argument types |
 | `emitter-worldview.do` | Symbol and dependency-summary indexing over the shared declaration index, recursive dependency-summary replay, native closure and consumer-local declaration selection/order |

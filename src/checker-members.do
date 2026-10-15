@@ -19,7 +19,7 @@ import { displayTypeName, neverType, primitive, sameType, typeName, unionType, u
 import { checkerSemanticSpan } from "./checker-validation"
 import { unionAliasJsonDiscriminator } from "./json-semantics"
 import type { Symbol } from "./semantic"
-import { Binding, ClassType, EnumType, FunctionType, ResolvedType, Scope, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { Binding, ClassType, EnumType, FunctionType, MapResolvedType, ResolvedType, Scope, UnionResolvedType, WeakResolvedType } from "./semantic"
 
 /** Checks 'object.member', including '?.' and '!.' over absent and weak receivers. */
 export function checkMember(state: CheckerState, member: MemberExpression, scope: Scope, expected: ResolvedType | none, calleePosition: bool): ResolvedType {
@@ -157,7 +157,6 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
 /** Checks 'object[index]', including '?[]' over absent receivers. */
 export function checkIndex(state: CheckerState, index: IndexExpression, scope: Scope): ResolvedType {
   let objectType = checkExpression(state, index.object, scope, none)
-  indexValueType := checkExpression(state, index.index, scope, primitive("int"))
   let optionalReceiver = false
   if index.optional {
     if hasFailureLayer(objectType) {
@@ -183,6 +182,14 @@ export function checkIndex(state: CheckerState, index: IndexExpression, scope: S
       }
     }
   }
+  // Map keys check against the key type so tuple, enum-shorthand, and union
+  // keys get the same context as in map literals.
+  let indexContext: ResolvedType = primitive("int")
+  case objectType {
+    map: MapResolvedType -> { indexContext = map.keyType }
+    _ -> { }
+  }
+  indexValueType := checkExpression(state, index.index, scope, indexContext)
   resolved := indexType(state, objectType, indexValueType, index.span)
   if objectType.kind == "never" || indexValueType.kind == "never" { return finish(state, index, neverType()) }
   if optionalReceiver && resolved.kind != "unknown" {

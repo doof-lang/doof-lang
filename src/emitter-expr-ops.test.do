@@ -229,3 +229,29 @@ export function testWeakFieldAccessOnAnImplementationlessInterfaceIsUnreachable(
   Assert.stringContains(source, "(static_cast<void>(_weak_value_1), doof::no_implementations<std::string>(\"Shape\"))")
   Assert.stringNotContains(source, "_weak_item->name")
 }
+
+enum HashKeySuit { Spades, Hearts }
+class HashKeyNode { name: string }
+
+export function testMapIndexConvertsKeysToTheKeyRepresentation(): none {
+  source := emittedSource("function f(m: Map<int | string, int>): int {\nm[1] = 2\nreturn m[\"a\"]\n}")
+  Assert.stringContains(source, "doof::map_index(m, doof::variant_promote<std::variant<int32_t, std::string>>(1), ")
+  Assert.stringContains(source, "doof::map_at(m, doof::variant_promote<std::variant<int32_t, std::string>>(std::string(\"a\")), ")
+
+  let unions: Map<int | string, int> = {}
+  unions[1] = 1
+  unions["1"] = 2
+  Assert.equal(unions.size, 2)
+  Assert.equal(unions[1], 1)
+  let tuples: Map<Tuple<HashKeySuit, string | none>, int> = { (.Spades, none): 1 }
+  tuples[(.Spades, "x")] = 2
+  tuples[(.Spades, none)] = 3
+  Assert.equal(tuples.size, 2)
+  Assert.equal(tuples[(.Spades, none)], 3)
+  first := HashKeyNode { name: "n" }
+  second := HashKeyNode { name: "n" }
+  let identities: Map<HashKeyNode, int> = { (first): 1 }
+  identities[second] = 2
+  Assert.equal(identities.size, 2)
+  Assert.equal(identities[first], 1)
+}

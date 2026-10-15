@@ -108,6 +108,32 @@ export function testStructFieldEqualityRuntimePaths(): none {
   Assert.equal(EqualityGeneric<int> { value: 3 }, EqualityGeneric<int> { value: 3 })
 }
 
+export function testEmitsStructKeyHashOverEqualityFields(): none {
+  result := emit("struct Color { red: int\nlabel: string\nstatic let count: int = 0 }\nstruct Empty {}\nclass Node { value: int }")
+  Assert.stringContains(result.header, "template <typename _DoofSelf = Color>\n    std::size_t doof_hash_value() const {")
+  Assert.stringContains(result.header, "doof::key_hash_combine(_doof_seed, doof::key_hash<std::decay_t<decltype(_doof_self.red)>>{}(_doof_self.red));")
+  Assert.stringContains(result.header, "doof::key_hash_combine(_doof_seed, doof::key_hash<std::decay_t<decltype(_doof_self.label)>>{}(_doof_self.label));")
+  Assert.stringNotContains(result.header, "_doof_self.count")
+  Assert.stringContains(result.header, "_DoofSelf = Empty>")
+  Assert.stringNotContains(result.header, "_DoofSelf = Node>")
+}
+
+export function testStructKeysFollowFieldEquality(): none {
+  node := EqualityNode { value: 1 }
+  let keys: Set<EqualityReference> = [EqualityReference { node }, EqualityReference { node }, EqualityReference { node: EqualityNode { value: 1 } }]
+  Assert.equal(keys.size, 2)
+  let nested: Map<EqualityNested, int> = {}
+  nested[EqualityNested { color: EqualityColor { red: 7 }, label: "red" }] = 1
+  nested[EqualityNested { color: EqualityColor { red: 7 }, label: "red" }] = 2
+  nested[EqualityNested { color: EqualityColor { red: 8 }, label: "red" }] = 3
+  Assert.equal(nested.size, 2)
+  Assert.equal(nested[EqualityNested { color: EqualityColor { red: 7 }, label: "red" }], 2)
+  let generic: Set<EqualityGeneric<string>> = [EqualityGeneric<string> { value: "a" }, EqualityGeneric<string> { value: "a" }]
+  Assert.equal(generic.size, 1)
+  let empty: Set<EqualityEmpty> = [EqualityEmpty {}, EqualityEmpty {}]
+  Assert.equal(empty.size, 1)
+}
+
 export function testRejectsEqualityAcrossNominalStructTypes(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "struct Left { value: int }\nstruct Right { value: int }\n" +

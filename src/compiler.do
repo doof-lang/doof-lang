@@ -74,24 +74,27 @@ function compileInternal(
   frontend := analyzeWithLoader(sources, entry, loader, entryMode, timings)
   analysis := frontend.analysis
   diagnostics := frontend.diagnostics
-  if hasErrorDiagnostics(diagnostics) || !emit {
+  if hasErrorDiagnostics(diagnostics) {
+    return Compilation { emission: none, diagnostics, sourceFiles: frontend.sourceFiles, resolutionProbes: frontend.resolutionProbes }
+  }
+  // Concrete instantiations validate what generic bodies defer, such as Map
+  // keys and implied JSON members over type parameters, so checking runs it too.
+  instantiationStart := timings.start()
+  discoveryStart := timings.start()
+  checkedInstantiations := discoverInstantiations(analysis)
+  timings.finish("compiler.instantiation-discovery", discoveryStart)
+  if checkedInstantiations.errors.length > 0 || !emit {
+    timings.finish("compiler.instantiations", instantiationStart)
+    for diagnostic of checkedInstantiations.errors { diagnostics.push(diagnostic) }
     return Compilation { emission: none, diagnostics, sourceFiles: frontend.sourceFiles, resolutionProbes: frontend.resolutionProbes }
   }
   paths: string[] := []
   for module of analysis.modules { paths.push(module.path) }
   names := prepareModuleNames(namespaceMappings, paths)
-  instantiationStart := timings.start()
-  discoveryStart := timings.start()
-  checkedInstantiations := discoverInstantiations(analysis)
-  timings.finish("compiler.instantiation-discovery", discoveryStart)
   namingStart := timings.start()
   instantiations := nameInstantiations(checkedInstantiations, names)
   timings.finish("compiler.instantiation-naming", namingStart)
   timings.finish("compiler.instantiations", instantiationStart)
-  if checkedInstantiations.jsonErrors.length > 0 {
-    for diagnostic of checkedInstantiations.jsonErrors { diagnostics.push(diagnostic) }
-    return Compilation { emission: none, diagnostics, sourceFiles: frontend.sourceFiles, resolutionProbes: frontend.resolutionProbes }
-  }
   if instantiations.overflow {
     let trace = ""
     for item of instantiations.overflowTrace { trace = trace + (if trace == "" then "" else " -> ") + item }

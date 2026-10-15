@@ -78,12 +78,12 @@ export function testImpliedInterfaceEncodingNamesTheBlockingImplementation(): no
     "function main(): none { pet: Pet := Dog { name: \"Rex\" }\nencode<Pet>(pet) }" }]).analyze("/main.do")
   Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
   catalog := discoverInstantiations(analysis)
-  Assert.equal(catalog.jsonErrors.length, 1)
-  Assert.equal(catalog.jsonErrors[0].message, "Type \"Pet\" does not support automatic JSON serialization (implementing class \"Robot\" does not support it), required by 'toSerialObject' on type parameter \"T\"")
+  Assert.equal(catalog.errors.length, 1)
+  Assert.equal(catalog.errors[0].message, "Type \"Pet\" does not support automatic JSON serialization (implementing class \"Robot\" does not support it), required by 'toSerialObject' on type parameter \"T\"")
   // The error points at the member access inside the generic body.
-  Assert.equal(catalog.jsonErrors[0].span.start.line, 6)
-  Assert.equal(catalog.jsonErrors[0].span.end.line, 6)
-  Assert.isTrue(catalog.jsonErrors[0].span.end.offset > catalog.jsonErrors[0].span.start.offset)
+  Assert.equal(catalog.errors[0].span.start.line, 6)
+  Assert.equal(catalog.errors[0].span.end.line, 6)
+  Assert.isTrue(catalog.errors[0].span.end.offset > catalog.errors[0].span.start.offset)
 }
 
 function joined(values: string[]): string {
@@ -111,4 +111,29 @@ export function testMetadataTypeArgumentsAreSpecializedPerCaller(): none {
   Assert.equal(keys.length, 2)
   Assert.stringContains(joined(keys), "Point")
   Assert.stringContains(joined(keys), "Line")
+}
+
+export function testConcreteInstantiationsValidateTypeParameterHashKeys(): none {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source:
+    "struct Box<T> { value: T }\n" +
+    "function index<T>(key: T): Map<T, int> {\nlet m: Map<T, int> = {}\nm.set(key, 1)\nreturn m\n}\n" +
+    "function pairs<T>(key: T): Set<Tuple<T, int>> => [(key, 1)]\n" +
+    "function count<T>(values: Set<Box<T>>): int => values.size\n" +
+    "class Bag<T> { items: Set<T> = [] }\n" +
+    "function main(): none {\nindex(1.5)\nindex((1, \"a\"))\nindex(\"ok\")\nindex(2.5)\npairs(2.0)\ncount<float>([])\nBag<float> {}\n}" }]).analyze("/main.do")
+  Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
+  catalog := discoverInstantiations(analysis)
+  let report = ""
+  for error of catalog.errors {
+    line := string(error.span.start.line) + ": " + error.message.split(";")[0]
+    report = if report == "" then line else report + "\n" + line
+  }
+  // Discovery order interleaves functions and classes; repeated
+  // instantiations with the same argument report once.
+  Assert.equal(report,
+    "3: Map key type \"T\" is not supported when T = double\n" +
+    "9: Set element type \"T\" is not supported when T = float\n" +
+    "9: Set element type \"T\" is not supported when T = float\n" +
+    "7: Set element type \"(T, int)\" is not supported when T = double (contains \"double\")\n" +
+    "8: Set element type \"Box<T>\" is not supported when T = float (field \"value\" of \"Box<float>\" has type \"float\")")
 }

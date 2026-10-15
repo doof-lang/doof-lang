@@ -207,3 +207,17 @@ export function testUnionAliasDecoderSignature(): none {
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
 }
+
+export function testMapIndexChecksKeysAgainstTheKeyType(): none {
+  result := checked(
+    "enum Suit { Spades, Hearts }\n" +
+    "function main(): none {\nlet counts: Map<Suit, int> = {}\ncounts[.Spades] = 1\nprintln(counts[.Hearts])\n" +
+    "let pairs: Map<Tuple<Suit, string | none>, int> = {}\npairs[(.Hearts, none)] = 2\nprintln(pairs[(.Hearts, \"x\")])\n" +
+    "let flags: Map<int | string, bool> = {}\nprintln(flags[1])\n}",
+  )
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  wrong := checked("function main(): none {\nlet counts: Map<string, int> = {}\nprintln(counts[1])\n}")
+  Assert.equal(wrong.diagnostics.length, 1)
+  Assert.equal(wrong.diagnostics[0].message, "Invalid map key type")
+}

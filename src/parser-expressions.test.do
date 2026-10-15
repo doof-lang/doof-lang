@@ -1,7 +1,7 @@
 import { Assert as EditorAssert } from "std/assert"
 import { Parser as EditorParser } from "./parser"
 import { Assert } from "std/assert"
-import { BinaryExpression, CallExpression, ConstructExpression, ExpressionStatement, MemberExpression, UnaryExpression } from "./ast"
+import { BinaryExpression, CallExpression, ConstructExpression, ExpressionStatement, LetDeclaration, MemberExpression, ObjectLiteral, UnaryExpression } from "./ast"
 import { parse } from "./parser"
 
 export function testInterfaceBoundNestedExplicitCallClosers(): none {
@@ -49,4 +49,19 @@ export function testPostfixQuestionConvertsTheOperand(): none {
   member := chained.expression as MemberExpression else { panic("expected member access") }
   Assert.isTrue(member.force)
   Assert.equal(member.object.kind, "optional-conversion")
+}
+
+export function testParenthesizedMapKeysAcceptAnyExpression(): none {
+  program := parse("let m = { (1, \"a\"): 1, (node): 2, (Point { x: 1 }): 3, ((a)): 4 }")
+  declaration := program.statements[0] as LetDeclaration else { panic("expected let declaration") }
+  object := declaration.value as ObjectLiteral else { panic("expected map literal") }
+  Assert.equal(object.properties.length, 4)
+  let kinds = ""
+  for property of object.properties {
+    Assert.isTrue(property.key != none)
+    Assert.isTrue(property.value != none)
+    kinds = kinds + property.key!.kind + ";"
+  }
+  // The colon after the closing parenthesis starts the value, never a lambda return type.
+  Assert.equal(kinds, "tuple-literal;identifier;construct-expression;identifier;")
 }

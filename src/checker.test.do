@@ -2418,9 +2418,12 @@ export function testRejectsUnsupportedSetElementTypes(): none {
   Assert.equal(numeric.diagnostics.length > 0, true)
   Assert.equal(numeric.diagnostics[0].message.contains("Set element type \"float\" is not supported"), true)
 
-  nominal := checked("class Item {}\nfunction use(values: ReadonlySet<Item>): void {}")
-  Assert.equal(nominal.diagnostics.length > 0, true)
-  Assert.equal(nominal.diagnostics[0].message.contains("Set element type \"Item\" is not supported"), true)
+  collection := checked("function use(values: ReadonlySet<int[]>): void {}")
+  Assert.equal(collection.diagnostics.length > 0, true)
+  Assert.equal(collection.diagnostics[0].message.contains("Set element type \"int[]\" is not supported"), true)
+
+  identity := checked("class Item {}\nfunction use(values: ReadonlySet<Item>): void {}")
+  Assert.equal(identity.diagnostics.length, 0)
 }
 
 export function testKeepsSetMutabilityInvariant(): none {

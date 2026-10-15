@@ -300,6 +300,17 @@ export function planClassDeclaration(decl: ClassDeclaration, context: EmitContex
     }
     result.text((if comparison == "" then "true" else comparison) + "; }\n")
     result.text("    template <typename _DoofOther = " + className + ">\n    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }\n")
+    // Map keys and Set elements hash the same fields equality compares. The
+    // dependent self type defers field hashing until a hash collection uses it.
+    result.text("    template <typename _DoofSelf = " + className + ">\n    std::size_t doof_hash_value() const {\n        const _DoofSelf& _doof_self = *this;\n        std::size_t _doof_seed = 0;\n")
+    for field of decl.fields {
+      if field.static_ { continue }
+      for name of field.names {
+        member := cppIdentifier(name)
+        result.text("        doof::key_hash_combine(_doof_seed, doof::key_hash<std::decay_t<decltype(_doof_self." + member + ")>>{}(_doof_self." + member + "));\n")
+      }
+    }
+    result.text("        return _doof_seed;\n    }\n")
   }
   result.text(emitGeneratedJsonDeclarations(decl, context))
   result.text(emitMetadataDeclaration(decl))

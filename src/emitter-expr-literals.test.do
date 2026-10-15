@@ -128,3 +128,12 @@ export function testTupleLiteralElementsConvertToCheckedSlots(): none {
   Assert.stringContains(source, "return std::tuple<std::variant<int32_t, std::string>, std::optional<int32_t>>(doof::variant_promote<std::variant<int32_t, std::string>>(std::string(\"r\")), std::nullopt);")
   Assert.stringContains(source, "return std::tuple<int32_t, std::string>(1, std::string(\"x\"));")
 }
+
+export function testSetLiteralElementsConvertToTheElementRepresentation(): none {
+  result := compile([SourceFile { path: "/main.do", source: "function f(): Set<string | none> => [\"a\", none]" }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.stringContains(result.emission!.modules[0].source, "doof::ordered_set<std::optional<std::string>>{std::string(\"a\"), std::nullopt}")
+  let values: Set<int | string | none> = [1, "1", none, 1, none]
+  Assert.equal(values.size, 3)
+}

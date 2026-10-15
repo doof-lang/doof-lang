@@ -849,6 +849,64 @@ R call_callback_unchecked(const doof::callback<R(Args...)>& cb, Args... args) {
 }
 
 // ============================================================================
+// Key hashing — Map keys and Set elements
+// ============================================================================
+
+// Hash consistent with Doof `==` for every checker-approved key type: scalars,
+// strings, and enums by value; class and interface references by identity;
+// tuples, optionals, unions, and structs by their members. Generated structs
+// expose `doof_hash_value()` over the fields their `operator==` compares.
+inline void key_hash_combine(std::size_t& seed, std::size_t value) {
+    seed ^= value + static_cast<std::size_t>(0x9e3779b97f4a7c15ULL) + (seed << 6) + (seed >> 2);
+}
+
+template <typename T, typename = void>
+struct key_hash {
+    std::size_t operator()(const T& value) const { return std::hash<T>{}(value); }
+};
+
+template <typename T>
+struct key_hash<T, std::void_t<decltype(std::declval<const T&>().doof_hash_value())>> {
+    std::size_t operator()(const T& value) const { return value.doof_hash_value(); }
+};
+
+template <typename... Ts>
+struct key_hash<std::tuple<Ts...>, void> {
+    std::size_t operator()(const std::tuple<Ts...>& value) const {
+        std::size_t seed = sizeof...(Ts);
+        std::apply([&seed](const auto&... item) {
+            (key_hash_combine(seed, key_hash<std::decay_t<decltype(item)>>{}(item)), ...);
+        }, value);
+        return seed;
+    }
+};
+
+template <typename T>
+struct key_hash<std::optional<T>, void> {
+    std::size_t operator()(const std::optional<T>& value) const {
+        std::size_t seed = value.has_value() ? 1 : 0;
+        if (value) key_hash_combine(seed, key_hash<T>{}(*value));
+        return seed;
+    }
+};
+
+template <typename... Ts>
+struct key_hash<std::variant<Ts...>, void> {
+    std::size_t operator()(const std::variant<Ts...>& value) const {
+        std::size_t seed = value.index();
+        std::visit([&seed](const auto& item) {
+            key_hash_combine(seed, key_hash<std::decay_t<decltype(item)>>{}(item));
+        }, value);
+        return seed;
+    }
+};
+
+template <>
+struct key_hash<NoImplementations, void> {
+    std::size_t operator()(const NoImplementations&) const { return 0; }
+};
+
+// ============================================================================
 // Ordered collections — insertion-order preserving Map/Set runtime types
 // ============================================================================
 
@@ -1037,7 +1095,7 @@ private:
     }
 
     storage_type entries_;
-    std::unordered_map<K, size_type> index_;
+    std::unordered_map<K, size_type, key_hash<K>> index_;
 };
 
 template <typename K, typename V>
@@ -1201,7 +1259,7 @@ private:
     }
 
     storage_type values_;
-    std::unordered_map<T, size_type> index_;
+    std::unordered_map<T, size_type, key_hash<T>> index_;
 };
 
 template <typename T>

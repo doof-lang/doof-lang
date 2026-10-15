@@ -578,6 +578,11 @@ function parseParenExpression(parser: Parser): Expression {
     parser.expect(TokenType.RightParen)
     return finishLambda(parser, params, start)
   }
+  return parseParenthesizedGroup(parser, start)
+}
+
+// A grouped expression or tuple literal, never a lambda.
+function parseParenthesizedGroup(parser: Parser, start: AstLocation): Expression {
   parser.expect(TokenType.LeftParen)
   if parser.check(TokenType.RightParen) {
     parser.advance()
@@ -676,6 +681,12 @@ function parseObjectLiteral(parser: Parser): Expression {
         value = parser.parseExpression()
       } else if parser.check(TokenType.Dot) && parser.peek(1).kind == TokenType.Identifier && parser.peek(2).kind == TokenType.Colon {
         key = parser.parseExpression()
+        parser.expect(TokenType.Colon, "Expected ':' after map key")
+        value = parser.parseExpression()
+      } else if parser.check(TokenType.LeftParen) {
+        // A parenthesized key admits any expression, such as a tuple or a
+        // construction; the colon after it starts the value, not a lambda type.
+        key = parseParenthesizedGroup(parser, parser.location())
         parser.expect(TokenType.Colon, "Expected ':' after map key")
         value = parser.parseExpression()
       } else if looksLikeExpressionMapKey(parser) {

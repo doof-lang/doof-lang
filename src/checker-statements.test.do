@@ -279,9 +279,9 @@ export function testLocalDeclarationAnnotationsReportOnce(): none {
     Assert.equal(result.diagnostics.length, 1)
     Assert.equal(result.diagnostics[0].message, "Unknown type 'Missing'")
   }
-  map := checked("class Key {}\nfunction main(): none { values: Map<Key, int> := {} }")
+  map := checked("function main(): none { values: Map<double, int> := {} }")
   Assert.equal(map.diagnostics.length, 1)
-  Assert.stringContains(map.diagnostics[0].message, "Map key type \"Key\" is not supported")
+  Assert.stringContains(map.diagnostics[0].message, "Map key type \"double\" is not supported")
 }
 
 export function testForOfAcceptsClassStreamsDeclaredAfterTheLoop(): none {

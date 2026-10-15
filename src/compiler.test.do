@@ -38,6 +38,16 @@ export function testCheckOnlyDoesNotProduceEmission(): none {
   Assert.equal(result.emission, none)
 }
 
+export function testCheckOnlyReportsConcreteInstantiationErrors(): none {
+  result := checkWithLoader([
+    SourceFile { path: "/main.do", source: "function index<T>(key: T): Map<T, int> => { (key): 1 }\nfunction main(): none { index(1.5) }" },
+  ], "/main.do", noSourceLoader)
+  Assert.equal(result.emission, none)
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "Map key type \"T\" is not supported when T = double")
+  Assert.equal(result.diagnostics[0].span.start.line, 1)
+}
+
 export function testEmitsPhysicalDoofSourceLineMappingsForProfiling(): none {
   result := compileWithLoader([
     SourceFile {
