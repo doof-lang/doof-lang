@@ -12,10 +12,10 @@ import {
   ArrayLiteral, ArrayType, AsExpression, AssignmentExpression, AstLocation, BinaryExpression, Block,
   BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ClassField, ConstructExpression,
   ConstDeclaration, ContinueStatement, DestructuringStatement, DoubleLiteral,
-  DotShorthand, EnumDeclaration, ExportDeclaration, ExportList, Expression, ExpressionStatement,
+  DotShorthand, EnumDeclaration, EnumVariant, ExportDeclaration, ExportList, Expression, ExpressionStatement,
   FloatLiteral, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType,
   IfExpression, IfStatement, ImmutableBinding, Identifier, ImportDeclaration, MockImportDirective,
-  IndexExpression, IntLiteral, InterfaceDeclaration, LetDeclaration,
+  IndexExpression, IntLiteral, InterfaceDeclaration, InterfaceField, LetDeclaration,
   LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral,
   NamedImport, ObjectLiteral, ObjectProperty, Program,
   ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral,
@@ -44,7 +44,8 @@ import { checkCallerDefault, checkExpression, addClassMethods } from "./checker-
 import { checkedCaseSubjectType, casePatternsExhaustive, checkCasePatterns } from "./checker-case"
 import { checkOmittedCollectionLiteral } from "./checker-literals"
 import { constantInt } from "./checker-constants"
-import { resolveType, memberType, resolveMember } from "./checker-resolution"
+import { memberType, resolveMember } from "./checker-resolution"
+import { resolveType } from "./checker-annotations"
 import { deprecatedClassMethodFunction, deprecatedConstDeclaration, deprecatedConstField, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
 import { decorateAnnotationWithResolved, blockContainsLoopExit, containsString, classFieldBinding, fieldDisplayName, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
 import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterface, isAssignableWithInterfaces } from "./checker-interfaces"
@@ -510,17 +511,18 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
 }
 
 function validateUniqueClassMembers(state: CheckerState, class_: ClassDeclaration): none {
+  owner := "class \"" + class_.name + "\""
   let names: string[] = []
   for field of class_.fields {
-    for name of field.names {
-      if containsString(names, name) { typeError(state, "Member \"" + name + "\" is already declared in class \"" + class_.name + "\"", field.span) }
-      else { names.push(name) }
-    }
+    for name of field.names { declareUniqueName(state, names, "Member", name, owner, field.span) }
   }
-  for method of class_.methods {
-    if containsString(names, method.name) { typeError(state, "Member \"" + method.name + "\" is already declared in class \"" + class_.name + "\"", method.span) }
-    else { names.push(method.name) }
-  }
+  for method of class_.methods { declareUniqueName(state, names, "Member", method.name, owner, method.span) }
+}
+
+// Reports a name already declared in the same namespace and records the rest.
+function declareUniqueName(state: CheckerState, names: string[], label: string, name: string, owner: string, span: SourceSpan): none {
+  if containsString(names, name) { typeError(state, label + " \"" + name + "\" is already declared in " + owner, span) }
+  else { names.push(name) }
 }
 
 function validateConstructorDeclaration(state: CheckerState, class_: ClassDeclaration, constructor: FunctionDeclaration, owner: ClassType): none {
@@ -586,39 +588,25 @@ export function checkInterface(state: CheckerState, interface_: InterfaceDeclara
   validateUniqueInterfaceMembers(state, interface_)
   interfaceScope := Scope { parent: scope, typeParams: [] }
   populateTypeParameters(state, interfaceScope, interface_.typeParams, interface_.typeParamConstraints)
-  for field of interface_.fields {
-    let fieldType = resolveType(state, field.type_, state.info!, interfaceScope)
-    if field.readonly_ { fieldType = applyDeepReadonly(fieldType) }
-    field.resolvedType = fieldType
-  }
+  for field of interface_.fields { resolveInterfaceField(state, field, interfaceScope) }
   for method of interface_.methods { checkFunction(state, method, interfaceScope, none) }
-  for field of interface_.staticFields {
-    let fieldType = resolveType(state, field.type_, state.info!, interfaceScope)
-    if field.readonly_ { fieldType = applyDeepReadonly(fieldType) }
-    field.resolvedType = fieldType
-  }
+  for field of interface_.staticFields { resolveInterfaceField(state, field, interfaceScope) }
   for method of interface_.staticMethods { checkFunction(state, method, interfaceScope, none) }
 }
 
+function resolveInterfaceField(state: CheckerState, field: InterfaceField, scope: Scope): none {
+  fieldType := resolveType(state, field.type_, state.info!, scope)
+  field.resolvedType = if field.readonly_ then applyDeepReadonly(fieldType) else fieldType
+}
+
 function validateUniqueInterfaceMembers(state: CheckerState, interface_: InterfaceDeclaration): none {
+  owner := "interface \"" + interface_.name + "\""
   let names: string[] = []
-  for field of interface_.fields {
-    if containsString(names, field.name) { typeError(state, "Member \"" + field.name + "\" is already declared in interface \"" + interface_.name + "\"", field.span) }
-    else { names.push(field.name) }
-  }
-  for method of interface_.methods {
-    if containsString(names, method.name) { typeError(state, "Member \"" + method.name + "\" is already declared in interface \"" + interface_.name + "\"", method.span) }
-    else { names.push(method.name) }
-  }
+  for field of interface_.fields { declareUniqueName(state, names, "Member", field.name, owner, field.span) }
+  for method of interface_.methods { declareUniqueName(state, names, "Member", method.name, owner, method.span) }
   let staticNames: string[] = []
-  for field of interface_.staticFields {
-    if containsString(staticNames, field.name) { typeError(state, "Static member \"" + field.name + "\" is already declared in interface \"" + interface_.name + "\"", field.span) }
-    else { staticNames.push(field.name) }
-  }
-  for method of interface_.staticMethods {
-    if containsString(staticNames, method.name) { typeError(state, "Static member \"" + method.name + "\" is already declared in interface \"" + interface_.name + "\"", method.span) }
-    else { staticNames.push(method.name) }
-  }
+  for field of interface_.staticFields { declareUniqueName(state, staticNames, "Static member", field.name, owner, field.span) }
+  for method of interface_.staticMethods { declareUniqueName(state, staticNames, "Static member", method.name, owner, method.span) }
 }
 
 // Constraint annotations live in the declaration scope so ordinary constraints
@@ -706,55 +694,34 @@ function validateTypeParameterShadowing(state: CheckerState, names: string[], ou
 }
 
 export function checkEnum(state: CheckerState, enum_: EnumDeclaration, scope: Scope): none {
-  let names: string[] = []
   let stringBacked = false
   for variant of enum_.variants {
-    if variant.value == none { continue }
-    case variant.value! {
-      literal: StringLiteral -> { if literal.interpolations.length == 0 { stringBacked = true } }
-      _ -> { }
-    }
+    if variant.value != none && literalStringValue(variant.value!) != none { stringBacked = true }
   }
   enum_.backingKind = if stringBacked then "string" else "int"
-  if stringBacked {
-    let values: string[] = []
-    let valueNames: string[] = []
-    for variant of enum_.variants {
-      if containsString(names, variant.name) { typeError(state, "Variant \"" + variant.name + "\" is already declared in enum \"" + enum_.name + "\"", variant.span) }
-      else { names.push(variant.name) }
+  owner := "enum \"" + enum_.name + "\""
+  let names: string[] = []
+  // Values are compared by their source text; one enum never mixes kinds.
+  let values: string[] = []
+  let valueNames: string[] = []
+  let nextValue = 0L
+  for variant of enum_.variants {
+    declareUniqueName(state, names, "Variant", variant.name, owner, variant.span)
+    if stringBacked {
       if variant.value == none {
         typeError(state, "String enum variant \"" + variant.name + "\" requires an explicit string value", variant.span)
         continue
       }
       checkExpression(state, variant.value!, scope, primitive("string"))
-      let value: string | none = none
-      case variant.value! {
-        literal: StringLiteral -> { if literal.interpolations.length == 0 { value = literal.value } }
-        _ -> { }
-      }
+      value := literalStringValue(variant.value!)
       if value == none {
         typeError(state, "String enum variant \"" + variant.name + "\" value must be a non-interpolated string literal", variant.value!.span)
         continue
       }
-      for previous of 0..<values.length {
-        if values[previous] == value! {
-          typeError(state, "Enum variant \"" + variant.name + "\" duplicates the value of \"" + valueNames[previous] + "\"", variant.span)
-          break
-        }
-      }
-      values.push(value!)
-      valueNames.push(variant.name)
+      recordUniqueEnumValue(state, values, valueNames, value!, variant)
       variant.resolvedStringValue = value
+      continue
     }
-    return
-  }
-  let values: long[] = []
-  let valueNames: string[] = []
-  let nextValue = 0L
-  for index of 0..<enum_.variants.length {
-    variant := enum_.variants[index]
-    if containsString(names, variant.name) { typeError(state, "Variant \"" + variant.name + "\" is already declared in enum \"" + enum_.name + "\"", variant.span) }
-    else { names.push(variant.name) }
     let value: long | none = nextValue
     if variant.value != none {
       valueType := checkExpression(state, variant.value!, scope, primitive("int"))
@@ -762,23 +729,34 @@ export function checkEnum(state: CheckerState, enum_: EnumDeclaration, scope: Sc
       value = constantInt(variant.value!)
       if value == none { typeError(state, "Enum variant \"" + variant.name + "\" value must be a compile-time int constant", variant.value!.span) }
     }
-    if value != none {
-      if value! < -2147483648L || value! > 2147483647L {
-        typeError(state, "Enum variant \"" + variant.name + "\" value is outside the int range", variant.span)
-      } else {
-        for previous of 0..<values.length {
-          if values[previous] == value! {
-            typeError(state, "Enum variant \"" + variant.name + "\" duplicates the value of \"" + valueNames[previous] + "\"", variant.span)
-            break
-          }
-        }
-        values.push(value!)
-        valueNames.push(variant.name)
-        variant.resolvedIntValue = int(value!)
-      }
-      nextValue = value! + 1L
+    if value == none { continue }
+    nextValue = value! + 1L
+    if value! < -2147483648L || value! > 2147483647L {
+      typeError(state, "Enum variant \"" + variant.name + "\" value is outside the int range", variant.span)
+      continue
+    }
+    recordUniqueEnumValue(state, values, valueNames, string(value!), variant)
+    variant.resolvedIntValue = int(value!)
+  }
+}
+
+function literalStringValue(expression: Expression): string | none {
+  case expression {
+    literal: StringLiteral -> { if literal.interpolations.length == 0 { return literal.value } }
+    _ -> { }
+  }
+  return none
+}
+
+function recordUniqueEnumValue(state: CheckerState, values: string[], valueNames: string[], value: string, variant: EnumVariant): none {
+  for previous of 0..<values.length {
+    if values[previous] == value {
+      typeError(state, "Enum variant \"" + variant.name + "\" duplicates the value of \"" + valueNames[previous] + "\"", variant.span)
+      break
     }
   }
+  values.push(value)
+  valueNames.push(variant.name)
 }
 
 // The parser accepts any dotted name as a literal-valued field; only an enum

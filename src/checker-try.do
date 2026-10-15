@@ -12,7 +12,7 @@ import { checkAssignment } from "./checker-assignment"
 import { checkDestructuring, declareUserBinding } from "./checker-statements"
 import { applyDeepReadonly, typeName } from "./checker-types"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
-import { resolveType } from "./checker-resolution"
+import { resolveType } from "./checker-annotations"
 import { deprecatedConstDeclaration, typeError } from "./checker-common"
 import { checkerSemanticSpan } from "./checker-validation"
 

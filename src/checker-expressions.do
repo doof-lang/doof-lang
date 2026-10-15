@@ -59,40 +59,14 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       return finish(state, catch_, caught)
     }
     literal: IntLiteral -> {
-      if expected != none { case expected! {
-        primitiveExpected: PrimitiveType -> {
-          if primitiveExpected.name == "byte" && (literal.value < 0 || literal.value > 255) {
-            typeError(state, "Byte literal must be in the range 0–255", expression.span)
-          }
-          if primitiveExpected.name == "byte" || primitiveExpected.name == "long" || primitiveExpected.name == "float" || primitiveExpected.name == "double" {
-            return finish(state, expression, expected!)
-          }
-        }
-        _ -> { }
-      } }
-      return finish(state, expression, primitive("int"))
+      if (literal.value < 0 || literal.value > 255) && expected != none && typeName(expected!) == "byte" {
+        typeError(state, "Byte literal must be in the range 0–255", expression.span)
+      }
+      return numericLiteralType(state, expression, "int", expected)
     }
-    _: LongLiteral -> {
-      if expected != none { case expected! {
-        primitiveExpected: PrimitiveType -> { if primitiveExpected.name == "double" { return finish(state, expression, expected!) } }
-        _ -> { }
-      } }
-      return finish(state, expression, primitive("long"))
-    }
-    _: FloatLiteral -> {
-      if expected != none { case expected! {
-        primitiveExpected: PrimitiveType -> { if primitiveExpected.name == "double" { return finish(state, expression, expected!) } }
-        _ -> { }
-      } }
-      return finish(state, expression, primitive("float"))
-    }
-    _: DoubleLiteral -> {
-      if expected != none { case expected! {
-        primitiveExpected: PrimitiveType -> { if primitiveExpected.name == "float" { return finish(state, expression, expected!) } }
-        _ -> { }
-      } }
-      return finish(state, expression, primitive("double"))
-    }
+    _: LongLiteral -> { return numericLiteralType(state, expression, "long", expected) }
+    _: FloatLiteral -> { return numericLiteralType(state, expression, "float", expected) }
+    _: DoubleLiteral -> { return numericLiteralType(state, expression, "double", expected) }
     string_: StringLiteral -> {
       let diverges = false
       for interpolation of string_.interpolations {
@@ -180,6 +154,26 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
     _ -> { return finish(state, expression, unknownType()) }
   }
   return unknownType()
+}
+
+// A numeric literal adopts a contextual primitive type it widens to without a cast.
+function numericLiteralType(state: CheckerState, expression: Expression, literal: string, expected: ResolvedType | none): ResolvedType {
+  if expected != none {
+    case expected! {
+      primitiveExpected: PrimitiveType -> {
+        target := primitiveExpected.name
+        widens := case literal {
+          "int" -> target == "byte" || target == "long" || target == "float" || target == "double",
+          "long" | "float" -> target == "double",
+          "double" -> target == "float",
+          _ -> false
+        }
+        if widens { return finish(state, expression, expected!) }
+      }
+      _ -> { }
+    }
+  }
+  return finish(state, expression, primitive(literal))
 }
 
 export function checkIdentifier(state: CheckerState, identifier: Identifier, scope: Scope): ResolvedType {

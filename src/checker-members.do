@@ -11,7 +11,8 @@ import { checkExpression } from "./checker-expressions"
 import { instantiateGenericReference } from "./checker-generic-references"
 import { classModuleFor } from "./checker-interfaces"
 import { hasNoneMember } from "./checker-operators"
-import { indexType, jsonPrograms, resolveBoundStaticMember, serialDecodeType, resolveMember, resolveType, validateTypeArgumentConstraints } from "./checker-resolution"
+import { indexType, jsonPrograms, resolveBoundStaticMember, serialDecodeType, resolveMember } from "./checker-resolution"
+import { resolveType, resolveTypeArguments, validateTypeArgumentConstraints } from "./checker-annotations"
 import { CheckerState } from "./checker-state"
 import { declarationFor, lookup } from "./checker-symbols"
 import { displayTypeName, neverType, primitive, sameType, typeName, unionType, unknownType } from "./checker-types"
@@ -197,8 +198,7 @@ export function checkIndex(state: CheckerState, index: IndexExpression, scope: S
  * exist once per instantiation.
  */
 function explicitStaticReceiver(state: CheckerState, member: MemberExpression, objectType: ResolvedType, scope: Scope): ResolvedType {
-  let resolvedArgs: ResolvedType[] = []
-  for argument of member.receiverTypeArgs { resolvedArgs.push(resolveType(state, argument, state.info!, scope)) }
+  resolvedArgs := resolveTypeArguments(state, member.receiverTypeArgs, scope)
   case objectType {
     class_: ClassType -> {
       declaration := declarationFor(state.result, class_.symbol)

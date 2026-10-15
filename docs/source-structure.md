@@ -53,8 +53,8 @@ modules own the following decisions:
 | `checker-state.do` | Mutable per-run and per-module checker state, including scoped lambda-return observations |
 | `checker-symbols.do` | Scope/binding operations, builtins, shared declaration signatures, symbol/declaration lookup |
 | `checker-types.do` | Resolved-type construction, comparison, union mutability conflict detection, assignability, substitution, interface-bound receiver views, and display |
-| `checker-annotations.do` | One annotation resolver for provisional signatures and checked types; builtin arity, alias expansion, constraints, and annotation decoration |
-| `checker-resolution.do` | Bound-aware member selections (type, declaration, owner, static/field flags), assignment bindings, indexing, and annotation API forwarding |
+| `checker-annotations.do` | One annotation resolver (`resolveType`) for provisional signatures, checked types, and explicit type arguments; builtin arity, alias expansion, constraints, and annotation decoration |
+| `checker-resolution.do` | Bound-aware member selections (type, declaration, owner, static/field flags), per-receiver built-in member tables, assignment bindings, and indexing |
 | `checker-array-methods.do` | Built-in array member signatures, the `(it, index)` / `(acc, it, index)` callback conventions, and narrowing callbacks to a named function's arity |
 | `checker-common.do` | State-aware diagnostics, expression type decoration, and centralized assignment-binding validation |
 | `checker-statements.do` | Statements, declarations, scopes, returns, destructuring, enum backing-value resolution, and control-flow continuation |

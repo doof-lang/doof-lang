@@ -341,3 +341,26 @@ export function testWeakFieldDiagnosticsNameTheField(): none {
   Assert.equal(target.diagnostics.length, 1)
   Assert.equal(target.diagnostics[0].message, "Field \"count\" has type \"int\", which is not a valid weak reference target")
 }
+
+function diagnosticMessages(result: CheckResult): string {
+  let found = ""
+  for diagnostic of result.diagnostics { found = found + diagnostic.message + "\n" }
+  return found
+}
+
+export function testEnumsReportDuplicateNamesAndValuesForBothBackings(): none {
+  Assert.equal(diagnosticMessages(checked("enum Level { Low = 1, High = 1, Low }")),
+    "Enum variant \"High\" duplicates the value of \"Low\"\n" +
+    "Variant \"Low\" is already declared in enum \"Level\"\n",
+  )
+  Assert.equal(diagnosticMessages(checked("enum Code { Ok = \"ok\", Fine = \"ok\" }")),
+    "Enum variant \"Fine\" duplicates the value of \"Ok\"\n",
+  )
+}
+
+export function testInterfacesKeepInstanceAndStaticMemberNamespacesApart(): none {
+  Assert.equal(diagnosticMessages(checked("interface Shape { name: string\nname(): string\nstatic make(): Shape\nstatic make(): Shape }")),
+    "Member \"name\" is already declared in interface \"Shape\"\n" +
+    "Static member \"make\" is already declared in interface \"Shape\"\n",
+  )
+}

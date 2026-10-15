@@ -221,6 +221,10 @@ export function functionType(params: FunctionParamType[], returnType: ResolvedTy
   return FunctionType { params, returnType, typeParams }
 }
 
+export function param(name: string, type_: ResolvedType, hasDefault: bool = false): FunctionParamType {
+  return FunctionParamType { name, type_, hasDefault }
+}
+
 /** Applies the deep readonly surface used by readonly fields and bindings. */
 export function applyDeepReadonly(type_: ResolvedType): ResolvedType {
   case type_ {

@@ -6,7 +6,7 @@ import { displayTypeName, functionType, neverType, noneType, unknownType } from 
 import { pathType } from "./checker-inference"
 import { checkBlock } from "./checker-statements"
 import { checkExpression } from "./checker-expressions"
-import { resolveType } from "./checker-resolution"
+import { resolveType } from "./checker-annotations"
 import { finish, typeError } from "./checker-common"
 import { decorateAnnotationWithResolved, functionParameterIndex, declare } from "./checker-symbols"
 import { isAssignableWithInterfaces } from "./checker-interfaces"

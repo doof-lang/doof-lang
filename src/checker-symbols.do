@@ -5,7 +5,7 @@ import { resolveProvisionalAnnotation } from "./checker-annotations"
 import { ArrayResolvedType, Binding, ClassType, FunctionParamType, FunctionType, MapResolvedType, RangeResolvedType, ResolvedType, Scope, SetResolvedType, Symbol, StreamResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { ArrayType, Block, ClassDeclaration, ClassField, ConstDeclaration, EnumDeclaration, Expression, FunctionDeclaration, AstFunctionType, IfStatement, ImmutableBinding, Identifier, InterfaceDeclaration, LetDeclaration, NamedType, ObjectProperty, ReadonlyDeclaration, Statement, TypeAliasDeclaration, TypeAnnotation, UnionType, WithStatement, BreakStatement, CaseStatement, TypePattern, WeakType } from "./ast"
-import { classType, enumType, functionType, interfaceType, jsonValueType, resultType, neverType, noneType, primitive, tupleType, unionType, typeParameter, unknownType } from "./checker-types"
+import { classType, enumType, functionType, interfaceType, jsonValueType, param, resultType, neverType, noneType, primitive, tupleType, unionType, typeParameter, unknownType } from "./checker-types"
 
 import { symbolSpan, findModule } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
@@ -314,47 +314,35 @@ export function isBuiltinCallable(name: string): bool {
 }
 
 export function builtinCallable(name: string): ResolvedType {
-  if name == "println" { return functionType([FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false }], noneType()) }
-  if name == "panic" { return functionType([FunctionParamType { name: "message", type_: primitive("string"), hasDefault: false }], neverType()) }
+  if name == "println" { return functionType([param("value", jsonValueType())], noneType()) }
+  if name == "panic" { return functionType([param("message", primitive("string"))], neverType()) }
   if name == "metricsIncrement" {
-    return functionType([
-      FunctionParamType { name: "name", type_: primitive("string"), hasDefault: false },
-      FunctionParamType { name: "value", type_: primitive("long"), hasDefault: false },
-    ], noneType())
+    return functionType([param("name", primitive("string")), param("value", primitive("long"))], noneType())
   }
   if name == "metricsSnapshotPrometheus" { return functionType([], primitive("string")) }
   if name == "assert" {
-    return functionType([
-      FunctionParamType { name: "condition", type_: primitive("bool"), hasDefault: false },
-      FunctionParamType { name: "message", type_: primitive("string"), hasDefault: false },
-    ], noneType())
+    return functionType([param("condition", primitive("bool")), param("message", primitive("string"))], noneType())
   }
   if name == "catchPanic" {
     successType := typeParameter("T")
     callbackType := functionType([], successType)
-    return functionType([
-      FunctionParamType { name: "f", type_: callbackType, hasDefault: false },
-    ], resultType(successType, primitive("string")), ["T"])
+    return functionType([param("f", callbackType)], resultType(successType, primitive("string")), ["T"])
   }
   if name == "string" {
-    return functionType([FunctionParamType {
-      name: "value",
-      type_: unionType([
-        primitive("byte"), primitive("int"), primitive("long"), primitive("float"),
-        primitive("double"), primitive("string"), primitive("char"), primitive("bool"),
-      ]),
-      hasDefault: false,
-    }], primitive("string"))
+    return functionType([param("value", unionType([
+      primitive("byte"), primitive("int"), primitive("long"), primitive("float"),
+      primitive("double"), primitive("string"), primitive("char"), primitive("bool"),
+    ]))], primitive("string"))
   }
   if name == "bool" {
-    return functionType([FunctionParamType { name: "value", type_: primitive("bool"), hasDefault: false }], primitive("bool"))
+    return functionType([param("value", primitive("bool"))], primitive("bool"))
   }
   result := primitive(name)
   let castInputs: ResolvedType[] = [
     primitive("byte"), primitive("int"), primitive("long"), primitive("float"), primitive("double"),
   ]
   if name == "int" { castInputs.push(primitive("char")) }
-  return functionType([FunctionParamType { name: "value", type_: unionType(castInputs), hasDefault: false }], result)
+  return functionType([param("value", unionType(castInputs))], result)
 }
 
 export function isBuiltinPrintlnCall(callee: Expression): bool {

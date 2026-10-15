@@ -7,7 +7,8 @@ import { ActorCreationExpression, CallArgument, CheckedConstruction, Constructio
 import { CheckerState } from "./checker-state"
 import { checkExpression } from "./checker-expressions"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
-import { memberType, resolveType, validateTypeArgumentConstraints } from "./checker-resolution"
+import { memberType } from "./checker-resolution"
+import { resolveTypeArguments, validateTypeArgumentConstraints } from "./checker-annotations"
 import { classModuleFor, findClassField, isAssignableWithInterfaces } from "./checker-interfaces"
 import { containsString, declarationFor, hasObjectProperty, methodSignature, symbolFor, valueSymbolFor, valueUseDiagnostic } from "./checker-symbols"
 import { actorType, classType, noneType, resultArmExpectation, resultArmType, resultType, sameType, substituteTypeParams, typeName, typeParameter, unknownType } from "./checker-types"
@@ -137,8 +138,7 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
       _ -> { }
     }
   }
-  let resolvedTypeArgs: ResolvedType[] = []
-  for argument of expression.typeArgs { resolvedTypeArgs.push(resolveType(state, argument, state.info!, scope)) }
+  let resolvedTypeArgs = resolveTypeArguments(state, expression.typeArgs, scope)
   if resolvedTypeArgs.length == 0 && expected != none {
     case expected! {
       expectedClass: ClassType -> {

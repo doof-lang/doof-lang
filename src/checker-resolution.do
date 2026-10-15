@@ -1,32 +1,19 @@
 // Type annotation, member, index, and callable-field resolution.
 
-import { ActorType, ArrayResolvedType, Binding, ClassMetadataResolvedType, ClassType, EnumType, InterfaceType, FunctionParamType, FunctionType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, Scope, SetResolvedType, Symbol, StreamResolvedType, TupleResolvedType, UnionResolvedType, TypeParameterType, NeverType, UnknownType } from "./semantic"
-import { AnalysisResult, ModuleInfo } from "./analyzer"
-import { CheckedMember, ClassDeclaration, DotShorthand, EnumDeclaration, Expression, FunctionDeclaration, Identifier, InterfaceDeclaration, MemberExpression, Program, SourceSpan, TypeAnnotation, Parameter, TypeParameterConstraint } from "./ast"
-import { interfaceBoundReceiver, applyDeepReadonly, arrayType, classMetadataType, classType, functionType, joinTypes, jsonObjectType, jsonValueType, mapType, resultType, setType, noneType, primitive, promiseType, sameType, typeName, unionType, methodReflectionType, substituteTypeParams, typeParameter, unknownType } from "./checker-types"
+import { ActorType, ArrayResolvedType, Binding, ClassMetadataResolvedType, ClassType, EnumType, InterfaceType, FunctionType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, Symbol, StreamResolvedType, TupleResolvedType, UnionResolvedType, TypeParameterType, NeverType, UnknownType } from "./semantic"
+import { AnalysisResult } from "./analyzer"
+import { CheckedMember, ClassDeclaration, DotShorthand, EnumDeclaration, Expression, FunctionDeclaration, Identifier, InterfaceDeclaration, MemberExpression, Program, SourceSpan } from "./ast"
+import { interfaceBoundReceiver, applyDeepReadonly, arrayType, classMetadataType, classType, functionType, joinTypes, jsonObjectType, jsonValueType, mapType, param, resultType, setType, noneType, primitive, promiseType, sameType, typeName, unionType, methodReflectionType, substituteTypeParams, unknownType } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, interfaceJsonSerializationBlocker, isGeneratedJsonType, jsonUnionFieldBlocker } from "./json-semantics"
 
 import { CheckerState } from "./checker-state"
 
 import { deprecatedBuildReadonly, typeError } from "./checker-common"
-import { classFieldBinding, resolveAnnotation, methodSignature, declarationFor } from "./checker-symbols"
+import { classFieldBinding, containsString, resolveAnnotation, methodSignature, declarationFor } from "./checker-symbols"
 import { classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 import { arrayMemberType } from "./checker-array-methods"
-
-import { resolveCheckedAnnotation, validateAnnotationConstraints, decorateAnnotationType } from "./checker-annotations"
-
-export function resolveType(state: CheckerState, annotation: TypeAnnotation, module: ModuleInfo, scope: Scope, validateConstraints: bool = true): ResolvedType {
-  return resolveCheckedAnnotation(state, annotation, module, scope, validateConstraints)
-}
-
-export function validateTypeArgumentConstraints(state: CheckerState, names: string[], constraints: TypeParameterConstraint[], arguments: ResolvedType[], span: SourceSpan, module: ModuleInfo, outer: Scope, ownerNames: string[] = [], ownerArguments: ResolvedType[] = []): none {
-  validateAnnotationConstraints(state, names, constraints, arguments, span, module, outer, ownerNames, ownerArguments)
-}
-
-export function decorateType(state: CheckerState, annotation: TypeAnnotation, resolvedType: ResolvedType): ResolvedType {
-  return decorateAnnotationType(state, annotation, resolvedType)
-}
+import { resolveType } from "./checker-annotations"
 
 // Some checker phases need a member's type without performing a source-level
 // access (for example, when synthesizing constructor parameters). Keep that
@@ -118,10 +105,7 @@ export function resolveBoundStaticMember(state: CheckerState, object: ResolvedTy
 
 /** Signature of the compiler-provided `fromSerialValue(value, lenient = true)` decoder for `target`. */
 export function serialDecodeType(target: ResolvedType): ResolvedType {
-  return functionType([
-    FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false },
-    FunctionParamType { name: "lenient", type_: primitive("bool"), hasDefault: true },
-  ], resultType(target, primitive("string")))
+  return functionType([param("value", jsonValueType()), param("lenient", primitive("bool"), true)], resultType(target, primitive("string")))
 }
 
 export function memberType(state: CheckerState, object: ResolvedType, property: string, span: SourceSpan, validateVisibility: bool = true, declaredOnly: bool = false): ResolvedType {
@@ -129,114 +113,43 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
 }
 
 function resolveMemberType(state: CheckerState, object: ResolvedType, property: string, span: SourceSpan, validateVisibility: bool, declaredOnly: bool, selection: CheckedMember): ResolvedType {
-  if typeName(object) == "string" {
-    if property == "length" { return primitive("int") }
-    if property == "startsWith" || property == "endsWith" || property == "contains" { return functionType([FunctionParamType { name: "value", type_: primitive("string"), hasDefault: false }], primitive("bool")) }
-    if property == "indexOf" { return functionType([FunctionParamType { name: "value", type_: primitive("string"), hasDefault: false }], primitive("int")) }
-    if property == "substring" { return functionType([FunctionParamType { name: "start", type_: primitive("int"), hasDefault: false }, FunctionParamType { name: "end", type_: primitive("int"), hasDefault: true }], primitive("string")) }
-    if property == "replace" || property == "replaceAll" { return functionType([FunctionParamType { name: "oldValue", type_: primitive("string"), hasDefault: false }, FunctionParamType { name: "newValue", type_: primitive("string"), hasDefault: false }], primitive("string")) }
-    if property == "trim" { return functionType([], primitive("string")) }
-    if property == "trimStart" { return functionType([], primitive("string")) }
-    if property == "trimEnd" { return functionType([FunctionParamType { name: "suffix", type_: primitive("char"), hasDefault: true }], primitive("string")) }
-    if property == "toLowerCase" || property == "toUpperCase" { return functionType([], primitive("string")) }
-    if property == "repeat" { return functionType([FunctionParamType { name: "count", type_: primitive("int"), hasDefault: false }], primitive("string")) }
-    if property == "slice" { return functionType([FunctionParamType { name: "start", type_: primitive("int"), hasDefault: false }], primitive("string")) }
-    if property == "charAt" { return functionType([FunctionParamType { name: "index", type_: primitive("int"), hasDefault: false }], primitive("char")) }
-    if property == "padStart" || property == "padEnd" { return functionType([FunctionParamType { name: "length", type_: primitive("int"), hasDefault: false }, FunctionParamType { name: "fill", type_: primitive("char"), hasDefault: true }], primitive("string")) }
-    if property == "split" { return functionType([FunctionParamType { name: "separator", type_: primitive("string"), hasDefault: false }], arrayType(primitive("string"), true)) }
-  }
   case object {
+    primitive_: PrimitiveType -> { return if primitive_.name == "string" then stringMemberType(property) else unknownType() }
     function_: FunctionType -> {
-      if property == "call" { return function_ }
-      if property == "post" { return functionType(function_.params, promiseType(function_.returnType)) }
-      if property == "dispatch" {
-        if function_.returnType.kind != "none" { typeError(state, "Method \"dispatch\" is only available on none-returning callbacks", span); return unknownType() }
-        return functionType(function_.params, noneType())
+      if property == "dispatch" && function_.returnType.kind != "none" {
+        typeError(state, "Method \"dispatch\" is only available on none-returning callbacks", span)
+        return unknownType()
       }
-      return unknownType()
-    }
-    union: UnionResolvedType -> {
-      let resolved: ResolvedType | none = none
-      let first = true
-      for member of union.types {
-        if member.kind == "none" { continue }
-        arm := CheckedMember {}
-        memberValue := resolveMemberType(state, member, property, span, validateVisibility, declaredOnly, arm)
-        if first {
-          recordMember(selection, member, arm.modulePath, arm.function_, arm.field, arm.staticOwner, arm.instance)
-        } else {
-          if selection.function_ != arm.function_ || selection.modulePath != arm.modulePath { selection.function_ = none; selection.modulePath = "" }
-          selection.field = selection.field && arm.field
-          selection.instance = selection.instance && arm.instance
-          if selection.staticOwner != arm.staticOwner { selection.staticOwner = none }
-        }
-        first = false
-        if memberValue.kind == "unknown" { return unknownType() }
-        resolved = if resolved == none then memberValue else joinTypes(resolved!, memberValue)
+      return case property {
+        "call" -> function_,
+        "post" -> functionType(function_.params, promiseType(function_.returnType)),
+        "dispatch" -> functionType(function_.params, noneType()),
+        _ -> unknownType()
       }
-      if resolved != none { return resolved! }
-      return unknownType()
     }
+    union: UnionResolvedType -> { return unionMemberType(state, union, property, span, validateVisibility, declaredOnly, selection) }
     array: ArrayResolvedType -> { return arrayMemberType(state, array, property, span) }
-    map: MapResolvedType -> {
-      if property == "size" { return primitive("int") }
-      if property == "has" { return functionType([FunctionParamType { name: "key", type_: map.keyType, hasDefault: false }], primitive("bool")) }
-      if property == "get" { return functionType([FunctionParamType { name: "key", type_: map.keyType, hasDefault: false }], resultType(map.valueType, primitive("string"))) }
-      if map.readonly_ && (property == "set" || property == "delete") {
-        typeError(state, "Method \"" + property + "\" is not available on readonly map", span)
-        return unknownType()
-      }
-      if property == "set" { return functionType([FunctionParamType { name: "key", type_: map.keyType, hasDefault: false }, FunctionParamType { name: "value", type_: map.valueType, hasDefault: false }], noneType()) }
-      if property == "delete" { return functionType([FunctionParamType { name: "key", type_: map.keyType, hasDefault: false }], noneType()) }
-      if property == "keys" { return functionType([], arrayType(map.keyType)) }
-      if property == "values" { return functionType([], arrayType(map.valueType)) }
-      if map.readonly_ && (property == "buildReadonly" || property == "drainToReadonly" || property == "cloneReadonly") {
-        typeError(state, "Method \"" + property + "\" is not available on readonly map", span)
-        return unknownType()
-      }
-      if property == "buildReadonly" { deprecatedBuildReadonly(state, span); return functionType([], mapType(map.keyType, map.valueType, true)) }
-      if property == "drainToReadonly" || property == "cloneReadonly" { return functionType([], mapType(map.keyType, map.valueType, true)) }
-      if property == "cloneMutable" { return functionType([], mapType(map.keyType, map.valueType)) }
-      return unknownType()
-    }
-    set: SetResolvedType -> {
-      if property == "size" { return primitive("int") }
-      if property == "has" { return functionType([FunctionParamType { name: "value", type_: set.elementType, hasDefault: false }], primitive("bool")) }
-      if set.readonly_ && property == "add" { typeError(state, "Method \"add\" is not available on readonly set", span); return unknownType() }
-      if property == "add" { return functionType([FunctionParamType { name: "value", type_: set.elementType, hasDefault: false }], noneType()) }
-      if set.readonly_ && property == "delete" { typeError(state, "Method \"delete\" is not available on readonly set", span); return unknownType() }
-      if property == "delete" { return functionType([FunctionParamType { name: "value", type_: set.elementType, hasDefault: false }], noneType()) }
-      if property == "values" { return functionType([], arrayType(set.elementType)) }
-      if set.readonly_ && (property == "buildReadonly" || property == "drainToReadonly" || property == "cloneReadonly") {
-        typeError(state, "Method \"" + property + "\" is not available on readonly set", span)
-        return unknownType()
-      }
-      if property == "buildReadonly" { deprecatedBuildReadonly(state, span); return functionType([], setType(set.elementType, true)) }
-      if property == "drainToReadonly" || property == "cloneReadonly" { return functionType([], setType(set.elementType, true)) }
-      if property == "cloneMutable" { return functionType([], setType(set.elementType)) }
-      return unknownType()
-    }
+    map: MapResolvedType -> { return mapMemberType(state, map, property, span) }
+    set: SetResolvedType -> { return setMemberType(state, set, property, span) }
     result: ResultResolvedType -> {
-      if property == "isSuccess" || property == "isFailure" { return functionType([], primitive("bool")) }
-      if property == "unwrapOr" {
-        if result.valueType.kind == "none" {
-          typeError(state, "Method \"unwrapOr\" is not available on Result<void, E>", span)
-          return unknownType()
-        }
-        return functionType([
-          FunctionParamType { name: "defaultValue", type_: result.valueType, hasDefault: false },
-        ], result.valueType)
+      if property == "unwrapOr" && result.valueType.kind == "none" {
+        typeError(state, "Method \"unwrapOr\" is not available on Result<void, E>", span)
+        return unknownType()
       }
-      return unknownType()
+      return case property {
+        "isSuccess" | "isFailure" -> functionType([], primitive("bool")),
+        "unwrapOr" -> functionType([param("defaultValue", result.valueType)], result.valueType),
+        _ -> unknownType()
+      }
     }
-    success: SuccessResolvedType -> { if property == "value" && success.valueType.kind != "none" { return success.valueType }
-      return unknownType() }
-    failure: FailureResolvedType -> { if property == "error" && failure.errorType.kind != "none" { return failure.errorType }
-      return unknownType() }
+    success: SuccessResolvedType -> { return if property == "value" && success.valueType.kind != "none" then success.valueType else unknownType() }
+    failure: FailureResolvedType -> { return if property == "error" && failure.errorType.kind != "none" then failure.errorType else unknownType() }
     stream: StreamResolvedType -> {
-      if property == "next" { return functionType([], primitive("bool")) }
-      if property == "value" { return functionType([], stream.elementType) }
-      return unknownType()
+      return case property {
+        "next" -> functionType([], primitive("bool")),
+        "value" -> functionType([], stream.elementType),
+        _ -> unknownType()
+      }
     }
     tuple: TupleResolvedType -> {
       for i of 0..<tuple.elements.length {
@@ -244,10 +157,7 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
       }
       return unknownType()
     }
-    _: RangeResolvedType -> {
-      if property == "lowerBound" || property == "upperBound" { return primitive("int") }
-      return unknownType()
-    }
+    _: RangeResolvedType -> { return if property == "lowerBound" || property == "upperBound" then primitive("int") else unknownType() }
     actor: ActorType -> {
       resolved := resolveMemberType(state, actor.innerClass, property, span, validateVisibility, declaredOnly, selection)
       if validateVisibility && selection.field && selection.instance {
@@ -257,258 +167,336 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
       return resolved
     }
     promise: PromiseType -> {
-      if property == "get" { return functionType([], resultType(promise.valueType, primitive("string"))) }
-      if property == "onComplete" {
-        callback := functionType([FunctionParamType { name: "result", type_: resultType(promise.valueType, primitive("string")), hasDefault: false }], noneType())
-        return functionType([FunctionParamType { name: "callback", type_: callback, hasDefault: false }], noneType())
+      settled := resultType(promise.valueType, primitive("string"))
+      return case property {
+        "get" -> functionType([], settled),
+        "onComplete" -> functionType([param("callback", functionType([param("result", settled)], noneType()))], noneType()),
+        _ -> unknownType()
       }
-      return unknownType()
     }
-    parameter: TypeParameterType -> {
-      bound := interfaceBoundReceiver(parameter)
-      if bound.kind == "interface" {
-        declared := resolveMemberType(state, bound, property, span, validateVisibility, true, selection)
-        // JSON members are compiler-provided, so an interface bound implies
-        // them without declaring them; instantiation validates the argument.
-        if declared.kind != "unknown" { return declared }
-        if property == "toSerialObject" { return functionType([], jsonObjectType()) }
-        if property == "fromSerialValue" { return serialDecodeType(parameter) }
-        return declared
-      }
-      if property == "metadata" {
-        if parameter.constraintName != "Reflectable" {
-          typeError(state, "Static member \"metadata\" requires type parameter \"" + parameter.name + "\" to be constrained by Reflectable", span)
-          return unknownType()
-        }
-        return classMetadataType(parameter)
-      }
-      if property == "toSerialObject" {
-        if parameter.constraintName != "Serializable" {
-          typeError(state, "Member \"toSerialObject\" requires type parameter \"" + parameter.name + "\" to be constrained by Serializable", span)
-          return unknownType()
-        }
-        return functionType([], jsonObjectType())
-      }
-      if property == "fromSerialValue" {
-        if parameter.constraintName != "Serializable" {
-          typeError(state, "Static member \"" + property + "\" requires type parameter \"" + parameter.name + "\" to be constrained by Serializable", span)
-          return unknownType()
-        }
-        return serialDecodeType(parameter)
-      }
-      return unknownType()
-    }
+    parameter: TypeParameterType -> { return typeParameterMemberType(state, parameter, property, span, validateVisibility, selection) }
     metadata: ClassMetadataResolvedType -> {
-      if property == "name" || property == "description" { return primitive("string") }
-      if property == "methods" { return arrayType(methodReflectionType(metadata.classType)) }
-      if property == "defs" { return unionType([jsonValueType(), noneType()]) }
-      if property == "invoke" {
-        return functionType([
-          FunctionParamType { name: "instance", type_: metadata.classType, hasDefault: false },
-          FunctionParamType { name: "methodName", type_: primitive("string"), hasDefault: false },
-          FunctionParamType { name: "params", type_: jsonValueType(), hasDefault: false },
-        ], resultType(jsonValueType(), jsonValueType()))
+      return case property {
+        "name" | "description" -> primitive("string"),
+        "methods" -> arrayType(methodReflectionType(metadata.classType)),
+        "defs" -> unionType([jsonValueType(), noneType()]),
+        "invoke" -> functionType([param("instance", metadata.classType), param("methodName", primitive("string")), param("params", jsonValueType())], resultType(jsonValueType(), jsonValueType())),
+        _ -> unknownType()
       }
-      return unknownType()
     }
     reflection: MethodReflectionResolvedType -> {
-      if property == "name" || property == "description" { return primitive("string") }
-      if property == "inputSchema" || property == "outputSchema" { return jsonValueType() }
-      if property == "invoke" {
-        return functionType([
-          FunctionParamType { name: "instance", type_: reflection.classType, hasDefault: false },
-          FunctionParamType { name: "params", type_: jsonValueType(), hasDefault: false },
-        ], resultType(jsonValueType(), jsonValueType()))
-      }
-      return unknownType()
-    }
-    enum_: EnumType -> {
-      declaration := declarationFor(state.result, enum_.symbol)
-      let backingType: ResolvedType = primitive("int")
-      if declaration != none {
-        case declaration! {
-          enumDeclaration: EnumDeclaration -> { if enumDeclaration.backingKind == "string" { backingType = primitive("string") } }
-          _ -> { }
-        }
-      }
-      if property == "name" { return primitive("string") }
-      if property == "value" { return backingType }
-      if property == "toSerialValue" { return functionType([], jsonValueType()) }
-      if property == "values" { return functionType([], arrayType(enum_, true)) }
-      if property == "fromName" {
-        return functionType(
-          [FunctionParamType { name: "value", type_: primitive("string"), hasDefault: false }],
-          unionType([enum_, noneType()]),
-        )
-      }
-      if property == "fromValue" {
-        return functionType(
-          [FunctionParamType { name: "value", type_: backingType, hasDefault: false }],
-          unionType([enum_, noneType()]),
-        )
-      }
-      if property == "fromSerialValue" {
-        return serialDecodeType(enum_)
-      }
-      if declaration != none {
-        case declaration! {
-          enumDeclaration: EnumDeclaration -> {
-            for variant of enumDeclaration.variants { if variant.name == property { return enum_ } }
-          }
-          _ -> { }
-        }
-      }
-      return unknownType()
-    }
-    class_: ClassType -> {
-      if class_.name == "SourceLocation" && class_.symbol.module == "<builtin>" {
-        if property == "fileName" || property == "functionName" { return primitive("string") }
-        if property == "line" { return primitive("int") }
-        return unknownType()
-      }
-      declaration := declarationFor(state.result, class_.symbol)
-      if declaration == none { return unknownType() }
-      case declaration! {
-        classDeclaration: ClassDeclaration -> {
-          if property == "metadata" {
-            if classDeclaration.typeParams.length > 0 {
-              typeError(state, "Metadata is not available on generic type \"" + classDeclaration.name + "\"", span)
-              return unknownType()
-            }
-            if !canGenerateJsonSerialization(classDeclaration, jsonPrograms(state.result)) || !canGenerateJsonDeserialization(classDeclaration, jsonPrograms(state.result)) {
-              typeError(state, "Type \"" + classDeclaration.name + "\" is not eligible for metadata because it does not support automatic JSON generation", span)
-              return unknownType()
-            }
-            let valid = true
-            for method of classDeclaration.methods {
-              if method.private_ || method.static_ { continue }
-              for parameter of method.params {
-                if parameter.resolvedType != none && !isGeneratedJsonType(parameter.resolvedType!, jsonPrograms(state.result)) {
-                  typeError(state, "Parameter \"" + parameter.name + "\" of method \"" + method.name + "\" is not JSON-serializable", parameter.span)
-                  valid = false
-                }
-              }
-              if method.resolvedType != none {
-                case method.resolvedType! {
-                function_: FunctionType -> {
-                  let successType = function_.returnType
-                  case successType {
-                    result: ResultResolvedType -> { successType = result.valueType }
-                    _ -> { }
-                  }
-                  if successType.kind != "none" && !isGeneratedJsonType(successType, jsonPrograms(state.result)) {
-                    typeError(state, "Return type of method \"" + method.name + "\" is not JSON-serializable", method.span)
-                    valid = false
-                  }
-                }
-                _ -> { }
-                }
-              }
-            }
-            if !valid { return unknownType() }
-            classDeclaration.needsMetadata = true
-            recordMember(selection, class_, class_.symbol.module, none, false, classDeclaration, false)
-            return classMetadataType(class_)
-          }
-          if property == "toSerialObject" && canGenerateJsonSerialization(classDeclaration, jsonPrograms(state.result)) {
-            return functionType([], jsonObjectType())
-          }
-          if property == "fromSerialValue" && canGenerateJsonDeserialization(classDeclaration, jsonPrograms(state.result)) {
-            recordMember(selection, class_, class_.symbol.module, none, false, classDeclaration, false)
-            return serialDecodeType(object)
-          }
-          if property == "toSerialObject" || property == "fromSerialValue" {
-            blocker := jsonUnionFieldBlocker(classDeclaration, jsonPrograms(state.result), property == "fromSerialValue")
-            reason := if blocker == none then "" else " (" + blocker! + ")"
-            typeError(state, "Type \"" + classDeclaration.name + "\" does not support automatic JSON " + (if property == "toSerialObject" then "serialization" else "deserialization") + reason, span)
-            return unknownType()
-          }
-          for field of classDeclaration.fields {
-            for name of field.names {
-              if name == property {
-                recordMember(selection, class_, class_.symbol.module, none, true, if field.static_ then classDeclaration else none, !field.static_)
-                fieldType := if field.resolvedType != none then field.resolvedType! else if field.type_ != none then resolveType(state, field.type_!, state.info!, state.moduleScope!) else unknownType()
-                if validateVisibility && field.private_ && class_.symbol.module != state.info!.path {
-                  typeError(state, "Field '" + property + "' is private to module '" + class_.symbol.module + "'", span)
-                }
-                return substituteTypeParams(fieldType, classDeclaration.typeParams, class_.typeArgs)
-              }
-            }
-          }
-          for method of classDeclaration.methods {
-            if method.name == property {
-              recordMember(selection, class_, class_.symbol.module, method, false, if method.static_ then classDeclaration else none, !method.static_)
-              methodType := method.resolvedType ?? methodSignature(method, classModuleFor(state.result, class_.symbol), state.result, class_.symbol.typeParams)
-              if validateVisibility && method.private_ && class_.symbol.module != state.info!.path {
-                typeError(state, "Method '" + property + "' is private to module '" + class_.symbol.module + "'", span)
-              }
-              return substituteTypeParams(methodType, classDeclaration.typeParams, class_.typeArgs)
-            }
-          }
-        }
-        interface_: InterfaceDeclaration -> {
-          for field of interface_.fields { if field.name == property { recordMember(selection, class_, class_.symbol.module, none, true); return field.resolvedType ?? resolveType(state, field.type_, state.info!, state.moduleScope!) } }
-          for method of interface_.methods { if method.name == property { recordMember(selection, class_, class_.symbol.module, method); return method.resolvedType ?? methodSignature(method, classModuleFor(state.result, class_.symbol), state.result, class_.symbol.typeParams) } }
-        }
-        _ -> { }
+      return case property {
+        "name" | "description" -> primitive("string"),
+        "inputSchema" | "outputSchema" -> jsonValueType(),
+        "invoke" -> functionType([param("instance", reflection.classType), param("params", jsonValueType())], resultType(jsonValueType(), jsonValueType())),
+        _ -> unknownType()
       }
     }
-    _: EnumType -> { return object }
-    interfaceType_: InterfaceType -> {
-      declaration := declarationFor(state.result, interfaceType_.symbol)
-      if declaration == none { return unknownType() }
-      case declaration! {
-        interface_: InterfaceDeclaration -> {
-          for field of interface_.fields {
-            if field.name == property {
-              recordMember(selection, interfaceType_, interfaceType_.symbol.module, none, true)
-              fieldType := field.resolvedType ?? resolveAnnotation(field.type_, classModuleFor(state.result, interfaceType_.symbol), state.result, interface_.typeParams)
-              return substituteTypeParams(if field.readonly_ then applyDeepReadonly(fieldType) else fieldType, interface_.typeParams, interfaceType_.typeArgs)
-            }
-          }
-          for method of interface_.methods {
-            if method.name == property {
-              recordMember(selection, interfaceType_, interfaceType_.symbol.module, method, false, none, !method.static_)
-              methodType := method.resolvedType ?? interfaceMethodSignature(state, method, interface_, interfaceType_.symbol)
-              return substituteTypeParams(methodType, interface_.typeParams, interfaceType_.typeArgs)
-            }
-          }
-          if declaredOnly { return unknownType() }
-          if property == "fromSerialValue" {
-            if interface_.typeParams.length > 0 {
-              typeError(state, "Automatic JSON deserialization is not available on generic interface \"" + interface_.name + "\"", span)
-              return unknownType()
-            }
-            // Without implementations no value can be decoded; the generated decoder
-            // always fails, so library helpers still check on their own.
-            discriminator := interfaceJsonDiscriminator(interface_, jsonPrograms(state.result))
-            if discriminator == none && interfaceType_.symbol.implementations.length > 0 {
-              typeError(state, "Cannot deserialize interface \"" + interface_.name + "\": all implementing classes must share a literal-valued string field with distinct values (e.g. kind: \"variant\")", span)
-              return unknownType()
-            }
-            return serialDecodeType(object)
-          }
-          if property == "toSerialObject" {
-            if interface_.typeParams.length > 0 {
-              typeError(state, "Automatic JSON serialization is not available on generic interface \"" + interface_.name + "\"", span)
-              return unknownType()
-            }
-            blocker := interfaceJsonSerializationBlocker(interface_, jsonPrograms(state.result))
-            if blocker != none {
-              typeError(state, "Cannot serialize interface \"" + interface_.name + "\": implementing class \"" + blocker! + "\" does not support automatic JSON serialization", span)
-              return unknownType()
-            }
-            recordMember(selection, interfaceType_, interfaceType_.symbol.module, none, false, none, true)
-            return functionType([], jsonObjectType())
-          }
+    enum_: EnumType -> { return enumMemberType(state, enum_, property) }
+    class_: ClassType -> { return classMemberType(state, class_, property, span, validateVisibility, selection) }
+    interfaceType_: InterfaceType -> { return interfaceMemberType(state, interfaceType_, property, span, declaredOnly, selection) }
+    _ -> { }
+  }
+  return unknownType()
+}
 
+function stringMemberType(property: string): ResolvedType {
+  string_ := primitive("string")
+  int_ := primitive("int")
+  return case property {
+    "length" -> int_,
+    "startsWith" | "endsWith" | "contains" -> functionType([param("value", string_)], primitive("bool")),
+    "indexOf" -> functionType([param("value", string_)], int_),
+    "substring" -> functionType([param("start", int_), param("end", int_, true)], string_),
+    "replace" | "replaceAll" -> functionType([param("oldValue", string_), param("newValue", string_)], string_),
+    "trim" | "trimStart" | "toLowerCase" | "toUpperCase" -> functionType([], string_),
+    "trimEnd" -> functionType([param("suffix", primitive("char"), true)], string_),
+    "repeat" -> functionType([param("count", int_)], string_),
+    "slice" -> functionType([param("start", int_)], string_),
+    "charAt" -> functionType([param("index", int_)], primitive("char")),
+    "padStart" | "padEnd" -> functionType([param("length", int_), param("fill", primitive("char"), true)], string_),
+    "split" -> functionType([param("separator", string_)], arrayType(string_, true)),
+    _ -> unknownType()
+  }
+}
+
+// A member of a union is available only when every non-none arm provides it;
+// the selection keeps only the declaration facts all arms agree on.
+function unionMemberType(state: CheckerState, union: UnionResolvedType, property: string, span: SourceSpan, validateVisibility: bool, declaredOnly: bool, selection: CheckedMember): ResolvedType {
+  let resolved: ResolvedType | none = none
+  for member of union.types {
+    if member.kind == "none" { continue }
+    arm := CheckedMember {}
+    memberValue := resolveMemberType(state, member, property, span, validateVisibility, declaredOnly, arm)
+    if resolved == none {
+      recordMember(selection, member, arm.modulePath, arm.function_, arm.field, arm.staticOwner, arm.instance)
+    } else {
+      if selection.function_ != arm.function_ || selection.modulePath != arm.modulePath { selection.function_ = none; selection.modulePath = "" }
+      selection.field = selection.field && arm.field
+      selection.instance = selection.instance && arm.instance
+      if selection.staticOwner != arm.staticOwner { selection.staticOwner = none }
+    }
+    if memberValue.kind == "unknown" { return unknownType() }
+    resolved = if resolved == none then memberValue else joinTypes(resolved!, memberValue)
+  }
+  return resolved ?? unknownType()
+}
+
+// Readonly collections reject mutators and the conversions that consume or
+// re-wrap a mutable collection.
+function rejectReadonlyCollectionMember(state: CheckerState, readonly_: bool, kind: string, mutators: string[], property: string, span: SourceSpan): bool {
+  if !readonly_ { return false }
+  if !containsString(mutators, property) && property != "buildReadonly" && property != "drainToReadonly" && property != "cloneReadonly" { return false }
+  typeError(state, "Method \"" + property + "\" is not available on readonly " + kind, span)
+  return true
+}
+
+function mapMemberType(state: CheckerState, map: MapResolvedType, property: string, span: SourceSpan): ResolvedType {
+  if rejectReadonlyCollectionMember(state, map.readonly_, "map", ["set", "delete"], property, span) { return unknownType() }
+  if property == "buildReadonly" { deprecatedBuildReadonly(state, span) }
+  key := map.keyType
+  value := map.valueType
+  return case property {
+    "size" -> primitive("int"),
+    "has" -> functionType([param("key", key)], primitive("bool")),
+    "get" -> functionType([param("key", key)], resultType(value, primitive("string"))),
+    "set" -> functionType([param("key", key), param("value", value)], noneType()),
+    "delete" -> functionType([param("key", key)], noneType()),
+    "keys" -> functionType([], arrayType(key)),
+    "values" -> functionType([], arrayType(value)),
+    "buildReadonly" | "drainToReadonly" | "cloneReadonly" -> functionType([], mapType(key, value, true)),
+    "cloneMutable" -> functionType([], mapType(key, value)),
+    _ -> unknownType()
+  }
+}
+
+function setMemberType(state: CheckerState, set: SetResolvedType, property: string, span: SourceSpan): ResolvedType {
+  if rejectReadonlyCollectionMember(state, set.readonly_, "set", ["add", "delete"], property, span) { return unknownType() }
+  if property == "buildReadonly" { deprecatedBuildReadonly(state, span) }
+  element := set.elementType
+  return case property {
+    "size" -> primitive("int"),
+    "has" -> functionType([param("value", element)], primitive("bool")),
+    "add" | "delete" -> functionType([param("value", element)], noneType()),
+    "values" -> functionType([], arrayType(element)),
+    "buildReadonly" | "drainToReadonly" | "cloneReadonly" -> functionType([], setType(element, true)),
+    "cloneMutable" -> functionType([], setType(element)),
+    _ -> unknownType()
+  }
+}
+
+function typeParameterMemberType(state: CheckerState, parameter: TypeParameterType, property: string, span: SourceSpan, validateVisibility: bool, selection: CheckedMember): ResolvedType {
+  bound := interfaceBoundReceiver(parameter)
+  if bound.kind == "interface" {
+    declared := resolveMemberType(state, bound, property, span, validateVisibility, true, selection)
+    // JSON members are compiler-provided, so an interface bound implies
+    // them without declaring them; instantiation validates the argument.
+    if declared.kind != "unknown" { return declared }
+    return case property {
+      "toSerialObject" -> functionType([], jsonObjectType()),
+      "fromSerialValue" -> serialDecodeType(parameter),
+      _ -> declared
+    }
+  }
+  required := case property {
+    "metadata" -> "Reflectable",
+    "toSerialObject" | "fromSerialValue" -> "Serializable",
+    _ -> ""
+  }
+  if required == "" { return unknownType() }
+  if parameter.constraintName != required {
+    memberKind := if property == "toSerialObject" then "Member" else "Static member"
+    typeError(state, memberKind + " \"" + property + "\" requires type parameter \"" + parameter.name + "\" to be constrained by " + required, span)
+    return unknownType()
+  }
+  return case property {
+    "metadata" -> classMetadataType(parameter),
+    "toSerialObject" -> functionType([], jsonObjectType()),
+    _ -> serialDecodeType(parameter)
+  }
+}
+
+function enumMemberType(state: CheckerState, enum_: EnumType, property: string): ResolvedType {
+  let declaration: EnumDeclaration | none = none
+  found := declarationFor(state.result, enum_.symbol)
+  if found != none {
+    case found! {
+      enumDeclaration: EnumDeclaration -> { declaration = enumDeclaration }
+      _ -> { }
+    }
+  }
+  backingType := if declaration != none && declaration!.backingKind == "string" then primitive("string") else primitive("int")
+  let resolved: ResolvedType = case property {
+    "name" -> primitive("string"),
+    "value" -> backingType,
+    "toSerialValue" -> functionType([], jsonValueType()),
+    "values" -> functionType([], arrayType(enum_, true)),
+    "fromName" -> functionType([param("value", primitive("string"))], unionType([enum_, noneType()])),
+    "fromValue" -> functionType([param("value", backingType)], unionType([enum_, noneType()])),
+    "fromSerialValue" -> serialDecodeType(enum_),
+    _ -> unknownType()
+  }
+  if resolved.kind != "unknown" || declaration == none { return resolved }
+  for variant of declaration!.variants { if variant.name == property { return enum_ } }
+  return unknownType()
+}
+
+function isGeneratedMember(property: string): bool {
+  return property == "metadata" || property == "toSerialObject" || property == "fromSerialValue"
+}
+
+function classMemberType(state: CheckerState, class_: ClassType, property: string, span: SourceSpan, validateVisibility: bool, selection: CheckedMember): ResolvedType {
+  if class_.name == "SourceLocation" && class_.symbol.module == "<builtin>" {
+    return case property {
+      "fileName" | "functionName" -> primitive("string"),
+      "line" -> primitive("int"),
+      _ -> unknownType()
+    }
+  }
+  declaration := declarationFor(state.result, class_.symbol)
+  if declaration == none { return unknownType() }
+  case declaration! {
+    classDeclaration: ClassDeclaration -> {
+      if isGeneratedMember(property) { return classGeneratedMemberType(state, class_, classDeclaration, property, span, selection) }
+      for field of classDeclaration.fields {
+        for name of field.names {
+          if name != property { continue }
+          recordMember(selection, class_, class_.symbol.module, none, true, if field.static_ then classDeclaration else none, !field.static_)
+          fieldType := if field.resolvedType != none then field.resolvedType! else if field.type_ != none then resolveType(state, field.type_!, state.info!, state.moduleScope!) else unknownType()
+          if validateVisibility && field.private_ && class_.symbol.module != state.info!.path {
+            typeError(state, "Field '" + property + "' is private to module '" + class_.symbol.module + "'", span)
+          }
+          return substituteTypeParams(fieldType, classDeclaration.typeParams, class_.typeArgs)
         }
-        _ -> { }
       }
+      for method of classDeclaration.methods {
+        if method.name != property { continue }
+        recordMember(selection, class_, class_.symbol.module, method, false, if method.static_ then classDeclaration else none, !method.static_)
+        methodType := method.resolvedType ?? methodSignature(method, classModuleFor(state.result, class_.symbol), state.result, class_.symbol.typeParams)
+        if validateVisibility && method.private_ && class_.symbol.module != state.info!.path {
+          typeError(state, "Method '" + property + "' is private to module '" + class_.symbol.module + "'", span)
+        }
+        return substituteTypeParams(methodType, classDeclaration.typeParams, class_.typeArgs)
+      }
+    }
+    interface_: InterfaceDeclaration -> {
+      for field of interface_.fields { if field.name == property { recordMember(selection, class_, class_.symbol.module, none, true); return field.resolvedType ?? resolveType(state, field.type_, state.info!, state.moduleScope!) } }
+      for method of interface_.methods { if method.name == property { recordMember(selection, class_, class_.symbol.module, method); return method.resolvedType ?? methodSignature(method, classModuleFor(state.result, class_.symbol), state.result, class_.symbol.typeParams) } }
     }
     _ -> { }
   }
   return unknownType()
+}
+
+/** Resolves the compiler-provided `metadata`, `toSerialObject`, and `fromSerialValue` members of a class. */
+function classGeneratedMemberType(state: CheckerState, class_: ClassType, declaration: ClassDeclaration, property: string, span: SourceSpan, selection: CheckedMember): ResolvedType {
+  programs := jsonPrograms(state.result)
+  if property == "metadata" {
+    if !validateClassMetadata(state, declaration, programs, span) { return unknownType() }
+    declaration.needsMetadata = true
+    recordMember(selection, class_, class_.symbol.module, none, false, declaration, false)
+    return classMetadataType(class_)
+  }
+  deserialize := property == "fromSerialValue"
+  if !deserialize && canGenerateJsonSerialization(declaration, programs) { return functionType([], jsonObjectType()) }
+  if deserialize && canGenerateJsonDeserialization(declaration, programs) {
+    recordMember(selection, class_, class_.symbol.module, none, false, declaration, false)
+    return serialDecodeType(class_)
+  }
+  blocker := jsonUnionFieldBlocker(declaration, programs, deserialize)
+  reason := if blocker == none then "" else " (" + blocker! + ")"
+  typeError(state, "Type \"" + declaration.name + "\" does not support automatic JSON " + (if deserialize then "deserialization" else "serialization") + reason, span)
+  return unknownType()
+}
+
+// Metadata exposes every public instance method through JSON invocation, so
+// each parameter and success value must itself be JSON-serializable.
+function validateClassMetadata(state: CheckerState, declaration: ClassDeclaration, programs: Program[], span: SourceSpan): bool {
+  if declaration.typeParams.length > 0 {
+    typeError(state, "Metadata is not available on generic type \"" + declaration.name + "\"", span)
+    return false
+  }
+  if !canGenerateJsonSerialization(declaration, programs) || !canGenerateJsonDeserialization(declaration, programs) {
+    typeError(state, "Type \"" + declaration.name + "\" is not eligible for metadata because it does not support automatic JSON generation", span)
+    return false
+  }
+  let valid = true
+  for method of declaration.methods {
+    if method.private_ || method.static_ { continue }
+    for parameter of method.params {
+      if parameter.resolvedType != none && !isGeneratedJsonType(parameter.resolvedType!, programs) {
+        typeError(state, "Parameter \"" + parameter.name + "\" of method \"" + method.name + "\" is not JSON-serializable", parameter.span)
+        valid = false
+      }
+    }
+    if method.resolvedType == none { continue }
+    case method.resolvedType! {
+      function_: FunctionType -> {
+        let successType = function_.returnType
+        case successType {
+          result: ResultResolvedType -> { successType = result.valueType }
+          _ -> { }
+        }
+        if successType.kind != "none" && !isGeneratedJsonType(successType, programs) {
+          typeError(state, "Return type of method \"" + method.name + "\" is not JSON-serializable", method.span)
+          valid = false
+        }
+      }
+      _ -> { }
+    }
+  }
+  return valid
+}
+
+function interfaceMemberType(state: CheckerState, interfaceType_: InterfaceType, property: string, span: SourceSpan, declaredOnly: bool, selection: CheckedMember): ResolvedType {
+  declaration := declarationFor(state.result, interfaceType_.symbol)
+  if declaration == none { return unknownType() }
+  case declaration! {
+    interface_: InterfaceDeclaration -> {
+      for field of interface_.fields {
+        if field.name != property { continue }
+        recordMember(selection, interfaceType_, interfaceType_.symbol.module, none, true)
+        fieldType := field.resolvedType ?? resolveAnnotation(field.type_, classModuleFor(state.result, interfaceType_.symbol), state.result, interface_.typeParams)
+        return substituteTypeParams(if field.readonly_ then applyDeepReadonly(fieldType) else fieldType, interface_.typeParams, interfaceType_.typeArgs)
+      }
+      for method of interface_.methods {
+        if method.name != property { continue }
+        recordMember(selection, interfaceType_, interfaceType_.symbol.module, method, false, none, !method.static_)
+        methodType := method.resolvedType ?? interfaceMethodSignature(state, method, interface_, interfaceType_.symbol)
+        return substituteTypeParams(methodType, interface_.typeParams, interfaceType_.typeArgs)
+      }
+      if declaredOnly || (property != "toSerialObject" && property != "fromSerialValue") { return unknownType() }
+      return interfaceGeneratedMemberType(state, interfaceType_, interface_, property, span, selection)
+    }
+    _ -> { }
+  }
+  return unknownType()
+}
+
+/** Resolves the compiler-provided `toSerialObject` and `fromSerialValue` members of an interface. */
+function interfaceGeneratedMemberType(state: CheckerState, interfaceType_: InterfaceType, interface_: InterfaceDeclaration, property: string, span: SourceSpan, selection: CheckedMember): ResolvedType {
+  deserialize := property == "fromSerialValue"
+  if interface_.typeParams.length > 0 {
+    typeError(state, "Automatic JSON " + (if deserialize then "deserialization" else "serialization") + " is not available on generic interface \"" + interface_.name + "\"", span)
+    return unknownType()
+  }
+  programs := jsonPrograms(state.result)
+  if deserialize {
+    // Without implementations no value can be decoded; the generated decoder
+    // always fails, so library helpers still check on their own.
+    if interfaceJsonDiscriminator(interface_, programs) == none && interfaceType_.symbol.implementations.length > 0 {
+      typeError(state, "Cannot deserialize interface \"" + interface_.name + "\": all implementing classes must share a literal-valued string field with distinct values (e.g. kind: \"variant\")", span)
+      return unknownType()
+    }
+    return serialDecodeType(interfaceType_)
+  }
+  blocker := interfaceJsonSerializationBlocker(interface_, programs)
+  if blocker != none {
+    typeError(state, "Cannot serialize interface \"" + interface_.name + "\": implementing class \"" + blocker! + "\" does not support automatic JSON serialization", span)
+    return unknownType()
+  }
+  recordMember(selection, interfaceType_, interfaceType_.symbol.module, none, false, none, true)
+  return functionType([], jsonObjectType())
 }
 
 export function fieldAssignmentBinding(state: CheckerState, object: ResolvedType, property: string, fieldType: ResolvedType, span: SourceSpan): Binding | none {

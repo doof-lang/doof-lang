@@ -324,3 +324,31 @@ export function testCompilerProvidedDecodersShareOneSignature(): none {
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
 }
+
+function messages(result: CheckResult): string {
+  let found = ""
+  for diagnostic of result.diagnostics { found = found + diagnostic.message + "\n" }
+  return found
+}
+
+export function testReadonlyCollectionsRejectOnlyTheirOwnMutators(): none {
+  Assert.equal(messages(checked("function use(m: ReadonlyMap<string, int>, s: ReadonlySet<int>): none { m.set(\"a\", 1)\ns.add(1)\ns.cloneReadonly() }")),
+    "Method \"set\" is not available on readonly map\n" +
+    "Method \"add\" is not available on readonly set\n" +
+    "Method \"cloneReadonly\" is not available on readonly set\n",
+  )
+  Assert.equal(checked("function use(m: ReadonlyMap<string, int>, s: ReadonlySet<int>): int { return m.size + s.size + m.keys().length + s.values().length }").diagnostics.length, 0)
+}
+
+export function testTypeParameterIntrinsicsNameTheirRequiredConstraint(): none {
+  Assert.equal(messages(checked("function use<T>(value: T): none { value.toSerialObject()\nT.fromSerialValue(value)\nT.metadata }")),
+    "Member \"toSerialObject\" requires type parameter \"T\" to be constrained by Serializable\n" +
+    "Static member \"fromSerialValue\" requires type parameter \"T\" to be constrained by Serializable\n" +
+    "Static member \"metadata\" requires type parameter \"T\" to be constrained by Reflectable\n",
+  )
+}
+
+export function testEnumMembersFollowTheBackingKind(): none {
+  result := checked("enum Code { Ok = \"ok\", Bad = \"bad\" }\nfunction use(): string { found := Code.fromValue(\"ok\")\nreturn Code.Bad.value + Code.Ok.name + string(Code.values().length) }")
+  Assert.equal(result.diagnostics.length, 0)
+}

@@ -6,7 +6,7 @@
 // `index`, which the runtime detects from the callback's arity.
 import { ArrayResolvedType, FunctionParamType, FunctionType, PromiseType, ResolvedType } from "./semantic"
 import { SourceSpan } from "./ast"
-import { arrayType, functionType, noneType, primitive, resultType, typeParameter, unionType, unknownType } from "./checker-types"
+import { arrayType, functionType, noneType, param, primitive, resultType, typeParameter, unionType, unknownType } from "./checker-types"
 import { CheckerState } from "./checker-state"
 import { deprecatedBuildReadonly, typeError } from "./checker-common"
 
@@ -89,8 +89,4 @@ export function withCallbackArity(signature: FunctionType, parameterIndex: int, 
 
 function elementCallback(element: ResolvedType, returnType: ResolvedType): ResolvedType {
   return functionType([param("it", element), param("index", primitive("int"))], returnType)
-}
-
-function param(name: string, type_: ResolvedType): FunctionParamType {
-  return FunctionParamType { name, type_, hasDefault: false }
 }
