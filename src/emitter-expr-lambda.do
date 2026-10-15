@@ -6,18 +6,10 @@
 // values and those boxes into the actor-affine doof::callback wrapper.
 
 import { emitExpressionReturn } from "./emitter-expr-utils"
-import {
-  ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpression, AsyncExpression, BinaryExpression, Block, CallExpression,
-  CaseExpression, CaseStatement, ConstDeclaration, ConstructExpression, Expression,
-  ExpressionStatement, ForOfStatement, ForStatement, Identifier, IfExpression,
-  IfStatement, ImmutableBinding, IndexExpression, LambdaExpression,
-  LetDeclaration, MemberExpression, ObjectLiteral, ReadonlyDeclaration, RetireExpression, ReturnStatement,
-  Statement, StringLiteral, ThisExpression, TryStatement, DestructuringStatement, TupleLiteral, UnaryExpression,
-  WhileStatement, WithStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression,
-} from "./ast"
+import { Block, ConstructExpression, Expression, Identifier, LambdaExpression, ObjectLiteral, ThisExpression } from "./ast"
 import { Binding, ClassType, FunctionType, ResolvedType, ResultResolvedType, NoneType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
-import { collectNestedExpressions } from "./ast-walk"
+import { collectBlockExpressions, collectNestedExpressions } from "./ast-walk"
 import { cppIdentifier } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
 import { emitContextReturnType, emitContextType, specializeEmitType } from "./emitter-types"
@@ -135,14 +127,16 @@ function addStructCapture(name: string, binding: Binding | none, context: EmitCo
 // only by its containing lambda remains an ordinary local while one captured by
 // a nested lambda is boxed.
 export function scanCapturedMutablesInBlock(body: Block): string[] {
+  let roots: Expression[] = []
+  collectBlockExpressions(body, roots)
   let result: string[] = []
-  scanBlockForLambdas(body, result)
+  scanExpressionsForLambdas(roots, result)
   return result
 }
 
 export function scanCapturedMutablesInExpression(body: Expression): string[] {
   let result: string[] = []
-  scanExpressionForLambdas(body, result)
+  scanExpressionsForLambdas([body], result)
   return result
 }
 
@@ -159,20 +153,7 @@ function lambdaFunctionType(expression: LambdaExpression): FunctionType {
 
 function lambdaCaptureNames(expression: LambdaExpression): string[] {
   let result: string[] = []
-  let bodyStart = 0
-  let bodyEnd = 0
-  case expression.body {
-    block: Block -> {
-      bodyStart = block.span.start.offset
-      bodyEnd = block.span.end.offset
-      collectBlockCaptures(block, bodyStart, bodyEnd, result, false)
-    }
-    body: Expression -> {
-      bodyStart = body.span.start.offset
-      bodyEnd = body.span.end.offset
-      collectExpressionCaptures(body, bodyStart, bodyEnd, result, false)
-    }
-  }
+  collectLambdaCaptures(expression, result, false)
   let captures: string[] = []
   for name of result {
     let parameter = false
@@ -182,265 +163,62 @@ function lambdaCaptureNames(expression: LambdaExpression): string[] {
   return captures
 }
 
-function scanBlockForLambdas(block: Block, result: string[]): none {
-  for statement of block.statements { scanStatementForLambdas(statement, result) }
-}
-
-function scanStatementForLambdas(statement: Statement, result: string[]): none {
-  case statement {
-    destructuring: DestructuringStatement -> { scanExpressionForLambdas(destructuring.value, result) }
-    const_: ConstDeclaration -> { scanExpressionForLambdas(const_.value, result) }
-    readonly_: ReadonlyDeclaration -> { scanExpressionForLambdas(readonly_.value, result) }
-    binding: ImmutableBinding -> {
-      scanExpressionForLambdas(binding.value, result)
-      if binding.else_ != none { scanBlockForLambdas(binding.else_!, result) }
+// Every lambda reachable from these roots contributes the outer mutable
+// bindings it reads, including lambdas nested inside other lambdas.
+function scanExpressionsForLambdas(expressions: Expression[], result: string[]): none {
+  let cursor = 0
+  while cursor < expressions.length {
+    current := expressions[cursor]
+    cursor += 1
+    case current {
+      lambda: LambdaExpression -> { collectLambdaCaptures(lambda, result, true) }
+      _ -> { }
     }
-    let_: LetDeclaration -> { scanExpressionForLambdas(let_.value, result) }
-    expression: ExpressionStatement -> { scanExpressionForLambdas(expression.expression, result) }
-    return_: ReturnStatement -> { if return_.value != none { scanExpressionForLambdas(return_.value!, result) } }
-    if_: IfStatement -> {
-      scanExpressionForLambdas(if_.condition, result)
-      scanBlockForLambdas(if_.body, result)
-      for branch of if_.elseIfs {
-        scanExpressionForLambdas(branch.condition, result)
-        scanBlockForLambdas(branch.body, result)
-      }
-      if if_.else_ != none { scanBlockForLambdas(if_.else_!, result) }
-    }
-    case_: CaseStatement -> {
-      scanExpressionForLambdas(case_.subject, result)
-      for arm of case_.arms {
-        case arm.body {
-          block: Block -> { scanBlockForLambdas(block, result) }
-          expression: Expression -> { scanExpressionForLambdas(expression, result) }
-        }
-      }
-    }
-    while_: WhileStatement -> {
-      scanExpressionForLambdas(while_.condition, result)
-      scanBlockForLambdas(while_.body, result)
-      if while_.then_ != none { scanBlockForLambdas(while_.then_!, result) }
-    }
-    for_: ForStatement -> {
-      for init of for_.init { scanStatementForLambdas(init, result) }
-      if for_.condition != none { scanExpressionForLambdas(for_.condition!, result) }
-      for update of for_.update { scanExpressionForLambdas(update, result) }
-      scanBlockForLambdas(for_.body, result)
-      if for_.then_ != none { scanBlockForLambdas(for_.then_!, result) }
-    }
-    forOf: ForOfStatement -> {
-      scanExpressionForLambdas(forOf.iterable, result)
-      scanBlockForLambdas(forOf.body, result)
-      if forOf.then_ != none { scanBlockForLambdas(forOf.then_!, result) }
-    }
-    with_: WithStatement -> {
-      for binding of with_.bindings { scanExpressionForLambdas(binding.value, result) }
-      scanBlockForLambdas(with_.body, result)
-    }
-    try_: TryStatement -> {
-      case try_.binding {
-        declaration: ConstDeclaration -> { scanExpressionForLambdas(declaration.value, result) }
-        declaration: ReadonlyDeclaration -> { scanExpressionForLambdas(declaration.value, result) }
-        binding: ImmutableBinding -> { scanExpressionForLambdas(binding.value, result) }
-        declaration: LetDeclaration -> { scanExpressionForLambdas(declaration.value, result) }
-        expression: ExpressionStatement -> { scanExpressionForLambdas(expression.expression, result) }
-        destructuring: DestructuringStatement -> { scanExpressionForLambdas(destructuring.value, result) }
-      }
-    }
-    assignment: YieldBlockAssignmentStatement -> { scanExpressionForLambdas(assignment.value, result) }
-    block: Block -> { scanBlockForLambdas(block, result) }
-    _ -> { }
+    collectNestedExpressions(current, expressions)
   }
 }
 
-function scanExpressionForLambdas(expression: Expression, result: string[]): none {
-  case expression {
-    as_: AsExpression -> { scanExpressionForLambdas(as_.expression, result) }
-    binary: BinaryExpression -> { scanExpressionForLambdas(binary.left, result)
-      scanExpressionForLambdas(binary.right, result) }
-    unary: UnaryExpression -> { scanExpressionForLambdas(unary.operand, result) }
-    assignment: AssignmentExpression -> { scanExpressionForLambdas(assignment.target, result)
-      scanExpressionForLambdas(assignment.value, result) }
-    member: MemberExpression -> { scanExpressionForLambdas(member.object, result) }
-    index: IndexExpression -> { scanExpressionForLambdas(index.object, result)
-      scanExpressionForLambdas(index.index, result) }
-    call: CallExpression -> { scanExpressionForLambdas(call.callee, result)
-      for argument of call.args { scanExpressionForLambdas(argument.value, result) } }
-    array: ArrayLiteral -> { for element of array.elements { scanExpressionForLambdas(element, result) } }
-    object: ObjectLiteral -> {
-      for property of object.properties {
-        if property.key != none { scanExpressionForLambdas(property.key!, result) }
-        if property.value != none { scanExpressionForLambdas(property.value!, result) }
-      }
-      if object.spread != none { scanExpressionForLambdas(object.spread!, result) }
+// Bindings declared inside the lambda body are its own locals, not captures.
+function collectLambdaCaptures(lambda: LambdaExpression, result: string[], mutableOnly: bool): none {
+  let expressions: Expression[] = []
+  let bodyStart = 0
+  let bodyEnd = 0
+  case lambda.body {
+    block: Block -> {
+      bodyStart = block.span.start.offset
+      bodyEnd = block.span.end.offset
+      collectBlockExpressions(block, expressions)
     }
-    tuple: TupleLiteral -> { for element of tuple.elements { scanExpressionForLambdas(element, result) } }
-    string_: StringLiteral -> { for interpolation of string_.interpolations { scanExpressionForLambdas(interpolation, result) } }
-    lambda: LambdaExpression -> {
-      case lambda.body {
-        block: Block -> {
-          collectBlockCaptures(block, block.span.start.offset, block.span.end.offset, result, true)
-          scanBlockForLambdas(block, result)
-        }
-        body: Expression -> {
-          collectExpressionCaptures(body, body.span.start.offset, body.span.end.offset, result, true)
-          scanExpressionForLambdas(body, result)
-        }
-      }
+    body: Expression -> {
+      bodyStart = body.span.start.offset
+      bodyEnd = body.span.end.offset
+      expressions.push(body)
     }
-    if_: IfExpression -> { scanExpressionForLambdas(if_.condition, result)
-      scanExpressionForLambdas(if_.then_, result)
-      scanExpressionForLambdas(if_.else_, result) }
-    case_: CaseExpression -> { scanExpressionForLambdas(case_.subject, result)
-      for arm of case_.arms {
-        case arm.body {
-          block: Block -> { scanBlockForLambdas(block, result) }
-          bodyExpression: Expression -> { scanExpressionForLambdas(bodyExpression, result) }
-        }
-      } }
-    construct: ConstructExpression -> {
-      if construct.spread != none { scanExpressionForLambdas(construct.spread!, result) }
-      for property of construct.args { if property.value != none { scanExpressionForLambdas(property.value!, result) } }
-    }
-    async_: AsyncExpression -> {
-      case async_.expression {
-        block: Block -> { scanBlockForLambdas(block, result) }
-        inner: Expression -> { scanExpressionForLambdas(inner, result) }
-      }
-    }
-    retire_: RetireExpression -> { scanExpressionForLambdas(retire_.actor, result) }
-    actor: ActorCreationExpression -> { for argument of actor.args { scanExpressionForLambdas(argument, result) } }
-    yieldBlock: YieldBlockExpression -> { scanBlockForLambdas(yieldBlock.body, result) }
-    catch_: CatchExpression -> { scanBlockForLambdas(catch_.body, result) }
-    _ -> { }
   }
-}
-
-function collectBlockCaptures(block: Block, bodyStart: int, bodyEnd: int, result: string[], mutableOnly: bool): none {
-  for statement of block.statements { collectStatementCaptures(statement, bodyStart, bodyEnd, result, mutableOnly) }
-}
-
-function collectStatementCaptures(statement: Statement, bodyStart: int, bodyEnd: int, result: string[], mutableOnly: bool): none {
-  case statement {
-    destructuring: DestructuringStatement -> { collectExpressionCaptures(destructuring.value, bodyStart, bodyEnd, result, mutableOnly) }
-    const_: ConstDeclaration -> { collectExpressionCaptures(const_.value, bodyStart, bodyEnd, result, mutableOnly) }
-    readonly_: ReadonlyDeclaration -> { collectExpressionCaptures(readonly_.value, bodyStart, bodyEnd, result, mutableOnly) }
-    binding: ImmutableBinding -> {
-      collectExpressionCaptures(binding.value, bodyStart, bodyEnd, result, mutableOnly)
-      if binding.else_ != none { collectBlockCaptures(binding.else_!, bodyStart, bodyEnd, result, mutableOnly) }
-    }
-    let_: LetDeclaration -> { collectExpressionCaptures(let_.value, bodyStart, bodyEnd, result, mutableOnly) }
-    expression: ExpressionStatement -> { collectExpressionCaptures(expression.expression, bodyStart, bodyEnd, result, mutableOnly) }
-    return_: ReturnStatement -> { if return_.value != none { collectExpressionCaptures(return_.value!, bodyStart, bodyEnd, result, mutableOnly) } }
-    if_: IfStatement -> {
-      collectExpressionCaptures(if_.condition, bodyStart, bodyEnd, result, mutableOnly)
-      collectBlockCaptures(if_.body, bodyStart, bodyEnd, result, mutableOnly)
-      for branch of if_.elseIfs { collectExpressionCaptures(branch.condition, bodyStart, bodyEnd, result, mutableOnly)
-        collectBlockCaptures(branch.body, bodyStart, bodyEnd, result, mutableOnly) }
-      if if_.else_ != none { collectBlockCaptures(if_.else_!, bodyStart, bodyEnd, result, mutableOnly) }
-    }
-    case_: CaseStatement -> { collectExpressionCaptures(case_.subject, bodyStart, bodyEnd, result, mutableOnly)
-      for arm of case_.arms {
-        case arm.body {
-          block: Block -> { collectBlockCaptures(block, bodyStart, bodyEnd, result, mutableOnly) }
-          expression: Expression -> { collectExpressionCaptures(expression, bodyStart, bodyEnd, result, mutableOnly) }
+  let cursor = 0
+  while cursor < expressions.length {
+    current := expressions[cursor]
+    cursor += 1
+    case current {
+      identifier: Identifier -> { collectIdentifierCapture(identifier, bodyStart, bodyEnd, result, mutableOnly) }
+      _: ThisExpression -> { if !mutableOnly { addUnique(result, "this") } }
+      object: ObjectLiteral -> {
+        for property of object.properties {
+          if property.key == none && property.value == none && property.resolvedBinding != none {
+            collectBindingCapture(property.name, property.resolvedBinding!, bodyStart, bodyEnd, result, mutableOnly)
+          }
         }
-      } }
-    while_: WhileStatement -> {
-      collectExpressionCaptures(while_.condition, bodyStart, bodyEnd, result, mutableOnly)
-      collectBlockCaptures(while_.body, bodyStart, bodyEnd, result, mutableOnly)
-      if while_.then_ != none { collectBlockCaptures(while_.then_!, bodyStart, bodyEnd, result, mutableOnly) }
-    }
-    for_: ForStatement -> {
-      for init of for_.init { collectStatementCaptures(init, bodyStart, bodyEnd, result, mutableOnly) }
-      if for_.condition != none { collectExpressionCaptures(for_.condition!, bodyStart, bodyEnd, result, mutableOnly) }
-      for update of for_.update { collectExpressionCaptures(update, bodyStart, bodyEnd, result, mutableOnly) }
-      collectBlockCaptures(for_.body, bodyStart, bodyEnd, result, mutableOnly)
-      if for_.then_ != none { collectBlockCaptures(for_.then_!, bodyStart, bodyEnd, result, mutableOnly) }
-    }
-    forOf: ForOfStatement -> {
-      collectExpressionCaptures(forOf.iterable, bodyStart, bodyEnd, result, mutableOnly)
-      collectBlockCaptures(forOf.body, bodyStart, bodyEnd, result, mutableOnly)
-      if forOf.then_ != none { collectBlockCaptures(forOf.then_!, bodyStart, bodyEnd, result, mutableOnly) }
-    }
-    with_: WithStatement -> { for binding of with_.bindings { collectExpressionCaptures(binding.value, bodyStart, bodyEnd, result, mutableOnly) }
-      collectBlockCaptures(with_.body, bodyStart, bodyEnd, result, mutableOnly) }
-    try_: TryStatement -> {
-      case try_.binding {
-        declaration: ConstDeclaration -> { collectExpressionCaptures(declaration.value, bodyStart, bodyEnd, result, mutableOnly) }
-        declaration: ReadonlyDeclaration -> { collectExpressionCaptures(declaration.value, bodyStart, bodyEnd, result, mutableOnly) }
-        binding: ImmutableBinding -> { collectExpressionCaptures(binding.value, bodyStart, bodyEnd, result, mutableOnly) }
-        declaration: LetDeclaration -> { collectExpressionCaptures(declaration.value, bodyStart, bodyEnd, result, mutableOnly) }
-        expression: ExpressionStatement -> { collectExpressionCaptures(expression.expression, bodyStart, bodyEnd, result, mutableOnly) }
-        destructuring: DestructuringStatement -> { collectExpressionCaptures(destructuring.value, bodyStart, bodyEnd, result, mutableOnly) }
       }
-    }
-    assignment: YieldBlockAssignmentStatement -> { collectExpressionCaptures(assignment.value, bodyStart, bodyEnd, result, mutableOnly) }
-    block: Block -> { collectBlockCaptures(block, bodyStart, bodyEnd, result, mutableOnly) }
-    _ -> { }
-  }
-}
-
-function collectExpressionCaptures(expression: Expression, bodyStart: int, bodyEnd: int, result: string[], mutableOnly: bool): none {
-  case expression {
-    identifier: Identifier -> { collectIdentifierCapture(identifier, bodyStart, bodyEnd, result, mutableOnly) }
-    _: ThisExpression -> { if !mutableOnly { addUnique(result, "this") } }
-    as_: AsExpression -> { collectExpressionCaptures(as_.expression, bodyStart, bodyEnd, result, mutableOnly) }
-    binary: BinaryExpression -> { collectExpressionCaptures(binary.left, bodyStart, bodyEnd, result, mutableOnly)
-      collectExpressionCaptures(binary.right, bodyStart, bodyEnd, result, mutableOnly) }
-    unary: UnaryExpression -> { collectExpressionCaptures(unary.operand, bodyStart, bodyEnd, result, mutableOnly) }
-    assignment: AssignmentExpression -> { collectExpressionCaptures(assignment.target, bodyStart, bodyEnd, result, mutableOnly)
-      collectExpressionCaptures(assignment.value, bodyStart, bodyEnd, result, mutableOnly) }
-    member: MemberExpression -> { collectExpressionCaptures(member.object, bodyStart, bodyEnd, result, mutableOnly) }
-    index: IndexExpression -> { collectExpressionCaptures(index.object, bodyStart, bodyEnd, result, mutableOnly)
-      collectExpressionCaptures(index.index, bodyStart, bodyEnd, result, mutableOnly) }
-    call: CallExpression -> { collectExpressionCaptures(call.callee, bodyStart, bodyEnd, result, mutableOnly)
-      for argument of call.args { collectExpressionCaptures(argument.value, bodyStart, bodyEnd, result, mutableOnly) } }
-    array: ArrayLiteral -> { for element of array.elements { collectExpressionCaptures(element, bodyStart, bodyEnd, result, mutableOnly) } }
-    object: ObjectLiteral -> {
-      for property of object.properties {
-        if property.key != none { collectExpressionCaptures(property.key!, bodyStart, bodyEnd, result, mutableOnly) }
-        if property.value != none { collectExpressionCaptures(property.value!, bodyStart, bodyEnd, result, mutableOnly) }
-        else if property.key == none && property.resolvedBinding != none { collectBindingCapture(property.name, property.resolvedBinding!, bodyStart, bodyEnd, result, mutableOnly) }
-      }
-      if object.spread != none { collectExpressionCaptures(object.spread!, bodyStart, bodyEnd, result, mutableOnly) }
-    }
-    tuple: TupleLiteral -> { for element of tuple.elements { collectExpressionCaptures(element, bodyStart, bodyEnd, result, mutableOnly) } }
-    string_: StringLiteral -> { for interpolation of string_.interpolations { collectExpressionCaptures(interpolation, bodyStart, bodyEnd, result, mutableOnly) } }
-    lambda: LambdaExpression -> {
-      case lambda.body {
-        block: Block -> { collectBlockCaptures(block, bodyStart, bodyEnd, result, mutableOnly) }
-        body: Expression -> { collectExpressionCaptures(body, bodyStart, bodyEnd, result, mutableOnly) }
-      }
-    }
-    if_: IfExpression -> { collectExpressionCaptures(if_.condition, bodyStart, bodyEnd, result, mutableOnly)
-      collectExpressionCaptures(if_.then_, bodyStart, bodyEnd, result, mutableOnly)
-      collectExpressionCaptures(if_.else_, bodyStart, bodyEnd, result, mutableOnly) }
-    case_: CaseExpression -> { collectExpressionCaptures(case_.subject, bodyStart, bodyEnd, result, mutableOnly)
-      for arm of case_.arms {
-        case arm.body {
-          block: Block -> { collectBlockCaptures(block, bodyStart, bodyEnd, result, mutableOnly) }
-          bodyExpression: Expression -> { collectExpressionCaptures(bodyExpression, bodyStart, bodyEnd, result, mutableOnly) }
+      construct: ConstructExpression -> {
+        for property of construct.args {
+          if property.value == none && property.resolvedBinding != none {
+            collectBindingCapture(property.name, property.resolvedBinding!, bodyStart, bodyEnd, result, mutableOnly)
+          }
         }
-      } }
-    construct: ConstructExpression -> {
-      if construct.spread != none { collectExpressionCaptures(construct.spread!, bodyStart, bodyEnd, result, mutableOnly) }
-      for property of construct.args {
-        if property.value != none { collectExpressionCaptures(property.value!, bodyStart, bodyEnd, result, mutableOnly) }
-        else if property.resolvedBinding != none { collectBindingCapture(property.name, property.resolvedBinding!, bodyStart, bodyEnd, result, mutableOnly) }
       }
+      _ -> { }
     }
-    async_: AsyncExpression -> {
-      case async_.expression {
-        block: Block -> { collectBlockCaptures(block, bodyStart, bodyEnd, result, mutableOnly) }
-        inner: Expression -> { collectExpressionCaptures(inner, bodyStart, bodyEnd, result, mutableOnly) }
-      }
-    }
-    retire_: RetireExpression -> { collectExpressionCaptures(retire_.actor, bodyStart, bodyEnd, result, mutableOnly) }
-    actor: ActorCreationExpression -> { for argument of actor.args { collectExpressionCaptures(argument, bodyStart, bodyEnd, result, mutableOnly) } }
-    yieldBlock: YieldBlockExpression -> { collectBlockCaptures(yieldBlock.body, bodyStart, bodyEnd, result, mutableOnly) }
-    catch_: CatchExpression -> { collectBlockCaptures(catch_.body, bodyStart, bodyEnd, result, mutableOnly) }
-    _ -> { }
+    collectNestedExpressions(current, expressions)
   }
 }
 

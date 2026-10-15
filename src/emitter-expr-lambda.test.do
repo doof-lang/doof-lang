@@ -189,3 +189,46 @@ export function testNoneCarrierLambdaDiscardsUnitReturn(): none {
   Assert.isTrue(result.emission != none)
   Assert.stringContains(result.emission!.modules[0].source, "return static_cast<void>((static_cast<void>(effect()), std::monostate{}));")
 }
+
+export function testLambdaInYieldStatementBoxesCapturedMutable(): none {
+  result := compile([SourceFile {
+    path: "/yield-callback.do",
+    source:
+      "function makeReader(): (): int {\n" +
+      "let count = 0\n" +
+      "readonly reader <- {\n" +
+      "yield (): int => count\n" +
+      "}\n" +
+      "count = 5\n" +
+      "return reader\n" +
+      "}",
+  }], "/yield-callback.do")
+
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "auto count = std::make_shared<int32_t>(0);")
+  Assert.stringContains(source, "doof::callback<int32_t()>([count]() -> int32_t")
+}
+
+export function testLambdaCasePatternBoundsCaptureMutable(): none {
+  result := compile([SourceFile {
+    path: "/pattern-callback.do",
+    source:
+      "function makeCheck(): (x: int): bool {\n" +
+      "let low = 0\n" +
+      "let limit = 3\n" +
+      "check := (x: int): bool => case x { low -> false, 1..<limit -> true, _ -> false }\n" +
+      "limit = 10\n" +
+      "return check\n" +
+      "}",
+  }], "/pattern-callback.do")
+
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "auto limit = std::make_shared<int32_t>(3);")
+  Assert.stringContains(source, "[low, limit](int32_t x) -> bool")
+}
