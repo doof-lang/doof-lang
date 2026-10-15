@@ -7,11 +7,10 @@
 // interface still check and emit; member access on such a value lowers to an
 // unreachable panic of the checked result type instead of a visitor that
 // could not compile.
-import { ExportDeclaration, InterfaceDeclaration } from "./ast"
-import type { Statement } from "./ast"
 import { InterfaceType, ResolvedType } from "./semantic"
 import { substituteTypeParams } from "./checker-types"
 import { EmitContext } from "./emitter-context"
+import { indexedInterface } from "./emitter-declarations"
 import { interfaceInstantiationKey } from "./emitter-monomorphize"
 import { emitContextReturnType, specializeEmitType } from "./emitter-types"
 import { quote } from "./emitter-expr-literals"
@@ -43,26 +42,11 @@ export function emitNoImplementationsAccess(receiver: string, interface_: Interf
 
 /** The declared type of an interface field, for accesses without a decorated result type. */
 export function interfaceFieldType(interface_: InterfaceType, field: string, context: EmitContext): ResolvedType | none {
-  for program of context.allPrograms {
-    for statement of program.statements {
-      declaration := interfaceDeclarationIn(statement) else { continue }
-      symbol := declaration.resolvedSymbol else { continue }
-      if symbol.module != interface_.symbol.module || symbol.name != interface_.symbol.name { continue }
-      for candidate of declaration.fields {
-        if candidate.name != field || candidate.resolvedType == none { continue }
-        if declaration.typeParams.length == 0 { return candidate.resolvedType }
-        return substituteTypeParams(candidate.resolvedType!, declaration.typeParams, interface_.typeArgs)
-      }
-      return none
-    }
+  declaration := indexedInterface(context.declarations, interface_.symbol.module, interface_.symbol.name) else { return none }
+  for candidate of declaration.fields {
+    if candidate.name != field || candidate.resolvedType == none { continue }
+    if declaration.typeParams.length == 0 { return candidate.resolvedType }
+    return substituteTypeParams(candidate.resolvedType!, declaration.typeParams, interface_.typeArgs)
   }
   return none
-}
-
-function interfaceDeclarationIn(statement: Statement): InterfaceDeclaration | none {
-  case statement {
-    interface_: InterfaceDeclaration -> { return interface_ }
-    export_: ExportDeclaration -> { return interfaceDeclarationIn(export_.declaration) }
-    _ -> { return none }
-  }
 }

@@ -10,9 +10,10 @@ import { Block, ConstructExpression, Expression, Identifier, LambdaExpression, O
 import { Binding, ClassType, FunctionType, ResolvedType, ResultResolvedType, NoneType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { collectBlockExpressions, collectNestedExpressions } from "./ast-walk"
-import { cppIdentifier } from "./emitter-expr"
+import { cppIdentifier } from "./emitter-names"
 import { emitBlock } from "./emitter-stmt"
 import { emitContextReturnType, emitContextType, specializeEmitType } from "./emitter-types"
+import { addUnique } from "./string-lists"
 
 export function emitLambdaExpression(expression: LambdaExpression, context: EmitContext, expected: ResolvedType | none = none): string {
   let functionType = lambdaFunctionType(expression)
@@ -245,9 +246,4 @@ function collectBindingCapture(name: string, binding: Binding, bodyStart: int, b
   if bindingStart >= bodyStart && bindingStart <= bodyEnd { return }
   if mutableOnly && !binding.mutable { return }
   addUnique(result, cppIdentifier(name))
-}
-
-function addUnique(values: string[], value: string): none {
-  for existing of values { if existing == value { return } }
-  values.push(value)
 }

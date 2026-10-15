@@ -7,6 +7,7 @@
 import { ModuleEmission, ModuleGraphEmission } from "./emitter-module"
 import { NativeBuildPlan, PackageManifest } from "./package-manifest"
 import { OptionalPkgConfigPackage } from "./native-dependency-config"
+import { addAllUnique, addUnique } from "./string-lists"
 
 /** One package whose generated and native files participate in the project. */
 export class NativePackageInput {
@@ -103,22 +104,22 @@ function planPackageNativeBuild(project: ProjectEmission, package_: NativePackag
 
   for includePath of native.includePaths {
     relativePath := addNativeCopy(project.nativeCopies, package_, includePath)
-    appendUnique(project.nativeBuild.includePaths, relativePath)
+    addUnique(project.nativeBuild.includePaths, relativePath)
     copiedAny = true
   }
   for sourcePath of native.sourceFiles {
     relativePath := addNativeCopy(project.nativeCopies, package_, sourcePath)
-    appendUnique(project.nativeBuild.sourceFiles, relativePath)
+    addUnique(project.nativeBuild.sourceFiles, relativePath)
     copiedAny = true
   }
   for libraryPath of native.libraryPaths {
     relativePath := addNativeCopy(project.nativeCopies, package_, libraryPath)
-    appendUnique(project.nativeBuild.libraryPaths, relativePath)
+    addUnique(project.nativeBuild.libraryPaths, relativePath)
     copiedAny = true
   }
   for extraCopyPath of native.extraCopyPaths {
     relativePath := addNativeCopy(project.nativeCopies, package_, extraCopyPath)
-    appendUnique(project.nativeBuild.includePaths, projectParentPath(relativePath))
+    addUnique(project.nativeBuild.includePaths, projectParentPath(relativePath))
     copiedAny = true
   }
   for dependency of native.optionalPkgConfigPackages {
@@ -131,17 +132,17 @@ function planPackageNativeBuild(project: ProjectEmission, package_: NativePackag
   }
 
   if copiedAny {
-    appendUnique(project.nativeBuild.includePaths, package_.outputRoot)
+    addUnique(project.nativeBuild.includePaths, package_.outputRoot)
     if package_.outputRoot != "" {
-      appendUnique(project.nativeBuild.includePaths, projectParentPath(package_.outputRoot))
+      addUnique(project.nativeBuild.includePaths, projectParentPath(package_.outputRoot))
     }
   }
-  appendUniqueValues(project.nativeBuild.linkLibraries, native.linkLibraries)
-  appendUniqueValues(project.nativeBuild.frameworks, native.frameworks)
-  appendUniqueValues(project.nativeBuild.pkgConfigPackages, native.pkgConfigPackages)
-  appendUniqueValues(project.nativeBuild.defines, native.defines)
-  appendUniqueValues(project.nativeBuild.compilerFlags, native.compilerFlags)
-  appendUniqueValues(project.nativeBuild.linkerFlags, native.linkerFlags)
+  addAllUnique(project.nativeBuild.linkLibraries, native.linkLibraries)
+  addAllUnique(project.nativeBuild.frameworks, native.frameworks)
+  addAllUnique(project.nativeBuild.pkgConfigPackages, native.pkgConfigPackages)
+  addAllUnique(project.nativeBuild.defines, native.defines)
+  addAllUnique(project.nativeBuild.compilerFlags, native.compilerFlags)
+  addAllUnique(project.nativeBuild.linkerFlags, native.linkerFlags)
 }
 
 function addNativeCopy(
@@ -215,13 +216,4 @@ function addSupportFile(files: ProjectSupportFile[], file: ProjectSupportFile): 
     }
   }
   files.push(file)
-}
-
-function appendUniqueValues(target: string[], values: string[]): none {
-  for value of values { appendUnique(target, value) }
-}
-
-function appendUnique(target: string[], value: string): none {
-  for existing of target { if existing == value { return } }
-  target.push(value)
 }

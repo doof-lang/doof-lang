@@ -1,10 +1,11 @@
-import { ModuleNames } from "./emitter-names"
+import { ModuleNames, cppIdentifier } from "./emitter-names"
 import { weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
 // Shared type-pattern lowering for statement and expression cases.
 
 import { emitCarrierAbsence } from "./emitter-carrier-values"
 import { EmitContext } from "./emitter-context"
-import { TypePattern, ValuePattern } from "./ast"
+import { CasePattern, RangePattern, TypePattern, ValuePattern, WildcardPattern } from "./ast"
+import { emitExpression } from "./emitter-expr"
 import {
   ArrayResolvedType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType,
   ResolvedType, ResultResolvedType, UnionResolvedType, WeakResolvedType,
@@ -15,6 +16,40 @@ import { isSerialBytesType, sameType } from "./checker-types"
 export class CaseTypePatternEmission {
   condition: string
   binding: string
+}
+
+/** One lowered case pattern: its test against the subject and any binding it introduces. */
+export class CasePatternEmission {
+  condition: string
+  binding: string = ""
+  wildcard: bool = false
+}
+
+/** Lowers any checked case pattern against an already-materialized subject. */
+export function emitCasePattern(pattern: CasePattern, subjectType: ResolvedType, subject: string, context: EmitContext): CasePatternEmission {
+  case pattern {
+    type_: TypePattern -> {
+      bindingName := if type_.name == "_" then "" else cppIdentifier(type_.name)
+      emitted := emitCaseTypePattern(type_, subjectType, subject, bindingName, context.modulePath, context.names, context)
+      return CasePatternEmission { condition: emitted.condition, binding: emitted.binding }
+    }
+    value: ValuePattern -> {
+      return CasePatternEmission { condition: emitCaseValuePattern(value, subjectType, subject, emitExpression(value.value, context), context) }
+    }
+    range: RangePattern -> { return CasePatternEmission { condition: emitRangePatternCondition(range, subject, context) } }
+    _: WildcardPattern -> { return CasePatternEmission { condition: "true", wildcard: true } }
+  }
+}
+
+function emitRangePatternCondition(pattern: RangePattern, subject: string, context: EmitContext): string {
+  let condition = ""
+  if pattern.start != none { condition = subject + " >= " + emitExpression(pattern.start!, context) }
+  if pattern.end != none {
+    operator := if pattern.inclusive then " <= " else " < "
+    if condition != "" { condition = condition + " && " }
+    condition = condition + subject + operator + emitExpression(pattern.end!, context)
+  }
+  return condition
 }
 
 /** Materializes the checker-owned weak read once, retaining a live referent. */

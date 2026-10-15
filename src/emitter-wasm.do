@@ -6,13 +6,14 @@ import { CppTypeRegistry } from "./cpp-type"
 // function accepts one JSON object string and returns an allocated JSON
 // envelope. Hosts release returned text through doof_free.
 
-import { ClassDeclaration, ExportDeclaration, FunctionDeclaration, Parameter, Program } from "./ast"
+import { ExportDeclaration, FunctionDeclaration, Parameter } from "./ast"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { createEmitContextForModule, EmitContext } from "./emitter-context"
-import { cppIdentifier, emitExpression } from "./emitter-expr"
+import { DeclarationIndex, indexDeclarations, indexedClass, indexedModule } from "./emitter-declarations"
+import { emitExpression } from "./emitter-expr"
 import { emitJsonField, emitJsonRead, emitJsonTypeCheck, jsonTypeName } from "./emitter-json"
 import { addJsonDeserializationDemand, addJsonSerializationDemand, buildInstantiationPlan, InstantiationPlan } from "./emitter-monomorphize"
-import { moduleHeaderName, moduleNamespace } from "./emitter-names"
+import { cppIdentifier, moduleHeaderName, moduleNamespace } from "./emitter-names"
 import { planModuleInitializationOrder } from "./emitter-module"
 import { emitContextType } from "./emitter-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, nullableJsonMember } from "./json-semantics"
@@ -27,7 +28,8 @@ export class WasmEmission {
 }
 
 export function emitWasmSupport(result: AnalysisResult, entry: string, instantiations: InstantiationPlan | none = none, moduleNames: ModuleNames = ModuleNames {}): Result<WasmEmission, string> {
-  info := findModule(result, entry)
+  declarations := indexDeclarations(result)
+  info := indexedModule(declarations, entry)
   if info == none { return Failure("Module not found: " + entry) }
   jsonPlan := instantiations ?? buildInstantiationPlan(result, moduleNames)
   let exports: FunctionDeclaration[] = []
@@ -36,7 +38,7 @@ export function emitWasmSupport(result: AnalysisResult, entry: string, instantia
   let functionNames: string[] = []
   for fn of exports {
     if fn.name == "main" { continue }
-    try validateWasmFunction(fn, result)
+    try validateWasmFunction(fn, declarations)
     addWasmJsonDemands(fn, result, jsonPlan)
     name := "doof_export_" + cppIdentifier(fn.name)
     for existing of functionNames {
@@ -47,8 +49,7 @@ export function emitWasmSupport(result: AnalysisResult, entry: string, instantia
     functionNames.push(name)
   }
 
-  programs := allPrograms(result)
-  context := createEmitContextForModule(info!.program, entry, programs)
+  context := createEmitContextForModule(info!.program, entry, declarations)
   context.names = moduleNames
   context.cppTypes = CppTypeRegistry { names: moduleNames }
   context.imports = info!.imports
@@ -105,7 +106,7 @@ function moduleExportsFunction(info: ModuleInfo, name: string): bool {
   return false
 }
 
-function validateWasmFunction(fn: FunctionDeclaration, analysis: AnalysisResult): Result<none, string> {
+function validateWasmFunction(fn: FunctionDeclaration, declarations: DeclarationIndex): Result<none, string> {
   if fn.typeParams.length > 0 { return Failure("WebAssembly export \"" + fn.name + "\" cannot be generic") }
   resolved := fn.resolvedType else {
     return Failure("WebAssembly export \"" + fn.name + "\" is missing a resolved function type")
@@ -113,7 +114,7 @@ function validateWasmFunction(fn: FunctionDeclaration, analysis: AnalysisResult)
   case resolved {
     type_: FunctionType -> {
       for parameter of fn.params {
-        if parameter.resolvedType == none || !isWasmJsonType(parameter.resolvedType!, analysis) {
+        if parameter.resolvedType == none || !isWasmJsonType(parameter.resolvedType!, declarations) {
           return Failure("Parameter \"" + parameter.name + "\" of WebAssembly export \"" + fn.name + "\" must be supported by the JSON ABI")
         }
       }
@@ -122,13 +123,13 @@ function validateWasmFunction(fn: FunctionDeclaration, analysis: AnalysisResult)
         result: ResultResolvedType -> {
           case result.valueType {
             _: NoneType -> { }
-            _ -> { if !isWasmJsonType(result.valueType, analysis) { return Failure("Success type of WebAssembly export \"" + fn.name + "\" must be supported by the JSON ABI") } }
+            _ -> { if !isWasmJsonType(result.valueType, declarations) { return Failure("Success type of WebAssembly export \"" + fn.name + "\" must be supported by the JSON ABI") } }
           }
-          if !isWasmJsonType(result.errorType, analysis) { return Failure("Error type of WebAssembly export \"" + fn.name + "\" must be supported by the JSON ABI") }
+          if !isWasmJsonType(result.errorType, declarations) { return Failure("Error type of WebAssembly export \"" + fn.name + "\" must be supported by the JSON ABI") }
           return Success()
         }
         _ -> {
-          if !isWasmJsonType(type_.returnType, analysis) { return Failure("Return type of WebAssembly export \"" + fn.name + "\" must be supported by the JSON ABI") }
+          if !isWasmJsonType(type_.returnType, declarations) { return Failure("Return type of WebAssembly export \"" + fn.name + "\" must be supported by the JSON ABI") }
           return Success()
         }
       }
@@ -138,20 +139,20 @@ function validateWasmFunction(fn: FunctionDeclaration, analysis: AnalysisResult)
   return Success()
 }
 
-function isWasmJsonType(type_: ResolvedType, analysis: AnalysisResult): bool {
+function isWasmJsonType(type_: ResolvedType, declarations: DeclarationIndex): bool {
   case type_ {
     _: PrimitiveType -> { return true }
     _: SerialValueResolvedType -> { return true }
     _: NoneType -> { return true }
     _: EnumType -> { return true }
     class_: ClassType -> {
-      declaration := findClass(analysis, class_)
-      return declaration != none && canGenerateJsonSerialization(declaration!, allPrograms(analysis)) && canGenerateJsonDeserialization(declaration!, allPrograms(analysis))
+      declaration := indexedClass(declarations, class_.symbol.module, class_.name)
+      return declaration != none && canGenerateJsonSerialization(declaration!, declarations.programs) && canGenerateJsonDeserialization(declaration!, declarations.programs)
     }
-    array: ArrayResolvedType -> { return isWasmJsonType(array.elementType, analysis) }
+    array: ArrayResolvedType -> { return isWasmJsonType(array.elementType, declarations) }
     union_: UnionResolvedType -> {
       inner := nullableJsonMember(union_)
-      return inner != none && isWasmJsonType(inner!, analysis)
+      return inner != none && isWasmJsonType(inner!, declarations)
     }
     _ -> { return false }
   }
@@ -238,33 +239,4 @@ function emitParameter(parameter: Parameter, context: EmitContext): string {
   source = source + "        if (" + iterator + " == __params->end()) return __doof_wasm_failure_message(400, \"Missing required parameter \\\"" + parameter.name + "\\\"\");\n"
   source = source + "        if (!(" + emitJsonTypeCheck(iterator + "->second", type_, context) + ")) return __doof_wasm_failure_message(400, \"Parameter " + parameter.name + " expected " + jsonTypeName(type_, context) + "\");\n"
   return source + "        auto " + name + " = " + emitJsonRead(iterator + "->second", type_, context) + ";\n"
-}
-
-function findModule(result: AnalysisResult, path: string): ModuleInfo | none {
-  for module of result.modules { if module.path == path { return module } }
-  return none
-}
-
-function allPrograms(result: AnalysisResult): Program[] {
-  let programs: Program[] = []
-  for module of result.modules { programs.push(module.program) }
-  return programs
-}
-
-function findClass(result: AnalysisResult, type_: ClassType): ClassDeclaration | none {
-  module := findModule(result, type_.symbol.module)
-  if module == none { return none }
-  for statement of module!.program.statements {
-    case statement {
-      class_: ClassDeclaration -> { if class_.name == type_.name { return class_ } }
-      export_: ExportDeclaration -> {
-        case export_.declaration {
-          class_: ClassDeclaration -> { if class_.name == type_.name { return class_ } }
-          _ -> { }
-        }
-      }
-      _ -> { }
-    }
-  }
-  return none
 }

@@ -9,18 +9,20 @@ import { emitNoImplementationsAccess, implementationlessInterface, interfaceFiel
 import {
   Block, Expression, ExpressionStatement, IfStatement, LetDeclaration, ImmutableBinding,
   ReadonlyDeclaration, ConstDeclaration, ReturnStatement, Statement,
-  WhileStatement, CaseStatement, RangePattern, TypePattern, ValuePattern, WildcardPattern,
+  WhileStatement, CaseStatement,
   Identifier, BreakStatement, ContinueStatement, DestructuringStatement, ForOfStatement, ForStatement, BinaryExpression,
   TryStatement, WithStatement, YieldStatement, YieldBlockAssignmentStatement,
-  MockImportDirective, ClassDeclaration, ExportDeclaration, AssignmentExpression,
+  MockImportDirective, AssignmentExpression,
 } from "./ast"
 import { emitTriedAssignment } from "./emitter-expr-ops"
+import { indexedClass } from "./emitter-declarations"
 import type { TypeAnnotation } from "./ast"
 import { ArrayResolvedType, ClassType, InterfaceType, MapResolvedType, PrimitiveType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable, recordCoverageLine, sourceLineDirective } from "./emitter-context"
 import { emitExpressionReturn } from "./emitter-expr-utils"
-import { emitCaseSubjectValue, emitCaseTypePattern, emitCaseValuePattern } from "./emitter-case-pattern"
-import { cppIdentifier, emitExpression, emitDiscardedExpression } from "./emitter-expr"
+import { emitCasePattern, emitCaseSubjectValue } from "./emitter-case-pattern"
+import { emitExpression, emitDiscardedExpression } from "./emitter-expr"
+import { cppIdentifier } from "./emitter-names"
 import { quote } from "./emitter-expr-literals"
 import { emitAbsentError, emitAbsentTest, emitPresentValue, emitterAbsenceLayers } from "./emitter-absence"
 import { absenceErrorType } from "./absence-types"
@@ -116,8 +118,7 @@ function emitWith(statement: WithStatement, level: int, context: EmitContext): s
     }
     let bindingName = cppIdentifier(binding.name)
     if binding.name == "_" {
-      context.tryCounter = context.tryCounter + 1
-      bindingName = "_with_discard_" + string(context.tryCounter)
+      bindingName = context.temporary("_with_discard_")
     }
     output = output + innerInd + "const " + declarationType + " " + bindingName + " = " + value + ";\n"
   }
@@ -132,8 +133,7 @@ function emitDestructuring(statement: DestructuringStatement, level: int, contex
 /** Lowers every destructuring shape after evaluating its source exactly once. */
 function emitDestructuringValue(statement: DestructuringStatement, source: string, sourceType: ResolvedType | none, level: int, context: EmitContext): string {
   ind := indent(level)
-  context.tryCounter = context.tryCounter + 1
-  temporaryName := "_destructure_" + string(context.tryCounter)
+  temporaryName := context.temporary("_destructure_")
   let result = ind + "const auto& " + temporaryName + " = " + source + ";\n"
   if statement.kind.startsWith("array-destructuring") {
     location := quote(context.modulePath) + ", " + string(statement.span.start.line)
@@ -208,30 +208,13 @@ function emitDestructuredField(source: string, field: string, sourceType: Resolv
 
 function classFieldNames(class_: ClassType, context: EmitContext): string[] {
   let result: string[] = []
-  declaration := findClassDeclaration(class_, context)
+  declaration := indexedClass(context.declarations, class_.symbol.module, class_.name)
   if declaration == none { return result }
   for field of declaration!.fields {
     if field.static_ { continue }
     for name of field.names { result.push(name) }
   }
   return result
-}
-
-function findClassDeclaration(class_: ClassType, context: EmitContext): ClassDeclaration | none {
-  for program of context.allPrograms { for statement of program.statements {
-    candidate := statementClass(statement)
-    if candidate != none && candidate!.resolvedSymbol != none && candidate!.resolvedSymbol!.module == class_.symbol.module && candidate!.name == class_.name { return candidate }
-  } }
-  return none
-}
-
-function statementClass(statement: Statement): ClassDeclaration | none {
-  case statement {
-    class_: ClassDeclaration -> { return class_ }
-    export_: ExportDeclaration -> { return statementClass(export_.declaration) }
-    _ -> { return none }
-  }
-  return none
 }
 
 function emitAssignmentTarget(name: string, context: EmitContext): string {
@@ -241,8 +224,7 @@ function emitAssignmentTarget(name: string, context: EmitContext): string {
 function emitBindingElse(binding: ImmutableBinding, level: int, context: EmitContext): string {
   ind := indent(level)
   if binding.else_ == none { return emitLocalDeclaration(ind, binding.name, binding.type_, binding.resolvedType!, binding.value, context, true, true) }
-  context.tryCounter = context.tryCounter + 1
-  temporaryName := "_binding_value_" + string(context.tryCounter)
+  temporaryName := context.temporary("_binding_value_")
   layers := emitterAbsenceLayers(binding.value.resolvedType!, context)
   if layers.length > 1 {
     // Every absent layer runs the handler; the error is none unless a Failure
@@ -294,8 +276,7 @@ function isSingleOptional(resolvedType: ResolvedType): bool {
 
 function emitTry(statement: TryStatement, level: int, context: EmitContext): string {
   ind := indent(level)
-  context.tryCounter = context.tryCounter + 1
-  temporaryName := "_try_value_" + string(context.tryCounter)
+  temporaryName := context.temporary("_try_value_")
   let value: Expression = Identifier { kind: "identifier", name: "<try>", span: statement.span }
   case statement.binding {
     declaration: ConstDeclaration -> { value = declaration.value }
@@ -457,33 +438,19 @@ function emitCase(statement: CaseStatement, level: int, context: EmitContext): s
 
   for arm of statement.arms {
     for pattern of arm.patterns {
-      let condition = ""
-      let binding = ""
-      let isWildcard = false
-      case pattern {
-        type_: TypePattern -> {
-          bindingName := if type_.name == "_" then "" else cppIdentifier(type_.name)
-          emitted := emitCaseTypePattern(type_, specializeEmitType(subjectType, context), subject, bindingName, context.modulePath, context.names, context)
-          condition = emitted.condition
-          binding = emitted.binding
-        }
-        value: ValuePattern -> { condition = emitCaseValuePattern(value, specializeEmitType(subjectType, context), subject, emitExpression(value.value, context), context) }
-        range: RangePattern -> { condition = emitRangePatternCondition(range, subject, context) }
-        _: WildcardPattern -> { isWildcard = true }
-      }
-
-      if isWildcard {
+      emitted := emitCasePattern(pattern, specializeEmitType(subjectType, context), subject, context)
+      if emitted.wildcard {
         result = result + if previous then ind + "else {\n" else inner + "{\n"
       } else {
-        result = result + if previous then ind + "else if (" + condition + ") {\n" else inner + "if (" + condition + ") {\n"
+        result = result + if previous then ind + "else if (" + emitted.condition + ") {\n" else inner + "if (" + emitted.condition + ") {\n"
       }
-      if binding != "" { result = result + bodyIndent + binding }
+      if emitted.binding != "" { result = result + bodyIndent + emitted.binding }
       case arm.body {
         block: Block -> { result = result + emitBlock(block, level + 2, context) + ind + "}\n" }
         _: Expression -> { panic("Expression case arm reached statement emitter") }
       }
       previous = true
-      if isWildcard {
+      if emitted.wildcard {
         result = result + ind + "}\n"
         return result + emitCaseContinuationGuard(statement, ind)
       }
@@ -498,17 +465,6 @@ function emitCase(statement: CaseStatement, level: int, context: EmitContext): s
 // through. doof::unreachable is [[noreturn]] in the runtime.
 function emitCaseContinuationGuard(statement: CaseStatement, ind: string): string {
   return if statement.resolvedCompletes! then "" else ind + "doof::unreachable();\n"
-}
-
-function emitRangePatternCondition(pattern: RangePattern, subject: string, context: EmitContext): string {
-  let condition = ""
-  if pattern.start != none { condition = subject + " >= " + emitExpression(pattern.start!, context) }
-  if pattern.end != none {
-    operator := if pattern.inclusive then " <= " else " < "
-    if condition != "" { condition = condition + " && " }
-    condition = condition + subject + operator + emitExpression(pattern.end!, context)
-  }
-  return condition
 }
 
 
@@ -548,8 +504,7 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
   body := emitLabeledLoopBody(statement.body, level + 1, labeledLoopId, context)
   endLabeledLoop(labeledLoopId, context)
   breakTarget := loopCompletion(statement.then_, labeledLoopId, level, context)
-  context.tryCounter = context.tryCounter + 1
-  loopId := context.tryCounter
+  loopId := context.nextTemporaryId()
   name := if statement.bindings.length == 0 then "_item" else discardableCppName(statement.bindings[0], loopId, 0)
   case statement.iterable {
     range: BinaryExpression -> {
@@ -573,8 +528,7 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
     _ -> { }
   }
   iterable := emitExpression(statement.iterable, context)
-  context.tryCounter = context.tryCounter + 1
-  iterableName := "_iterable_" + string(context.tryCounter)
+  iterableName := context.temporary("_iterable_")
   // Own the iterable by value: a reference would dangle for members reached
   // through a temporary (`make()->items`) or a variable the body reassigns.
   iterableBinding := ind + "const auto " + iterableName + " = " + iterable + ";\n"
@@ -680,8 +634,7 @@ function beginLabeledLoop(label: string | none, hasThen: bool, context: EmitCont
     context.loopUnlabeledBreakTargets.push("")
     return -1
   }
-  context.tryCounter = context.tryCounter + 1
-  loopId := context.tryCounter
+  loopId := context.nextTemporaryId()
   breakTarget := "_doof_break_" + string(loopId)
   context.loopLabels.push(label ?? "")
   context.loopBreakTargets.push(breakTarget)

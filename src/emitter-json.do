@@ -6,15 +6,17 @@
 import { carrierOf } from "./emitter-carriers"
 import { emitCarrierAbsence } from "./emitter-carrier-values"
 import {
-  BoolLiteral, CharLiteral, ClassDeclaration, ClassField, DoubleLiteral, EnumDeclaration, ExportDeclaration, Expression, FloatLiteral, Identifier,
-  IntLiteral, InterfaceDeclaration, LongLiteral, MemberExpression, NoneLiteral, Statement, StringLiteral, TypeAliasDeclaration, UnaryExpression,
+  BoolLiteral, CharLiteral, ClassDeclaration, ClassField, DoubleLiteral, Expression, FloatLiteral, Identifier,
+  IntLiteral, InterfaceDeclaration, LongLiteral, MemberExpression, NoneLiteral, StringLiteral, TypeAliasDeclaration, UnaryExpression,
 } from "./ast"
 import { quote } from "./emitter-expr-literals"
 import { emitNoImplementationsAccess, implementationlessInterface } from "./emitter-no-implementations"
 import { jsonValueType } from "./checker-types"
 import { ArrayResolvedType, ClassType, EnumType, InterfaceType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
+import { indexedEnum } from "./emitter-declarations"
 import { EmitContext } from "./emitter-context"
-import { cppIdentifier, emitExpression } from "./emitter-expr"
+import { emitExpression } from "./emitter-expr"
+import { cppIdentifier } from "./emitter-names"
 import { emitClassInnerType, emitContextType, usesVariantRepresentation } from "./emitter-types"
 import { JsonDiscriminator, JsonUnionLayout, interfaceJsonDiscriminator, jsonInterfaceKey, jsonOwnerKey, jsonUnionClassMembers, jsonUnionLayout, nullableJsonMember, objectUnionJsonDiscriminator, unionAliasJsonDiscriminator } from "./json-semantics"
 
@@ -29,7 +31,7 @@ export function emitInterfaceJsonDefinition(owner: InterfaceDeclaration, context
     return "\ndoof::Result<" + owner.name + ", std::string> " + owner.name + "_fromSerialValue(const doof::SerialValue&, bool) {\n" +
       "    return doof::Failure<std::string>{\"Interface " + owner.name + " has no implementing classes\"};\n}\n"
   }
-  discriminator := interfaceJsonDiscriminator(owner, context.allPrograms, context.jsonEligibility)
+  discriminator := interfaceJsonDiscriminator(owner, context.declarations.programs, context.jsonEligibility)
   if discriminator == none { return "" }
   return emitDiscriminatedJsonDefinition(owner.name, discriminator!, context)
 }
@@ -41,7 +43,7 @@ export function emitUnionAliasJsonDeclaration(alias: TypeAliasDeclaration): stri
 
 export function emitUnionAliasJsonDefinition(alias: TypeAliasDeclaration, context: EmitContext): string {
   if !alias.needsJson { return "" }
-  discriminator := unionAliasJsonDiscriminator(alias, context.allPrograms, context.jsonEligibility)
+  discriminator := unionAliasJsonDiscriminator(alias, context.declarations.programs, context.jsonEligibility)
   if discriminator == none { return "" }
   return emitDiscriminatedJsonDefinition(alias.name, discriminator!, context)
 }
@@ -312,7 +314,7 @@ export function emitJsonRead(json: string, type_: ResolvedType, context: EmitCon
 }
 
 function requiredJsonUnionLayout(union_: UnionResolvedType, context: EmitContext): JsonUnionLayout {
-  layout := jsonUnionLayout(union_, context.allPrograms) else { panic("Union JSON coding has no layout for " + context.modulePath) }
+  layout := jsonUnionLayout(union_, context.declarations.programs) else { panic("Union JSON coding has no layout for " + context.modulePath) }
   return layout
 }
 
@@ -323,7 +325,7 @@ function jsonKindCheck(json: string, jsonKind: string): string {
 // A union accepts exactly the JSON kinds of its members, before any lenient
 // conversion, matching the dispatch in emitJsonUnionRead.
 function emitJsonUnionTypeCheck(json: string, union_: UnionResolvedType, context: EmitContext | none): string {
-  layout := jsonUnionLayout(union_, if context == none then [] else context!.allPrograms) else { return "false" }
+  layout := jsonUnionLayout(union_, if context == none then [] else context!.declarations.programs) else { return "false" }
   let kinds: string[] = []
   if layout.hasNone { kinds.push("null") }
   for arm of layout.arms { if !kinds.contains(arm.jsonKind) { kinds.push(arm.jsonKind) } }
@@ -356,7 +358,7 @@ function emitJsonUnionRead(json: string, union_: UnionResolvedType, context: Emi
 }
 
 function emitJsonUnionClassesRead(json: string, union_: UnionResolvedType, unionCpp: string, context: EmitContext): string {
-  discriminator := objectUnionJsonDiscriminator(union_, context.allPrograms, context.jsonEligibility) else { panic("Union JSON decoding has no discriminator") }
+  discriminator := objectUnionJsonDiscriminator(union_, context.declarations.programs, context.jsonEligibility) else { panic("Union JSON decoding has no discriminator") }
   let result = emitJsonContainerRead(json, "_union_object", true)
   if discriminator.entries.length == 0 { return result + "throw doof::JsonDecodeError(\"Union has no member classes\");" }
   field := discriminator.fieldName
@@ -369,7 +371,7 @@ function emitJsonUnionClassesRead(json: string, union_: UnionResolvedType, union
 }
 
 function jsonUnionTypeName(union_: UnionResolvedType, context: EmitContext | none): string {
-  layout := jsonUnionLayout(union_, if context == none then [] else context!.allPrograms) else { return "value" }
+  layout := jsonUnionLayout(union_, if context == none then [] else context!.declarations.programs) else { return "value" }
   let names: string[] = []
   for arm of layout.arms {
     name := jsonTypeName(arm.member, context)
@@ -499,33 +501,9 @@ export function emitJsonField(value: string, resolvedType: ResolvedType, context
 }
 
 function enumBackingKind(enum_: EnumType, context: EmitContext): string {
-  declaration := findEnumDeclaration(context, enum_.symbol.module, enum_.name)
+  declaration := indexedEnum(context.declarations, enum_.symbol.module, enum_.name)
   if declaration == none { return "int" }
   return declaration!.backingKind
-}
-
-function findEnumDeclaration(context: EmitContext, modulePath: string, name: string): EnumDeclaration | none {
-  for program of context.allPrograms {
-    for statement of program.statements {
-      declaration := enumStatementDeclaration(statement)
-      if declaration != none && declaration!.name == name { return declaration }
-    }
-  }
-  return none
-}
-
-function enumStatementDeclaration(statement: Statement): EnumDeclaration | none {
-  case statement {
-    enum_: EnumDeclaration -> { return enum_ }
-    export_: ExportDeclaration -> {
-      case export_.declaration {
-        enum_: EnumDeclaration -> { return enum_ }
-        _ -> { }
-      }
-    }
-    _ -> { }
-  }
-  return none
 }
 
 function jsonResultValueType(owner: ClassDeclaration): string {

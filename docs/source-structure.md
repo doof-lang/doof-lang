@@ -137,13 +137,14 @@ emitter or individual expression branch.
 
 | File | Responsibility |
 | --- | --- |
-| `emitter-context.do` | Graph-wide nominal/method context, per-module emission state, and opt-in observer instrumentation configuration |
+| `emitter-context.do` | Graph-wide nominal/method context, per-module emission state, generated temporary names, and opt-in observer instrumentation configuration |
+| `emitter-declarations.do` | One per-graph index of programs, modules, and top-level declarations keyed by defining module and name; shared by the context, worldview, module, and Wasm emitters |
 | `emitter-names.do` | Immutable per-compilation namespace snapshots; pure stable filenames, diagnostics and native paths; shared C++ keyword escaping; package top-level namespaces avoid C globals |
 | `emitter-reserved-globals.do` | C and POSIX global names that a package's top-level namespace must not reuse |
 | `checked-instantiations.do` | Semantic specialization fixed point and shared JSON demand traversal |
 | `emitter-monomorphize.do` | C++ naming adapter over semantic specialization discovery |
 | `emitter-dependencies.do` | Immutable ordered direct-dependency extraction from checked surfaces, root bodies and concrete argument types |
-| `emitter-worldview.do` | Graph indexing, recursive dependency-summary replay, native closure and consumer-local declaration selection/order |
+| `emitter-worldview.do` | Symbol and dependency-summary indexing over the shared declaration index, recursive dependency-summary replay, native closure and consumer-local declaration selection/order |
 | `emitter-module.do` | Module graph orchestration, transitive emission fingerprints, header/source pairing, and per-defining-module header type sessions |
 | `emitter-header-cache.do` | Compilation-local reuse of immutable plans for exact projected declaration selections |
 | `emitter-type-cache.do` | Preparation/renderer-local semantic-to-C++ memo tables with mutable preparation or read-only identity lookup and specialization-scoped sessions |
@@ -154,6 +155,7 @@ emitter or individual expression branch.
 | `emitter-header.do` | Checked declaration selection and header-plan construction, including native aliases and enum helpers |
 | `emitter-header-render.do` | Multi-namespace ordering and immutable rendered-section reuse with alias-state restoration |
 | `string-builder.do` | Runtime-backed append-only construction for large generated text |
+| `string-lists.do` | Insertion-ordered unique string lists for includes, namespaces, captures, and native build inputs |
 | `emitter-decl.do` | Shared function/method body and return boundaries, signatures, class declarations, opt-in class lifecycle counters, top-level definitions, and field equality operators for structs |
 | `emitter-stmt.do` | Blocks and statement/control-flow lowering, routing discarded statement, loop-update, and void-yield values through expression discard emission |
 | `emitter-expr.do` | Single expression dispatch façade; contextual conversion of checked unit expressions and native void calls to stored unit values; discarded calls bypass unused carrier conversion |
@@ -161,17 +163,18 @@ emitter or individual expression branch.
 | `emitter-expr-calls.do` | Call target selection, runtime member dispatch, and positional Result payload construction |
 | `emitter-array-methods.do` | Built-in array member lowering onto runtime helpers, with callbacks emitted against the checked signature and `find` converted into the `T \| none` carrier |
 | `emitter-no-implementations.do` | Identifies interfaces without implementing classes (lowered to `doof::NoImplementations`) and emits unreachable member access for them |
+| `emitter-weak-access.do` | Forced and `?.` member access and calls through weak references: one store, one lock, then the access against the locked strong value |
 | `emitter-optional-chain.do` | `?.` and `?[]` over nullable receivers (Result receivers arrive as postfix `?`): single evaluation, none short-circuits, a Result-valued access widened with a none success value, and access through the checked unwrapped receiver |
 | `emitter-absence.do` | Layered absence lowering for postfix `!` and `?`, declaration-else tests and error capture, and `??=` tests |
 | `emitter-call-arguments.do` | Shared named/positional argument ordering, checked contextual argument types, and call-site default emission for direct and dispatched calls |
 | `emitter-construction.do` | Positional, named, contextual, and actor construction from checked plans; shared argument/default lowering, owner specialization, and spread handling |
 | `emitter-expr-literals.do` | Literal, array, object, tuple, and string lowering; shared contextual absence values for literals and catch initialization |
-| `emitter-expr-control.do` | Conditional, case, catch, dot-shorthand, and yield-block expressions; shares statement condition formatting for lowered C++ if branches |
+| `emitter-expr-control.do` | Conditional, case, catch, dot-shorthand, and yield-block expressions; shares statement condition formatting for lowered C++ if branches and the value-yield block used by case arms, yield blocks, and async blocks |
 | `emitter-expr-lambda.do` | Lambda capture analysis, mutable capture boxing, and callback lowering |
 | `emitter-function-refs.do` | Function and method references used as values: wraps named functions, static methods, generic instantiations, and receiver-capturing bound methods (including `?.`, weak, and union receivers) as `doof::callback`; emits call callees unwrapped |
 | `emitter-expr-actor.do` | Actors, promises, async calls, and retirement |
 | `emitter-expr-utils.do` | Decorated-type requirements, shared shorthand property emission, specialized expression-return boundaries, and model-backed nullable queries |
-| `emitter-case-pattern.do` | Type-pattern lowering from checked pattern types (a Result subject is the variant of its arms) and checker-decorated weak subject materialization shared by statement and expression cases; natural nullable absence patterns test for null, and absence bindings use the unit carrier |
+| `emitter-case-pattern.do` | Per-pattern condition and binding lowering (type, value, range, wildcard) shared by statement and expression cases; type-pattern lowering from checked pattern types (a Result subject is the variant of its arms) and checker-decorated weak subject materialization shared by statement and expression cases; natural nullable absence patterns test for null, and absence bindings use the unit carrier |
 | `emitter-carriers.do` | Pure specialized-type classification for value, return, payload, nullable storage, and explicit absence, including weak variant targets (interfaces) and the present type a locked weak reference holds |
 | `emitter-carrier-values.do` | Shared absence construction and native carrier conversion, with exactly-once evaluation |
 | `emitter-carrier-native.test.do` | Compiles current-source emitter output and executes the durable native carrier matrix in the normal suite |

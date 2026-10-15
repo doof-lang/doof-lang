@@ -276,3 +276,44 @@ export function testClassPatternInsideInterfaceArmUsesNestedVariantTest(): none 
   Assert.stringContains(source, "doof::variant_is<std::shared_ptr<Circle>>")
   Assert.stringNotContains(source, "std::holds_alternative<std::shared_ptr<Circle>>")
 }
+
+function quarkBucketStatement(value: int): string {
+  case value {
+    ..<0 -> { return "negative" }
+    0 -> { return "zero" }
+    1..9 -> { return "digit" }
+    _ -> { return "large" }
+  }
+}
+
+function quarkBucketExpression(value: int): string => case value {
+  ..<0 -> "negative"
+  0 -> "zero"
+  1..9 -> "digit"
+  _ -> "large"
+}
+
+export function testCaseStatementAndExpressionShareRangeValueAndWildcardPatterns(): none {
+  for value of [-1, 0, 1, 9, 10] {
+    Assert.equal(quarkBucketStatement(value), quarkBucketExpression(value))
+  }
+  Assert.equal(quarkBucketExpression(-1), "negative")
+  Assert.equal(quarkBucketExpression(0), "zero")
+  Assert.equal(quarkBucketExpression(9), "digit")
+  Assert.equal(quarkBucketExpression(10), "large")
+}
+
+export function testCaseStatementAndExpressionLowerPatternsIdentically(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function statement(value: int): int { case value {\n..<0 -> { return -1 }\n1..9 -> { return 1 }\n_ -> { return 0 }\n} }\n" +
+    "function expression(value: int): int => case value {\n..<0 -> -1\n1..9 -> 1\n_ -> 0\n}",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "if (_case_subject < 0)")
+  Assert.stringContains(source, "else if (_case_subject >= 1 && _case_subject <= 9)")
+  Assert.stringContains(source, "    if (_case_subject >= 1 && _case_subject <= 9) {")
+  // The statement's wildcard is a bare else; the expression's is an always-true arm.
+  Assert.stringContains(source, "else {")
+  Assert.stringContains(source, "if (true) {")
+}

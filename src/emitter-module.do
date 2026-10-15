@@ -26,11 +26,12 @@ import { emitGeneratedJsonMethods, emitInterfaceJsonDefinition, emitUnionAliasJs
 import { emitMetadataDefinition } from "./emitter-metadata"
 import { emitStatement } from "./emitter-stmt"
 import { emitContextType } from "./emitter-types"
-import { cppIdentifier, emitExpression } from "./emitter-expr"
+import { emitExpression } from "./emitter-expr"
 import { classDefinitionDependencies, HeaderPlan, HeaderSection, HeaderRenderCache, renderProjectedHeader, planHeader, reserveHeaderNamespaceName } from "./emitter-header"
+import { DeclarationIndex, indexDeclarations, indexedModule } from "./emitter-declarations"
 import { indexWorldviewGraph, planWorldview, WorldviewModule } from "./emitter-worldview"
 import { buildInstantiationPlan, classInstantiationKey, InstantiationPlan, MethodInstantiation } from "./emitter-monomorphize"
-import { moduleHeaderName, moduleNamespace, moduleSourceName } from "./emitter-names"
+import { cppIdentifier, moduleHeaderName, moduleNamespace, moduleSourceName } from "./emitter-names"
 import { sha256HexString } from "std/crypto"
 import { JsonEligibilityCache } from "./json-semantics"
 import { StringBuilder } from "./string-builder"
@@ -130,7 +131,7 @@ class CxxModuleEmitter {
   sourceNameOverride: string = ""
   namespaceNameOverride: string = ""
   modulePath: string = ""
-  allPrograms: Program[] = []
+  declarations: DeclarationIndex = DeclarationIndex {}
   imports: ImportBinding[] = []
   moduleSurfaces: EmitModuleSurface[] = []
   let worldviewModules: WorldviewModule[] = []
@@ -166,7 +167,7 @@ class CxxModuleEmitter {
 
   render(program: Program, header: PreparedModuleHeader, text: string, preparedTypes: CppTypeSnapshot, identities: SemanticTypeIdentitySnapshot, entryMode: string): ModuleEmission {
     contextStart := timings.start()
-    context := createEmitContextForModule(program, modulePath, allPrograms)
+    context := createEmitContextForModule(program, modulePath, declarations)
     context.names = names
     context.sourcePath = sourcePathFor(sourcePaths, context.modulePath)
     context.imports = imports
@@ -192,7 +193,7 @@ class CxxModuleEmitter {
     timings.finish("header.cache-lookup-copy", lookupStart)
     if cached != none { return cached! }
     contextStart := timings.start()
-    sectionContext := createEmitContextForModule(view.program, view.path, allPrograms)
+    sectionContext := createEmitContextForModule(view.program, view.path, declarations)
     sectionContext.names = names
     sectionContext.imports = surfaceImports(moduleSurfaces, view.path)
     sectionContext.sourcePath = sourcePathFor(sourcePaths, view.path)
@@ -224,7 +225,7 @@ class CxxModuleEmitter {
     )
     for name of view.forwardClassNames {
       declaration := "struct " + name + ";\n"
-      if !containsString(sectionPlan.classForwardDeclarations, declaration) {
+      if !sectionPlan.classForwardDeclarations.contains(declaration) {
         sectionPlan.classForwardDeclarations.push(declaration)
       }
       reserveHeaderNamespaceName(sectionPlan, name)
@@ -425,11 +426,6 @@ function emitScriptClassStatics(statement: Statement, context: EmitContext): str
   return ""
 }
 
-function containsString(values: string[], value: string): bool {
-  for existing of values { if existing == value { return true } }
-  return false
-}
-
 function emitImportedNamespaces(context: EmitContext, worldviewModules: readonly string[]): string {
   let namespaces: string[] = []
   for imported of context.imports {
@@ -470,10 +466,9 @@ export function emitModuleGraph(
   graph := ModuleGraphEmission {}
   concretePlan := instantiations ?? buildInstantiationPlan(result, names)
   plan := planModuleGraph(result, names)
-  initializationOrder := planModuleInitializationOrder(result, entry, entryMode)
-  graphPrograms := allPrograms(result)
+  declarations := indexDeclarations(result)
+  initializationOrder := planModuleInitializationOrder(result, entry, entryMode, declarations)
   graphSurfaces := emitModuleSurfaces(result)
-  moduleIndex := indexGraphModules(result)
   reusableFingerprints := indexReusableModuleFingerprints(reusableModules)
   instantiationFingerprintInput := moduleInstantiationFingerprintInput(concretePlan)
   jsonEligibility := JsonEligibilityCache {}
@@ -483,7 +478,7 @@ export function emitModuleGraph(
   identities := SemanticTypeIdentities {}
   typeLowering := TypeLoweringGraph { registry: cppTypes, identities }
   headerTypeSessions: Map<string, TypeLoweringSession> := {}
-  worldviewGraphIndex := indexWorldviewGraph(result, identities)
+  worldviewGraphIndex := indexWorldviewGraph(result, identities, declarations)
   let sourcePaths: Map<string, string> = {}
   for info of result.modules {
     sourcePaths.set(info.path, if physicalSourcePaths && info.physicalPath != "" then info.physicalPath else info.path)
@@ -492,7 +487,7 @@ export function emitModuleGraph(
   pending: (PendingModuleEmission | none)[] := []
   let nextCoverageModuleId = 0
   for module of plan.modules {
-    info := indexedGraphModule(moduleIndex, module.path)
+    info := indexedModule(declarations, module.path)
     if info == none { continue }
     let coverageModuleId = -1
     if coverage && isCoverageEligible(module.path) {
@@ -507,7 +502,7 @@ export function emitModuleGraph(
         "\nmetrics-class-lifecycle:" + string(configuration.metricsClassLifecycle)
     }
     fingerprint := moduleEmissionFingerprint(
-      result, moduleIndex, module.path, entry, entryMode, coverage,
+      result, declarations, module.path, entry, entryMode, coverage,
       initializationOrder, configurationFingerprint + "\nphysical-source-paths:" + string(physicalSourcePaths) +
         observerFingerprint, instantiationFingerprintInput,
     )
@@ -526,7 +521,7 @@ export function emitModuleGraph(
       sourceNameOverride: module.sourceName,
       namespaceNameOverride: module.namespaceName,
       modulePath: module.path,
-      allPrograms: graphPrograms,
+      declarations,
       imports: infoImports(result, module.path),
       moduleSurfaces: graphSurfaces,
       instantiations: concretePlan,
@@ -574,7 +569,7 @@ export function emitModuleGraph(
       sourceNameOverride: job.sourceName,
       namespaceNameOverride: job.namespaceName,
       modulePath: job.modulePath,
-      allPrograms: graphPrograms,
+      declarations,
       imports: infoImports(result, job.modulePath),
       moduleSurfaces: graphSurfaces,
       instantiations: concretePlan,
@@ -595,17 +590,6 @@ export function emitModuleGraph(
     }
   }
   return graph
-}
-
-function indexGraphModules(result: AnalysisResult): Map<string, ModuleInfo> {
-  let indexed: Map<string, ModuleInfo> = {}
-  for module of result.modules { indexed.set(module.path, module) }
-  return indexed
-}
-
-function indexedGraphModule(indexed: Map<string, ModuleInfo>, path: string): ModuleInfo | none {
-  module := indexed.get(path) else { return none }
-  return module
 }
 
 function indexReusableModuleFingerprints(keys: ModuleEmissionCacheKey[]): Map<string, string> {
@@ -641,7 +625,7 @@ function moduleInstantiationFingerprintInput(instantiations: InstantiationPlan):
 
 function moduleEmissionFingerprint(
   result: AnalysisResult,
-  moduleIndex: Map<string, ModuleInfo>,
+  declarations: DeclarationIndex,
   path: string,
   entry: string,
   entryMode: string,
@@ -654,7 +638,7 @@ function moduleEmissionFingerprint(
   value.append("doof-module-emission-2\n" + configurationFingerprint + "\n" + path + "\n" +
     entryMode + "\n" + string(coverage))
   let reachable: Set<string> = []
-  collectModuleDependencyClosure(moduleIndex, path, reachable)
+  collectModuleDependencyClosure(declarations, path, reachable)
   for candidate of result.modules {
     if reachable.has(candidate.path) {
       value.append("\nsource:" + candidate.path + ":" + candidate.sourceHash)
@@ -670,13 +654,13 @@ function moduleEmissionFingerprint(
   return sha256HexString(value.drainToString())
 }
 
-function collectModuleDependencyClosure(moduleIndex: Map<string, ModuleInfo>, path: string, reachable: Set<string>): none {
+function collectModuleDependencyClosure(declarations: DeclarationIndex, path: string, reachable: Set<string>): none {
   if reachable.has(path) { return }
   reachable.add(path)
-  module := indexedGraphModule(moduleIndex, path)
+  module := indexedModule(declarations, path)
   if module == none { return }
-  for imported of module!.imports { collectModuleDependencyClosure(moduleIndex, imported.sourceModule, reachable) }
-  for reExport of module!.reExports { collectModuleDependencyClosure(moduleIndex, reExport, reachable) }
+  for imported of module!.imports { collectModuleDependencyClosure(declarations, imported.sourceModule, reachable) }
+  for reExport of module!.reExports { collectModuleDependencyClosure(declarations, reExport, reachable) }
 }
 
 function isCoverageEligible(modulePath: string): bool {
@@ -734,7 +718,7 @@ function addConcreteHeaderDeclarations(
     for argument of instantiation.substitution.arguments { addConcreteTypeForwardDeclarations(plan, context, argument) }
   }
   for interface_ of instantiations.interfaces {
-    if !containsString(interfaceKeys, interface_.key) { continue }
+    if !interfaceKeys.contains(interface_.key) { continue }
     if interface_.name != "Stream" && interface_.modulePath != context.modulePath { continue }
     if interface_.name != "Stream" && !programDeclares(program, interface_.name) { continue }
     let alternatives: CppType[] = []
@@ -805,14 +789,14 @@ function addConcreteTypeForwardDeclarations(plan: HeaderPlanBuilder, context: Em
       if class_.symbol.module != "" && class_.symbol.module != context.modulePath {
         typeName := concreteClassTypeName(context, class_)
         declaration := "namespace " + moduleNamespace(class_.symbol.module, context.names) + " { struct " + typeName + "; }\n"
-        if !containsString(plan.typeOnlyForwardDeclarations, declaration) { plan.typeOnlyForwardDeclarations.push(declaration) }
+        if !plan.typeOnlyForwardDeclarations.contains(declaration) { plan.typeOnlyForwardDeclarations.push(declaration) }
       }
       for argument of class_.typeArgs { addConcreteTypeForwardDeclarations(plan, context, argument) }
     }
     enum_: EnumType -> {
       if enum_.symbol.module != "" && enum_.symbol.module != context.modulePath {
         declaration := "namespace " + moduleNamespace(enum_.symbol.module, context.names) + " { enum class " + enum_.name + "; }\n"
-        if !containsString(plan.typeOnlyForwardDeclarations, declaration) { plan.typeOnlyForwardDeclarations.push(declaration) }
+        if !plan.typeOnlyForwardDeclarations.contains(declaration) { plan.typeOnlyForwardDeclarations.push(declaration) }
       }
     }
     interface_: InterfaceType -> { for argument of interface_.typeArgs { addConcreteTypeForwardDeclarations(plan, context, argument) } }
@@ -913,12 +897,6 @@ function collectGenericSurfaceSymbols(statement: Statement, typeNames: string[])
   }
 }
 
-function allPrograms(result: AnalysisResult): Program[] {
-  let programs: Program[] = []
-  for module of result.modules { programs.push(module.program) }
-  return programs
-}
-
 function surfaceImports(surfaces: EmitModuleSurface[], path: string): ImportBinding[] {
   for surface of surfaces { if surface.path == path { return surface.imports } }
   return []
@@ -929,25 +907,21 @@ function infoImports(result: AnalysisResult, path: string): ImportBinding[] {
   return []
 }
 
-function findGraphModule(result: AnalysisResult, path: string): ModuleInfo | none {
-  for module of result.modules { if module.path == path { return module } }
-  return none
-}
-
 export function planModuleInitializationOrder(
   result: AnalysisResult,
   entry: string,
   entryMode: string = "executable",
+  declarations: DeclarationIndex | none = none,
 ): string[] {
   let order: string[] = []
   let visiting: string[] = []
   let visited: string[] = []
-  visitInitializationModule(result, entry, entry, entryMode, visiting, visited, order)
+  visitInitializationModule(declarations ?? indexDeclarations(result), entry, entry, entryMode, visiting, visited, order)
   return order
 }
 
 function visitInitializationModule(
-  result: AnalysisResult,
+  declarations: DeclarationIndex,
   path: string,
   entry: string,
   entryMode: string,
@@ -955,14 +929,14 @@ function visitInitializationModule(
   visited: string[],
   order: string[],
 ): none {
-  if containsString(visited, path) || containsString(visiting, path) { return }
-  info := findGraphModule(result, path)
+  if visited.contains(path) || visiting.contains(path) { return }
+  info := indexedModule(declarations, path)
   if info == none { return }
   visiting.push(path)
   for imported of info!.imports {
-    if !imported.typeOnly { visitInitializationModule(result, imported.sourceModule, entry, entryMode, visiting, visited, order) }
+    if !imported.typeOnly { visitInitializationModule(declarations, imported.sourceModule, entry, entryMode, visiting, visited, order) }
   }
-  for reExport of info!.reExports { visitInitializationModule(result, reExport, entry, entryMode, visiting, visited, order) }
+  for reExport of info!.reExports { visitInitializationModule(declarations, reExport, entry, entryMode, visiting, visited, order) }
   let ignored = visiting.pop()!
   visited.push(path)
   scriptEntry := path == entry && (entryMode == "executable" || entryMode == "ios-app") &&

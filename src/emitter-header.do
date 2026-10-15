@@ -10,7 +10,6 @@ import {
 } from "./ast"
 import { EmitContext, EmitModuleSurface } from "./emitter-context"
 import { planClassDeclaration, emitDescriptionComment, planFunctionDeclaration, planInterfaceAlias } from "./emitter-decl"
-import { cppIdentifier } from "./emitter-expr"
 import { quote } from "./emitter-expr-literals"
 import { emitInterfaceJsonDeclaration, emitUnionAliasJsonDeclaration } from "./emitter-json"
 import { emitContextType, emitType, specializeEmitType } from "./emitter-types"
@@ -19,7 +18,7 @@ import {
   MapResolvedType, PrimitiveType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType,
   PromiseType, Symbol, TupleResolvedType, UnionResolvedType, WeakResolvedType,
 } from "./semantic"
-import { moduleNamespace, moduleNativeHeaderPath } from "./emitter-names"
+import { cppIdentifier, moduleNamespace, moduleNativeHeaderPath } from "./emitter-names"
 import { StringBuilder } from "./string-builder"
 import { ClassInstantiation, classInstantiationKey, MethodInstantiation } from "./emitter-monomorphize"
 
@@ -28,6 +27,7 @@ import { addClassDefinition, HeaderPlanBuilder } from "./emitter-header-plan"
 import { CppDeclaration, CppDeclarationBuilder, textDeclaration } from "./cpp-declaration"
 import { CppTypeRegistry, isReferenceVariant } from "./cpp-type"
 import { lowerContextCppType } from "./emitter-types"
+import { addUnique } from "./string-lists"
 
 export function planHeader(program: Program, context: EmitContext, methods: MethodInstantiation[] = [], classes: ClassInstantiation[] = []): HeaderPlanBuilder {
   plan := HeaderPlanBuilder {}
@@ -384,11 +384,6 @@ function planModuleValueDeclaration(name: string, type_: ResolvedType, context: 
   result.type_(lowerContextCppType(type_, context))
   result.text(" " + name + ";\n")
   return result.finish()
-}
-
-function addUnique(values: string[], value: string): none {
-  for existing of values { if existing == value { return } }
-  values.push(value)
 }
 
 // Structural interface aliases are emitted before selected native headers so

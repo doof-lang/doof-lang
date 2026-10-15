@@ -4,11 +4,11 @@ import { SemanticTypeIdentities } from "./semantic-type-identities"
 // This is a transient lowering plan. It consumes checker decorations and never
 // persists or reconstructs module semantics.
 
-import {
-  ClassDeclaration, ConstDeclaration, EnumDeclaration, ExportDeclaration, Expression, FunctionDeclaration,
-  ImmutableBinding, InterfaceDeclaration, Program, ReadonlyDeclaration, Statement, TypeAliasDeclaration,
-} from "./ast"
+import { ClassDeclaration, ExportDeclaration, Expression, Program, Statement } from "./ast"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
+import {
+  DeclarationIndex, declarationKey, declarationName, indexDeclarations, indexedClass, indexedDeclaration, indexedModule,
+} from "./emitter-declarations"
 import { InstantiationPlan } from "./emitter-monomorphize"
 import { collectStatementExpressions } from "./ast-walk"
 import { Symbol, ResolvedType } from "./semantic"
@@ -39,8 +39,7 @@ class WorldviewSelection {
 // Selection and traversal visitation live exclusively in WorldviewIndex.
 export class WorldviewGraphIndex {
   identityPreparation: SemanticTypeIdentities | none = none
-  modules: Map<string, ModuleInfo> = {}
-  declarations: Map<string, Statement> = {}
+  declarations: DeclarationIndex = DeclarationIndex {}
   symbols: Map<string, Symbol> = {}
   readonly summaries: readonly Map<string, DependencySummary> = {}
 }
@@ -198,29 +197,11 @@ function forwardNamesWithoutDefinitions(selection: WorldviewSelection): string[]
   for name of selection.forwardClassNames {
     let defined = false
     for statement of selection.statements {
-      if statementName(statement) == name { defined = true; break }
+      if declarationName(statement) == name { defined = true; break }
     }
     if !defined { result.push(name) }
   }
   return result
-}
-
-function statementIsClass(statement: Statement): bool {
-  case statement {
-    export_: ExportDeclaration -> { return statementIsClass(export_.declaration) }
-    _: ClassDeclaration -> { return true }
-    _ -> { return false }
-  }
-}
-
-function addUniqueString(values: string[], value: string): none {
-  for existing of values { if existing == value { return } }
-  values.push(value)
-}
-
-function containsString(values: string[], value: string): bool {
-  for existing of values { if existing == value { return true } }
-  return false
 }
 
 function addInterfaceKey(index: WorldviewIndex, value: string): none {
@@ -232,9 +213,9 @@ function addInterfaceKey(index: WorldviewIndex, value: string): none {
 function orderedSelectionStatements(info: ModuleInfo, selection: WorldviewSelection): Statement[] {
   let ordered: Statement[] = []
   let selectedNames: Set<string> = []
-  for selected of selection.statements { selectedNames.add(statementName(selected)) }
+  for selected of selection.statements { selectedNames.add(declarationName(selected)) }
   for candidate of info.program.statements {
-    name := statementName(candidate)
+    name := declarationName(candidate)
     if name != "" && selectedNames.has(name) { ordered.push(candidate) }
   }
   return ordered
@@ -266,7 +247,7 @@ function collectGeneratedJsonDeclarationDependencies(statement: Statement, rootP
     export_: ExportDeclaration -> { collectGeneratedJsonDeclarationDependencies(export_.declaration, rootPath, instantiations, index) }
     class_: ClassDeclaration -> {
       key := rootPath + "::" + class_.name
-      if !containsString(instantiations.jsonSerializationKeys, key) && !containsString(instantiations.jsonDeserializationKeys, key) { return }
+      if !instantiations.jsonSerializationKeys.contains(key) && !instantiations.jsonDeserializationKeys.contains(key) { return }
       dependencies := DependencyBuilder { identities: index.graph.identityPreparation }
       for field of class_.fields {
         if !field.static_ && field.resolvedType != none { collectCompleteDependencyType(field.resolvedType!, dependencies) }
@@ -295,10 +276,9 @@ function collectSymbolDependency(
   if symbol.modulePath == "" { return }
   if symbol.forwardOnly && !forceTransitiveDefinitions {
     if index.selectedKeys.has(symbol.key) { return }
-    declaration := declarationFor(index, symbol.modulePath, symbol.name)
-    if declaration == none || !statementIsClass(declaration!) { return }
+    if indexedClass(index.graph.declarations, symbol.modulePath, symbol.name) == none { return }
     selection := selectionFor(index, symbol.modulePath)
-    addUniqueString(selection.forwardClassNames, symbol.name)
+    if !selection.forwardClassNames.contains(symbol.name) { selection.forwardClassNames.push(symbol.name) }
     return
   }
   if index.selectedKeys.has(symbol.key) { return }
@@ -371,57 +351,30 @@ function isNominalSurfaceSymbol(symbol: Symbol): bool {
 }
 
 function declarationFor(index: WorldviewIndex, modulePath: string, name: string): Statement | none {
-  declaration := index.graph.declarations.get(declarationKey(modulePath, name)) else { return none }
-  return declaration
+  return indexedDeclaration(index.graph.declarations, modulePath, name)
 }
 
-function statementName(statement: Statement): string {
-  case statement {
-    export_: ExportDeclaration -> { return statementName(export_.declaration) }
-    class_: ClassDeclaration -> { return class_.name }
-    fn: FunctionDeclaration -> { return fn.name }
-    interface_: InterfaceDeclaration -> { return interface_.name }
-    enum_: EnumDeclaration -> { return enum_.name }
-    alias: TypeAliasDeclaration -> { return alias.name }
-    const_: ConstDeclaration -> { return const_.name }
-    readonly_: ReadonlyDeclaration -> { return readonly_.name }
-    binding: ImmutableBinding -> { return binding.name }
-    _ -> { return "" }
-  }
-  return ""
-}
-
-export function indexWorldviewGraph(result: AnalysisResult, identities: SemanticTypeIdentities | none = none): WorldviewGraphIndex {
-  modules: Map<string, ModuleInfo> := {}
-  declarations: Map<string, Statement> := {}
+export function indexWorldviewGraph(
+  result: AnalysisResult,
+  identities: SemanticTypeIdentities | none = none,
+  declarations: DeclarationIndex | none = none,
+): WorldviewGraphIndex {
+  graph := declarations ?? indexDeclarations(result)
   symbols: Map<string, Symbol> := {}
   summaries: Map<string, DependencySummary> := {}
   for module of result.modules {
-    if !modules.has(module.path) { modules.set(module.path, module) }
-    for statement of module.program.statements {
-      name := statementName(statement)
-      key := declarationKey(module.path, name)
-      if name != "" && !declarations.has(key) {
-        declarations.set(key, statement)
-        summaries.set(key, summarizeDeclaration(statement, identities))
-      }
-    }
     for symbol of module.symbols {
       name := if symbol.originalName == "" then symbol.name else symbol.originalName
       key := declarationKey(module.path, name)
       if !symbols.has(key) { symbols.set(key, symbol) }
     }
   }
-  return WorldviewGraphIndex { identityPreparation: identities, modules, declarations, symbols, summaries: summaries.drainToReadonly() }
-}
-
-function declarationKey(modulePath: string, name: string): string {
-  return modulePath + "\n" + name
+  for key, statement of graph.declarations { summaries.set(key, summarizeDeclaration(statement, identities)) }
+  return WorldviewGraphIndex { identityPreparation: identities, declarations: graph, symbols, summaries: summaries.drainToReadonly() }
 }
 
 function findModule(index: WorldviewIndex, path: string): ModuleInfo | none {
-  module := index.graph.modules.get(path) else { return none }
-  return module
+  return indexedModule(index.graph.declarations, path)
 }
 
 function findSymbol(index: WorldviewIndex, modulePath: string, name: string): Symbol | none {

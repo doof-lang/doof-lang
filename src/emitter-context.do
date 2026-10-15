@@ -7,6 +7,7 @@ import { TypeLoweringSession } from "./emitter-type-cache"
 // module dependency state belongs to the module/header planner.
 
 import { CppTypeRegistry } from "./cpp-type"
+import { DeclarationIndex } from "./emitter-declarations"
 import { Program, SourceSpan } from "./ast"
 import { JsonEligibilityCache } from "./json-semantics"
 import {
@@ -36,7 +37,8 @@ export class EmitContext {
   let cppTypes: CppTypeRegistry = CppTypeRegistry {}
   let modulePath: string = ""
   let sourcePath: string = ""
-  allPrograms: Program[] = []
+  // Every program in the graph, with its top-level declarations by module and name.
+  declarations: DeclarationIndex = DeclarationIndex {}
   let imports: ImportBinding[] = []
   let moduleSurfaces: EmitModuleSurface[] = []
   let jsonEligibility: JsonEligibilityCache = JsonEligibilityCache {}
@@ -74,7 +76,7 @@ export class EmitContext {
   // Mutable locals captured by any lambda in the current callable. Their
   // declarations are heap-boxed and every identifier use dereferences the box.
   let capturedMutables: string[] = []
-  let tryCounter: int = 0
+  private let temporaryCounter: int = 0
   loopLabels: string[] = []
   loopBreakTargets: string[] = []
   loopContinueTargets: string[] = []
@@ -89,6 +91,15 @@ export class EmitContext {
   let coverageEnabled: bool = false
   let coverageModuleId: int = -1
   coverageInstrumentedLines: int[] = []
+
+  /** A number not yet used for a generated local in this context. */
+  nextTemporaryId(): int {
+    temporaryCounter += 1
+    return temporaryCounter
+  }
+
+  /** A fresh generated C++ local name: `prefix` followed by a new id. */
+  temporary(prefix: string): string => prefix + string(nextTemporaryId())
 }
 
 /** Maps generated C++ back to the active Doof source location. */
@@ -111,10 +122,8 @@ export function isCapturedMutable(context: EmitContext, name: string): bool {
   return false
 }
 
-export function createEmitContextForModule(program: Program, modulePath: string, allPrograms: Program[] = []): EmitContext {
-  let programs = allPrograms
-  if programs.length == 0 { programs = [program] }
-  context := EmitContext { allPrograms: programs }
+export function createEmitContextForModule(program: Program, modulePath: string, declarations: DeclarationIndex = DeclarationIndex {}): EmitContext {
+  context := EmitContext { declarations: if declarations.programs.length == 0 then DeclarationIndex { programs: [program] } else declarations }
   context.modulePath = modulePath
   context.sourcePath = modulePath
   return context

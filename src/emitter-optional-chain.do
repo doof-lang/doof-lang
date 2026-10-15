@@ -71,8 +71,7 @@ function lowerOptional(
   access: (receiver: Expression): Expression,
 ): string {
   source := emitExpression(object, context)
-  context.tryCounter = context.tryCounter + 1
-  suffix := string(context.tryCounter)
+  suffix := string(context.nextTemporaryId())
   sourceName := "_optional_source_" + suffix
   receiverName := "_optional_receiver_" + suffix
   receiver := Identifier { kind: "identifier", name: receiverName, span }

@@ -17,11 +17,11 @@ import {
   UnionResolvedType, UnknownType, NoneType, WeakResolvedType,
 } from "./semantic"
 import { EmitContext, recordCoverageLine, sourceLineDirective } from "./emitter-context"
-import { cppIdentifier, emitExpression } from "./emitter-expr"
+import { emitExpression } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
 import { emitContextType, specializeEmitType } from "./emitter-types"
 import { scanCapturedMutablesInBlock, scanCapturedMutablesInExpression } from "./emitter-expr-lambda"
-import { moduleNamespace } from "./emitter-names"
+import { cppIdentifier, moduleNamespace } from "./emitter-names"
 import { ClassInstantiation, MethodInstantiation } from "./emitter-monomorphize"
 import { emitGeneratedJsonDeclarations } from "./emitter-json"
 import { emitMetadataDeclaration } from "./emitter-metadata"

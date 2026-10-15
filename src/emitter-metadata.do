@@ -1,12 +1,14 @@
 // Structured reflection metadata, JSON Schema, and JSON invocation lowering.
 
-import { ClassDeclaration, EnumDeclaration, ExportDeclaration, FunctionDeclaration, Statement } from "./ast"
+import { ClassDeclaration, FunctionDeclaration } from "./ast"
 import {
   ArrayResolvedType, ClassType, EnumType, FunctionType, SerialValueResolvedType, NoneType, PrimitiveType,
   ResolvedType, ResultResolvedType, TupleResolvedType, UnionResolvedType,
 } from "./semantic"
 import { EmitContext } from "./emitter-context"
-import { cppIdentifier, emitExpression } from "./emitter-expr"
+import { indexedClass, indexedEnum } from "./emitter-declarations"
+import { emitExpression } from "./emitter-expr"
+import { cppIdentifier } from "./emitter-names"
 import { emitContextType } from "./emitter-types"
 import { emitJsonField, emitJsonRead, emitJsonTypeCheck, jsonTypeName } from "./emitter-json"
 
@@ -173,7 +175,7 @@ function emitTypeSchemaEntries(type_: ResolvedType, context: EmitContext): strin
     }
     enum_: EnumType -> {
       let values: string[] = []
-      declaration := findEnum(context, enum_.symbol.module, enum_.name)
+      declaration := indexedEnum(context.declarations, enum_.symbol.module, enum_.name)
       let backingKind = "int"
       if declaration != none {
         backingKind = declaration!.backingKind
@@ -209,7 +211,7 @@ function emitDefinitions(methods: FunctionDeclaration[], context: EmitContext): 
 function collectSchemaClasses(type_: ResolvedType, context: EmitContext, classes: ClassDeclaration[]): none {
   case type_ {
     classType: ClassType -> {
-      declaration := findClass(context, classType.symbol.module, classType.name)
+      declaration := indexedClass(context.declarations, classType.symbol.module, classType.name)
       if declaration == none || containsClass(classes, declaration!) { return }
       classes.push(declaration!)
       for field of declaration!.fields { if !field.static_ { collectSchemaClasses(field.resolvedType!, context, classes) } }
@@ -236,39 +238,6 @@ function emitClassSchema(owner: ClassDeclaration, context: EmitContext): string 
   if required.length > 0 { entries.push(jsonEntry("required", jsonArray(required))) }
   if owner.description != "" { entries.push(jsonEntry("description", jsonString(owner.description))) }
   return jsonObject(entries)
-}
-
-function findClass(context: EmitContext, modulePath: string, name: string): ClassDeclaration | none {
-  for program of context.allPrograms { for statement of program.statements {
-    declaration := statementClass(statement)
-    if declaration != none && declaration!.name == name && declaration!.resolvedSymbol != none && declaration!.resolvedSymbol!.module == modulePath { return declaration }
-  } }
-  return none
-}
-
-function findEnum(context: EmitContext, modulePath: string, name: string): EnumDeclaration | none {
-  for program of context.allPrograms { for statement of program.statements {
-    case statement {
-      enum_: EnumDeclaration -> { if enum_.name == name { return enum_ } }
-      export_: ExportDeclaration -> {
-        case export_.declaration {
-          enum_: EnumDeclaration -> { if enum_.name == name { return enum_ } }
-          _ -> { }
-        }
-      }
-      _ -> { }
-    }
-  } }
-  return none
-}
-
-function statementClass(statement: Statement): ClassDeclaration | none {
-  case statement {
-    class_: ClassDeclaration -> { return class_ }
-    export_: ExportDeclaration -> { return statementClass(export_.declaration) }
-    _ -> { return none }
-  }
-  return none
 }
 
 function containsClass(classes: ClassDeclaration[], candidate: ClassDeclaration): bool {

@@ -78,3 +78,21 @@ export function testReadonlyEmissionWasmUsesExplicitPackageNames(): none {
   Assert.stringContains(result.emission!.wasmSupportSource, "::mapped::main_::add(")
   Assert.stringContains(result.emission!.wasmSupportSource, "mapped_main.hpp")
 }
+
+export function testSameNamedEnumsUseTheirOwnModulesBackingKind(): none {
+  // The int-backed Mode is analyzed first; the export takes the string-backed one.
+  result := compileWithLoader([
+    SourceFile {
+      path: "/main.do",
+      source: "import { Mode as Level } from \"./level\"\nimport { Mode } from \"./text\"\nexport function pick(mode: Mode, level: Level): int => 0",
+    },
+    SourceFile { path: "/level.do", source: "export enum Mode { Low, High }" },
+    SourceFile { path: "/text.do", source: "export enum Mode { Quiet = \"quiet\" }" },
+  ], "/main.do", noSourceLoader, [], "wasm")
+
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  support := result.emission!.wasmSupportSource
+  Assert.stringContains(support, "Parameter mode expected string")
+  Assert.stringContains(support, "Parameter level expected integer")
+}

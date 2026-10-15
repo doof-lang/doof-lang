@@ -43,8 +43,7 @@ function runtimeCall(helper: string, member: MemberExpression, expression: CallE
 function emitArrayFind(member: MemberExpression, expression: CallExpression, array: ArrayResolvedType, context: EmitContext): string {
   signature := checkedSignature(member, expression, context)
   resultType := expression.resolvedType ?? signature!.returnType
-  context.tryCounter = context.tryCounter + 1
-  suffix := string(context.tryCounter)
+  suffix := string(context.nextTemporaryId())
   items := "_find_items_" + suffix
   index := "_find_index_" + suffix
   predicate := emitArgument(expression.args[0].value, signature!.params[0].type_, context)

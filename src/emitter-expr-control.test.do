@@ -4,6 +4,10 @@ import { compileWithLoader } from "./compiler"
 import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
+import { AstLocation, Block, SourceSpan } from "./ast"
+import { primitive, sameType } from "./checker-types"
+import { EmitContext } from "./emitter-context"
+import { emitValueYieldBlock } from "./emitter-expr-control"
 
 export function testQuarkWeakCaseExpressionEmission(): none {
   result := compile([SourceFile { path: "/main.do", source:
@@ -188,3 +192,20 @@ export function testResultIfExpressionConvertsEachArm(): none {
   Assert.stringContains(source, "{ if (ok) { return ")
   Assert.stringNotContains(source, "(ok ? ")
 }
+
+export function testValueYieldBlockRestoresOuterYieldTarget(): none {
+  location := AstLocation { line: 1, column: 1, offset: 0 }
+  block := Block { kind: "block", statements: [], span: SourceSpan { start: location, end: location } }
+  outer := primitive("string")
+  context := EmitContext { inValueYieldBlock: true, valueYieldReturnsVoid: true, valueYieldType: outer }
+  Assert.equal(emitValueYieldBlock(block, 1, primitive("int"), false, context), "")
+  Assert.isTrue(context.inValueYieldBlock)
+  Assert.isTrue(context.valueYieldReturnsVoid)
+  Assert.isTrue(sameType(context.valueYieldType!, outer))
+
+  nested := EmitContext {}
+  Assert.equal(emitValueYieldBlock(block, 1, none, true, nested), "")
+  Assert.isFalse(nested.inValueYieldBlock)
+  Assert.isTrue(nested.valueYieldType == none)
+}
+

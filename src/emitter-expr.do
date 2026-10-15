@@ -9,7 +9,7 @@ import { emitCarrierConversion } from "./emitter-carrier-values"
 import { ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpression, AsyncExpression, BinaryExpression, BoolLiteral, CallExpression, CallerExpression, CaseExpression, CatchExpression, CharLiteral, ConstructExpression, DoubleLiteral, DotShorthand, Expression, FloatLiteral, Identifier, IfExpression, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NoneLiteral, ObjectLiteral, RetireExpression, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression } from "./ast"
 import { ClassType, SerialValueResolvedType, NoneType, PrimitiveType, ResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
-import { emitAs, emitAssignment, emitBinary, emitIdentifier, emitIndex, emitMember, emitUnary, cppIdentifier as emitCppIdentifier } from "./emitter-expr-ops"
+import { emitAs, emitAssignment, emitBinary, emitIdentifier, emitIndex, emitMember, emitUnary } from "./emitter-expr-ops"
 import { emitCall } from "./emitter-expr-calls"
 import { emitClassTuple, emitConstruct } from "./emitter-construction"
 import { emitArray, emitChar, emitNoneLiteral, emitObject, emitString, emitTuple } from "./emitter-expr-literals"
@@ -118,7 +118,6 @@ function emitJsonValuePromotion(expression: Expression, value: string, source: R
   return "doof::serial_value(" + value + ")"
 }
 
-export function cppIdentifier(name: string): string { return emitCppIdentifier(name) }
 
 function decimalLiteral(value: string): string {
   if value.contains(".") || value.contains("e") || value.contains("E") { return value }

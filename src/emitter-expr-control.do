@@ -1,10 +1,11 @@
 // Conditional and pattern-based expression lowering.
 
-import { Block, CaseExpression, CatchExpression, DotShorthand, Expression, IfExpression, RangePattern, TypePattern, ValuePattern, WildcardPattern, YieldBlockExpression } from "./ast"
+import { Block, CaseExpression, CatchExpression, DotShorthand, Expression, IfExpression, YieldBlockExpression } from "./ast"
 import { ResultResolvedType, SerialValueResolvedType, ResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
-import { emitCaseSubjectValue, emitCaseTypePattern, emitCaseValuePattern } from "./emitter-case-pattern"
-import { cppIdentifier, emitExpression } from "./emitter-expr"
+import { emitCasePattern, emitCaseSubjectValue } from "./emitter-case-pattern"
+import { emitExpression } from "./emitter-expr"
+import { cppIdentifier } from "./emitter-names"
 import { emitBlock, emitCondition } from "./emitter-stmt"
 import { exprModuleNamespaceFor, hasNoneMember } from "./emitter-expr-utils"
 import { emitContextType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
@@ -58,16 +59,7 @@ export function emitYieldBlockExpression(expression: YieldBlockExpression, conte
   checkedResultType := if expected == none then expression.resolvedType else expected
   if checkedResultType == none { panic("Yield block has no resolved result type") }
   resultType := specializeEmitType(checkedResultType!, context)
-  previousYieldType := context.valueYieldType
-  previousYieldVoid := context.valueYieldReturnsVoid
-  previousYieldState := context.inValueYieldBlock
-  context.inValueYieldBlock = true
-  context.valueYieldReturnsVoid = false
-  context.valueYieldType = resultType
-  body := emitBlock(expression.body, 1, context)
-  context.inValueYieldBlock = previousYieldState
-  context.valueYieldType = previousYieldType
-  context.valueYieldReturnsVoid = previousYieldVoid
+  body := emitValueYieldBlock(expression.body, 1, resultType, false, context)
   return "[&]() -> " + emitContextType(resultType, context) + " {\n" + body + "}()"
 }
 
@@ -75,8 +67,7 @@ export function emitCatchExpression(expression: CatchExpression, context: EmitCo
   if expression.resolvedType == none { panic("Catch expression has no resolved result type") }
   resultType := specializeEmitType(expression.resolvedType!, context)
   resultCppType := emitContextType(resultType, context)
-  context.tryCounter = context.tryCounter + 1
-  catchVar := "_catch_" + string(context.tryCounter)
+  catchVar := context.temporary("_catch_")
   previousCatchVar := context.catchVarName
   previousCatchType := context.catchResultType
   context.catchVarName = catchVar
@@ -102,34 +93,11 @@ export function emitCaseExpression(expression: CaseExpression, context: EmitCont
   output = output + "    auto _case_subject = " + emitCaseSubjectValue(emitExpression(expression.subject, context), specializeEmitType(storageType, context), specializeEmitType(subjectResult, context), context) + ";\n"
   for arm of expression.arms {
     for pattern of arm.patterns {
-      let condition = "true"
-      let binding = ""
-      case pattern {
-        type_: TypePattern -> {
-          bindingName := if type_.name == "_" then "" else cppIdentifier(type_.name)
-          emitted := emitCaseTypePattern(type_, specializeEmitType(subjectResult, context), "_case_subject", bindingName, context.modulePath, context.names, context)
-          condition = emitted.condition
-          binding = emitted.binding
-        }
-        value: ValuePattern -> { condition = emitCaseValuePattern(value, specializeEmitType(subjectResult, context), "_case_subject", emitExpression(value.value, context), context) }
-        range: RangePattern -> { condition = emitRangePatternCondition(range, "_case_subject", context) }
-        _: WildcardPattern -> { condition = "true" }
-      }
-      output = output + "    if (" + condition + ") {\n"
-      if binding != "" { output = output + "        " + binding }
+      emitted := emitCasePattern(pattern, specializeEmitType(subjectResult, context), "_case_subject", context)
+      output = output + "    if (" + emitted.condition + ") {\n"
+      if emitted.binding != "" { output = output + "        " + emitted.binding }
       case arm.body {
-        block: Block -> {
-          previousYieldType := context.valueYieldType
-          previousYieldVoid := context.valueYieldReturnsVoid
-          previousYieldState := context.inValueYieldBlock
-          context.inValueYieldBlock = true
-          context.valueYieldReturnsVoid = false
-          context.valueYieldType = resultType
-          output = output + emitBlock(block, 2, context)
-          context.inValueYieldBlock = previousYieldState
-          context.valueYieldType = previousYieldType
-          context.valueYieldReturnsVoid = previousYieldVoid
-        }
+        block: Block -> { output = output + emitValueYieldBlock(block, 2, resultType, false, context) }
         bodyExpression: Expression -> {
           emittedBody := emitExpression(bodyExpression, context, resultType)
           output = output + "        return " + emittedBody + ";\n"
@@ -141,13 +109,17 @@ export function emitCaseExpression(expression: CaseExpression, context: EmitCont
   return output + "    throw std::runtime_error(\"non-exhaustive case expression\");\n}()"
 }
 
-function emitRangePatternCondition(pattern: RangePattern, subject: string, context: EmitContext): string {
-  let condition = ""
-  if pattern.start != none { condition = subject + " >= " + emitExpression(pattern.start!, context) }
-  if pattern.end != none {
-    operator := if pattern.inclusive then " <= " else " < "
-    if condition != "" { condition = condition + " && " }
-    condition = condition + subject + operator + emitExpression(pattern.end!, context)
-  }
-  return condition
+/** Emits a block whose `yield` returns from the enclosing C++ lambda, restoring the outer yield target afterwards. */
+export function emitValueYieldBlock(block: Block, level: int, valueType: ResolvedType | none, returnsVoid: bool, context: EmitContext): string {
+  previousYieldState := context.inValueYieldBlock
+  previousVoidState := context.valueYieldReturnsVoid
+  previousYieldType := context.valueYieldType
+  context.inValueYieldBlock = true
+  context.valueYieldReturnsVoid = returnsVoid
+  context.valueYieldType = valueType
+  body := emitBlock(block, level, context)
+  context.inValueYieldBlock = previousYieldState
+  context.valueYieldReturnsVoid = previousVoidState
+  context.valueYieldType = previousYieldType
+  return body
 }

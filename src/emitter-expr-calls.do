@@ -3,17 +3,19 @@
 import { emitClassCall } from "./emitter-construction"
 
 import { emitCallArguments, emitDispatchCallArguments } from "./emitter-call-arguments"
-import { presentWeakTarget, weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
+import { presentWeakTarget, weakTargetUsesVariant } from "./emitter-carriers"
 import { CallExpression, Expression, FunctionDeclaration, Identifier, MemberExpression } from "./ast"
-import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, NoneType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
+import { emitWeakAccess, weakAccessNames } from "./emitter-weak-access"
 import { substituteTypeParams } from "./checker-types"
-import { cppIdentifier, emitExpression } from "./emitter-expr"
+import { emitExpression } from "./emitter-expr"
+import { cppIdentifier } from "./emitter-names"
 import { decoratedExpressionType, exprModuleNamespaceFor, variantVisitValue } from "./emitter-expr-utils"
 import { emitContextReturnType, emitContextType, emitResultPayloadType, emitType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { classInstantiationKey, functionInstantiationKey, methodInstantiationKey } from "./emitter-monomorphize"
 import { emitSyncActorCall } from "./emitter-expr-actor"
-import { emitOptionalAbsent, emitOptionalCall, emitOptionalPresent } from "./emitter-optional-chain"
+import { emitOptionalCall } from "./emitter-optional-chain"
 import { emitArrayMethodCall } from "./emitter-array-methods"
 import { emitNoImplementationsAccess, implementationlessInterface } from "./emitter-no-implementations"
 import { isTypeParameterName } from "./ast-walk"
@@ -98,8 +100,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
             if member.property == "isSuccess" { return "doof::is_success(" + emitExpression(member.object, context) + ")" }
             if member.property == "isFailure" { return "doof::is_failure(" + emitExpression(member.object, context) + ")" }
             if member.property == "unwrapOr" && expression.args.length == 1 {
-              temporaryName := "_result_unwrap_" + string(context.tryCounter)
-              context.tryCounter += 1
+              temporaryName := context.temporary("_result_unwrap_")
               object := emitExpression(member.object, context)
               fallback := emitExpression(expression.args[0].value, context, resultType.valueType)
               return "[&]() -> " + emitType(resultType.valueType, context.modulePath, context.names) + " { auto " + temporaryName + " = " + object + "; if (doof::is_failure(" + temporaryName + ")) return " + fallback + "; return std::move(doof::success_value(" + temporaryName + ")); }()"
@@ -160,8 +161,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
           }
           map: MapResolvedType -> {
             if member.property == "has" {
-              context.tryCounter = context.tryCounter + 1
-              temporary := "_map_has_" + string(context.tryCounter)
+              temporary := context.temporary("_map_has_")
               return "[&]() -> bool { auto " + temporary + " = " + emitExpression(member.object, context) + "; return " + temporary + "->find(" + emitExpression(expression.args[0].value, context) + ") != " + temporary + "->end(); }()"
             }
             if member.property == "set" { return "doof::map_set<" + emitContextType(map.keyType, context) + ", " + emitContextType(map.valueType, context) + ">(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context, map.keyType) + ", " + emitExpression(expression.args[1].value, context, map.valueType) + ", \"\", 0)" }
@@ -336,16 +336,9 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
 }
 
 function emitWeakMemberCall(expression: CallExpression, member: MemberExpression, context: EmitContext): string {
-  context.tryCounter = context.tryCounter + 1
-  storage := "_weak_storage_" + string(context.tryCounter)
-  temporary := "_weak_value_" + string(context.tryCounter)
+  names := weakAccessNames(context)
+  temporary := names.value
   object := emitExpression(member.object, context)
-  let nullable = false
-  case member.object.resolvedType! {
-    weak_: WeakResolvedType -> { nullable = weakTargetAllowsNone(weak_.inner) }
-    _ -> { }
-  }
-  weakValue := if nullable then storage + ".value()" else storage
   let originalReturn: ResolvedType | none = none
   if member.resolvedType != none {
     case member.resolvedType! { function_: FunctionType -> { originalReturn = function_.returnType } _ -> { } }
@@ -363,24 +356,7 @@ function emitWeakMemberCall(expression: CallExpression, member: MemberExpression
     }
     _ -> { }
   }
-  if member.force {
-    resultType := expression.resolvedType!
-    noneCheck := if nullable then "if (!" + storage + ".has_value()) doof::panic(\"Weak reference is none\"); " else ""
-    case resultType {
-      _: NoneType -> { return "[&]() -> void { auto " + storage + " = " + object + "; " + noneCheck + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) doof::panic(\"Weak reference has expired\"); auto " + temporary + " = std::move(_weak_locked.value()); " + call + "; }()" }
-      _ -> { return "[&]() -> " + emitType(resultType, context.modulePath, context.names) + " { auto " + storage + " = " + object + "; " + noneCheck + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) doof::panic(\"Weak reference has expired\"); auto " + temporary + " = std::move(_weak_locked.value()); return " + call + "; }()" }
-    }
-  }
-  // '?.' on an absent or expired reference is none.
-  resultType := expression.resolvedType!
-  noneReturn := if nullable then "if (!" + storage + ".has_value()) return; " else ""
-  if resultType.kind == "none" {
-    return "[&]() -> void { auto " + storage + " = " + object + "; " + noneReturn + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) return; auto " + temporary + " = std::move(_weak_locked.value()); " + call + "; }()"
-  }
-  absent := emitOptionalAbsent(resultType, context)
-  absentReturn := if nullable then "if (!" + storage + ".has_value()) return " + absent + "; " else ""
-  present := emitOptionalPresent(call, expression.resolvedOptionalValue!, resultType, string(context.tryCounter), context)
-  return "[&]() -> " + emitContextType(resultType, context) + " { auto " + storage + " = " + object + "; " + absentReturn + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) return " + absent + "; auto " + temporary + " = std::move(_weak_locked.value()); return " + present + "; }()"
+  return emitWeakAccess(object, member.object.resolvedType!, names, call, member.force, expression.resolvedType!, expression.resolvedOptionalValue, context)
 }
 
 function isBuiltinIdentifier(identifier: Identifier, name: string): bool {

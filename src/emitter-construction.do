@@ -5,7 +5,8 @@ import { ActorCreationExpression, CheckedConstruction, CallArgument, CallExpress
 import { emitNoImplementationsAccess, implementationlessInterface, interfaceFieldType } from "./emitter-no-implementations"
 import { ClassType, FailureResolvedType, InterfaceType, ResolvedType, ResultResolvedType, SuccessResolvedType, TypeSubstitution } from "./semantic"
 import { EmitContext } from "./emitter-context"
-import { cppIdentifier, emitExpression } from "./emitter-expr"
+import { emitExpression } from "./emitter-expr"
+import { cppIdentifier } from "./emitter-names"
 import { emitPropertyValue, emittedSymbolName, exprModuleNamespaceFor, findProperty } from "./emitter-expr-utils"
 import { emitContextReturnType, specializeEmitType } from "./emitter-types"
 import { classInstantiationKey } from "./emitter-monomorphize"
@@ -124,8 +125,7 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
 
 function constructionSpreadTemporary(expression: ConstructExpression, context: EmitContext): string {
   if expression.spread == none { return "" }
-  context.tryCounter = context.tryCounter + 1
-  return "_construct_spread_" + string(context.tryCounter)
+  return context.temporary("_construct_spread_")
 }
 
 function hasSpreadField(expression: ConstructExpression, name: string): bool {

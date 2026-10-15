@@ -5,8 +5,9 @@ import { emitActorConstruction } from "./emitter-construction"
 import { ActorCreationExpression, AsyncExpression, Block, CallExpression, Expression, MemberExpression, RetireExpression } from "./ast"
 import { ActorType, FunctionType, PromiseType, ResolvedType } from "./semantic"
 import { EmitContext, SourceLocationSpanOverride } from "./emitter-context"
-import { cppIdentifier, emitExpression, emitDiscardedExpression } from "./emitter-expr"
-import { emitBlock } from "./emitter-stmt"
+import { emitExpression, emitDiscardedExpression } from "./emitter-expr"
+import { cppIdentifier } from "./emitter-names"
+import { emitValueYieldBlock } from "./emitter-expr-control"
 import { emitClassInnerType, emitContextReturnType } from "./emitter-types"
 
 export function emitActorCreation(expression: ActorCreationExpression, context: EmitContext): string {
@@ -70,16 +71,7 @@ function emitAsyncBlock(expression: AsyncExpression, block: Block, context: Emit
     if i > 0 { captures = captures + ", " }
     captures = captures + cppIdentifier(expression.resolvedCaptureNames[i])
   }
-  previousYieldState := context.inValueYieldBlock
-  previousVoidState := context.valueYieldReturnsVoid
-  previousYieldType := context.valueYieldType
-  context.inValueYieldBlock = true
-  context.valueYieldReturnsVoid = cppReturn == "void"
-  context.valueYieldType = valueType
-  body := emitBlock(block, 1, context)
-  context.inValueYieldBlock = previousYieldState
-  context.valueYieldReturnsVoid = previousVoidState
-  context.valueYieldType = previousYieldType
+  body := emitValueYieldBlock(block, 1, valueType, cppReturn == "void", context)
   return "doof::submit_async<" + cppReturn + ">([" + captures + "]() -> " + cppReturn + " {\n" + body + "})"
 }
 

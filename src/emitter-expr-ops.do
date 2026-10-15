@@ -1,18 +1,19 @@
 // Assignment, identifier, operator, member, and index lowering.
 
 import { emitCarrierConversion } from "./emitter-carrier-values"
-import { emitOptionalAbsent, emitOptionalIndex, emitOptionalMember, emitOptionalPresent } from "./emitter-optional-chain"
+import { emitOptionalIndex, emitOptionalMember } from "./emitter-optional-chain"
 import { emitAbsentTest, emitForced, emitOptional, emitterAbsenceLayers } from "./emitter-absence"
 import { absenceLayers, hasFailureLayer } from "./absence-types"
-import { carrierOf, presentWeakTarget, weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
+import { carrierOf, presentWeakTarget, weakTargetUsesVariant } from "./emitter-carriers"
 import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Identifier, IndexExpression, MemberExpression, StringLiteral, ThisExpression, UnaryExpression } from "./ast"
 import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, SerialValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
+import { emitWeakAccess, weakAccessNames } from "./emitter-weak-access"
 import { emitExpression } from "./emitter-expr"
 import { emitStringConstant, quote } from "./emitter-expr-literals"
 import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
 import { emitContextClassInnerType, emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
-import { cppIdentifier as emittedCppIdentifier, moduleDiagnosticPath } from "./emitter-names"
+import { cppIdentifier, moduleDiagnosticPath } from "./emitter-names"
 import { isNumeric, isSerialBytesType, sameType } from "./checker-types"
 import { emitNoImplementationsAccess, implementationlessInterface } from "./emitter-no-implementations"
 import { isTypeParameterName } from "./ast-walk"
@@ -298,7 +299,6 @@ export function emitIdentifier(expression: Identifier, context: EmitContext): st
   return cppIdentifier(expression.name)
 }
 
-export function cppIdentifier(name: string): string { return emittedCppIdentifier(name) }
 
 export function emitUnary(expression: UnaryExpression, context: EmitContext): string {
   // Postfix '!' panics and '?' returns none at the first absent layer. A
@@ -341,8 +341,7 @@ export function emitBinary(expression: BinaryExpression, context: EmitContext): 
     rightType := requireExpressionType(expression.right, "coalescing fallback")
     right := emitExpression(expression.right, context, resultType)
     fallback := if rightType.kind == "never" then "{ " + right + "; }" else "return " + right + ";"
-    context.tryCounter = context.tryCounter + 1
-    temporary := "_coalesce_" + string(context.tryCounter)
+    temporary := context.temporary("_coalesce_")
     // `??` removes only the outer absent layer. The fallback may still be
     // absent, so the present value converts to the joined result carrier
     // (for example `A | B` into `A | B | none`).
@@ -548,15 +547,8 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
 }
 
 function emitWeakFieldAccess(expression: MemberExpression, object: string, context: EmitContext): string {
-  context.tryCounter = context.tryCounter + 1
-  storage := "_weak_storage_" + string(context.tryCounter)
-  temporary := "_weak_value_" + string(context.tryCounter)
-  let nullable = false
-  case decoratedExpressionType(expression.object)! {
-    weak_: WeakResolvedType -> { nullable = weakTargetAllowsNone(weak_.inner) }
-    _ -> { }
-  }
-  weakValue := if nullable then storage + ".value()" else storage
+  names := weakAccessNames(context)
+  temporary := names.value
   let access = temporary + "->" + cppIdentifier(expression.property)
   case decoratedExpressionType(expression.object)! {
     weak_: WeakResolvedType -> {
@@ -576,17 +568,7 @@ function emitWeakFieldAccess(expression: MemberExpression, object: string, conte
     }
     _ -> { }
   }
-  if expression.force {
-    resultType := emitType(expression.resolvedType!, context.modulePath, context.names)
-    noneCheck := if nullable then "if (!" + storage + ".has_value()) doof::panic(\"Weak reference is none\"); " else ""
-    return "[&]() -> " + resultType + " { auto " + storage + " = " + object + "; " + noneCheck + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) doof::panic(\"Weak reference has expired\"); auto " + temporary + " = std::move(_weak_locked.value()); return " + access + "; }()"
-  }
-  // '?.' on an absent or expired reference is none.
-  resultType := expression.resolvedType!
-  absent := emitOptionalAbsent(resultType, context)
-  absentReturn := if nullable then "if (!" + storage + ".has_value()) return " + absent + "; " else ""
-  present := emitOptionalPresent(access, expression.resolvedOptionalValue!, resultType, string(context.tryCounter), context)
-  return "[&]() -> " + emitContextType(resultType, context) + " { auto " + storage + " = " + object + "; " + absentReturn + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) return " + absent + "; auto " + temporary + " = std::move(_weak_locked.value()); return " + present + "; }()"
+  return emitWeakAccess(object, decoratedExpressionType(expression.object)!, names, access, expression.force, expression.resolvedType!, expression.resolvedOptionalValue, context)
 }
 
 export function emitIndex(expression: IndexExpression, context: EmitContext): string {

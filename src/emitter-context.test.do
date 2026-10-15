@@ -41,3 +41,18 @@ export function testReadonlyEmissionContextsCarryIndependentNames(): none {
   Assert.equal(moduleNamespace("/vendor/item.do", first.names), "one::item")
   Assert.equal(moduleNamespace("/vendor/item.do", second.names), "two::item")
 }
+
+export function testTemporaryNamesShareOneIncreasingCounter(): none {
+  context := EmitContext {}
+  Assert.equal(context.temporary("_catch_"), "_catch_1")
+  Assert.equal(context.temporary("_catch_"), "_catch_2")
+  Assert.equal(context.nextTemporaryId(), 3)
+  Assert.equal(context.temporary(""), "4")
+}
+
+export function testTemporaryCountersAreIndependentPerContext(): none {
+  first := EmitContext {}
+  second := EmitContext {}
+  Assert.equal(first.temporary("_a_"), "_a_1")
+  Assert.equal(second.temporary("_a_"), "_a_1")
+}
