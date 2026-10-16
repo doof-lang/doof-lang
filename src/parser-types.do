@@ -121,18 +121,23 @@ function parsePrimaryType(parser: Parser): TypeAnnotation {
     returnType := parseTypeAnnotation(parser)
     return AstFunctionType { kind: "function-type", params, returnType, span: parser.span(start) }
   }
-  nameToken := parser.advance()
-  if nameToken.kind != TokenType.Identifier && nameToken.kind != TokenType.None && nameToken.kind != TokenType.Void && nameToken.kind != TokenType.Null {
+  kind := parser.current().kind
+  if kind != TokenType.Identifier && kind != TokenType.None && kind != TokenType.Void && kind != TokenType.Null {
     parser.fail("Expected a type name")
   }
-  name := parser.text(nameToken)
-  let typeArgs: TypeAnnotation[] = []
-  if parser.match(TokenType.Less) {
-    while !parser.check(TokenType.Greater) && !parser.atEnd() {
-      typeArgs.push(parseTypeAnnotation(parser))
-      if !parser.match(TokenType.Comma) { break }
-    }
-    parser.expect(TokenType.Greater)
-  }
+  name := parser.text(parser.advance())
+  typeArgs: TypeAnnotation[] := if parser.check(TokenType.Less) then parseTypeArguments(parser) else []
   return NamedType { kind: "named-type", name, typeArgs, span: parser.span(start) }
+}
+
+// Parses a `<T, U>` argument list; the caller has checked for the opening `<`.
+export function parseTypeArguments(parser: Parser): TypeAnnotation[] {
+  parser.expect(TokenType.Less)
+  let typeArgs: TypeAnnotation[] = []
+  while !parser.check(TokenType.Greater) && !parser.atEnd() {
+    typeArgs.push(parseTypeAnnotation(parser))
+    if !parser.match(TokenType.Comma) { break }
+  }
+  parser.expect(TokenType.Greater)
+  return typeArgs
 }

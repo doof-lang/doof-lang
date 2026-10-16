@@ -1,6 +1,9 @@
 import { Assert as EditorAssert } from "std/assert"
-import { Parser as EditorParser } from "./parser"
-import { Block, CaseExpression, CaseStatement, FunctionDeclaration, ImmutableBinding, LambdaExpression, MemberExpression, NamedType, UnaryExpression, ValuePattern, RangePattern, DotShorthand } from "./ast"
+import { Parser as EditorParser, parse } from "./parser"
+import {
+  Block, BreakStatement, CaseExpression, CaseStatement, ContinueStatement, ForOfStatement, ForStatement, FunctionDeclaration, ImmutableBinding,
+  LambdaExpression, MemberExpression, NamedType, TryStatement, UnaryExpression, ValuePattern, RangePattern, DotShorthand, WhileStatement,
+} from "./ast"
 
 export function testEditorStatementRecoveryKeepsLaterDeclarations(): none {
   parser := EditorParser { source: "function main(): int {\nlet broken = ;\nreturn 42\n}", editorMode: true }
@@ -188,4 +191,81 @@ export function testLineSeparatedCaseStatementArmsStartingWithDot(): none {
     statement: CaseStatement -> { EditorAssert.equal(statement.arms.length, 3) }
     _ -> { panic("expected case statement") }
   }
+}
+
+function parseFailure(source: string): EditorParser {
+  parser := EditorParser { source }
+  case catchPanic(=> parser.parse()) {
+    _: Failure<string> -> { }
+    _ -> { panic("expected parse failure for: " + source) }
+  }
+  return parser
+}
+
+export function testImmutableBindingFormsShareElseCapture(): none {
+  program := parse("value := load() else failure { return }\ntyped: int := load() else { return }\n_ := load() else { return }\nload() else problem { return }")
+  let names = ""
+  for statement of program.statements {
+    binding := statement as ImmutableBinding else { panic("expected immutable binding") }
+    EditorAssert.isTrue(binding.else_ != none)
+    names = names + binding.name + "/" + (binding.failureName ?? "-") + ";"
+  }
+  EditorAssert.equal(names, "value/failure;typed/-;_/-;_/problem;")
+  typed := program.statements[1] as ImmutableBinding else { panic("expected typed binding") }
+  EditorAssert.isTrue(typed.type_ != none)
+}
+
+export function testTryBindingsCannotHandleFailureWithElse(): none {
+  message := "A 'try' binding cannot have an 'else' block; use 'try' to propagate the failure or 'name := expr else { ... }' to handle it"
+  for source of ["try value := load() else { return }", "try value: int := load() else failure { return }"] {
+    parser := parseFailure(source)
+    EditorAssert.equal(parser.errorMessage, message)
+    EditorAssert.equal(parser.errorOffset, source.indexOf(" else") + 1)
+  }
+  for source of ["try value := load()", "try value: int := load()"] {
+    statement := parse(source).statements[0] as TryStatement else { panic("expected try statement") }
+    binding := statement.binding as ImmutableBinding else { panic("expected binding") }
+    EditorAssert.equal(binding.name, "value")
+    // The binding span starts at its name for typed and untyped forms alike.
+    EditorAssert.equal(binding.span.start.offset, "try ".length)
+  }
+}
+
+export function testDestructuringShapesForStatementsTryAndLet(): none {
+  program := parse("[a, b] := pair\n(c, d) = pair\n{ name } := person\ntry [e, _] := load()\ntry (f, g) = load()\nlet { age as years } = person")
+  let kinds = ""
+  for statement of program.statements {
+    case statement {
+      try_: TryStatement -> { kinds = kinds + "try:" + try_.binding.kind + ";" }
+      _ -> { kinds = kinds + statement.kind + ";" }
+    }
+  }
+  EditorAssert.equal(kinds, "array-destructuring;positional-destructuring-assignment;named-destructuring;try:array-destructuring;try:positional-destructuring-assignment;named-destructuring;")
+}
+
+export function testLoopThenBlocksAndJumpLabels(): none {
+  program := parse("outer: while true { break outer\n}\nfor x of items { continue\nlabel } then { }\nfor let i = 0; i < 3; i += 1 { } then { }")
+  loop := program.statements[0] as WhileStatement else { panic("expected while") }
+  EditorAssert.equal(loop.label!, "outer")
+  EditorAssert.isTrue(loop.then_ == none)
+  jump := loop.body.statements[0] as BreakStatement else { panic("expected break") }
+  EditorAssert.equal(jump.label!, "outer")
+  each := program.statements[1] as ForOfStatement else { panic("expected for-of") }
+  EditorAssert.isTrue(each.then_ != none)
+  // A label on the next line is a separate statement.
+  next := each.body.statements[0] as ContinueStatement else { panic("expected continue") }
+  EditorAssert.isTrue(next.label == none)
+  EditorAssert.equal(each.body.statements.length, 2)
+  counted := program.statements[2] as ForStatement else { panic("expected for") }
+  EditorAssert.isTrue(counted.then_ != none)
+}
+
+export function testRangePatternForms(): none {
+  statement := parse("case n { ..<0 -> a(), 0..9 -> b(), 10.. -> c(), 20..<30 -> d() }").statements[0] as CaseStatement else { panic("expected case") }
+  let shapes = ""
+  for arm of statement.arms {
+    range := arm.patterns[0] as RangePattern else { panic("expected range pattern") }
+    shapes = shapes + (if range.start == none then "_" else "s") + (if range.end == none then "_" else "e") + (if range.inclusive then "=" else "<") + ";"
+  }
+  EditorAssert.equal(shapes, "_e<;se=;s_=;se<;")
 }

@@ -265,6 +265,18 @@ Rules:
 - A surrounding `catch` handles failures within its own scope. It does not
   handle failures inside nested functions, lambdas, or value-producing blocks.
 - `try` is a statement-level construct, not an expression.
+- A `try` binding cannot take an `else` block: `try` already propagates the
+  failure. Use declaration-`else` (`value := expr else { ... }`) to handle it
+  locally instead.
+
+```doof reject
+function load(): Result<int, string> => Success(1)
+
+function run(): Result<int, string> {
+    try value := load() else { return Success(0) }  // ❌ try already propagates the failure
+    return Success(value)
+}
+```
 
 Supported forms:
 

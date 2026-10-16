@@ -12,7 +12,7 @@ import {
   CallArgument, AstLocation, SourceSpan, YieldBlockExpression, YieldBlockAssignmentStatement,
   FunctionDeclaration, NamedType,
 } from "./ast"
-import type { Statement, Expression } from "./ast"
+import type { Statement, Expression, TypeAnnotation } from "./ast"
 
 export isolated function parseStatement(parser: Parser): Statement {
   if parser.check(TokenType.Mock) { return parser.parseMockImport() }
@@ -55,41 +55,21 @@ export isolated function parseStatement(parser: Parser): Statement {
   if parser.check(TokenType.Break) { return parseBreak(parser) }
   if parser.check(TokenType.Continue) { return parseContinue(parser) }
 
-  if parser.check(TokenType.Identifier) {
-    if parser.peek(1).kind == TokenType.Colon && looksLikeTypedImmutableBinding(parser) {
-      return parseTypedImmutableBinding(parser)
-    }
-  }
-  if parser.check(TokenType.Underscore) && parser.peek(1).kind == TokenType.ColonEqual {
-    return parseDiscardElseBinding(parser)
-  }
-  if parser.check(TokenType.LeftBracket) {
-    if looksLikePattern(parser, TokenType.ColonEqual) {
-      return parseDestructuring(parser, "array", "immutable", TokenType.ColonEqual)
-    }
-    if looksLikePattern(parser, TokenType.Equal) {
-      return parseDestructuring(parser, "array", "assignment", TokenType.Equal)
-    }
-  }
-  if parser.check(TokenType.LeftParen) {
-    if looksLikePattern(parser, TokenType.ColonEqual) {
-      return parseDestructuring(parser, "positional", "immutable", TokenType.ColonEqual)
-    }
-    if looksLikePattern(parser, TokenType.Equal) {
-      return parseDestructuring(parser, "positional", "assignment", TokenType.Equal)
-    }
-  }
-  if parser.check(TokenType.LeftBrace) {
-    if looksLikePattern(parser, TokenType.ColonEqual) {
-      return parseDestructuring(parser, "named", "immutable", TokenType.ColonEqual)
-    }
-    if looksLikePattern(parser, TokenType.Equal) {
-      return parseDestructuring(parser, "named", "assignment", TokenType.Equal)
-    }
-  }
+  if startsImmutableBinding(parser) { return parseImmutableBinding(parser, true) }
+  destructuring := parseDestructuringStatement(parser)
+  if destructuring != none { return destructuring! }
   if parser.check(TokenType.LeftBrace) { parser.fail("Bare block statements are not allowed") }
 
   return parseExpressionStatement(parser)
+}
+
+// `[a, b] := v`, `(a, b) = v`, `{ name } := v`, and their assignment forms.
+function parseDestructuringStatement(parser: Parser): Statement | none {
+  shape := destructuringShape(parser)
+  if shape == "" { return none }
+  if looksLikePattern(parser, TokenType.ColonEqual) { return parseDestructuring(parser, shape, "immutable", TokenType.ColonEqual) }
+  if looksLikePattern(parser, TokenType.Equal) { return parseDestructuring(parser, shape, "assignment", TokenType.Equal) }
+  return none
 }
 
 function parseReturn(parser: Parser): Statement {
@@ -141,9 +121,7 @@ function parseCaseStatement(parser: Parser): Statement {
   let arms: CaseArm[] = []
   while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
     armStart := parser.location()
-    let patterns: CasePattern[] = [parseCasePattern(parser)]
-    while parser.match(TokenType.Pipe) { patterns.push(parseCasePattern(parser)) }
-    parser.expect(TokenType.RightArrow)
+    patterns := parseCaseArmPatterns(parser)
     body := if parser.check(TokenType.LeftBrace) then parseBlock(parser) else parseBoundedCaseArm(parser)
     arms.push(CaseArm { kind: "case-arm", patterns, body, span: parser.span(armStart) })
     parser.match(TokenType.Comma)
@@ -161,9 +139,7 @@ export function parseCaseExpression(parser: Parser): Expression {
   let arms: CaseExpressionArm[] = []
   while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
     armStart := parser.location()
-    let patterns: CasePattern[] = [parseCasePattern(parser)]
-    while parser.match(TokenType.Pipe) { patterns.push(parseCasePattern(parser)) }
-    parser.expect(TokenType.RightArrow)
+    patterns := parseCaseArmPatterns(parser)
     body := parseCaseExpressionBody(parser)
     arms.push(CaseExpressionArm { kind: "case-expression-arm", patterns, body, span: parser.span(armStart) })
     parser.match(TokenType.Comma)
@@ -172,23 +148,36 @@ export function parseCaseExpression(parser: Parser): Expression {
   return CaseExpression { kind: "case-expression", subject, arms, span: parser.span(start) }
 }
 
+// `pattern | pattern ->` at the start of a case arm.
+function parseCaseArmPatterns(parser: Parser): CasePattern[] {
+  let patterns: CasePattern[] = [parseCasePattern(parser)]
+  while parser.match(TokenType.Pipe) { patterns.push(parseCasePattern(parser)) }
+  parser.expect(TokenType.RightArrow)
+  return patterns
+}
+
 // Keep the Expression/Block promotion at a typed boundary so generated C++
 // does not try to represent this choice as a native conditional expression.
 function parseCaseExpressionBody(parser: Parser): Expression | Block {
   if parser.check(TokenType.LeftBrace) { return parseBlock(parser) }
-  previousBoundary := parser.caseArmBoundary
-  parser.caseArmBoundary = nextCaseArmBoundary(parser)
+  previousBoundary := enterInlineCaseArm(parser)
   body := parser.parseExpression()
   parser.caseArmBoundary = previousBoundary
   return body
 }
 
 function parseBoundedCaseArm(parser: Parser): Block {
+  previousBoundary := enterInlineCaseArm(parser)
+  statement := parseStatement(parser)
+  parser.caseArmBoundary = previousBoundary
+  return Block { kind: "block", statements: [statement], span: statement.span }
+}
+
+// Bounds an inline arm body at the next arm; returns the boundary to restore.
+function enterInlineCaseArm(parser: Parser): int {
   previousBoundary := parser.caseArmBoundary
   parser.caseArmBoundary = nextCaseArmBoundary(parser)
-  body := parseInlineCaseArm(parser)
-  parser.caseArmBoundary = previousBoundary
-  return body
+  return previousBoundary
 }
 
 // Inline arm bodies continue across lines like other expressions, so an arm
@@ -229,11 +218,6 @@ function lineStartsCaseArm(tokens: Token[], start: int): bool {
   return false
 }
 
-function parseInlineCaseArm(parser: Parser): Block {
-  statement := parseStatement(parser)
-  return Block { kind: "block", statements: [statement], span: statement.span }
-}
-
 function parseCasePattern(parser: Parser): CasePattern {
   start := parser.location()
   if parser.match(TokenType.Underscore) {
@@ -243,12 +227,7 @@ function parseCasePattern(parser: Parser): CasePattern {
     }
     return WildcardPattern { kind: "wildcard-pattern", span: parser.span(start) }
   }
-  if parser.match(TokenType.DotDotLess) {
-    end := parser.parseAdditive()
-    return RangePattern {
-      kind: "range-pattern", start: none, end, inclusive: false, span: parser.span(start),
-    }
-  }
+  if parser.match(TokenType.DotDotLess) { return rangePattern(parser, start, none, parser.parseAdditive(), false) }
   if parser.check(TokenType.Identifier) && parser.peek(1).kind == TokenType.Colon {
     name := parser.text(parser.advance())
     parser.advance()
@@ -260,30 +239,23 @@ function parseCasePattern(parser: Parser): CasePattern {
   value := parser.parseAdditive()
   if parser.match(TokenType.DotDot) {
     if parser.check(TokenType.RightArrow) || parser.check(TokenType.Pipe) || parser.check(TokenType.Comma) || parser.check(TokenType.RightBrace) || parser.atEnd() {
-      return RangePattern {
-        kind: "range-pattern", start: value, end: none, inclusive: true, span: parser.span(start),
-      }
+      return rangePattern(parser, start, value, none, true)
     }
-    end := parser.parseAdditive()
-    return RangePattern {
-      kind: "range-pattern", start: value, end, inclusive: true, span: parser.span(start),
-    }
+    return rangePattern(parser, start, value, parser.parseAdditive(), true)
   }
-  if parser.match(TokenType.DotDotLess) {
-    end := parser.parseAdditive()
-    return RangePattern {
-      kind: "range-pattern", start: value, end, inclusive: false, span: parser.span(start),
-    }
-  }
+  if parser.match(TokenType.DotDotLess) { return rangePattern(parser, start, value, parser.parseAdditive(), false) }
   return ValuePattern { kind: "value-pattern", value, span: parser.span(start) }
+}
+
+function rangePattern(parser: Parser, start: AstLocation, low: Expression | none, high: Expression | none, inclusive: bool): CasePattern {
+  return RangePattern { kind: "range-pattern", start: low, end: high, inclusive, span: parser.span(start) }
 }
 
 function parseWhile(parser: Parser, label: string | none, start: AstLocation): Statement {
   parser.expect(TokenType.While)
   condition := parser.parseExpression()
   body := parseBlock(parser)
-  let then_: Block | none = none
-  if parser.match(TokenType.Then) { then_ = parseBlock(parser) }
+  then_ := parseLoopThen(parser)
   return WhileStatement { kind: "while-statement", condition, body, label, then_, span: parser.span(start) }
 }
 
@@ -297,8 +269,7 @@ function parseFor(parser: Parser, label: string | none, start: AstLocation): Sta
     iterable := parser.parseExpression()
     parser.inForIterable = false
     body := parseBlock(parser)
-    let then_: Block | none = none
-    if parser.match(TokenType.Then) { then_ = parseBlock(parser) }
+    then_ := parseLoopThen(parser)
     return ForOfStatement { kind: "for-of-statement", bindings, iterable, body, label, then_, span: parser.span(start) }
   }
   // One `let` covers every comma-separated declarator: `let i = 0, j = 10`.
@@ -307,8 +278,8 @@ function parseFor(parser: Parser, label: string | none, start: AstLocation): Sta
     if parser.check(TokenType.Let) {
       declaratorStart := parser.location()
       parser.expect(TokenType.Let)
-      init.push(parseLetDeclarator(parser, declaratorStart))
-      while parser.match(TokenType.Comma) { init.push(parseLetDeclarator(parser, parser.location())) }
+      init.push(parser.parseLetDeclarator(declaratorStart, true))
+      while parser.match(TokenType.Comma) { init.push(parser.parseLetDeclarator(parser.location(), true)) }
     } else {
       init.push(parseExpressionStatementNoSemicolon(parser))
       while parser.match(TokenType.Comma) { init.push(parseExpressionStatementNoSemicolon(parser)) }
@@ -324,16 +295,14 @@ function parseFor(parser: Parser, label: string | none, start: AstLocation): Sta
     if !parser.match(TokenType.Comma) { break }
   }
   body := parseBlock(parser)
-  let then_: Block | none = none
-  if parser.match(TokenType.Then) { then_ = parseBlock(parser) }
+  then_ := parseLoopThen(parser)
   return ForStatement { kind: "for-statement", init, condition, update, body, label, then_, span: parser.span(start) }
 }
 
-function parseLetDeclarator(parser: Parser, start: AstLocation): Statement {
-  name := parser.text(parser.expect(TokenType.Identifier))
-  typeValue := parser.parseOptionalType()
-  value := parseInitializer(parser)
-  return LetDeclaration { kind: "let-declaration", name, type_: typeValue, value, span: parser.span(start) }
+// The optional `then { ... }` block that runs when a loop ends without `break`.
+function parseLoopThen(parser: Parser): Block | none {
+  if !parser.match(TokenType.Then) { return none }
+  return parseBlock(parser)
 }
 
 function parseExpressionStatementNoSemicolon(parser: Parser): Statement {
@@ -372,19 +341,23 @@ function parseDiscardableBindingName(parser: Parser, message: string): string {
 function parseBreak(parser: Parser): Statement {
   start := parser.location()
   parser.expect(TokenType.Break)
-  let label: string | none = none
-  if parser.check(TokenType.Identifier) && parser.sameLineAsPrevious() { label = parser.text(parser.advance()) }
-  parser.consumeSemicolon()
+  label := parseJumpLabel(parser)
   return BreakStatement { kind: "break-statement", label, span: parser.span(start) }
 }
 
 function parseContinue(parser: Parser): Statement {
   start := parser.location()
   parser.expect(TokenType.Continue)
+  label := parseJumpLabel(parser)
+  return ContinueStatement { kind: "continue-statement", label, span: parser.span(start) }
+}
+
+// A loop label must stay on the `break`/`continue` line; the statement ends there.
+function parseJumpLabel(parser: Parser): string | none {
   let label: string | none = none
   if parser.check(TokenType.Identifier) && parser.sameLineAsPrevious() { label = parser.text(parser.advance()) }
   parser.consumeSemicolon()
-  return ContinueStatement { kind: "continue-statement", label, span: parser.span(start) }
+  return label
 }
 
 export function parseBlock(parser: Parser): Block {
@@ -476,6 +449,15 @@ export function looksLikePattern(parser: Parser, separator: TokenType): bool {
   return false
 }
 
+// The destructuring shape a pattern opening at the current token would have,
+// or "" when the token cannot open a pattern.
+export function destructuringShape(parser: Parser): string {
+  if parser.check(TokenType.LeftBracket) { return "array" }
+  if parser.check(TokenType.LeftParen) { return "positional" }
+  if parser.check(TokenType.LeftBrace) { return "named" }
+  return ""
+}
+
 export function parseDestructuring(parser: Parser, shape: string, bindingKind: string, separator: TokenType): Statement {
   start := parser.location()
   let close = TokenType.RightParen
@@ -517,29 +499,9 @@ function parseExpressionStatement(parser: Parser): Statement {
     parser.consumeSemicolon()
     return YieldBlockAssignmentStatement { name, value, span: parser.span(start) }
   }
-  if parser.check(TokenType.Identifier) && parser.peek(1).kind == TokenType.ColonEqual {
-    name := parser.text(parser.advance())
-    parser.advance()
-    rhs := parser.parseExpression()
-    let else_: Block | none = none
-    let failureName: string | none = none
-    if parser.check(TokenType.Else) {
-      capture := parseElseCaptureAndBlock(parser)
-      else_ = capture.block
-      failureName = capture.failureName
-    }
-    parser.consumeSemicolon()
-    return ImmutableBinding { kind: "immutable-binding", name, type_: none, value: rhs, exported: false, else_, failureName, span: parser.span(start) }
-  }
   let value = parser.parseExpression()
-  if parser.check(TokenType.Else) {
-    capture := parseElseCaptureAndBlock(parser)
-    parser.consumeSemicolon()
-    return ImmutableBinding {
-      kind: "immutable-binding", name: "_", type_: none, value, exported: false,
-      else_: capture.block, failureName: capture.failureName, span: parser.span(start),
-    }
-  }
+  // Statement-else: `expr else { ... }` binds the success value to nothing.
+  if parser.check(TokenType.Else) { return finishImmutableBinding(parser, start, "_", none, value, true) }
   value = parseTrailingLambdaExpressionStatement(parser, value)
   parser.consumeSemicolon()
   return ExpressionStatement { kind: "expression-statement", expression: value, span: parser.span(start) }
@@ -578,9 +540,7 @@ export isolated function parseTryStatement(parser: Parser): Statement {
   start := parser.location()
   parser.expect(TokenType.Try)
   if parser.check(TokenType.Bang) || parser.check(TokenType.Question) {
-    let operator = "try!"
-    if parser.match(TokenType.Bang) { operator = "try!" }
-    else { parser.advance(); operator = "try?" }
+    operator := if parser.advance().kind == TokenType.Bang then "try!" else "try?"
     operand := parser.parseUnary()
     parser.consumeSemicolon()
     return ExpressionStatement {
@@ -608,35 +568,13 @@ export isolated function parseTryStatement(parser: Parser): Statement {
       _ -> { parser.fail("Expected named let declaration after try") }
     }
   }
-  if parser.check(TokenType.LeftBracket) {
-    if looksLikePattern(parser, TokenType.ColonEqual) { return wrapTryDestructuring(parser, start, "array", "immutable", TokenType.ColonEqual) }
-    if looksLikePattern(parser, TokenType.Equal) { return wrapTryDestructuring(parser, start, "array", "assignment", TokenType.Equal) }
+  shape := destructuringShape(parser)
+  if shape != "" {
+    if looksLikePattern(parser, TokenType.ColonEqual) { return wrapTryDestructuring(parser, start, shape, "immutable", TokenType.ColonEqual) }
+    if looksLikePattern(parser, TokenType.Equal) { return wrapTryDestructuring(parser, start, shape, "assignment", TokenType.Equal) }
   }
-  if parser.check(TokenType.LeftParen) {
-    if looksLikePattern(parser, TokenType.ColonEqual) { return wrapTryDestructuring(parser, start, "positional", "immutable", TokenType.ColonEqual) }
-    if looksLikePattern(parser, TokenType.Equal) { return wrapTryDestructuring(parser, start, "positional", "assignment", TokenType.Equal) }
-  }
-  if parser.check(TokenType.LeftBrace) {
-    if looksLikePattern(parser, TokenType.ColonEqual) { return wrapTryDestructuring(parser, start, "named", "immutable", TokenType.ColonEqual) }
-    if looksLikePattern(parser, TokenType.Equal) { return wrapTryDestructuring(parser, start, "named", "assignment", TokenType.Equal) }
-  }
-  if parser.check(TokenType.Identifier) && parser.peek(1).kind == TokenType.Colon && looksLikeTypedImmutableBinding(parser) {
-    case parseTypedImmutableBinding(parser) {
-      binding: ImmutableBinding -> { return TryStatement { kind: "try-statement", binding, span: parser.span(start) } }
-      _ -> { parser.fail("Expected typed declaration after try") }
-    }
-  }
-  if parser.check(TokenType.Identifier) && parser.peek(1).kind == TokenType.ColonEqual {
-    name := parser.text(parser.advance())
-    parser.advance()
-    value := parser.parseExpression()
-    let else_: Block | none = none
-    if parser.match(TokenType.Else) { else_ = parseBlock(parser) }
-    parser.consumeSemicolon()
-    binding := ImmutableBinding {
-      kind: "immutable-binding", name, type_: none, value, exported: false, else_,
-      span: parser.span(start),
-    }
+  if parser.check(TokenType.Identifier) && startsImmutableBinding(parser) {
+    binding := parseImmutableBinding(parser, false)
     return TryStatement { kind: "try-statement", binding, span: parser.span(start) }
   }
   value := parser.parseExpression()
@@ -656,10 +594,12 @@ function wrapTryDestructuring(parser: Parser, start: AstLocation, shape: string,
   return ExpressionStatement { kind: "expression-statement", expression: Identifier { kind: "identifier", name: "<error>", span: parser.locationSpan() }, span: parser.span(start) }
 }
 
-function parseInitializer(parser: Parser): Expression {
-  if parser.match(TokenType.Equal) { return parser.parseExpression() }
-  parser.fail("Expected '=' in declaration")
-  return Identifier { kind: "identifier", name: "<error>", span: parser.locationSpan() }
+// `name := value`, `name: Type := value`, or the discarding `_ := value`.
+function startsImmutableBinding(parser: Parser): bool {
+  next := parser.peek(1).kind
+  if parser.check(TokenType.Underscore) { return next == TokenType.ColonEqual }
+  if !parser.check(TokenType.Identifier) { return false }
+  return next == TokenType.ColonEqual || (next == TokenType.Colon && looksLikeTypedImmutableBinding(parser))
 }
 
 function looksLikeTypedImmutableBinding(parser: Parser): bool {
@@ -673,53 +613,31 @@ function looksLikeTypedImmutableBinding(parser: Parser): bool {
   return false
 }
 
-function parseTypedImmutableBinding(parser: Parser): Statement {
+// A `try` binding propagates failure, so it cannot also handle it with `else`.
+function parseImmutableBinding(parser: Parser, allowElse: bool): ImmutableBinding {
   start := parser.location()
-  name := parser.text(parser.expect(TokenType.Identifier))
-  parser.expect(TokenType.Colon)
-  typeValue := parser.parseTypeAnnotation()
+  name := parser.text(parser.advance())
+  let typeValue: TypeAnnotation | none = none
+  if parser.match(TokenType.Colon) { typeValue = parser.parseTypeAnnotation() }
   parser.expect(TokenType.ColonEqual)
   value := parser.parseExpression()
+  return finishImmutableBinding(parser, start, name, typeValue, value, allowElse)
+}
+
+// Parses the optional `else [failure] { ... }` and terminator of a binding.
+function finishImmutableBinding(parser: Parser, start: AstLocation, name: string, typeValue: TypeAnnotation | none, value: Expression, allowElse: bool): ImmutableBinding {
   let else_: Block | none = none
   let failureName: string | none = none
   if parser.check(TokenType.Else) {
-    capture := parseElseCaptureAndBlock(parser)
-    else_ = capture.block
-    failureName = capture.failureName
+    if !allowElse {
+      parser.fail("A 'try' binding cannot have an 'else' block; use 'try' to propagate the failure or 'name := expr else { ... }' to handle it")
+    }
+    parser.advance()
+    if parser.check(TokenType.Identifier) && parser.peek(1).kind == TokenType.LeftBrace {
+      failureName = parser.text(parser.advance())
+    }
+    else_ = parseBlock(parser)
   }
   parser.consumeSemicolon()
   return ImmutableBinding { kind: "immutable-binding", name, type_: typeValue, value, exported: false, else_, failureName, span: parser.span(start) }
-}
-
-function parseDiscardElseBinding(parser: Parser): Statement {
-  start := parser.location()
-  parser.expect(TokenType.Underscore)
-  parser.expect(TokenType.ColonEqual)
-  value := parser.parseExpression()
-  let else_: Block | none = none
-  let failureName: string | none = none
-  if parser.check(TokenType.Else) {
-    capture := parseElseCaptureAndBlock(parser)
-    else_ = capture.block
-    failureName = capture.failureName
-  }
-  parser.consumeSemicolon()
-  return ImmutableBinding {
-    kind: "immutable-binding", name: "_", type_: none, value, exported: false,
-    else_, failureName, span: parser.span(start),
-  }
-}
-
-class ElseCapture {
-  failureName: string | none
-  block: Block
-}
-
-function parseElseCaptureAndBlock(parser: Parser): ElseCapture {
-  parser.expect(TokenType.Else)
-  let failureName: string | none = none
-  if parser.check(TokenType.Identifier) && parser.peek(1).kind == TokenType.LeftBrace {
-    failureName = parser.text(parser.advance())
-  }
-  return ElseCapture { failureName, block: parseBlock(parser) }
 }

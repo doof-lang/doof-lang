@@ -12,19 +12,22 @@ import {
   parseFunction as parseFunctionImpl, parseClass as parseClassImpl,
   parseInterface as parseInterfaceImpl, parseEnum as parseEnumImpl,
   parseTypeAlias as parseTypeAliasImpl, parseImport as parseImportImpl,
-  parseMockImport as parseMockImportImpl,
+  parseMockImport as parseMockImportImpl, parseLetDeclarator as parseLetDeclaratorImpl,
 } from "./parser-declarations"
 import {
   parseStatement as parseStatementImpl, parseBlock as parseBlockImpl,
   parseCaseExpression as parseCaseExpressionImpl,
-  looksLikePattern as looksLikePatternImpl,
+  looksLikePattern as looksLikePatternImpl, destructuringShape as destructuringShapeImpl,
   parseDestructuring as parseDestructuringImpl,
   parseLocalStatement,
 } from "./parser-statements"
-import { parseOptionalType as parseOptionalTypeImpl, parseTypeAnnotation as parseTypeAnnotationImpl } from "./parser-types"
+import {
+  parseOptionalType as parseOptionalTypeImpl, parseTypeAnnotation as parseTypeAnnotationImpl,
+  parseTypeArguments as parseTypeArgumentsImpl,
+} from "./parser-types"
 import { parseExpression as parseExpressionImpl, parseAdditive as parseAdditiveImpl, parseUnary as parseUnaryImpl } from "./parser-expressions"
 import {
-  Program, Block, FunctionDeclaration,
+  Program, Block, FunctionDeclaration, LetDeclaration,
   Statement, Expression, TypeAnnotation, AstLocation, SourceSpan,
 } from "./ast"
 
@@ -76,12 +79,7 @@ export class Parser {
     // Strict callers see parser errors first; lexer diagnostics fail an otherwise valid parse.
     if !editorMode && lexer.diagnostics.length > 0 {
       diagnostic := lexer.diagnostics[0]
-      location := diagnosticLocation(diagnostic)
-      errorMessage = diagnostic.message
-      errorLine = location.line
-      errorColumn = location.column
-      errorOffset = location.offset
-      panic("Parse error at " + string(location.line) + ":" + string(location.column) + ": " + diagnostic.message)
+      failAt(diagnosticLocation(diagnostic), diagnostic.message)
     }
     return Program { kind: "program", statements, span: span(start) }
   }
@@ -168,9 +166,9 @@ export class Parser {
     token := current()
     if inTagAttribute {
       if token.kind == TokenType.LeftParen || token.kind == TokenType.LeftBracket || token.kind == TokenType.LeftBrace {
-        tagAttributeDelimiterDepth = tagAttributeDelimiterDepth + 1
+        tagAttributeDelimiterDepth += 1
       } else if token.kind == TokenType.RightParen || token.kind == TokenType.RightBracket || token.kind == TokenType.RightBrace {
-        tagAttributeDelimiterDepth = tagAttributeDelimiterDepth - 1
+        tagAttributeDelimiterDepth -= 1
       }
     }
     if token.kind != TokenType.EndOfFile {
@@ -211,10 +209,7 @@ export class Parser {
     return current()
   }
 
-  fail(message: string): none {
-    token := current()
-    failAt(AstLocation { line: token.line, column: token.column, offset: token.offset }, message)
-  }
+  fail(message: string): none { failAt(location(), message) }
 
   failAt(location: AstLocation, message: string): none {
     errorMessage = message
@@ -286,6 +281,7 @@ export class Parser {
   parseConst(exported: bool): Statement { return parseConstImpl(this, exported) }
   parseReadonly(exported: bool): Statement { return parseReadonlyImpl(this, exported) }
   parseLet(): Statement { return parseLetImpl(this) }
+  parseLetDeclarator(start: AstLocation, forInitializer: bool): LetDeclaration { return parseLetDeclaratorImpl(this, start, forInitializer) }
   parseFunction(exported: bool, static_: bool, isolated_: bool, private_: bool, legacyMethod: bool = false): FunctionDeclaration {
     return parseFunctionImpl(this, exported, static_, isolated_, private_, legacyMethod)
   }
@@ -298,6 +294,7 @@ export class Parser {
 
   parseBlock(): Block { return parseBlockImpl(this) }
   parseCaseExpression(): Expression { return parseCaseExpressionImpl(this) }
+  destructuringShape(): string { return destructuringShapeImpl(this) }
   looksLikePattern(separator: TokenType): bool { return looksLikePatternImpl(this, separator) }
   parseDestructuring(shape: string, bindingKind: string, separator: TokenType): Statement {
     return parseDestructuringImpl(this, shape, bindingKind, separator)
@@ -305,6 +302,7 @@ export class Parser {
 
   parseOptionalType(weakField: bool = false): TypeAnnotation | none { return parseOptionalTypeImpl(this, weakField) }
   parseTypeAnnotation(): TypeAnnotation { return parseTypeAnnotationImpl(this) }
+  parseTypeArguments(): TypeAnnotation[] { return parseTypeArgumentsImpl(this) }
 
   parseExpression(): Expression { return parseExpressionImpl(this) }
   parseAdditive(): Expression { return parseAdditiveImpl(this) }

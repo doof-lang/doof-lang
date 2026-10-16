@@ -71,7 +71,9 @@ The native entry-script scope is the exception: because top-level execution
 has no return channel, statement-level `try` panics on failure.
 
 `try` is a statement, not an expression: write `try x := load()`, not
-`x := try load()`. Inside an expression use postfix `!` or `?`.
+`x := try load()`. Inside an expression use postfix `!` or `?`. A `try`
+binding cannot take `else`; to handle the failure locally, drop `try` and use
+declaration-`else` (`x := load() else { ... }`).
 
 ```doof
 function loadConfig(): Result<Config, Error> {

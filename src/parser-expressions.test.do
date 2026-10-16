@@ -1,7 +1,8 @@
 import { Assert as EditorAssert } from "std/assert"
 import { Parser as EditorParser } from "./parser"
 import { Assert } from "std/assert"
-import { BinaryExpression, CallExpression, ConstructExpression, ExpressionStatement, LetDeclaration, MemberExpression, ObjectLiteral, UnaryExpression } from "./ast"
+import { BinaryExpression, CallExpression, ConstructExpression, DoubleLiteral, ExpressionStatement, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral, UnaryExpression } from "./ast"
+import type { Expression } from "./ast"
 import { parse } from "./parser"
 
 export function testInterfaceBoundNestedExplicitCallClosers(): none {
@@ -64,4 +65,58 @@ export function testParenthesizedMapKeysAcceptAnyExpression(): none {
   }
   // The colon after the closing parenthesis starts the value, never a lambda return type.
   Assert.equal(kinds, "tuple-literal;identifier;construct-expression;identifier;")
+}
+
+function expressionOf(source: string): Expression {
+  statement := parse(source).statements[0] as ExpressionStatement else { panic("expected expression statement") }
+  return statement.expression
+}
+
+export function testBinaryPrecedenceLevels(): none {
+  // `||` < `&&` < `|` < `^` < `&` < equality < comparison < shift < range < additive < multiplicative < `**`.
+  or_ := expressionOf("a || b && c | d ^ e & f == g < h << i + j * k ** l") as BinaryExpression else { panic("expected binary") }
+  Assert.equal(or_.operator, "||")
+  let node = or_.right
+  for operator of ["&&", "|", "^", "&", "==", "<", "<<", "+", "*", "**"] {
+    binary := node as BinaryExpression else { panic("expected " + operator) }
+    Assert.equal(binary.operator, operator)
+    node = binary.right
+  }
+  // Each level is left-associative except `**`.
+  minus := expressionOf("a - b - c") as BinaryExpression else { panic("expected binary") }
+  Assert.equal(minus.left.kind, "binary-expression")
+  power := expressionOf("a ** b ** c") as BinaryExpression else { panic("expected binary") }
+  Assert.equal(power.right.kind, "binary-expression")
+}
+
+export function testMemberAccessOnPlainIdentifiersGoesThroughPostfix(): none {
+  member := expressionOf("Shape.Circle.radius") as MemberExpression else { panic("expected member") }
+  Assert.equal(member.property, "radius")
+  inner := member.object as MemberExpression else { panic("expected inner member") }
+  Assert.equal(inner.property, "Circle")
+  Assert.equal(inner.span.start.offset, 0)
+  Assert.equal(inner.span.end.offset, "Shape.Circle".length)
+  generic := expressionOf("Channel<string>.tag()") as CallExpression else { panic("expected call") }
+  receiver := generic.callee as MemberExpression else { panic("expected static member") }
+  Assert.equal(receiver.receiverTypeArgs.length, 1)
+}
+
+export function testParameterlessAndParenthesizedLambdasShareOneBuilder(): none {
+  bare := expressionOf("=> 1") as LambdaExpression else { panic("expected lambda") }
+  Assert.isTrue(bare.parameterless)
+  Assert.isTrue(bare.returnType == none)
+  empty := expressionOf("(): int => 1") as LambdaExpression else { panic("expected lambda") }
+  Assert.isTrue(empty.parameterless)
+  Assert.isTrue(empty.returnType != none)
+}
+
+export function testFloatingLiteralValuesIgnoreDigitSeparators(): none {
+  for source of ["1.5_0", "1_0.2_5e0_1", "0.000_5"] {
+    literal := expressionOf(source) as DoubleLiteral else { panic("expected double literal") }
+    expected := if source == "1.5_0" then 1.5 else if source == "0.000_5" then 0.0005 else 102.5
+    Assert.equal(literal.value, expected, source)
+  }
+  // Integral digits beyond long accumulate as a double instead of wrapping.
+  huge := expressionOf("12345678901234567890123.0") as DoubleLiteral else { panic("expected double literal") }
+  Assert.isTrue(huge.value > 1.2e22 && huge.value < 1.3e22)
 }
