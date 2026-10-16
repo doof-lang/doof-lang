@@ -1,7 +1,7 @@
 // One UI-independent, launch-owned session. All callbacks run on the host loop.
 import { DebugLaunch } from "../../src/debug-command"
 import { DebugTransport } from "./transport"
-import { DapDecoder, frameMessage, textField, intField, boolField, objectField, arrayField } from "./protocol"
+import { DapDecoder, frameMessage, responseError, textField, intField, boolField, objectField, arrayField } from "./protocol"
 import { panicMessageFromVariables } from "./panic-presentation"
 import { stringArrayStorage } from "./collection-presentation"
 import { hasDoofSource } from "./frame-presentation"
@@ -127,7 +127,7 @@ export class DebugSession {
       pending = remaining
       item := found as PendingRequest else { return }
       if !boolField(message, "success") {
-        error := item.command + ": " + textField(message, "message")
+        error := item.command + ": " + responseError(message)
         if item.onError != none { item.onError!(error) }
         else if state == "Starting" { fail(error) }
         else { status = error; appendOutput("[Debugger] " + error + "\n"); revision += 1 }

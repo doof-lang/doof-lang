@@ -1,5 +1,5 @@
 import { Assert } from "std/assert"
-import { DapDecoder, bytesOf, frameMessage, textField, intField } from "./protocol"
+import { DapDecoder, bytesOf, frameMessage, responseError, textField, intField } from "./protocol"
 
 export function testDapFramingFragmentedUnicodeAndBatchedMessages(): none {
   decoder := DapDecoder {}
@@ -27,4 +27,10 @@ export function testDapFramingRejectsInvalidAndTruncatedMessages(): none {
   decoder := DapDecoder {}
   decoder.feed(bytesOf("Content-Length: 10\r\n\r\n{}"))!
   Assert.equal(decoder.finish().isFailure(), true)
+}
+
+export function testResponseErrorPrefersAdapterDetail(): none {
+  Assert.equal(responseError({ success: false, message: "", body: { error: { id: 3, format: "cannot get permission to debug processes" } } }), "cannot get permission to debug processes")
+  Assert.equal(responseError({ success: false, message: "cancelled" }), "cancelled")
+  Assert.equal(responseError({ success: false }), "request failed")
 }

@@ -104,3 +104,12 @@ export function arrayField(object: SerialObject, name: string): readonly SerialV
   value := field(object, name) as readonly SerialValue[] else { return [] }
   return value
 }
+
+/** A failed response's reason. Adapters such as LLDB-DAP leave `message` empty
+ * and report the detail in `body.error.format`. */
+export function responseError(response: SerialObject): string {
+  detail := textField(objectField(objectField(response, "body"), "error"), "format")
+  if detail != "" { return detail }
+  message := textField(response, "message")
+  return if message == "" then "request failed" else message
+}
