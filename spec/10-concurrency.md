@@ -580,6 +580,67 @@ isolated function make(): int => Thing {}.n  // ❌ the omitted default reads co
 isolated function given(): int => Thing { n: 1 }.n  // ✅ OK - no default runs
 ```
 
+Construction also commits the constructing code to the class `destructor`. An
+object is released in the domain that drops its last reference, and mutable
+objects stay in the domain that creates them unless retirement or an async
+result transfers them out, so the destructor's effects count as calls made by
+the constructing code. Deeply immutable instances may cross into any domain and
+be released there, so the destructor of a deeply immutable class must itself be
+isolated, whether or not the program sends its instances anywhere:
+
+```doof reject
+let counter: int[] = []
+
+class Tracked {
+    let uses: int = 0
+    destructor { counter.push(this.uses) }
+}
+
+class Token {
+    id: int
+    destructor {
+        counter.push(this.id) // ❌ Token instances can cross domains
+    }
+}
+
+isolated function track(): none {
+    tracked := Tracked {} // ❌ releasing it runs the destructor here
+}
+
+function trackLocally(): none {
+    tracked := Tracked {} // ✅ OK - root-domain code may touch counter
+}
+```
+
+A `for` loop over a class stream calls the iterable's `next()` and `value()`
+methods. A `Stream<T>` value may hold an instance of any class convertible to
+`Stream<T>`, so iterating it, or calling `next()` or `value()` on it, reaches
+those methods of every such class:
+
+```doof reject
+let counter: int[] = []
+
+class Counter implements Stream<int> {
+    let current: int
+
+    next(): bool {
+        counter.push(this.current) // reached by both loops below
+        this.current = this.current + 1
+        return this.current < 3
+    }
+
+    value(): int => this.current
+}
+
+isolated function direct(): none {
+    for value of Counter(0) { } // ❌ calls Counter.next
+}
+
+isolated function converted(values: Stream<int>): none {
+    for value of values { } // ❌ values may be a Counter
+}
+```
+
 Source class methods use the same modifier order without a `function` keyword:
 `isolated run(): none` and `isolated static create(): Worker`. The modifier is
 valid on both instance and static methods.

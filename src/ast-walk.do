@@ -25,39 +25,44 @@ export function isTypeParameterName(expression: Expression): bool {
   }
 }
 
-export function collectStatementExpressions(statement: Statement, result: Expression[]): none {
+// When `statements` is given, every visited statement is also recorded there,
+// including statements inside nested blocks and lambda bodies, so consumers can
+// recover statement-level semantics (such as a for-of iterable) that the
+// flattened expression list loses.
+export function collectStatementExpressions(statement: Statement, result: Expression[], statements: Statement[] | none = none): none {
+  if statements != none { statements!.push(statement) }
   case statement {
     value: ConstDeclaration -> { result.push(value.value) }
     value: ReadonlyDeclaration -> { result.push(value.value) }
-    value: ImmutableBinding -> { result.push(value.value); if value.else_ != none { collectBlockExpressions(value.else_!, result) } }
+    value: ImmutableBinding -> { result.push(value.value); if value.else_ != none { collectBlockExpressions(value.else_!, result, statements) } }
     value: LetDeclaration -> { result.push(value.value) }
     expression: ExpressionStatement -> { result.push(expression.expression) }
     return_: ReturnStatement -> { if return_.value != none { result.push(return_.value!) } }
     yield_: YieldStatement -> { result.push(yield_.value) }
     if_: IfStatement -> {
       result.push(if_.condition)
-      collectBlockExpressions(if_.body, result)
-      for branch of if_.elseIfs { result.push(branch.condition); collectBlockExpressions(branch.body, result) }
-      if if_.else_ != none { collectBlockExpressions(if_.else_!, result) }
+      collectBlockExpressions(if_.body, result, statements)
+      for branch of if_.elseIfs { result.push(branch.condition); collectBlockExpressions(branch.body, result, statements) }
+      if if_.else_ != none { collectBlockExpressions(if_.else_!, result, statements) }
     }
     while_: WhileStatement -> {
-      result.push(while_.condition); collectBlockExpressions(while_.body, result)
-      if while_.then_ != none { collectBlockExpressions(while_.then_!, result) }
+      result.push(while_.condition); collectBlockExpressions(while_.body, result, statements)
+      if while_.then_ != none { collectBlockExpressions(while_.then_!, result, statements) }
     }
     for_: ForStatement -> {
-      for init of for_.init { collectStatementExpressions(init, result) }
+      for init of for_.init { collectStatementExpressions(init, result, statements) }
       if for_.condition != none { result.push(for_.condition!) }
       for update of for_.update { result.push(update) }
-      collectBlockExpressions(for_.body, result)
-      if for_.then_ != none { collectBlockExpressions(for_.then_!, result) }
+      collectBlockExpressions(for_.body, result, statements)
+      if for_.then_ != none { collectBlockExpressions(for_.then_!, result, statements) }
     }
     forOf: ForOfStatement -> {
-      result.push(forOf.iterable); collectBlockExpressions(forOf.body, result)
-      if forOf.then_ != none { collectBlockExpressions(forOf.then_!, result) }
+      result.push(forOf.iterable); collectBlockExpressions(forOf.body, result, statements)
+      if forOf.then_ != none { collectBlockExpressions(forOf.then_!, result, statements) }
     }
     with_: WithStatement -> {
       for binding of with_.bindings { result.push(binding.value) }
-      collectBlockExpressions(with_.body, result)
+      collectBlockExpressions(with_.body, result, statements)
     }
     case_: CaseStatement -> {
       result.push(case_.subject)
@@ -73,7 +78,7 @@ export function collectStatementExpressions(statement: Statement, result: Expres
           }
         }
         case arm.body {
-          block: Block -> { collectBlockExpressions(block, result) }
+          block: Block -> { collectBlockExpressions(block, result, statements) }
           expression: Expression -> { result.push(expression) }
         }
       }
@@ -81,25 +86,25 @@ export function collectStatementExpressions(statement: Statement, result: Expres
     destructuring: DestructuringStatement -> { result.push(destructuring.value) }
     try_: TryStatement -> {
       case try_.binding {
-        declaration: ConstDeclaration -> { collectStatementExpressions(declaration, result) }
-        declaration: ReadonlyDeclaration -> { collectStatementExpressions(declaration, result) }
-        binding: ImmutableBinding -> { collectStatementExpressions(binding, result) }
-        declaration: LetDeclaration -> { collectStatementExpressions(declaration, result) }
-        expression: ExpressionStatement -> { collectStatementExpressions(expression, result) }
-        destructuring: DestructuringStatement -> { collectStatementExpressions(destructuring, result) }
+        declaration: ConstDeclaration -> { collectStatementExpressions(declaration, result, statements) }
+        declaration: ReadonlyDeclaration -> { collectStatementExpressions(declaration, result, statements) }
+        binding: ImmutableBinding -> { collectStatementExpressions(binding, result, statements) }
+        declaration: LetDeclaration -> { collectStatementExpressions(declaration, result, statements) }
+        expression: ExpressionStatement -> { collectStatementExpressions(expression, result, statements) }
+        destructuring: DestructuringStatement -> { collectStatementExpressions(destructuring, result, statements) }
       }
     }
     assignment: YieldBlockAssignmentStatement -> { result.push(assignment.value) }
-    block: Block -> { collectBlockExpressions(block, result) }
+    block: Block -> { collectBlockExpressions(block, result, statements) }
     _ -> { }
   }
 }
 
-export function collectBlockExpressions(block: Block, result: Expression[]): none {
-  for statement of block.statements { collectStatementExpressions(statement, result) }
+export function collectBlockExpressions(block: Block, result: Expression[], statements: Statement[] | none = none): none {
+  for statement of block.statements { collectStatementExpressions(statement, result, statements) }
 }
 
-export function collectNestedExpressions(expression: Expression, result: Expression[]): none {
+export function collectNestedExpressions(expression: Expression, result: Expression[], statements: Statement[] | none = none): none {
   case expression {
     string_: StringLiteral -> { for interpolation of string_.interpolations { result.push(interpolation) } }
     binary: BinaryExpression -> { result.push(binary.left); result.push(binary.right) }
@@ -119,7 +124,7 @@ export function collectNestedExpressions(expression: Expression, result: Express
     tuple: TupleLiteral -> { for element of tuple.elements { result.push(element) } }
     lambda: LambdaExpression -> {
       case lambda.body {
-        block: Block -> { collectBlockExpressions(block, result) }
+        block: Block -> { collectBlockExpressions(block, result, statements) }
         body: Expression -> { result.push(body) }
       }
     }
@@ -138,16 +143,16 @@ export function collectNestedExpressions(expression: Expression, result: Express
           }
         }
         case arm.body {
-          block: Block -> { collectBlockExpressions(block, result) }
+          block: Block -> { collectBlockExpressions(block, result, statements) }
           bodyExpression: Expression -> { result.push(bodyExpression) }
         }
       }
     }
-    yieldBlock: YieldBlockExpression -> { collectBlockExpressions(yieldBlock.body, result) }
-    catch_: CatchExpression -> { collectBlockExpressions(catch_.body, result) }
+    yieldBlock: YieldBlockExpression -> { collectBlockExpressions(yieldBlock.body, result, statements) }
+    catch_: CatchExpression -> { collectBlockExpressions(catch_.body, result, statements) }
     async_: AsyncExpression -> {
       case async_.expression {
-        block: Block -> { collectBlockExpressions(block, result) }
+        block: Block -> { collectBlockExpressions(block, result, statements) }
         inner: Expression -> { result.push(inner) }
       }
     }
@@ -163,11 +168,11 @@ export function collectNestedExpressions(expression: Expression, result: Express
 }
 
 // Preorder traversal for analyses that deliberately include every expression.
-export function collectExpressionTree(expression: Expression, result: Expression[]): none {
+export function collectExpressionTree(expression: Expression, result: Expression[], statements: Statement[] | none = none): none {
   result.push(expression)
   let nested: Expression[] = []
-  collectNestedExpressions(expression, nested)
-  for child of nested { collectExpressionTree(child, result) }
+  collectNestedExpressions(expression, nested, statements)
+  for child of nested { collectExpressionTree(child, result, statements) }
 }
 
 // Checked annotations point from uses back to declarations: a call to its

@@ -69,3 +69,23 @@ export function testReleasingCheckedReferencesClearsJsonAliases(): none {
     _ -> { panic("expected function") }
   }
 }
+
+import { ForOfStatement, Statement } from "./ast"
+
+export function testStatementSinkRecordsNestedStatements(): none {
+  program := parse("function main(): none { if ready() { for v of items() { } }\nf := (): none => { for w of more() { } } }")
+  let expressions: Expression[] = []
+  let statements: Statement[] = []
+  case program.statements[0] {
+    fn: FunctionDeclaration -> { case fn.body {
+      block: Block -> { collectBlockExpressions(block, expressions, statements) }
+      _ -> { panic("expected function block") }
+    } }
+    _ -> { panic("expected function") }
+  }
+  let nested: Expression[] = []
+  for expression of expressions { collectExpressionTree(expression, nested, statements) }
+  let loops = 0
+  for statement of statements { case statement { _: ForOfStatement -> { loops += 1 } _ -> { } } }
+  Assert.equal(loops, 2)
+}

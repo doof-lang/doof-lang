@@ -281,7 +281,10 @@ Actor lifecycle, async capture, isolation, and worldview planning consume
 those primitives but retain their separate worklists, stopping rules, and
 semantic products. New syntax with expression children must update
 `ast-walk.do` and its focused traversal test once, rather than synchronizing a
-checker copy with an emitter copy.
+checker copy with an emitter copy. Collectors accept an optional statement sink
+that records every visited statement, including those inside lambda and block
+expressions; isolation uses it to find for-of iterables, whose implicit
+`next()`/`value()` calls the flattened expression list cannot show.
 
 The monomorphisation and validation walkers cannot be replaced by the shallow
 collector alone. They also visit type annotations, declaration surfaces,

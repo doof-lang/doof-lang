@@ -1,13 +1,14 @@
 // Transitive mutable-global effect analysis for isolated and actor-dispatched code.
 
 import { AnalysisResult, ModuleInfo } from "./analyzer"
-import { ActorType, Binding, ClassType, Diagnostic, InterfaceType, ResolvedType, SemanticSpan, TypeParameterType, UnionResolvedType } from "./semantic"
-import { ActorCreationExpression, AsyncExpression, Block, CallArgument, CallExpression, CheckedConstruction, ClassDeclaration, ConstructExpression, ConstDeclaration, Expression, FunctionDeclaration, Identifier, ImmutableBinding, InterfaceDeclaration, LetDeclaration, MemberExpression, ObjectLiteral, ObjectProperty, ReadonlyDeclaration, SourceSpan, Statement, TupleLiteral } from "./ast"
+import { ActorType, Binding, ClassType, Diagnostic, InterfaceType, ResolvedType, SemanticSpan, StreamResolvedType, TypeParameterType, UnionResolvedType } from "./semantic"
+import { ActorCreationExpression, AsyncExpression, Block, CallArgument, CallExpression, CheckedConstruction, ClassDeclaration, ConstructExpression, ConstDeclaration, Expression, ForOfStatement, FunctionDeclaration, Identifier, ImmutableBinding, InterfaceDeclaration, LetDeclaration, MemberExpression, ObjectLiteral, ObjectProperty, ReadonlyDeclaration, SourceSpan, Statement, TupleLiteral } from "./ast"
 import { findActorBoundaryViolation, isActorMethodCall } from "./checker-actor-boundary"
 import { validateAsyncBlock } from "./checker-async"
 import { collectExpressionTree, collectBlockExpressions, collectStatementExpressions } from "./ast-walk"
 import { declarationFor, findClassDeclaration } from "./checker-symbols"
 import { findModule } from "./checker-interfaces"
+import { classType, containsTypeParameter, isAssignable } from "./checker-types"
 import { pushDiagnostic } from "./checker-validation"
 
 export class IsolationReason {
@@ -143,17 +144,17 @@ function staticFieldReason(result: AnalysisResult, owner: ClassDeclaration, prop
   return none
 }
 
-function allExpressions(roots: Expression[]): Expression[] {
+function allExpressions(roots: Expression[], statements: Statement[] | none = none): Expression[] {
   let result: Expression[] = []
-  for root of roots { collectExpressionTree(root, result) }
+  for root of roots { collectExpressionTree(root, result, statements) }
   return result
 }
 
-function functionExpressionRoots(fn: FunctionDeclaration): Expression[] {
+function functionExpressionRoots(fn: FunctionDeclaration, statements: Statement[] | none = none): Expression[] {
   let roots: Expression[] = []
   for parameter of fn.params { if parameter.defaultValue != none { roots.push(parameter.defaultValue!) } }
   case fn.body {
-    block: Block -> { collectBlockExpressions(block, roots) }
+    block: Block -> { collectBlockExpressions(block, roots, statements) }
     expression: Expression -> { roots.push(expression) }
   }
   return roots
@@ -230,8 +231,48 @@ function receiverMethods(result: AnalysisResult, receiver: ResolvedType, propert
     parameter: TypeParameterType -> {
       if parameter.constraint != none { receiverMethods(result, parameter.constraint!, property, targets) }
     }
+    stream: StreamResolvedType -> {
+      for class_ of streamClasses(result, stream) {
+        for method of class_.methods {
+          if method.name == property && !method.static_ && !targets.contains(method) { targets.push(method) }
+        }
+      }
+    }
     _ -> { }
   }
+}
+
+// A Stream<T> value holds any class instance converted to it, like the closed
+// variant the emitter generates. Generic classes and element types that still
+// mention type parameters match conservatively.
+function streamClasses(result: AnalysisResult, stream: StreamResolvedType): ClassDeclaration[] {
+  let classes: ClassDeclaration[] = []
+  open := containsTypeParameter(stream.elementType)
+  for module of result.modules {
+    for statement of module.program.statements {
+      case statement {
+        class_: ClassDeclaration -> {
+          symbol := class_.resolvedSymbol
+          if symbol == none || symbol!.streamElementTypes.length == 0 { continue }
+          if open || class_.typeParams.length > 0 || isAssignable(classType(class_.name, symbol!), stream) { classes.push(class_) }
+        }
+        _ -> { }
+      }
+    }
+  }
+  return classes
+}
+
+// A for-of loop over a class or Stream<T> calls next() and value() on it.
+function iterationMethods(result: AnalysisResult, iterable: ResolvedType): FunctionDeclaration[] {
+  let targets: FunctionDeclaration[] = []
+  case iterable {
+    _: ActorType -> { return targets }
+    _ -> { }
+  }
+  receiverMethods(result, iterable, "next", targets)
+  receiverMethods(result, iterable, "value", targets)
+  return targets
 }
 
 function callDeclarations(result: AnalysisResult, call: CallExpression): FunctionDeclaration[] {
@@ -255,18 +296,31 @@ function callDeclarations(result: AnalysisResult, call: CallExpression): Functio
 
 // Direct mutable-state accesses and call edges reachable from a set of
 // expressions, in source order. Construction contributes the checked plan's
-// static factory or the omitted field defaults it evaluates; reasons found inside
-// a default are attributed to the construction expression that evaluates it.
+// static factory or the omitted field defaults it evaluates, and the class
+// destructor, which runs in the domain that releases the object; reasons found
+// inside a default or destructor are attributed to the construction expression.
+// For-of loops over class or Stream<T> iterables call next() and value().
 class IsolationEffects {
   let direct: IsolationReason | none = none
   // Number of calls collected before the first direct reason.
   let callsBeforeDirect: int = 0
   calls: IsolationCall[] = []
   visitedDefaults: Expression[] = []
+  visitedDestructors: Block[] = []
 }
 
-function collectEffects(result: AnalysisResult, roots: Expression[], effects: IsolationEffects, via: SourceSpan | none = none): none {
-  for expression of allExpressions(roots) {
+// `statements` holds statements already visited while building `roots`, such
+// as a function body's; nested ones are collected here.
+function collectEffects(result: AnalysisResult, roots: Expression[], effects: IsolationEffects, via: SourceSpan | none = none, statements: Statement[] = []): none {
+  expressions := allExpressions(roots, statements)
+  let loops: ForOfStatement[] = []
+  for statement of statements {
+    case statement {
+      forOf: ForOfStatement -> { loops.push(forOf) }
+      _ -> { }
+    }
+  }
+  for expression of expressions {
     if effects.direct == none {
       let reason = mutableModuleReason(result, expression)
       if reason == none { reason = mutableStaticReason(result, expression) }
@@ -286,6 +340,13 @@ function collectEffects(result: AnalysisResult, roots: Expression[], effects: Is
       construct: ConstructExpression -> { collectConstructionEffects(result, construct.resolvedConstruction, suppliedProperties(construct.args, construct.spreadFields), via ?? construct.span, effects) }
       actor: ActorCreationExpression -> { collectConstructionEffects(result, actor.resolvedConstruction, suppliedPositions(actor.args.length), via ?? actor.span, effects) }
       _ -> { }
+    }
+    // The loop advances the iterable after evaluating it and before its body.
+    for loop_ of loops {
+      if loop_.iterable != expression || expression.resolvedType == none { continue }
+      for declaration of iterationMethods(result, expression.resolvedType!) {
+        effects.calls.push(IsolationCall { declaration, span: via ?? expression.span })
+      }
     }
   }
 }
@@ -315,6 +376,16 @@ function suppliedPositions(count: int): SuppliedArguments {
 
 function collectConstructionEffects(result: AnalysisResult, plan: CheckedConstruction | none, supplied: SuppliedArguments, span: SourceSpan, effects: IsolationEffects): none {
   if plan == none { return }
+  if plan!.declaration != none && plan!.declaration!.destructor_ != none {
+    releaser := plan!.declaration!.destructor_!
+    if !effects.visitedDestructors.contains(releaser) {
+      effects.visitedDestructors.push(releaser)
+      let roots: Expression[] = []
+      let statements: Statement[] = []
+      collectBlockExpressions(releaser, roots, statements)
+      collectEffects(result, roots, effects, span, statements)
+    }
+  }
   if plan!.factory != none {
     // Factory parameter defaults belong to the factory's own isolation node.
     effects.calls.push(IsolationCall { declaration: plan!.factory!, span })
@@ -337,7 +408,9 @@ function analyzeNode(result: AnalysisResult, graph: IsolationGraph, node: Isolat
     return
   }
   effects := IsolationEffects {}
-  collectEffects(result, functionExpressionRoots(node.declaration), effects)
+  let statements: Statement[] = []
+  roots := functionExpressionRoots(node.declaration, statements)
+  collectEffects(result, roots, effects, none, statements)
   node.directReason = effects.direct
   for call of effects.calls { node.calls.push(call) }
 }
@@ -402,6 +475,20 @@ function actorConstructionReason(result: AnalysisResult, graph: IsolationGraph, 
   return effectsReason(result, graph, effects)
 }
 
+/** Construction adds a destructor's effects to the domain that creates the
+ * object. Deeply immutable instances may also cross into another domain and be
+ * released there, so their destructors must be isolated outright. */
+function crossingDestructorReason(result: AnalysisResult, graph: IsolationGraph, class_: ClassDeclaration): IsolationReason | none {
+  if class_.destructor_ == none || class_.resolvedSymbol == none { return none }
+  if findActorBoundaryViolation(result, classType(class_.name, class_.resolvedSymbol!)) != none { return none }
+  effects := IsolationEffects { visitedDestructors: [class_.destructor_!] }
+  let roots: Expression[] = []
+  let statements: Statement[] = []
+  collectBlockExpressions(class_.destructor_!, roots, statements)
+  collectEffects(result, roots, effects, none, statements)
+  return effectsReason(result, graph, effects)
+}
+
 function moduleExpressions(module: ModuleInfo): Expression[] {
   let roots: Expression[] = []
   for statement of module.program.statements {
@@ -414,6 +501,7 @@ function moduleExpressions(module: ModuleInfo): Expression[] {
         for method of class_.methods {
           for expression of functionExpressionRoots(method) { roots.push(expression) }
         }
+        if class_.destructor_ != none { collectBlockExpressions(class_.destructor_!, roots) }
       }
       _ -> { collectStatementExpressions(statement, roots) }
     }
@@ -429,6 +517,19 @@ function validateModuleIsolationEffects(result: AnalysisResult, graph: Isolation
       then "Isolated " + owner + " cannot call non-isolated function \"" + node.reason!.name + "\""
       else "Isolated " + owner + " is not isolated: " + reasonText(node.reason!)
     pushDiagnostic(diagnostics, module.path, node.reason!.span, message)
+  }
+
+  for statement of module.program.statements {
+    case statement {
+      class_: ClassDeclaration -> {
+        reason := crossingDestructorReason(result, graph, class_)
+        if reason != none {
+          pushDiagnostic(diagnostics, module.path, reason!.span,
+            "Destructor of immutable class \"" + class_.name + "\" must be isolated because its instances can cross domains: " + reasonText(reason!))
+        }
+      }
+      _ -> { }
+    }
   }
 
   for expression of moduleExpressions(module) {

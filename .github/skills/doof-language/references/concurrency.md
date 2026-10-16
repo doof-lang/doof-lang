@@ -127,8 +127,12 @@ execution by itself; use `async functionCall(args)` or an async block.
 
 Calls through a union receiver reach every member's method, and calls through a
 constrained type parameter reach the constraint's implementations. Constructing a
-class runs its static `constructor` factory or the field defaults it omits, so
-those count as calls made by the constructing code.
+class runs its static `constructor` factory or the field defaults it omits, and
+later its `destructor` in the domain that releases it, so those count as calls
+made by the constructing code. A `for` loop over a class stream calls its
+`next()` and `value()` methods; one over a `Stream<T>` value reaches every class
+convertible to that `Stream<T>`. Instances of a deeply immutable class can cross
+domains and be released anywhere, so its destructor must itself be isolated.
 
 Bodyless native code needs an explicit trusted contract because the compiler
 cannot inspect its implementation. Use `import isolated function` for native
