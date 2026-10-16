@@ -591,6 +591,12 @@ returned by `post`. Otherwise nothing is queued and the failure is one of:
   [Queue capacity](#queue-capacity));
 - `"retired"`: the owning actor is retiring or retired, or no longer exists.
 
+`post` treats the same lifecycle state as a logic error: posting to a callback
+whose owning actor is retiring, retired, or no longer exists panics with
+`actor is retiring or retired`. An actor is destroyed only after its last handle
+is dropped and its mailbox has drained, so it is indistinguishable from a
+retired one.
+
 The root application domain never retires, so a root-owned callback fails only
 with `"full"`. Use `tryPost` where blocking the sender is unacceptable, such as
 a producer that sheds load or applies its own backpressure.

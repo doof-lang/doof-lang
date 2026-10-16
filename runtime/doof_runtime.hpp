@@ -1082,9 +1082,14 @@ public:
             return;
         }
 
+        std::shared_ptr<detail::CallbackDomain> retained;
+        auto owner = posting_owner(retained);
+        if (!owner) {
+            doof::panic("actor is retiring or retired");
+        }
         auto self = *this;
         auto packedArgs = std::make_tuple(std::forward<Args>(args)...);
-        owner_->enqueue_callback([self, packedArgs = std::move(packedArgs)]() mutable {
+        owner->enqueue_callback([self, packedArgs = std::move(packedArgs)]() mutable {
             std::apply([&](auto&&... unpacked) {
                 self.call(std::forward<decltype(unpacked)>(unpacked)...);
             }, std::move(packedArgs));
@@ -1092,6 +1097,16 @@ public:
     }
 
 private:
+    // Where posted work runs. An actor owner is retained while work is offered
+    // to it; null means the owning actor no longer exists.
+    detail::CallbackDomain* posting_owner(std::shared_ptr<detail::CallbackDomain>& retained) const {
+        if (!owner_ || detail::ApplicationDomain::is_application_domain(owner_)) {
+            return &detail::ApplicationDomain::shared();
+        }
+        retained = owner_lifetime_.lock();
+        return retained.get();
+    }
+
     template <typename T> friend class Promise;
     template <typename CR, typename... CArgs>
     friend CR detail::call_callback_unchecked(const doof::callback<CR(CArgs...)>& cb, CArgs... args);
@@ -3309,7 +3324,12 @@ doof::Promise<R> callback<R(Args...)>::post(Args... args) const {
     if (!static_cast<bool>(*this)) {
         doof::panic("callback posted before initialization");
     }
-    auto owner = owner_ ? owner_ : &doof::detail::ApplicationDomain::shared();
+    std::shared_ptr<doof::detail::CallbackDomain> retained;
+    auto owner = posting_owner(retained);
+    if (!owner) {
+        // A destroyed actor had no handles and an empty mailbox: it is retired.
+        doof::panic("actor is retiring or retired");
+    }
 
     auto state = std::make_shared<doof::detail::PromiseState<R>>(static_cast<const void*>(owner));
     auto self = *this;
@@ -3333,14 +3353,9 @@ doof::Result<doof::Promise<R>, std::string> callback<R(Args...)>::tryPost(Args..
         doof::panic("callback posted before initialization");
     }
     std::shared_ptr<doof::detail::CallbackDomain> retained;
-    doof::detail::CallbackDomain* owner = &doof::detail::ApplicationDomain::shared();
-    if (owner_ && !doof::detail::ApplicationDomain::is_application_domain(owner_)) {
-        // Keep the actor alive while the message is offered to it.
-        retained = owner_lifetime_.lock();
-        if (!retained) {
-            return doof::Failure<std::string>{"retired"};
-        }
-        owner = retained.get();
+    auto owner = posting_owner(retained);
+    if (!owner) {
+        return doof::Failure<std::string>{"retired"};
     }
 
     auto state = std::make_shared<doof::detail::PromiseState<R>>(static_cast<const void*>(owner));

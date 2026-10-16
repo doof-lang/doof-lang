@@ -306,7 +306,9 @@ which thread drains that mailbox, which preserves UI runtime thread affinity.
 `callback.tryPost(args)` is the non-blocking form. It returns
 `Result<Promise<R>, string>`: on success the promise behaves like `post`'s;
 otherwise nothing is queued and the error is `"full"` (owner mailbox at
-capacity) or `"retired"` (owning actor retiring, retired, or gone). Use it for
+capacity) or `"retired"` (owning actor retiring, retired, or gone). Plain
+`post` blocks on a full mailbox and panics with `actor is retiring or retired`
+for a retired owner. Use `tryPost` for
 producers that shed load rather than block:
 
 ```doof

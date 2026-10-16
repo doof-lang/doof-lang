@@ -619,6 +619,9 @@ void test_try_post() {
     auto owned = actor->call_sync<doof::callback<int(int)>>([](ActorState& state) {
         return doof::callback<int(int)>([&state](int n) { return state.value += n; });
     });
+    auto notify = actor->call_sync<doof::callback<void(int)>>([](ActorState&) {
+        return doof::callback<void(int)>([](int) {});
+    });
     std::promise<void> release;
     auto gate = release.get_future().share();
     std::atomic<bool> running{false};
@@ -641,6 +644,12 @@ void test_try_post() {
     require(rejected_post(owned.tryPost(1)) == "retired", "post to a retired actor was not rejected");
     actor.reset();
     require(rejected_post(owned.tryPost(1)) == "retired", "post to a released actor was not rejected");
+
+    // Blocking post and dispatch treat a destroyed owner as retired.
+    require(panic_message([&] { (void)owned.post(1); }) == "actor is retiring or retired",
+        "post to a destroyed actor did not panic as retired");
+    require(panic_message([&] { notify.dispatch(1); }) == "actor is retiring or retired",
+        "dispatch to a destroyed actor did not panic as retired");
 }
 
 void test_async_queue_capacity() {
