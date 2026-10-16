@@ -15,7 +15,7 @@ import { typeNamespace } from "./emitter-types"
 import { HeaderPlanCache, projectedHeaderKey } from "./emitter-header-cache"
 import { PhaseTimings } from "./phase-timings"
 import {
-  BoolLiteral, CharLiteral, ClassDeclaration, ConstDeclaration, DotShorthand, DoubleLiteral, EnumDeclaration, ExportDeclaration, ExportList, Expression, FloatLiteral, FunctionDeclaration,
+  BoolLiteral, CharLiteral, ClassDeclaration, ConstDeclaration, DotShorthand, DoubleLiteral, EnumDeclaration, ExportList, Expression, FloatLiteral, FunctionDeclaration,
   ImmutableBinding, ImportDeclaration, InterfaceDeclaration, LetDeclaration, MockImportDirective, Program,
   IntLiteral, LongLiteral, ReadonlyDeclaration, Statement, TryStatement, TypeAliasDeclaration,
 } from "./ast"
@@ -323,7 +323,6 @@ function isModuleDeclaration(statement: Statement): bool {
     _: TypeAliasDeclaration -> { return true }
     _: ImportDeclaration -> { return true }
     _: MockImportDirective -> { return true }
-    _: ExportDeclaration -> { return true }
     _: ExportList -> { return true }
     _ -> { return false }
   }
@@ -420,7 +419,6 @@ function emitScriptClassStatics(statement: Statement, context: EmitContext): str
       if class_.native_ || class_.typeParams.length > 0 { return "" }
       return emitStaticFieldAssignments(class_, class_.name, context)
     }
-    export_: ExportDeclaration -> { return emitScriptClassStatics(export_.declaration, context) }
     _ -> { return "" }
   }
   return ""
@@ -774,7 +772,6 @@ function programDeclares(program: Program, name: string): bool {
 
 function headerDeclarationName(statement: Statement): string {
   case statement {
-    export_: ExportDeclaration -> { return headerDeclarationName(export_.declaration) }
     class_: ClassDeclaration -> { return class_.name }
     interface_: InterfaceDeclaration -> { return interface_.name }
     fn: FunctionDeclaration -> { return fn.name }
@@ -892,7 +889,6 @@ function collectGenericSurfaceSymbols(statement: Statement, typeNames: string[])
     class_: ClassDeclaration -> { if class_.typeParams.length > 0 { typeNames.push(class_.name) } }
     interface_: InterfaceDeclaration -> { if interface_.typeParams.length > 0 { typeNames.push(interface_.name) } }
     alias: TypeAliasDeclaration -> { if alias.typeParams.length > 0 { typeNames.push(alias.name) } }
-    export_: ExportDeclaration -> { collectGenericSurfaceSymbols(export_.declaration, typeNames) }
     _ -> { }
   }
 }
@@ -973,7 +969,6 @@ function emitSourceStatement(statement: Statement, context: EmitContext): string
     readonly_: ReadonlyDeclaration -> { return emitModuleStorage(readonly_, readonly_.value, context) }
     binding: ImmutableBinding -> { return emitModuleStorage(binding, binding.value, context) }
     let_: LetDeclaration -> { return emitModuleStorage(let_, let_.value, context) }
-    export_: ExportDeclaration -> { return emitSourceStatement(export_.declaration, context) }
     _ -> { return "" }
   }
   return ""
@@ -1034,7 +1029,6 @@ function statementHasDeferredInitialization(statement: Statement): bool {
       for field of class_.fields { if field.static_ && field.defaultValue != none { return true } }
       return false
     }
-    export_: ExportDeclaration -> { return statementHasDeferredInitialization(export_.declaration) }
     _ -> { return false }
   }
   return false
@@ -1091,7 +1085,6 @@ function emitModuleInitializerStatement(statement: Statement, context: EmitConte
       if class_.native_ || class_.typeParams.length > 0 { return "" }
       return emitStaticFieldAssignments(class_, class_.name, context)
     }
-    export_: ExportDeclaration -> { return emitModuleInitializerStatement(export_.declaration, context) }
     _ -> { return "" }
   }
   return ""
@@ -1134,7 +1127,6 @@ function emitNativeClassMethodsForStatement(statement: Statement, context: EmitC
       }
       return result
     }
-    export_: ExportDeclaration -> { return emitNativeClassMethodsForStatement(export_.declaration, context) }
     _ -> { return "" }
   }
   return ""

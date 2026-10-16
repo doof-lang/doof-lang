@@ -5,7 +5,7 @@
 
 import {
   ArrayType, BoolLiteral, CharLiteral, ClassDeclaration, ClassField, DoubleLiteral, EnumDeclaration, FloatLiteral,
-  ExportDeclaration, IntLiteral, InterfaceDeclaration, LongLiteral, NamedType, Program, Statement, StringLiteral, TypeAliasDeclaration, TypeAnnotation, UnionType,
+  IntLiteral, InterfaceDeclaration, LongLiteral, NamedType, Program, Statement, StringLiteral, TypeAliasDeclaration, TypeAnnotation, UnionType,
 } from "./ast"
 import { ArrayResolvedType, ClassType, EnumType, InterfaceType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, Symbol, TupleResolvedType, UnionResolvedType } from "./semantic"
 import { typeName } from "./checker-types"
@@ -535,7 +535,6 @@ function findJsonInterfaceDeclaration(programs: Program[], symbol: Symbol): Inte
 function jsonInterfaceDeclaration(statement: Statement): InterfaceDeclaration | none {
   case statement {
     interface_: InterfaceDeclaration -> { return interface_ }
-    export_: ExportDeclaration -> { return jsonInterfaceDeclaration(export_.declaration) }
     _ -> { return none }
   }
   return none
@@ -544,7 +543,6 @@ function jsonInterfaceDeclaration(statement: Statement): InterfaceDeclaration | 
 function jsonClassDeclaration(statement: Statement): ClassDeclaration | none {
   case statement {
     class_: ClassDeclaration -> { return class_ }
-    export_: ExportDeclaration -> { return jsonClassDeclaration(export_.declaration) }
     _ -> { return none }
   }
   return none
@@ -617,15 +615,10 @@ function jsonUnionMemberKind(member: ResolvedType, programs: Program[]): string 
 function jsonEnumBackingKind(enum_: EnumType, programs: Program[]): string {
   for program of programs {
     for statement of program.statements {
-      let declaration: EnumDeclaration | none = none
       case statement {
-        direct: EnumDeclaration -> { declaration = direct }
-        export_: ExportDeclaration -> {
-          case export_.declaration { exported: EnumDeclaration -> { declaration = exported } _ -> { } }
-        }
+        declaration: EnumDeclaration -> { if declaration.name == enum_.name { return declaration.backingKind } }
         _ -> { }
       }
-      if declaration != none && declaration!.name == enum_.name { return declaration!.backingKind }
     }
   }
   return "int"

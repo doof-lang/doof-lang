@@ -10,7 +10,7 @@ import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { memberType } from "./checker-resolution"
 import { resolveTypeArguments, validateTypeArgumentConstraints } from "./checker-annotations"
 import { classModuleFor, findClassField, isAssignableWithInterfaces } from "./checker-interfaces"
-import { containsString, declarationFor, hasObjectProperty, methodSignature, symbolFor, valueSymbolFor, valueUseDiagnostic } from "./checker-symbols"
+import { declarationFor, hasObjectProperty, methodSignature, symbolFor, valueSymbolFor, valueUseDiagnostic } from "./checker-symbols"
 import { actorType, classType, noneType, resultArmExpectation, resultArmType, resultType, sameType, substituteTypeParams, typeName, typeParameter, unknownType } from "./checker-types"
 import { inferCallTypeArguments } from "./checker-call-inference"
 import { discardDiagnosticsSince, finish, typeError } from "./checker-common"
@@ -194,7 +194,7 @@ export function validateConstructorVisibility(state: CheckerState, owner: ClassT
 export function checkClassProperties(state: CheckerState, properties: ObjectProperty[], scope: Scope, constructed: ClassType, declaration: ClassDeclaration, span: SourceSpan, structural: bool = false, spread: ConstructExpression | none = none): none {
   let used: string[] = []
   for property of properties {
-    if containsString(used, property.name) { typeError(state, "Duplicate field '" + property.name + "' in " + declaration.name + " construction", property.span) }
+    if used.contains(property.name) { typeError(state, "Duplicate field '" + property.name + "' in " + declaration.name + " construction", property.span) }
     used.push(property.name)
     field := findClassField(declaration.fields, property.name)
     if field == none || field!.static_ || (!structural && field!.const_) {
@@ -213,7 +213,7 @@ export function checkClassProperties(state: CheckerState, properties: ObjectProp
   for field of declaration.fields {
     if field.static_ || (!structural && field.const_) { continue }
     for name of field.names {
-      if containsString(used, name) { continue }
+      if used.contains(name) { continue }
       spreadType := if spread == none then none else constructionSpreadFieldType(state, spread!, name)
       if spreadType == none {
         if field.const_ || field.defaultValue == none { typeError(state, "Missing required field '" + name + "'", span) }
@@ -252,7 +252,7 @@ function constructionSpreadFieldType(state: CheckerState, expression: ConstructE
   if !supported { return none }
   fieldType := memberType(state, spreadType, name, expression.spread!.span)
   if fieldType.kind == "unknown" { return none }
-  if !containsString(expression.spreadFields, name) { expression.spreadFields.push(name) }
+  if !expression.spreadFields.contains(name) { expression.spreadFields.push(name) }
   return fieldType
 }
 

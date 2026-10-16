@@ -2,7 +2,7 @@
 import { EditorIndex, EditorItem, EditorEdit, EditorResponse } from "./editor-model"
 import { Parser } from "./parser"
 import { ModuleResolver, noSourceLoader } from "./resolver"
-import { FunctionDeclaration, ClassDeclaration, InterfaceDeclaration, EnumDeclaration, TypeAliasDeclaration, ConstDeclaration, ReadonlyDeclaration, ImmutableBinding, ExportDeclaration, ExportList, Statement, ImportDeclaration, NamedImport } from "./ast"
+import { FunctionDeclaration, ClassDeclaration, InterfaceDeclaration, EnumDeclaration, TypeAliasDeclaration, ConstDeclaration, ReadonlyDeclaration, ImmutableBinding, ExportList, Statement, ImportDeclaration, NamedImport } from "./ast"
 
 function declarationItem(statement: Statement, module: string, forced: bool = false): EditorItem | none {
   let name = ""
@@ -10,7 +10,6 @@ function declarationItem(statement: Statement, module: string, forced: bool = fa
   let exported = forced
   let documentation = ""
   case statement {
-    export_: ExportDeclaration -> { return declarationItem(export_.declaration, module, true) }
     fn: FunctionDeclaration -> { name = fn.name; kind = "function"; exported = exported || fn.exported; documentation = fn.description }
     class_: ClassDeclaration -> { name = class_.name; kind = "class"; exported = exported || class_.exported; documentation = class_.description }
     interface_: InterfaceDeclaration -> { name = interface_.name; kind = "interface"; exported = exported || interface_.exported; documentation = interface_.description }

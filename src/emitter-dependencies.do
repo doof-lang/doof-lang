@@ -3,7 +3,7 @@ import { SemanticTypeIdentities } from "./semantic-type-identities"
 // immutable scalar data, never symbols, resolved types or AST nodes.
 import {
   ActorCreationExpression, ArrayType, AstFunctionType, Block, CallExpression, ClassDeclaration, ConstDeclaration, ConstructExpression, EnumDeclaration,
-  ExportDeclaration, Expression, FunctionDeclaration, Identifier, ImmutableBinding, InterfaceDeclaration, MemberExpression, NamedType, ObjectLiteral,
+  Expression, FunctionDeclaration, Identifier, ImmutableBinding, InterfaceDeclaration, MemberExpression, NamedType, ObjectLiteral,
   ReadonlyDeclaration, Statement, TupleLiteral, TypeAliasDeclaration,
   TypeAnnotation, UnionType, WeakType,
 } from "./ast"
@@ -227,7 +227,6 @@ export function collectDependencySurface(
   foreign: bool,
 ): none {
   case statement {
-    export_: ExportDeclaration -> { collectDependencySurface(export_.declaration, index, foreign) }
     fn: FunctionDeclaration -> {
       if fn.resolvedType != none { collectDependencyType(fn.resolvedType!, index) }
       if fn.returnType != none { collectAnnotationAliases(fn.returnType!, index) }

@@ -2,7 +2,7 @@ import { Assert } from "std/assert"
 import { AnalysisResult, createAnalyzer } from "./analyzer"
 import { ClassDeclaration, ClassField } from "./ast"
 import { SourceFile, FunctionType } from "./semantic"
-import { builtinCallable, classFieldBinding, classFieldMode, fieldDisplayName, isBuiltinCallable, methodSignature } from "./checker-symbols"
+import { builtinCallable, classFieldBinding, classFieldMode, fieldDisplayName, findClassDeclaration, findInterfaceDeclaration, isBuiltinCallable, methodSignature } from "./checker-symbols"
 import { primitive, typeName } from "./checker-types"
 
 // Fails on parse or analysis diagnostics so a malformed fixture cannot pass
@@ -88,4 +88,16 @@ export function testFieldDisplayNameFallsBackForRecoveredFields(): none {
   Assert.equal(fieldDisplayName(class_.fields[0]), "x")
   nameless := ClassField { kind: "class-field", names: [], type_: none, defaultValue: none, static_: false, readonly_: false, private_: false, span: class_.span }
   Assert.equal(fieldDisplayName(nameless), "<field>")
+}
+
+export function testDeclarationLookupsMatchModuleNameAndKind(): none {
+  analysis := analyzed("export class Box { value: int = 0 }\ninterface Shape { area(): double }\nfunction Box2(): int => 1")
+  box := findClassDeclaration(analysis, "/main.do", "Box") else { panic("expected class Box") }
+  Assert.equal(box.name, "Box")
+  shape := findInterfaceDeclaration(analysis, "/main.do", "Shape") else { panic("expected interface Shape") }
+  Assert.equal(shape.name, "Shape")
+  Assert.equal(findClassDeclaration(analysis, "/main.do", "Shape"), none)
+  Assert.equal(findInterfaceDeclaration(analysis, "/main.do", "Box"), none)
+  Assert.equal(findClassDeclaration(analysis, "/main.do", "Box2"), none)
+  Assert.equal(findClassDeclaration(analysis, "/other.do", "Box"), none)
 }

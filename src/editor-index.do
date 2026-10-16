@@ -9,7 +9,7 @@ import { Binding, ResolvedType, Scope, Symbol, ClassType, InterfaceType } from "
 import { Lexer, TokenType, tokenValue } from "./lexer"
 import { declarationFor, lookup } from "./checker-symbols"
 import { editorTypeName } from "./editor-model"
-import { Identifier, MemberExpression, FunctionDeclaration, ClassDeclaration, InterfaceDeclaration, NamedType, ExportDeclaration, Statement, ObjectLiteral, ConstructExpression, ObjectProperty, ImportDeclaration, NamedImport, ExportList } from "./ast"
+import { Identifier, MemberExpression, FunctionDeclaration, ClassDeclaration, InterfaceDeclaration, NamedType, Statement, ObjectLiteral, ConstructExpression, ObjectProperty, ImportDeclaration, NamedImport, ExportList } from "./ast"
 
 export function editorModule(index: EditorIndex, path: string): ModuleInfo | none {
   for module of index.frontend.analysis.modules { if module.path == path { return module } }
@@ -238,13 +238,9 @@ export function createEditorIndex(frontend: FrontendResult, modules: string[] = 
   return index
 }
 
-function unwrapDeclaration(statement: Statement): Statement {
-  case statement { export_: ExportDeclaration -> { return unwrapDeclaration(export_.declaration) } _ -> { return statement } }
-}
-
 function symbolDocumentation(index: EditorIndex, symbol: Symbol): string {
   declaration := declarationFor(index.frontend.analysis, symbol) else { return "" }
-  case unwrapDeclaration(declaration) {
+  case declaration {
     fn: FunctionDeclaration -> { return fn.description }
     class_: ClassDeclaration -> { return class_.description }
     interface_: InterfaceDeclaration -> { return interface_.description }
@@ -261,7 +257,7 @@ function memberDeclaration(index: EditorIndex, module: string, name: string, sta
 }
 
 function addMemberDeclarations(index: EditorIndex, statement: Statement, module: string): none {
-  case unwrapDeclaration(statement) {
+  case statement {
     class_: ClassDeclaration -> {
       for field of class_.fields { for name of field.names { memberDeclaration(index, module, name, field.span.start.offset, field.span.end.offset, "property", field.resolvedType) } }
       for method of class_.methods { memberDeclaration(index, module, method.name, method.span.start.offset, method.span.end.offset, "method", method.resolvedType, method.description) }
@@ -280,7 +276,7 @@ function fieldTarget(index: EditorIndex, owner: ResolvedType | none, name: strin
   case owner! { class_: ClassType -> { symbol = class_.symbol } interface_: InterfaceType -> { symbol = interface_.symbol } _ -> { } }
   if symbol == none { return none }
   declaration := declarationFor(index.frontend.analysis, symbol!) else { return none }
-  case unwrapDeclaration(declaration) {
+  case declaration {
     class_: ClassDeclaration -> {
       for field of class_.fields { for fieldName of field.names { if fieldName == name { return nameItem(index, symbol!.module, name, field.span.start.offset, field.span.end.offset, "property") } } }
     }

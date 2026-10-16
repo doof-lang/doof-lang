@@ -6,7 +6,7 @@ import { FunctionParamType, FunctionType, ResolvedType, Scope } from "./semantic
 import { CheckerState } from "./checker-state"
 import { checkExpression } from "./checker-expressions"
 import { checkPropertyValue } from "./checker-properties"
-import { containsString, functionParameterIndex } from "./checker-symbols"
+import { functionParameterIndex } from "./checker-symbols"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
 import { displayTypeName, sameType, typeName } from "./checker-types"
 import { typeError } from "./checker-common"
@@ -69,7 +69,7 @@ export function checkArguments(
         checkArgumentValue(state, argument, scope, none)
         continue
       }
-      if containsString(used, argument.name!) { typeError(state, "Duplicate named argument '" + argument.name! + "'", argument.span) }
+      if used.contains(argument.name!) { typeError(state, "Duplicate named argument '" + argument.name! + "'", argument.span) }
       used.push(argument.name!)
     }
     let expected: ResolvedType | none = none
@@ -82,7 +82,7 @@ export function checkArguments(
   }
   if named {
     for parameter of params {
-      if containsString(used, parameter.name) { continue }
+      if used.contains(parameter.name) { continue }
       spreadIndex := functionParameterIndex(spread, parameter.name)
       if spreadIndex >= 0 {
         actual := spread[spreadIndex].type_

@@ -137,11 +137,6 @@ export function classFieldBinding(field: ClassField, name: string, owner: ClassD
   }
 }
 
-export function containsString(values: string[], value: string): bool {
-  for existing of values { if existing == value { return true } }
-  return false
-}
-
 export function hasObjectProperty(properties: ObjectProperty[], name: string): bool {
   for property of properties { if property.name == name { return true } }
   return false
@@ -394,6 +389,30 @@ export function declarationFor(result: AnalysisResult, symbol: Symbol): Statemen
     if statement.kind == "export-list" { continue }
     candidate := symbolName(statement)
     if candidate == declarationName { return statement }
+  }
+  return none
+}
+
+export function findClassDeclaration(result: AnalysisResult, modulePath: string, name: string): ClassDeclaration | none {
+  module := findModule(result, modulePath)
+  if module == none { return none }
+  for statement of module!.program.statements {
+    case statement {
+      class_: ClassDeclaration -> { if class_.name == name { return class_ } }
+      _ -> { }
+    }
+  }
+  return none
+}
+
+export function findInterfaceDeclaration(result: AnalysisResult, modulePath: string, name: string): InterfaceDeclaration | none {
+  module := findModule(result, modulePath)
+  if module == none { return none }
+  for statement of module!.program.statements {
+    case statement {
+      interface_: InterfaceDeclaration -> { if interface_.name == name { return interface_ } }
+      _ -> { }
+    }
   }
   return none
 }

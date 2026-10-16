@@ -8,7 +8,7 @@
 
 import {
   ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpression, AsyncExpression, BinaryExpression, Block, CallExpression, CaseExpression, CasePattern, CaseStatement,
-  ClassDeclaration, ConstDeclaration, ConstructExpression, DestructuringStatement, ExportDeclaration, Expression,
+  ClassDeclaration, ConstDeclaration, ConstructExpression, DestructuringStatement, Expression,
   ExpressionStatement, ForOfStatement, ForStatement, FunctionDeclaration, Identifier, IfExpression, IfStatement,
   ImmutableBinding, IndexExpression, InterfaceDeclaration, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral,
   RangePattern, ReadonlyDeclaration, RetireExpression, ReturnStatement, SourceSpan, Statement, StringLiteral, TryStatement, TupleLiteral, TypePattern, UnaryExpression, ValuePattern,
@@ -19,7 +19,7 @@ import { AnalysisResult } from "./analyzer"
 import { containsTypeParameters, sameType, substituteTypeParams, typeName } from "./checker-types"
 import { hashKeyDiagnostic } from "./checker-hash-keys"
 import { classSatisfiesConcreteInterface } from "./checker-interfaces"
-import { containsString } from "./checker-symbols"
+import { findClassDeclaration, findInterfaceDeclaration } from "./checker-symbols"
 import { checkerSemanticSpan } from "./checker-validation"
 import {
   ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType,
@@ -210,18 +210,8 @@ function collectStatement(statement: Statement, modulePath: string, analysis: An
     yield_: YieldStatement -> { collectExpression(yield_.value, modulePath, analysis, plan, names, arguments) }
     expression: ExpressionStatement -> { collectExpression(expression.expression, modulePath, analysis, plan, names, arguments) }
     destructuring: DestructuringStatement -> { collectExpression(destructuring.value, modulePath, analysis, plan, names, arguments) }
-    try_: TryStatement -> {
-      case try_.binding {
-        declaration: ConstDeclaration -> { collectStatement(declaration, modulePath, analysis, plan, names, arguments) }
-        declaration: ReadonlyDeclaration -> { collectStatement(declaration, modulePath, analysis, plan, names, arguments) }
-        binding: ImmutableBinding -> { collectStatement(binding, modulePath, analysis, plan, names, arguments) }
-        declaration: LetDeclaration -> { collectStatement(declaration, modulePath, analysis, plan, names, arguments) }
-        expression: ExpressionStatement -> { collectStatement(expression, modulePath, analysis, plan, names, arguments) }
-        destructuring: DestructuringStatement -> { collectStatement(destructuring, modulePath, analysis, plan, names, arguments) }
-      }
-    }
+    try_: TryStatement -> { collectStatement(try_.binding, modulePath, analysis, plan, names, arguments) }
     assignment: YieldBlockAssignmentStatement -> { collectExpression(assignment.value, modulePath, analysis, plan, names, arguments) }
-    export_: ExportDeclaration -> { collectStatement(export_.declaration, modulePath, analysis, plan, names, arguments) }
     block: Block -> { collectBlock(block, modulePath, analysis, plan, names, arguments) }
     _ -> { }
   }
@@ -318,7 +308,7 @@ function collectGenericTarget(callee: Expression, function_: FunctionDeclaration
       identifier: Identifier -> {
         if identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "method" && identifier.resolvedBinding!.symbol != none {
           symbol := identifier.resolvedBinding!.symbol!
-          owner := classDeclaration(analysis, symbol.module, symbol.name)
+          owner := findClassDeclaration(analysis, symbol.module, symbol.name)
           if owner != none && function_.typeParams.length > 0 {
             let ownerArgs: ResolvedType[] = []
             for typeParam of owner!.typeParams {
@@ -333,7 +323,7 @@ function collectGenericTarget(callee: Expression, function_: FunctionDeclaration
         if member.object.resolvedType != none {
           case specialize(member.object.resolvedType!, names, arguments) {
             ownerType: ClassType -> {
-              owner := classDeclaration(analysis, ownerType.symbol.module, ownerType.symbol.name)
+              owner := findClassDeclaration(analysis, ownerType.symbol.module, ownerType.symbol.name)
               if owner != none && function_.typeParams.length > 0 {
                 if !owner!.native_ { addMethod(plan, ownerType, owner!, function_, concreteArgs) }
                 recordedMethod = true
@@ -378,7 +368,7 @@ function collectJsonMemberDemand(member: MemberExpression, modulePath: string, a
   if member.property != "metadata" { return }
   case receiver {
     class_: ClassType -> {
-      owner := classDeclaration(analysis, class_.symbol.module, class_.symbol.name)
+      owner := findClassDeclaration(analysis, class_.symbol.module, class_.symbol.name)
       if owner == none { return }
       for method of owner!.methods {
         if method.private_ || method.static_ { continue }
@@ -414,7 +404,7 @@ function validateImpliedJsonMember(member: MemberExpression, receiver: ResolvedT
   let reason = ""
   case receiver {
     class_: ClassType -> {
-      owner := if class_.symbol.native_ then none else classDeclaration(analysis, class_.symbol.module, class_.symbol.name)
+      owner := if class_.symbol.native_ then none else findClassDeclaration(analysis, class_.symbol.module, class_.symbol.name)
       if owner != none {
         supported = if member.property == "toSerialObject" then canGenerateJsonSerialization(owner!, programs) else canGenerateJsonDeserialization(owner!, programs)
       }
@@ -427,7 +417,7 @@ function validateImpliedJsonMember(member: MemberExpression, receiver: ResolvedT
       // Mirrors the checker's rules for direct interface JSON members:
       // encoding needs serializable implementations, decoding a shared
       // discriminator.
-      declaration := interfaceDeclaration(analysis, interfaceType_.symbol.module, interfaceType_.symbol.name)
+      declaration := findInterfaceDeclaration(analysis, interfaceType_.symbol.module, interfaceType_.symbol.name)
       if declaration == none {
         supported = false
       } else if declaration!.typeParams.length > 0 {
@@ -531,10 +521,10 @@ export function collectJsonDemand(keys: string[], type_: ResolvedType, analysis:
   case type_ {
     class_: ClassType -> {
       if class_.typeArgs.length > 0 || class_.symbol.native_ { return }
-      owner := classDeclaration(analysis, class_.symbol.module, class_.symbol.name)
+      owner := findClassDeclaration(analysis, class_.symbol.module, class_.symbol.name)
       if owner == none { return }
       key := class_.symbol.module + "::" + class_.symbol.name
-      if containsString(keys, key) { return }
+      if keys.contains(key) { return }
       keys.push(key)
       for field of owner!.fields {
         if field.static_ || field.resolvedType == none { continue }
@@ -546,7 +536,7 @@ export function collectJsonDemand(keys: string[], type_: ResolvedType, analysis:
     interface_: InterfaceType -> {
       if interface_.typeArgs.length > 0 { return }
       key := interface_.symbol.module + "::" + interface_.symbol.name
-      if containsString(keys, key) { return }
+      if keys.contains(key) { return }
       keys.push(key)
       for implementation of interface_.symbol.implementations {
         if implementation.typeParams.length == 0 { collectJsonDemand(keys, ClassType { name: implementation.name, symbol: implementation }, analysis) }
@@ -569,7 +559,7 @@ function collectType(type_: ResolvedType, analysis: AnalysisResult, plan: Checke
     class_: ClassType -> {
       for argument of class_.typeArgs { collectType(argument, analysis, plan) }
       if class_.typeArgs.length > 0 && !containsTypeParameters(class_.typeArgs) {
-        declaration := classDeclaration(analysis, class_.symbol.module, class_.symbol.name)
+        declaration := findClassDeclaration(analysis, class_.symbol.module, class_.symbol.name)
         if declaration != none && !declaration!.native_ { addClass(plan, class_.symbol.module, declaration!, class_.typeArgs) }
       }
     }
@@ -656,19 +646,13 @@ function discoverConcreteInterfaceImplementations(analysis: AnalysisResult, plan
   for interface_ of plan.interfaces {
     for module of analysis.modules {
       for statement of module.program.statements {
-        let candidate: ClassDeclaration | none = none
         case statement {
-          class_: ClassDeclaration -> { candidate = class_ }
-          export_: ExportDeclaration -> {
-            case export_.declaration {
-              class_: ClassDeclaration -> { candidate = class_ }
-              _ -> { }
+          class_: ClassDeclaration -> {
+            if class_.typeParams.length == 0 && !class_.struct_ && classImplementsConcreteInterface(class_, [], interface_, analysis) {
+              addImplementation(interface_, module.path, class_.name)
             }
           }
           _ -> { }
-        }
-        if candidate != none && candidate!.typeParams.length == 0 && !candidate!.struct_ && classImplementsConcreteInterface(candidate!, [], interface_, analysis) {
-          addImplementation(interface_, module.path, candidate!.name)
         }
       }
     }
@@ -709,7 +693,7 @@ function classImplementsConcreteInterface(class_: ClassDeclaration, classArgs: R
       _ -> { return false }
     }
   }
-  declaration := interfaceDeclaration(analysis, interface_.modulePath, interface_.name)
+  declaration := findInterfaceDeclaration(analysis, interface_.modulePath, interface_.name)
   if declaration == none || declaration!.resolvedSymbol == none || class_.resolvedSymbol == none { return false }
   return classSatisfiesConcreteInterface(
     analysis,
@@ -725,45 +709,6 @@ function classImplementsConcreteInterface(class_: ClassDeclaration, classArgs: R
 
 function classMethod(class_: ClassDeclaration, name: string): FunctionDeclaration | none {
   for method of class_.methods { if method.name == name && !method.static_ { return method } }
-  return none
-}
-
-function interfaceDeclaration(analysis: AnalysisResult, modulePath: string, name: string): InterfaceDeclaration | none {
-  for module of analysis.modules {
-    if module.path != modulePath { continue }
-    for statement of module.program.statements {
-      case statement {
-        interface_: InterfaceDeclaration -> { if interface_.name == name { return interface_ } }
-        export_: ExportDeclaration -> {
-          case export_.declaration {
-            interface_: InterfaceDeclaration -> { if interface_.name == name { return interface_ } }
-            _ -> { }
-          }
-        }
-        _ -> { }
-      }
-    }
-  }
-  return none
-}
-
-function classDeclaration(analysis: AnalysisResult, modulePath: string, name: string): ClassDeclaration | none {
-  for module of analysis.modules {
-    if module.path != modulePath { continue }
-    for statement of module.program.statements {
-      declaration := classFromStatement(statement, name)
-      if declaration != none { return declaration }
-    }
-  }
-  return none
-}
-
-function classFromStatement(statement: Statement, name: string): ClassDeclaration | none {
-  case statement {
-    class_: ClassDeclaration -> { if class_.name == name { return class_ } }
-    export_: ExportDeclaration -> { return classFromStatement(export_.declaration, name) }
-    _ -> { }
-  }
   return none
 }
 

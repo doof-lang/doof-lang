@@ -1,6 +1,6 @@
 import { SemanticTypeIdentities } from "./semantic-type-identities"
 import { WorldviewPlan, indexWorldviewGraph } from "./emitter-worldview"
-import { Statement, ExportDeclaration, ClassDeclaration, InterfaceDeclaration, FunctionDeclaration } from "./ast"
+import { Statement, ClassDeclaration, InterfaceDeclaration, FunctionDeclaration } from "./ast"
 import { Assert } from "std/assert"
 
 import { createAnalyzer } from "./analyzer"
@@ -151,7 +151,6 @@ function dependencyNames(plan: WorldviewPlan, path: string): string {
 
 function dependencyName(statement: Statement): string {
   case statement {
-    export_: ExportDeclaration -> { return dependencyName(export_.declaration) }
     class_: ClassDeclaration -> { return class_.name + "," }
     interface_: InterfaceDeclaration -> { return interface_.name + "," }
     function_: FunctionDeclaration -> { return function_.name + "," }

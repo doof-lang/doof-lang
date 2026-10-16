@@ -2,11 +2,11 @@
 
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { ActorType, Binding, Diagnostic, InterfaceType, SemanticSpan } from "./semantic"
-import { ActorCreationExpression, AsyncExpression, Block, CallExpression, ClassDeclaration, ConstDeclaration, ExportDeclaration, Expression, FunctionDeclaration, Identifier, ImmutableBinding, InterfaceDeclaration, LetDeclaration, MemberExpression, ReadonlyDeclaration, SourceSpan, Statement } from "./ast"
-import { findActorBoundaryViolation } from "./checker-actor-boundary"
+import { ActorCreationExpression, AsyncExpression, Block, CallExpression, ClassDeclaration, ConstDeclaration, Expression, FunctionDeclaration, Identifier, ImmutableBinding, InterfaceDeclaration, LetDeclaration, MemberExpression, ReadonlyDeclaration, SourceSpan, Statement } from "./ast"
+import { findActorBoundaryViolation, isActorMethodCall } from "./checker-actor-boundary"
 import { validateAsyncBlock } from "./checker-async"
 import { collectExpressionTree, collectBlockExpressions, collectStatementExpressions } from "./ast-walk"
-import { declarationFor } from "./checker-symbols"
+import { declarationFor, findClassDeclaration } from "./checker-symbols"
 import { findModule } from "./checker-interfaces"
 import { pushDiagnostic } from "./checker-validation"
 
@@ -35,18 +35,11 @@ export class IsolationGraph {
   nodes: IsolationNode[] = []
 }
 
-function unwrapExport(statement: Statement): Statement {
-  case statement {
-    export_: ExportDeclaration -> { return export_.declaration }
-    _ -> { return statement }
-  }
-}
-
 function collectGraph(result: AnalysisResult, previous: IsolationGraph | none, reusedModules: string[]): IsolationGraph {
   graph := IsolationGraph {}
   for module of result.modules {
-    for raw of module.program.statements {
-      case unwrapExport(raw) {
+    for statement of module.program.statements {
+      case statement {
         fn: FunctionDeclaration -> { graph.nodes.push(IsolationNode { declaration: fn, module: module.path }) }
         class_: ClassDeclaration -> {
           for method of class_.methods {
@@ -83,8 +76,7 @@ function moduleValueDeclaration(result: AnalysisResult, binding: Binding): State
   }
   module := findModule(result, binding.module)
   if module == none { return none }
-  for raw of module!.program.statements {
-    statement := unwrapExport(raw)
+  for statement of module!.program.statements {
     case statement {
       value: ConstDeclaration -> { if sameSpan(value.span, binding.span) { return value } }
       value: ReadonlyDeclaration -> { if sameSpan(value.span, binding.span) { return value } }
@@ -124,17 +116,9 @@ function mutableStaticReason(result: AnalysisResult, expression: Expression): Is
     identifier: Identifier -> {
       if identifier.resolvedBinding == none || identifier.resolvedBinding!.kind != "field" { return none }
       binding := identifier.resolvedBinding!
-      module := findModule(result, binding.module)
-      if module == none { return none }
-      for raw of module!.program.statements {
-        case unwrapExport(raw) {
-          class_: ClassDeclaration -> {
-            if class_.name != binding.fieldOwner { continue }
-            return staticFieldReason(result, class_, identifier.name, identifier.span)
-          }
-          _ -> { }
-        }
-      }
+      owner := findClassDeclaration(result, binding.module, binding.fieldOwner)
+      if owner == none { return none }
+      return staticFieldReason(result, owner!, identifier.name, identifier.span)
     }
     member: MemberExpression -> {
       if member.resolvedStaticOwner == none { return none }
@@ -189,8 +173,8 @@ function nodesForDeclaration(result: AnalysisResult, graph: IsolationGraph, decl
   if direct != none { return [direct!] }
   let targets: IsolationNode[] = []
   for module of result.modules {
-    for raw of module.program.statements {
-      case unwrapExport(raw) {
+    for statement of module.program.statements {
+      case statement {
         interface_: InterfaceDeclaration -> {
           let ownsMethod = false
           for method of interface_.methods {
@@ -362,8 +346,7 @@ function actorConstructionReason(result: AnalysisResult, graph: IsolationGraph, 
 
 function moduleExpressions(module: ModuleInfo): Expression[] {
   let roots: Expression[] = []
-  for raw of module.program.statements {
-    statement := unwrapExport(raw)
+  for statement of module.program.statements {
     case statement {
       fn: FunctionDeclaration -> {
         for expression of functionExpressionRoots(fn) { roots.push(expression) }
@@ -403,24 +386,7 @@ function validateModuleIsolationEffects(result: AnalysisResult, graph: Isolation
             }
           }
           inner: Expression -> {
-            let actorCall = false
-            case inner {
-              call: CallExpression -> {
-                case call.callee {
-                  member: MemberExpression -> {
-                    if member.object.resolvedType != none {
-                      case member.object.resolvedType! {
-                        _: ActorType -> { actorCall = true }
-                        _ -> { }
-                      }
-                    }
-                  }
-                  _ -> { }
-                }
-              }
-              _ -> { }
-            }
-            if !actorCall {
+            if !isActorMethodCall(inner) {
               reason := probeReason(result, graph, inner)
               if reason != none {
                 pushDiagnostic(diagnostics, module.path, reason!.span,
@@ -431,24 +397,12 @@ function validateModuleIsolationEffects(result: AnalysisResult, graph: Isolation
         }
       }
       call: CallExpression -> {
-        case call.callee {
-          member: MemberExpression -> {
-            if member.object.resolvedType != none {
-              case member.object.resolvedType! {
-                _: ActorType -> {
-                  if call.resolvedFunction != none {
-                    target := nodeForDeclaration(graph, call.resolvedFunction!)
-                    if target != none && target!.reason != none {
-                      pushDiagnostic(diagnostics, module.path, call.span,
-                        "Actor method \"" + target!.declaration.name + "\" is not isolated: " + reasonText(target!.reason!))
-                    }
-                  }
-                }
-                _ -> { }
-              }
-            }
+        if isActorMethodCall(call) && call.resolvedFunction != none {
+          target := nodeForDeclaration(graph, call.resolvedFunction!)
+          if target != none && target!.reason != none {
+            pushDiagnostic(diagnostics, module.path, call.span,
+              "Actor method \"" + target!.declaration.name + "\" is not isolated: " + reasonText(target!.reason!))
           }
-          _ -> { }
         }
       }
       actor: ActorCreationExpression -> {

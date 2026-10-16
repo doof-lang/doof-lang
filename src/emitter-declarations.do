@@ -7,7 +7,7 @@
 
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import {
-  ClassDeclaration, ConstDeclaration, EnumDeclaration, ExportDeclaration, FunctionDeclaration,
+  ClassDeclaration, ConstDeclaration, EnumDeclaration, FunctionDeclaration,
   ImmutableBinding, InterfaceDeclaration, Program, ReadonlyDeclaration, Statement, TypeAliasDeclaration,
 } from "./ast"
 
@@ -52,7 +52,7 @@ export function indexedDeclaration(index: DeclarationIndex, modulePath: string, 
 
 export function indexedClass(index: DeclarationIndex, modulePath: string, name: string): ClassDeclaration | none {
   statement := indexedDeclaration(index, modulePath, name) else { return none }
-  case unwrapExport(statement) {
+  case statement {
     class_: ClassDeclaration -> { return class_ }
     _ -> { return none }
   }
@@ -60,7 +60,7 @@ export function indexedClass(index: DeclarationIndex, modulePath: string, name: 
 
 export function indexedEnum(index: DeclarationIndex, modulePath: string, name: string): EnumDeclaration | none {
   statement := indexedDeclaration(index, modulePath, name) else { return none }
-  case unwrapExport(statement) {
+  case statement {
     enum_: EnumDeclaration -> { return enum_ }
     _ -> { return none }
   }
@@ -68,22 +68,15 @@ export function indexedEnum(index: DeclarationIndex, modulePath: string, name: s
 
 export function indexedInterface(index: DeclarationIndex, modulePath: string, name: string): InterfaceDeclaration | none {
   statement := indexedDeclaration(index, modulePath, name) else { return none }
-  case unwrapExport(statement) {
+  case statement {
     interface_: InterfaceDeclaration -> { return interface_ }
     _ -> { return none }
   }
 }
 
-export function unwrapExport(statement: Statement): Statement {
-  case statement {
-    export_: ExportDeclaration -> { return unwrapExport(export_.declaration) }
-    _ -> { return statement }
-  }
-}
-
 /** The name a top-level statement declares, or "" when it declares none. */
 export function declarationName(statement: Statement): string {
-  case unwrapExport(statement) {
+  case statement {
     class_: ClassDeclaration -> { return class_.name }
     fn: FunctionDeclaration -> { return fn.name }
     interface_: InterfaceDeclaration -> { return interface_.name }

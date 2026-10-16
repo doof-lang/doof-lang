@@ -4,7 +4,7 @@ import { SemanticTypeIdentities } from "./semantic-type-identities"
 // This is a transient lowering plan. It consumes checker decorations and never
 // persists or reconstructs module semantics.
 
-import { ClassDeclaration, ExportDeclaration, Expression, Program, Statement } from "./ast"
+import { ClassDeclaration, Expression, Program, Statement } from "./ast"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import {
   DeclarationIndex, declarationKey, declarationName, indexDeclarations, indexedClass, indexedDeclaration, indexedModule,
@@ -244,7 +244,6 @@ function collectGeneratedJsonDependencies(program: Program, rootPath: string, in
 
 function collectGeneratedJsonDeclarationDependencies(statement: Statement, rootPath: string, instantiations: InstantiationPlan, index: WorldviewIndex): none {
   case statement {
-    export_: ExportDeclaration -> { collectGeneratedJsonDeclarationDependencies(export_.declaration, rootPath, instantiations, index) }
     class_: ClassDeclaration -> {
       key := rootPath + "::" + class_.name
       if !instantiations.jsonSerializationKeys.contains(key) && !instantiations.jsonDeserializationKeys.contains(key) { return }

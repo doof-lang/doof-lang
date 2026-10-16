@@ -6,7 +6,7 @@
 
 import {
   ArrayLiteral, BinaryExpression, BoolLiteral, CallExpression, CharLiteral, ClassDeclaration, ClassField, ConstDeclaration,
-  ConstructExpression, DotShorthand, DoubleLiteral, ExportDeclaration, Expression,
+  ConstructExpression, DotShorthand, DoubleLiteral, Expression,
   FloatLiteral, Identifier, ImmutableBinding, IntLiteral, LetDeclaration, LongLiteral, MemberExpression, NoneLiteral,
   ObjectLiteral, ObjectProperty, ReadonlyDeclaration, Statement, StringLiteral, TupleLiteral,
   UnaryExpression,
@@ -35,7 +35,6 @@ export function validateModuleInitializerStatement(state: CheckerState, statemen
         field.moduleInitializerChecked = true
       }
     }
-    export_: ExportDeclaration -> { validateModuleInitializerStatement(state, export_.declaration) }
     _ -> { }
   }
 }
@@ -80,13 +79,8 @@ function validateField(state: CheckerState, owner: ClassDeclaration, field: Clas
 }
 
 function literalTree(state: CheckerState, expression: Expression): bool {
+  if scalarConstantInitializer(expression) { return true }
   case expression {
-    _: IntLiteral -> { return true }
-    _: LongLiteral -> { return true }
-    _: FloatLiteral -> { return true }
-    _: DoubleLiteral -> { return true }
-    _: CharLiteral -> { return true }
-    _: BoolLiteral -> { return true }
     _: NoneLiteral -> { return true }
     string_: StringLiteral -> { return string_.interpolations.length == 0 }
     unary: UnaryExpression -> {
@@ -125,8 +119,6 @@ function literalTree(state: CheckerState, expression: Expression): bool {
       for argument of call.args { if !literalTree(state, argument.value) { return false } }
       return literalPositionalClassDefaults(state, call.resolvedClass!, call.args.length)
     }
-    dot: DotShorthand -> { return dot.resolvedShorthandOwnerKind == "enum" }
-    member: MemberExpression -> { return enumVariant(member) }
     _ -> { return false }
   }
   return false
@@ -172,16 +164,20 @@ function directScalarConstantBinding(state: CheckerState, identifier: Identifier
 }
 
 function scalarConstantInitializer(expression: Expression): bool {
+  if scalarLiteral(expression) { return true }
   case expression {
-    _: IntLiteral -> { return true }
-    _: LongLiteral -> { return true }
-    _: FloatLiteral -> { return true }
-    _: DoubleLiteral -> { return true }
-    _: CharLiteral -> { return true }
-    _: BoolLiteral -> { return true }
     dot: DotShorthand -> { return dot.resolvedShorthandOwnerKind == "enum" }
     member: MemberExpression -> { return enumVariant(member) }
     _ -> { return false }
+  }
+  return false
+}
+
+function scalarLiteral(expression: Expression): bool {
+  case expression {
+    _: CharLiteral -> { return true }
+    _: BoolLiteral -> { return true }
+    _ -> { return numericLiteral(expression) }
   }
   return false
 }

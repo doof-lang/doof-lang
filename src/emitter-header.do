@@ -5,7 +5,7 @@
 // or statement emission.
 
 import {
-  ClassDeclaration, ConstDeclaration, EnumDeclaration, ExportDeclaration, FunctionDeclaration, InterfaceDeclaration,
+  ClassDeclaration, ConstDeclaration, EnumDeclaration, FunctionDeclaration, InterfaceDeclaration,
   ImmutableBinding, LetDeclaration, Program, ReadonlyDeclaration, Statement, TypeAliasDeclaration,
 } from "./ast"
 import { EmitContext, EmitModuleSurface } from "./emitter-context"
@@ -169,7 +169,6 @@ function collect(statement: Statement, plan: HeaderPlanBuilder, context: EmitCon
         plan.functionSignatures.push(planFunctionDeclaration(fn, "", context.modulePath, context))
       }
     }
-    export_: ExportDeclaration -> { collect(export_.declaration, plan, context, methods, classes) }
     _ -> { }
   }
 }

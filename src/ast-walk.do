@@ -10,7 +10,7 @@
 import {
   ActorCreationExpression, ArrayLiteral, AssignmentExpression, AsyncExpression, BinaryExpression, Block, CallExpression,
   CaseExpression, CaseStatement, CatchExpression, ConstDeclaration, ConstructExpression, DestructuringStatement,
-  ExportDeclaration, Expression, ExpressionStatement, ForOfStatement, ForStatement, IfExpression, IfStatement,
+  Expression, ExpressionStatement, ForOfStatement, ForStatement, IfExpression, IfStatement,
   ImmutableBinding, IndexExpression, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral, RangePattern,
   ReadonlyDeclaration, RetireExpression, ReturnStatement, Statement, StringLiteral, TryStatement, TupleLiteral,
   UnaryExpression, ValuePattern, WhileStatement, WithStatement, YieldBlockAssignmentStatement, YieldBlockExpression,
@@ -90,7 +90,6 @@ export function collectStatementExpressions(statement: Statement, result: Expres
       }
     }
     assignment: YieldBlockAssignmentStatement -> { result.push(assignment.value) }
-    export_: ExportDeclaration -> { collectStatementExpressions(export_.declaration, result) }
     block: Block -> { collectBlockExpressions(block, result) }
     _ -> { }
   }
@@ -194,7 +193,6 @@ export function releaseCheckedReferences(statements: Statement[]): none {
         for method of interface_.methods { releaseFunctionBody(method, pending, expressions) }
         for method of interface_.staticMethods { releaseFunctionBody(method, pending, expressions) }
       }
-      export_: ExportDeclaration -> { pending.push(export_.declaration) }
       block: Block -> { for inner of block.statements { pending.push(inner) } }
       _ -> { collectStatementExpressions(statement, expressions) }
     }

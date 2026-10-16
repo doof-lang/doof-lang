@@ -12,11 +12,10 @@ import {
   ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType,
   TypeParameterType, UnionResolvedType, UnknownType, WeakResolvedType,
 } from "./semantic"
-import { ClassDeclaration, ExportDeclaration, InterfaceDeclaration, Statement } from "./ast"
+import { CallExpression, ClassDeclaration, Expression, InterfaceDeclaration, MemberExpression } from "./ast"
 import { classType, substituteTypeParams, typeName } from "./checker-types"
-import { findModule } from "./checker-interfaces"
-import { containsString, fieldDisplayName } from "./checker-symbols"
-import { checkerSemanticSpan } from "./checker-validation"
+import { fieldDisplayName, findClassDeclaration, findInterfaceDeclaration } from "./checker-symbols"
+import { pushDiagnostic } from "./checker-validation"
 
 export class ActorBoundaryViolation {
   reason: string
@@ -30,19 +29,14 @@ export function validateDeepReadonlyFields(result: AnalysisResult): Diagnostic[]
   let diagnostics: Diagnostic[] = []
   for module of result.modules {
     for raw of module.program.statements {
-      case unwrapExport(raw) {
+      case raw {
         class_: ClassDeclaration -> {
           for field of class_.fields {
             if !field.readonly_ || field.resolvedType == none { continue }
             violation := findViolation(result, field.resolvedType!, [])
             if violation == none { continue }
             name := fieldDisplayName(field)
-            diagnostics.push(Diagnostic {
-              severity: "error",
-              message: "Readonly field \"" + class_.name + "." + name + "\" must be deeply immutable: " + violation!.reason,
-              span: checkerSemanticSpan(field.span),
-              module: module.path,
-            })
+            pushDiagnostic(diagnostics, module.path, field.span, "Readonly field \"" + class_.name + "." + name + "\" must be deeply immutable: " + violation!.reason)
           }
         }
         interface_: InterfaceDeclaration -> {
@@ -50,12 +44,7 @@ export function validateDeepReadonlyFields(result: AnalysisResult): Diagnostic[]
             if !field.readonly_ || field.resolvedType == none { continue }
             violation := findViolation(result, field.resolvedType!, [])
             if violation == none { continue }
-            diagnostics.push(Diagnostic {
-              severity: "error",
-              message: "Readonly field \"" + interface_.name + "." + field.name + "\" must be deeply immutable: " + violation!.reason,
-              span: checkerSemanticSpan(field.span),
-              module: module.path,
-            })
+            pushDiagnostic(diagnostics, module.path, field.span, "Readonly field \"" + interface_.name + "." + field.name + "\" must be deeply immutable: " + violation!.reason)
           }
         }
         _ -> { }
@@ -132,11 +121,11 @@ function findViolation(result: AnalysisResult, type_: ResolvedType, seen: string
 
 function findClassViolation(result: AnalysisResult, type_: ClassType, seen: string[]): ActorBoundaryViolation | none {
   key := "class:" + type_.symbol.module + ":" + typeName(type_)
-  if containsString(seen, key) { return none }
+  if seen.contains(key) { return none }
   let nextSeen: string[] = []
   for item of seen { nextSeen.push(item) }
   nextSeen.push(key)
-  declaration := classDeclaration(result, type_.symbol.module, type_.symbol.name)
+  declaration := findClassDeclaration(result, type_.symbol.module, type_.symbol.name)
   if declaration == none { return none }
   for field of declaration!.fields {
     if field.static_ { continue }
@@ -158,11 +147,11 @@ function findClassViolation(result: AnalysisResult, type_: ClassType, seen: stri
 
 function findInterfaceViolation(result: AnalysisResult, type_: InterfaceType, seen: string[]): ActorBoundaryViolation | none {
   key := "interface:" + type_.symbol.module + ":" + typeName(type_)
-  if containsString(seen, key) { return none }
+  if seen.contains(key) { return none }
   let nextSeen: string[] = []
   for item of seen { nextSeen.push(item) }
   nextSeen.push(key)
-  declaration := interfaceDeclaration(result, type_.symbol.module, type_.symbol.name)
+  declaration := findInterfaceDeclaration(result, type_.symbol.module, type_.symbol.name)
   if declaration == none { return none }
   for field of declaration!.fields {
     if field.let_ { return ActorBoundaryViolation { reason: "field \"" + field.name + "\" is mutable" } }
@@ -187,33 +176,22 @@ function findInterfaceViolation(result: AnalysisResult, type_: InterfaceType, se
   return none
 }
 
-function classDeclaration(result: AnalysisResult, modulePath: string, name: string): ClassDeclaration | none {
-  module := findModule(result, modulePath)
-  if module == none { return none }
-  for statement of module!.program.statements {
-    case unwrapExport(statement) {
-      class_: ClassDeclaration -> { if class_.name == name { return class_ } }
-      _ -> { }
+/** Whether `expression` calls a method through an `Actor<T>` receiver. */
+export function isActorMethodCall(expression: Expression): bool {
+  case expression {
+    call: CallExpression -> {
+      case call.callee {
+        member: MemberExpression -> {
+          if member.object.resolvedType == none { return false }
+          case member.object.resolvedType! {
+            _: ActorType -> { return true }
+            _ -> { return false }
+          }
+        }
+        _ -> { return false }
+      }
     }
+    _ -> { return false }
   }
-  return none
-}
-
-function interfaceDeclaration(result: AnalysisResult, modulePath: string, name: string): InterfaceDeclaration | none {
-  module := findModule(result, modulePath)
-  if module == none { return none }
-  for statement of module!.program.statements {
-    case unwrapExport(statement) {
-      interface_: InterfaceDeclaration -> { if interface_.name == name { return interface_ } }
-      _ -> { }
-    }
-  }
-  return none
-}
-
-function unwrapExport(statement: Statement): Statement {
-  case statement {
-    export_: ExportDeclaration -> { return export_.declaration }
-    _ -> { return statement }
-  }
+  return false
 }

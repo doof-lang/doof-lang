@@ -2,11 +2,10 @@
 import { EditorIndex, EditorItem } from "./editor-model"
 import { nameItem } from "./editor-index"
 import { Parser } from "./parser"
-import { Statement, ExportDeclaration, FunctionDeclaration, ClassDeclaration, InterfaceDeclaration, EnumDeclaration, TypeAliasDeclaration, ConstDeclaration, ReadonlyDeclaration, ImmutableBinding } from "./ast"
+import { Statement, FunctionDeclaration, ClassDeclaration, InterfaceDeclaration, EnumDeclaration, TypeAliasDeclaration, ConstDeclaration, ReadonlyDeclaration, ImmutableBinding } from "./ast"
 
 function declarationName(statement: Statement): string {
   case statement {
-    export_: ExportDeclaration -> { return declarationName(export_.declaration) }
     fn: FunctionDeclaration -> { return fn.name }
     class_: ClassDeclaration -> { return class_.name }
     interface_: InterfaceDeclaration -> { return interface_.name }

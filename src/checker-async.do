@@ -4,7 +4,7 @@
 import { AnalysisResult } from "./analyzer"
 import { ActorType, ArrayResolvedType, ClassType, Diagnostic, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, Scope, SuccessResolvedType, FailureResolvedType, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { AsyncExpression, Block, CallExpression, ClassDeclaration, Expression, Identifier, InterfaceDeclaration, MemberExpression, SourceSpan, ThisExpression } from "./ast"
-import { findActorBoundaryViolation } from "./checker-actor-boundary"
+import { findActorBoundaryViolation, isActorMethodCall } from "./checker-actor-boundary"
 import { collectBlockExpressions, collectExpressionTree } from "./ast-walk"
 import { declarationFor, fieldDisplayName } from "./checker-symbols"
 import { neverType, promiseType, substituteTypeParams, typeName, unknownType } from "./checker-types"
@@ -47,22 +47,11 @@ export function checkAsync(state: CheckerState, async_: AsyncExpression, scope: 
     }
     inner: Expression -> {
       innerType := checkExpression(state, inner, scope, none)
-      let actorCall = false
+      actorCall := isActorMethodCall(inner)
       let isolatedCall = false
       case inner {
         call: CallExpression -> {
           isolatedCall = call.resolvedFunction != none
-          case call.callee {
-            member: MemberExpression -> {
-              if member.object.resolvedType != none {
-                case member.object.resolvedType! {
-                  _: ActorType -> { actorCall = true }
-                  _ -> { }
-                }
-              }
-            }
-            _ -> { }
-          }
           if !actorCall && isolatedCall {
             for i of 0..<call.args.length {
               argumentType := call.args[i].value.resolvedType
@@ -228,8 +217,8 @@ function findAsyncViolation(result: AnalysisResult, type_: ResolvedType, seen: s
 
 function findClassAsyncViolation(result: AnalysisResult, type_: ClassType, seen: string[], resultMode: bool, safe: string[]): AsyncBoundaryViolation | none {
   key := "class:" + type_.symbol.module + ":" + typeName(type_)
-  if contains(safe, key) { return none }
-  if contains(seen, key) { return none }
+  if safe.contains(key) { return none }
+  if seen.contains(key) { return none }
   next := appended(seen, key)
   declaration := declarationFor(result, type_.symbol)
   if declaration == none { return none }
@@ -253,8 +242,8 @@ function findClassAsyncViolation(result: AnalysisResult, type_: ClassType, seen:
 
 function findInterfaceAsyncViolation(result: AnalysisResult, type_: InterfaceType, seen: string[], resultMode: bool, safe: string[]): AsyncBoundaryViolation | none {
   key := "interface:" + type_.symbol.module + ":" + typeName(type_)
-  if contains(safe, key) { return none }
-  if contains(seen, key) { return none }
+  if safe.contains(key) { return none }
+  if seen.contains(key) { return none }
   next := appended(seen, key)
   declaration := declarationFor(result, type_.symbol)
   if declaration == none { return none }
@@ -277,11 +266,6 @@ function findInterfaceAsyncViolation(result: AnalysisResult, type_: InterfaceTyp
   }
   safe.push(key)
   return none
-}
-
-function contains(values: string[], value: string): bool {
-  for item of values { if item == value { return true } }
-  return false
 }
 
 function appended(values: string[], value: string): string[] {

@@ -7,7 +7,7 @@
 import { Expression, Identifier, RetireExpression, Statement } from "./ast"
 import { ActorType, Binding, Diagnostic } from "./semantic"
 import { collectNestedExpressions, collectStatementExpressions } from "./ast-walk"
-import { checkerSemanticSpan } from "./checker-validation"
+import { pushDiagnostic } from "./checker-validation"
 
 export function reportRetiredActorUses(statement: Statement, retired: Binding[], module: string, diagnostics: Diagnostic[]): none {
   if retired.length == 0 { return }
@@ -17,12 +17,7 @@ export function reportRetiredActorUses(statement: Statement, retired: Binding[],
     if identifier.resolvedBinding == none { continue }
     for binding of retired {
       if sameBinding(identifier.resolvedBinding!, binding) {
-        diagnostics.push(Diagnostic {
-          severity: "error",
-          message: "Cannot use actor binding \"" + identifier.name + "\" after it has been retired",
-          span: checkerSemanticSpan(identifier.span),
-          module,
-        })
+        pushDiagnostic(diagnostics, module, identifier.span, "Cannot use actor binding \"" + identifier.name + "\" after it has been retired")
       }
     }
   }

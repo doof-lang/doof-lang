@@ -12,7 +12,7 @@ import {
   ArrayLiteral, ArrayType, AsExpression, AssignmentExpression, AstLocation, BinaryExpression, Block,
   BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ClassField, ConstructExpression,
   ConstDeclaration, ContinueStatement, DestructuringStatement, DoubleLiteral,
-  DotShorthand, EnumDeclaration, EnumVariant, ExportDeclaration, ExportList, Expression, ExpressionStatement,
+  DotShorthand, EnumDeclaration, EnumVariant, ExportList, Expression, ExpressionStatement,
   FloatLiteral, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType,
   IfExpression, IfStatement, ImmutableBinding, Identifier, ImportDeclaration, MockImportDirective,
   IndexExpression, IntLiteral, InterfaceDeclaration, InterfaceField, LetDeclaration,
@@ -47,7 +47,7 @@ import { constantInt } from "./checker-constants"
 import { memberType, resolveMember } from "./checker-resolution"
 import { resolveType } from "./checker-annotations"
 import { deprecatedClassMethodFunction, deprecatedConstDeclaration, deprecatedConstField, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
-import { decorateAnnotationWithResolved, blockContainsLoopExit, containsString, classFieldBinding, fieldDisplayName, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
+import { decorateAnnotationWithResolved, blockContainsLoopExit, classFieldBinding, fieldDisplayName, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
 import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterface, isAssignableWithInterfaces } from "./checker-interfaces"
 import { absenceErrorType, canBeAbsent, presentType } from "./absence-types"
 import { checkerSemanticSpan } from "./checker-validation"
@@ -521,7 +521,7 @@ function validateUniqueClassMembers(state: CheckerState, class_: ClassDeclaratio
 
 // Reports a name already declared in the same namespace and records the rest.
 function declareUniqueName(state: CheckerState, names: string[], label: string, name: string, owner: string, span: SourceSpan): none {
-  if containsString(names, name) { typeError(state, label + " \"" + name + "\" is already declared in " + owner, span) }
+  if names.contains(name) { typeError(state, label + " \"" + name + "\" is already declared in " + owner, span) }
   else { names.push(name) }
 }
 
@@ -631,10 +631,10 @@ function populateTypeParameters(state: CheckerState, scope: Scope, names: string
 }
 
 function populateConstraint(state: CheckerState, scope: Scope, names: string[], constraints: TypeParameterConstraint[], offset: int, index: int, active: string[], completed: string[]): none {
-  if containsString(completed, names[index]) { return }
+  if completed.contains(names[index]) { return }
   if index >= constraints.length || constraints[index].type_ == none { completed.push(names[index]); return }
   annotation := constraints[index].type_!
-  if containsString(active, names[index]) {
+  if active.contains(names[index]) {
     typeError(state, "Cyclic constraint for type parameter '" + names[index] + "'", annotation.span)
     scope.typeParamConstraints[offset + index].type_ = unknownType()
     completed.push(names[index])
@@ -658,11 +658,11 @@ function populateConstraint(state: CheckerState, scope: Scope, names: string[], 
       for dependency of 0..<names.length {
         if parameter.name == names[dependency] { populateConstraint(state, scope, names, constraints, offset, dependency, active, completed) }
       }
-      if !containsString(completed, names[index]) { resolved = resolveType(state, annotation, state.info!, scope, false) }
+      if !completed.contains(names[index]) { resolved = resolveType(state, annotation, state.info!, scope, false) }
     }
     _ -> { }
   }
-  if !containsString(completed, names[index]) {
+  if !completed.contains(names[index]) {
     scope.typeParamConstraints[offset + index].type_ = resolved
     completed.push(names[index])
   }

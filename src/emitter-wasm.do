@@ -6,7 +6,7 @@ import { CppTypeRegistry } from "./cpp-type"
 // function accepts one JSON object string and returns an allocated JSON
 // envelope. Hosts release returned text through doof_free.
 
-import { ExportDeclaration, FunctionDeclaration, Parameter } from "./ast"
+import { FunctionDeclaration, Parameter } from "./ast"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { createEmitContextForModule, EmitContext } from "./emitter-context"
 import { DeclarationIndex, indexDeclarations, indexedClass, indexedModule } from "./emitter-declarations"
@@ -87,12 +87,6 @@ function collectExportedFunctions(info: ModuleInfo, result: FunctionDeclaration[
   for statement of info.program.statements {
     case statement {
       fn: FunctionDeclaration -> { if fn.exported || moduleExportsFunction(info, fn.name) { result.push(fn) } }
-      export_: ExportDeclaration -> {
-        case export_.declaration {
-          fn: FunctionDeclaration -> { result.push(fn) }
-          _ -> { }
-        }
-      }
       _ -> { }
     }
   }

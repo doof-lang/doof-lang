@@ -847,12 +847,6 @@ export class MockImportDirective {
   span: SourceSpan
 }
 
-export class ExportDeclaration {
-  kind: string
-  declaration: Statement
-  span: SourceSpan
-}
-
 export class ExportSpecifier {
   name: string
   alias: string | none
@@ -870,7 +864,7 @@ export type Statement =
   ConstDeclaration | ReadonlyDeclaration | ImmutableBinding | LetDeclaration |
   FunctionDeclaration | ClassDeclaration | InterfaceDeclaration |
   EnumDeclaration | TypeAliasDeclaration | ImportDeclaration | MockImportDirective |
-  ExportDeclaration | ExportList | IfStatement | CaseStatement | WhileStatement |
+  ExportList | IfStatement | CaseStatement | WhileStatement |
   ForStatement | ForOfStatement | WithStatement | ReturnStatement |
   YieldStatement | BreakStatement | ContinueStatement | ExpressionStatement |
   DestructuringStatement | TryStatement | YieldBlockAssignmentStatement | Block

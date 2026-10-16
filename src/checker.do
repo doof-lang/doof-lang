@@ -16,7 +16,7 @@ import { checkerSemanticSpan, validateCheckedTypes as validateCheckedTypesImpl }
 import { validateIsolationEffects as validateIsolationEffectsImpl } from "./checker-isolation"
 import { validateDeepReadonlyFields as validateDeepReadonlyFieldsImpl } from "./checker-actor-boundary"
 import {
-  ConstDeclaration, ExportDeclaration, ExportList, FunctionDeclaration, ImportDeclaration,
+  ConstDeclaration, ExportList, FunctionDeclaration, ImportDeclaration,
   ImmutableBinding, InterfaceDeclaration, ClassDeclaration, EnumDeclaration, LetDeclaration,
   MockImportDirective, ReadonlyDeclaration, Statement, TryStatement, TypeAliasDeclaration,
 } from "./ast"
@@ -141,7 +141,6 @@ function isModuleDeclaration(statement: Statement): bool {
     _: TypeAliasDeclaration -> { return true }
     _: ImportDeclaration -> { return true }
     _: MockImportDirective -> { return true }
-    _: ExportDeclaration -> { return true }
     _: ExportList -> { return true }
     _ -> { return false }
   }
@@ -165,7 +164,6 @@ function rejectExportedMain(state: CheckerState, statement: Statement): none {
 
 function isExport(statement: Statement): bool {
   case statement {
-    _: ExportDeclaration -> { return true }
     _: ExportList -> { return true }
     const_: ConstDeclaration -> { return const_.exported }
     readonly_: ReadonlyDeclaration -> { return readonly_.exported }
@@ -180,19 +178,7 @@ function isExport(statement: Statement): bool {
 }
 
 function promoteScriptBinding(statement: Statement, scriptScope: Scope, moduleScope: Scope): none {
-  let name = ""
-  let declaration = statement
-  case statement {
-    try_: TryStatement -> { declaration = try_.binding }
-    _ -> { }
-  }
-  case declaration {
-    value: ConstDeclaration -> { name = value.name }
-    value: ReadonlyDeclaration -> { name = value.name }
-    value: ImmutableBinding -> { name = value.name }
-    value: LetDeclaration -> { name = value.name }
-    _ -> { return }
-  }
+  name := scriptGlobalName(statement)
   if name == "" || name == "_" { return }
   for binding of scriptScope.bindings {
     if binding.name == name && binding.kind != "script-arguments" {

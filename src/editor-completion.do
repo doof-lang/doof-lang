@@ -4,7 +4,7 @@ import { EditorIndex, EditorItem } from "./editor-model"
 import { editorTypeName } from "./editor-model"
 import { editorModule, editorScopeAt, bindingItem, symbolItem } from "./editor-index"
 import { Scope, Binding, ResolvedType, ClassType, InterfaceType, EnumType, FunctionType } from "./semantic"
-import { ClassDeclaration, InterfaceDeclaration, EnumDeclaration, ExportDeclaration, Statement, MemberExpression, Identifier, SourceSpan, AstLocation } from "./ast"
+import { ClassDeclaration, InterfaceDeclaration, EnumDeclaration, Statement, MemberExpression, Identifier, SourceSpan, AstLocation } from "./ast"
 import { declarationFor, lookup } from "./checker-symbols"
 import { CheckerState } from "./checker-state"
 import { resolveMember } from "./checker-resolution"
@@ -33,7 +33,6 @@ export function scopeCompletions(index: EditorIndex, scope: Scope, offset: int, 
 
 function declarationMemberNames(statement: Statement, names: string[]): none {
   case statement {
-    export_: ExportDeclaration -> { declarationMemberNames(export_.declaration, names) }
     class_: ClassDeclaration -> {
       for field of class_.fields { for name of field.names { names.push(name) } }
       for method of class_.methods { names.push(method.name) }

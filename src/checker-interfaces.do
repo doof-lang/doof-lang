@@ -11,7 +11,7 @@ import {
   ArrayLiteral, ArrayType, AsExpression, AssignmentExpression, AstLocation, BinaryExpression, Block,
   BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ClassField, ConstructExpression,
   ConstDeclaration, ContinueStatement, DestructuringStatement, DoubleLiteral,
-  DotShorthand, EnumDeclaration, ExportDeclaration, ExportList, Expression, ExpressionStatement,
+  DotShorthand, EnumDeclaration, ExportList, Expression, ExpressionStatement,
   FloatLiteral, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType,
   IfExpression, IfStatement, ImmutableBinding, Identifier, ImportDeclaration,
   IndexExpression, IntLiteral, InterfaceDeclaration, InterfaceField, LetDeclaration,
@@ -35,7 +35,7 @@ import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-actor-lifecycle"
 
 
-import { containsString, methodSignature, resolveAnnotation, declarationFor, symbolName } from "./checker-symbols"
+import { methodSignature, resolveAnnotation, declarationFor, symbolName } from "./checker-symbols"
 
 export function symbolSpan(info: ModuleInfo, name: string): SourceSpan {
   for statement of info.program.statements { if symbolName(statement) == name { return statement.span } }
@@ -108,7 +108,7 @@ export function classSatisfiesConcreteInterface(result: AnalysisResult, class_: 
 
 function classSatisfiesConcreteInterfaceSeen(result: AnalysisResult, class_: ClassDeclaration, classType_: ClassType, interfaceType_: InterfaceType, seen: string[]): bool {
   key := concreteInterfacePairKey(classType_, interfaceType_)
-  if containsString(seen, key) { return true }
+  if seen.contains(key) { return true }
   let next = [key]
   for existing of seen { next.push(existing) }
   declaration := declarationFor(result, interfaceType_.symbol)

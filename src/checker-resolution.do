@@ -9,7 +9,7 @@ import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interface
 import { CheckerState } from "./checker-state"
 
 import { deprecatedBuildReadonly, typeError } from "./checker-common"
-import { classFieldBinding, containsString, resolveAnnotation, methodSignature, declarationFor } from "./checker-symbols"
+import { classFieldBinding, resolveAnnotation, methodSignature, declarationFor } from "./checker-symbols"
 import { classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 import { arrayMemberType } from "./checker-array-methods"
@@ -246,7 +246,7 @@ function unionMemberType(state: CheckerState, union: UnionResolvedType, property
 // re-wrap a mutable collection.
 function rejectReadonlyCollectionMember(state: CheckerState, readonly_: bool, kind: string, mutators: string[], property: string, span: SourceSpan): bool {
   if !readonly_ { return false }
-  if !containsString(mutators, property) && property != "buildReadonly" && property != "drainToReadonly" && property != "cloneReadonly" { return false }
+  if !mutators.contains(property) && property != "buildReadonly" && property != "drainToReadonly" && property != "cloneReadonly" { return false }
   typeError(state, "Method \"" + property + "\" is not available on readonly " + kind, span)
   return true
 }
