@@ -6,7 +6,8 @@ Doof's concurrency model is built around actor-owned mutable domains.
 
 An `Actor<T>` is a concurrent domain containing one mutable `T`. The main thread
 is the implicit root actor domain. Mutable state belongs to exactly one actor
-domain at a time. Immutable values may be shared freely across actor domains.
+domain at a time. Immutable values may be shared freely across actor domains,
+as may actor and promise handles, which are synchronized by the runtime.
 
 Cross-domain mutable interaction happens only through actor method calls.
 Fields of the wrapped class cannot be read or written directly through an
@@ -98,8 +99,8 @@ thread affinity, or a particular worker.
 
 Values captured from the enclosing scope are copied into the task. A capture
 must use an immutable binding and its type must be deeply immutable and safe to
-cross a thread boundary. Actor, promise, callback, weak-reference, and stream
-handles cannot be captured. Mutable locals and freshly constructed mutable
+cross a thread boundary. Actor and promise handles may be captured; callback,
+weak-reference, and stream handles cannot. Mutable locals and freshly constructed mutable
 graphs are allowed inside the task.
 
 Async-block code is isolated. It may call only transitively isolated functions,
@@ -108,12 +109,11 @@ module/static state.
 
 An async block may yield an owned mutable object or collection. Its worker has
 no persistent mutable domain after completion, so ownership transfers to the
-promise consumer. Actor, promise, callback, weak-reference, and stream handles
-cannot occur recursively in the yielded graph.
+promise consumer. Callback, weak-reference, and stream handles cannot occur
+recursively in the yielded graph; actor and promise handles may.
 
-Nested async blocks and async calls on actors created inside the block are
-allowed. Handles from those operations must be consumed before yielding the
-outer result.
+Nested async blocks and actor calls are allowed inside the block, including
+calls through captured actor handles.
 
 `async functionCall(args)` schedules an ordinary function call when the
 function is inferred isolated. Arguments must satisfy the same boundary rules
@@ -135,8 +135,9 @@ setup, multiple operations, or an owned mutable intermediate graph.
 ### Runtime scheduling
 
 Async blocks and eligible actor messages enter a process-wide FIFO scheduler.
-Pending work is unbounded, while CPU execution is bounded by a runtime CPU-token
-limit. The default limit is the host's reported hardware concurrency, falling
+CPU execution is bounded by a runtime CPU-token limit; accepted actor messages
+and pending async submissions are bounded as described under
+[Queue capacity](#queue-capacity). The default limit is the host's reported hardware concurrency, falling
 back to one. The application thread, including a UI thread when present, does
 not consume a CPU token.
 
@@ -162,8 +163,48 @@ idle timeout is 30 seconds.
 Native hosts may call `doof::configure_runtime_scheduler` with
 `doof::RuntimeSchedulerOptions` before the first scheduled job. Configuration
 after scheduling begins is a runtime logic error. The maximum must be at least
-one, the retained count cannot exceed it, and the idle timeout cannot be
-negative.
+one, the retained count cannot exceed it, the idle timeout cannot be
+negative, and both queue capacities must be at least one.
+
+### Queue capacity
+
+Actor mailboxes and pending async submissions are bounded. Once an actor holds
+its capacity of accepted calls and posts, a synchronous call, `async` actor
+call, or `callback.post` to that actor blocks until the actor dequeues a
+message. Once the process-wide count of async blocks and isolated calls that
+were submitted but have not started reaches its capacity, the submitter blocks
+until one starts. Both waits relinquish a runtime worker's CPU token. An `async`
+expression can therefore block its caller while the destination is full.
+
+Deliveries for accepted `onComplete` registrations and retirement requests are
+never blocked by capacity. The application mailbox is not bounded.
+
+Each capacity defaults to 65,536. Native hosts may change them through the
+`actor_mailbox_capacity` and `async_queue_capacity` fields of
+`doof::RuntimeSchedulerOptions`.
+
+### Deadlock detection
+
+Each actor, the application thread, and each running async block is a serial
+domain. While a domain blocks in a synchronous actor call, an actor retirement,
+a wait for actor mailbox capacity, or a `Promise.get()`, the runtime records that
+it waits on the producing domain: the actor, the async block, or the posted
+callback's owning domain. A wait that would close a cycle of waiting domains can
+never complete. The waiter that would close the cycle panics instead of hanging,
+and the message names the chain of waits:
+
+```text
+deadlock: blocking wait would never complete (synchronous actor call -> synchronous actor call)
+```
+
+Cycles include an actor calling itself synchronously through its own handle,
+two actors calling each other synchronously, an actor retiring itself, and an
+actor sending to its own full mailbox. The panic is an ordinary Doof panic, and
+the other domains in the cycle continue with their queued work.
+
+Detection is a safety net rather than a liveness guarantee. It does not cover
+livelock, waits on several promises through `takeFirstCompleted()`, the async
+submission queue, or native blocking outside runtime waits.
 
 ---
 
@@ -175,16 +216,52 @@ create shared mutable state.
 Allowed:
 
 - primitives;
-- deeply immutable objects and collections.
+- deeply immutable objects and collections;
+- `Actor<T>` handles;
+- `Promise<T>` values;
+- actor-affine callbacks whose parameter and return types are allowed.
 
 Rejected:
 
 - mutable objects and collections;
-- `Actor<T>` references;
-- `Promise<T>` values.
+- streams.
 
-Actor references may be copied within the domain that owns them. They may not be
-passed into another actor method.
+Actor and promise handles are synchronized runtime handles, so sharing them
+does not share mutable state: actor state stays behind its mailbox, and a
+promise result still has exactly one consumer. Readonly fields and bindings may
+hold them, and immutable messages can carry them:
+
+```doof check
+class Sink {
+    let total: int = 0
+    add(amount: int): none { this.total += amount }
+    read(): int => this.total
+}
+
+class Envelope {
+    readonly sink: Actor<Sink>
+    readonly amount: int
+}
+
+class Relay {
+    forward(envelope: Envelope): none { envelope.sink.add(envelope.amount) }
+}
+
+sink := Actor<Sink>()
+relay := Actor<Relay>()
+relay.forward(Envelope { sink, amount: 2 })
+task := async {
+    sink.add(1)
+    yield none
+}
+task.get()!
+println(sink.read())  // 3
+```
+
+Sharing a handle shares its lifecycle. Any holder of an actor handle may call
+or `retire` it; after retirement has been requested, a second retirement or a
+call through any handle panics. Any holder of a promise may consume it; the
+first claim wins and later claims panic with `promise result already claimed`.
 
 Actor construction is also a boundary. Every explicit `Actor<T>(...)`
 constructor argument must be boundary-safe. Mutable arguments are rejected even
@@ -251,8 +328,9 @@ Retirement behavior:
 4. Completions registered to this actor before the request are also drained;
    retirement waits for their producers and queued callbacks before stopping.
 5. The actor's inner `T` is returned to the retiring domain.
-6. Calls through aliases after retirement has been requested are logic errors
-   and panic at runtime.
+6. Calls through any handle, in any domain, after retirement has been
+   requested are logic errors and panic at runtime. Senders blocked on mailbox
+   capacity are released with the same panic.
 
 Failures from earlier async actor calls belong to their `Promise<T>` handles.
 `retire` returns `T` and does not aggregate or rethrow earlier promise failures.
@@ -283,7 +361,8 @@ wait relinquishes its CPU token; application and other non-worker threads are
 unaffected. Native runtime exceptions are reported as `Failure<string>`; Doof
 panics remain panics.
 
-A promise has exactly one consumer across all copies and aliases. Calling
+A promise has exactly one consumer across all copies and aliases, including
+copies held by other domains. Calling
 `get()` claims the result before waiting. Calling `onComplete()` claims it when
 the callback is registered. A second `get()` or valid `onComplete()` registration
 panics with `promise result already claimed`.
@@ -455,9 +534,11 @@ isolated work outside the current actor domain.
 - Actor calls are synchronous unless marked `async`.
 - `async` supports actor calls, isolated function calls, and value-producing
   isolated blocks.
-- Runtime CPU execution is bounded; pending work and blocked workers are not
-  hard-capped.
+- Runtime CPU execution is bounded; blocked workers are not hard-capped.
+- Actor mailboxes and pending async submissions are bounded; a full
+  destination blocks the sender.
+- Blocking-wait cycles panic as deadlocks instead of hanging.
 - `retire actor` drains accepted work and returns the actor state.
-- Immutable values may cross domains.
+- Immutable values and actor and promise handles may cross domains.
 - Mutable state transfers through actor retirement or a single-consumer owned
   async result, including delivery through `onComplete`.

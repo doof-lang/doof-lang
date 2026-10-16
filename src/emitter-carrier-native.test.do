@@ -60,6 +60,10 @@ export function testPromiseOnCompleteNative(): none {
   runNativeFixture("promise-on-complete", "onComplete delivered", 7)
 }
 
+export function testSharedActorAndPromiseHandlesNative(): none {
+  runNativeFixture("shared-handles", "shared handles ok")
+}
+
 export function testWeakPrecedenceNative(): none {
   runNativeFixture("weak-precedence", "weak precedence ok")
 }

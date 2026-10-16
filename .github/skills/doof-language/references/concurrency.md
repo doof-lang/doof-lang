@@ -8,7 +8,8 @@ containing one mutable `T`. The main thread is the implicit root actor domain.
 Core rules:
 
 - Mutable state belongs to exactly one actor domain at a time.
-- Immutable values may cross actor boundaries freely.
+- Immutable values may cross actor boundaries freely, and so may `Actor<T>` and
+  `Promise<T>` handles, which the runtime synchronizes.
 - Cross-domain mutable interaction happens through actor method calls. Direct field reads/writes through `Actor<T>` are rejected, including readonly and callback fields; use a method. Fields on the inner state returned by `retire` are accessible normally.
 - Actor method calls are synchronous by default.
 - `async` supports actor method calls and isolated value-producing blocks.
@@ -78,18 +79,31 @@ fresh mutable values are allowed inside the block. The yielded graph may be
 mutable because the temporary worker domain ends before the caller receives
 it.
 
-Actor, promise, callback, weak-reference, and stream handles cannot be captured
-or occur recursively in the yielded graph. Async-block code may invoke only
-transitively isolated code and cannot access mutable module/static state.
+Actor and promise handles may be captured and yielded. Callback,
+weak-reference, and stream handles cannot be captured or occur recursively in
+the yielded graph. Async-block code may invoke only transitively isolated code
+and cannot access mutable module/static state.
 
-Nested async blocks and async calls on locally created actors are allowed, but
-their handles must be consumed before yielding. Worker identity and timing are
-deliberately unspecified.
+Nested async blocks and actor calls, including calls through captured actor
+handles, are allowed. Worker identity and timing are deliberately unspecified.
 
-The runtime uses a process-wide FIFO scheduler. Pending work is unbounded, but
-CPU execution is limited to the host hardware-concurrency count by default
-(falling back to one). The application/UI thread is outside this token limit.
-One actor message at a time is eligible from each FIFO actor mailbox.
+The runtime uses a process-wide FIFO scheduler. CPU execution is limited to the
+host hardware-concurrency count by default (falling back to one). The
+application/UI thread is outside this token limit. One actor message at a time
+is eligible from each FIFO actor mailbox.
+
+Actor mailboxes and not-yet-started async submissions are bounded (65,536 each
+by default). A sender to a full actor blocks, so an `async` actor call or
+`callback.post` can block its caller; a submitter blocks while the async queue
+is full. `onComplete` deliveries and retirement are never blocked by capacity,
+and the application mailbox is unbounded.
+
+Blocking waits (synchronous actor calls, retirement, mailbox-capacity waits, and
+`Promise.get()`) are tracked between serial domains. A wait that would close a
+cycle panics with `deadlock: blocking wait would never complete (...)` instead
+of hanging; for example an actor synchronously calling itself, two actors
+calling each other synchronously, or an actor sending to its own full mailbox.
+Livelock and `takeFirstCompleted()` waits are not detected.
 
 Worker waits in `Promise.get()`, synchronous actor calls, and actor retirement
 automatically relinquish their CPU token. This lets nested work progress at a
@@ -98,8 +112,8 @@ one-token limit. Blocking native C++ integrations may use
 workers can be replaced by compensating threads, so blocked OS-thread count is
 not hard-capped. Excess idle workers retire after 30 seconds by default.
 
-Native hosts can configure the CPU limit, retained workers, and idle timeout
-with `doof::RuntimeSchedulerOptions` and
+Native hosts can configure the CPU limit, retained workers, idle timeout,
+`actor_mailbox_capacity`, and `async_queue_capacity` with `doof::RuntimeSchedulerOptions` and
 `doof::configure_runtime_scheduler(...)` before the first scheduled job.
 
 `isolated` is an enforced transitive effect. Isolated code cannot access mutable
@@ -212,11 +226,16 @@ than polled and relinquishes a runtime-worker CPU token like `get()`.
 | Primitives | Allowed |
 | Immutable objects/collections | Allowed |
 | Mutable objects/collections | Rejected |
-| `Actor<T>` | Rejected |
-| `Promise<T>` | Rejected |
+| Streams | Rejected |
+| `Actor<T>` | Allowed |
+| `Promise<T>` | Allowed |
+| Callbacks with allowed payload types | Allowed |
 
-Actor references may be copied inside the domain that owns them. They may not be
-passed into another actor method.
+Readonly fields and bindings may hold actor and promise handles, so immutable
+messages can carry a reply-to actor. Sharing a handle shares its lifecycle: any
+holder may `retire` an actor, after which a second retirement or any call
+through any handle panics. Any holder may consume a promise; the first claim
+wins and later claims panic with `promise result already claimed`.
 
 `Actor<T>(...)` construction is also a boundary. Explicit constructor arguments
 must be boundary-safe, and omitted defaults or constructor factories must be

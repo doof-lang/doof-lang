@@ -1475,6 +1475,12 @@ export function testRejectsUnsafeAsyncBlockCaptures(): none {
   Assert.equal(foundCallback, true)
 }
 
+export function testAllowsActorAndPromiseHandlesInAsyncBlocks(): none {
+  result := checked("class Worker { value: int\nread(): int => value }\nfunction run(): Promise<Actor<Worker> > { worker := Actor<Worker>(1)\npending := async { yield 2 }\nreturn async { total := pending.get()! + worker.read()\nyield worker } }")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}
+
 export function testRejectsNonIsolatedAsyncBlocksAndUnsafeResults(): none {
   nonIsolated := checked("let shared = 0\nfunction mutate(): int { shared = shared + 1\nreturn shared }\nfunction run(): Promise<int> => async { yield mutate() }")
   let foundIsolation = false
@@ -1564,19 +1570,23 @@ export function testValidatesDeepReadonlyFieldGraphs(): none {
   Assert.stringContains(mutableClass.diagnostics[0].message, "Readonly field \"Container.point\" must be deeply immutable")
   Assert.stringContains(mutableClass.diagnostics[0].message, "field \"x\" is mutable")
 
-  actor := checked("class Worker {}\nclass Container { readonly worker: Actor<Worker> }")
-  Assert.equal(actor.diagnostics.length, 1)
-  Assert.stringContains(actor.diagnostics[0].message, "Actor<T> references cannot cross actor boundaries")
+  handles := checked("class Worker {}\nclass Container { readonly worker: Actor<Worker>\nreadonly pending: Promise<int> }")
+  Assert.equal(handles.diagnostics.length, 0)
 }
 
-export function testValidatesNestedAndGenericActorBoundaryPayloads(): none {
+export function testAllowsActorAndPromiseHandlesAcrossActorBoundaries(): none {
   nested := checked("class Worker { function accept(payload: Payload): void {} }\nclass Payload { readonly actor: Actor<Worker> }\nfunction main(): none { worker := Actor<Worker>()\npayload := Payload { actor: worker }\nworker.accept(payload) }")
-  Assert.equal(nested.diagnostics.length > 0, true)
-  Assert.equal(nested.diagnostics[0].message.contains("Actor<T> references"), true)
+  Assert.equal(nested.diagnostics.length, 0)
 
   generic := checked("class Worker { function echo<T>(value: T): T => value }\nfunction main(): none { worker := Actor<Worker>()\nother := Actor<Worker>()\nresult := worker.echo<Actor<Worker> >(other) }")
-  Assert.equal(generic.diagnostics.length > 0, true)
-  Assert.equal(generic.diagnostics[0].message.contains("Actor<T> references"), true)
+  Assert.equal(generic.diagnostics.length, 0)
+
+  promise := checked("class Worker { function wait(pending: Promise<int[]>): int => pending.get()!.length }\nfunction main(): none { worker := Actor<Worker>()\npending := async { yield [1, 2] }\nlength := worker.wait(pending) }")
+  Assert.equal(promise.diagnostics.length, 0)
+
+  mutableBehindHandle := checked("class Worker { function accept(payload: Payload): void {} }\nclass Payload { readonly actor: Actor<Worker>\nlet count: int }\nfunction main(): none { worker := Actor<Worker>()\nworker.accept(Payload { actor: worker, count: 0 }) }")
+  Assert.equal(mutableBehindHandle.diagnostics.length > 0, true)
+  Assert.stringContains(mutableBehindHandle.diagnostics[0].message, "field \"count\" is mutable")
 }
 
 export function testRejectsActorMethodsThatAccessMutableModuleState(): none {

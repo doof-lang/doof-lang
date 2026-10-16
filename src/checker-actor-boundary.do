@@ -2,7 +2,8 @@
 //
 // Validation is deliberately performed at call sites after generic
 // substitution. The same method may be called locally without crossing an
-// actor domain, while an Actor<T> receiver requires deeply immutable payloads.
+// actor domain, while an Actor<T> receiver requires deeply immutable payloads or
+// synchronized runtime handles (actors, promises, and actor-affine callbacks).
 
 import { AnalysisResult } from "./analyzer"
 import {
@@ -72,8 +73,11 @@ function findViolation(result: AnalysisResult, type_: ResolvedType, seen: string
     _: UnknownType -> { return none }
     _: TypeParameterType -> { return none }
     _: SerialValueResolvedType -> { return none }
-    _: ActorType -> { return ActorBoundaryViolation { reason: "Actor<T> references cannot cross actor boundaries" } }
-    _: PromiseType -> { return ActorBoundaryViolation { reason: "Promise<T> values cannot cross actor boundaries" } }
+    // Actor and promise handles are synchronized runtime handles: actor state
+    // stays behind messages, and a promise result has a single runtime-claimed
+    // consumer, so neither shares mutable state across domains.
+    _: ActorType -> { return none }
+    _: PromiseType -> { return none }
     weak_: WeakResolvedType -> { return findViolation(result, weak_.inner, seen) }
     array: ArrayResolvedType -> {
       if !array.readonly_ { return ActorBoundaryViolation { reason: "array type \"" + typeName(type_) + "\" is mutable" } }

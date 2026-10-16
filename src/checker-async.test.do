@@ -17,7 +17,9 @@ function analyzed(source: string): AnalysisResult {
 
 export function testSecondConsolidationAsyncNestedResultPolicy(): none {
   nested := arrayType(mapType(primitive("string"), resultType(tupleType([primitive("int"), promiseType(primitive("int"))]), primitive("string"))))
-  Assert.equal(asyncResultViolation(createAnalyzer([]).analyze("/main.do"), nested), "Promise<T> values are asynchronous handles")
+  Assert.equal(asyncResultViolation(createAnalyzer([]).analyze("/main.do"), nested), none)
+  weakNested := arrayType(tupleType([primitive("int"), weakType(arrayType(primitive("int")))]))
+  Assert.equal(asyncResultViolation(createAnalyzer([]).analyze("/main.do"), weakNested), "weak references cannot be transferred from async blocks")
   safe := arrayType(mapType(primitive("string"), primitive("int")))
   Assert.equal(asyncResultViolation(createAnalyzer([]).analyze("/main.do"), safe), none)
 }

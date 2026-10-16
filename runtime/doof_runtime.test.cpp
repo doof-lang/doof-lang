@@ -330,12 +330,214 @@ void test_configuration() {
         fail("negative idle timeout was accepted");
     } catch (const doof::Panic&) {}
 
+    auto zero_mailbox = options(1, 1);
+    zero_mailbox.actor_mailbox_capacity = 0;
+    try {
+        doof::configure_runtime_scheduler(zero_mailbox);
+        fail("zero actor mailbox capacity was accepted");
+    } catch (const doof::Panic&) {}
+
+    auto zero_queue = options(1, 1);
+    zero_queue.async_queue_capacity = 0;
+    try {
+        doof::configure_runtime_scheduler(zero_queue);
+        fail("zero async queue capacity was accepted");
+    } catch (const doof::Panic&) {}
+
     doof::configure_runtime_scheduler(options(1, 1));
     require(success(doof::submit_async<int>([] { return 1; })) == 1, "configured scheduler did not run");
     try {
         doof::configure_runtime_scheduler(options(1, 1));
         fail("configuration after scheduler startup was accepted");
     } catch (const doof::Panic&) {}
+}
+
+template <typename F>
+std::string panic_message(F&& f) {
+    try {
+        f();
+    } catch (const doof::Panic& panic) {
+        return panic.message();
+    }
+    fail("expected a Doof panic");
+}
+
+void require_deadlock(const std::string& message, const std::string& chain) {
+    require(message.find("deadlock: blocking wait would never complete") != std::string::npos,
+        "deadlock panic message changed: " + message);
+    require(message.find(chain) != std::string::npos, "deadlock chain was not reported: " + message);
+}
+
+void test_deadlock_detection() {
+    doof::configure_runtime_scheduler(options(2, 2));
+
+    // An actor waiting on its own mailbox can never be served.
+    auto self = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    require_deadlock(panic_message([&] {
+        self->call_sync<int>([self](ActorState&) {
+            return self->call_sync<int>([](ActorState& state) { return state.value; });
+        });
+    }), "(synchronous actor call)");
+    require(self->call_sync<int>([](ActorState& state) { return state.value + 1; }) == 1,
+        "actor did not recover after a detected self-deadlock");
+
+    // Two actors calling each other synchronously close a two-node cycle.
+    auto first = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    auto second = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    require_deadlock(panic_message([&] {
+        first->call_sync<int>([second, first](ActorState&) {
+            return second->call_sync<int>([first](ActorState&) {
+                return first->call_sync<int>([](ActorState& state) { return state.value; });
+            });
+        });
+    }), "synchronous actor call -> synchronous actor call");
+
+    // A promise is a wait on its producer: an actor awaiting a callback posted
+    // to the application thread that is itself blocked on that actor.
+    auto poster = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    doof::callback<int()> root([] { return 3; });
+    require_deadlock(panic_message([&] {
+        poster->call_sync<int>([root](ActorState&) {
+            auto result = root.post().get();
+            return doof::is_success(result) ? doof::success_value(result) : -1;
+        });
+    }), "promise wait");
+    // Whichever side closes the cycle panics; the posted callback remains queued.
+    require(doof::detail::ApplicationDomain::shared().drain_ready() == 1, "posted root callback was lost");
+
+    // Retiring an actor from its own message waits on its own mailbox.
+    auto retiring = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    auto retired = retiring->call_async<int>([retiring](ActorState&) {
+        retiring->retire();
+        return 0;
+    });
+    auto retired_result = panic_message([&] { (void)retired.get(); });
+    require_deadlock(retired_result, "(actor retirement)");
+
+    // Waits that are satisfied before the waiter wakes must not form cycles.
+    auto ping = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    auto pong = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    std::vector<doof::Promise<int>> rounds;
+    for (int i = 0; i < 50; ++i) {
+        rounds.push_back(doof::submit_async<int>([ping, pong] {
+            return ping->call_sync<int>([pong](ActorState& state) {
+                state.value += 1;
+                return pong->call_sync<int>([](ActorState& other) { return ++other.value; });
+            });
+        }));
+        rounds.push_back(doof::submit_async<int>([ping, pong] {
+            return pong->call_sync<int>([](ActorState& state) { return ++state.value; })
+                + ping->call_sync<int>([](ActorState& state) { return state.value; });
+        }));
+    }
+    for (auto& round : rounds) (void)success(std::move(round));
+    require(ping->retire()->value == 50 && pong->retire()->value == 100, "acyclic actor traffic was lost");
+}
+
+void test_actor_mailbox_capacity() {
+    auto configured = options(2, 2);
+    configured.actor_mailbox_capacity = 2;
+    doof::configure_runtime_scheduler(configured);
+
+    std::promise<void> release;
+    auto gate = release.get_future().share();
+    auto actor = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    std::atomic<bool> running{false};
+    auto blocker = actor->call_async<int>([gate, &running](ActorState&) {
+        running.store(true);
+        gate.wait();
+        return 0;
+    });
+    // A running message no longer occupies mailbox capacity.
+    wait_until([&] { return running.load(); }, "blocking actor message did not start");
+    (void)actor->call_async<int>([](ActorState& state) { return ++state.value; });
+    std::atomic<int> accepted{1};
+    std::thread sender([&] {
+        for (int i = 0; i < 3; ++i) {
+            (void)actor->call_async<int>([](ActorState& state) { return ++state.value; });
+            accepted.fetch_add(1);
+        }
+    });
+    wait_until([&] { return accepted.load() == 2; }, "second queued call was not accepted");
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    require(accepted.load() == 2, "sender was not blocked by a full actor mailbox");
+
+    release.set_value();
+    sender.join();
+    (void)success(std::move(blocker));
+    require(actor->retire()->value == 4, "calls accepted after mailbox capacity freed were lost");
+
+    // An actor filling its own mailbox can never drain it.
+    auto looping = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    auto filled = looping->call_async<int>([looping](ActorState&) {
+        for (int i = 0; i < 3; ++i) {
+            (void)looping->call_async<int>([](ActorState& state) { return ++state.value; });
+        }
+        return 0;
+    });
+    require_deadlock(panic_message([&] { (void)filled.get(); }), "(actor mailbox capacity)");
+
+    // Retirement releases blocked senders with a lifecycle panic.
+    std::promise<void> hold;
+    auto held = hold.get_future().share();
+    auto closing = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    std::atomic<bool> busy_running{false};
+    auto busy = closing->call_async<int>([held, &busy_running](ActorState&) {
+        busy_running.store(true);
+        held.wait();
+        return 0;
+    });
+    wait_until([&] { return busy_running.load(); }, "retiring actor message did not start");
+    (void)closing->call_async<int>([](ActorState&) { return 0; });
+    (void)closing->call_async<int>([](ActorState&) { return 0; });
+    std::string rejected;
+    std::thread late([&] {
+        rejected = panic_message([&] { (void)closing->call_async<int>([](ActorState&) { return 0; }); });
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    std::thread retirer([&] { closing->retire(); });
+    late.join();
+    require(rejected == "actor is retiring or retired", "blocked sender was not released by retirement: " + rejected);
+    hold.set_value();
+    retirer.join();
+    (void)success(std::move(busy));
+}
+
+void test_async_queue_capacity() {
+    auto configured = options(1, 1);
+    configured.async_queue_capacity = 1;
+    doof::configure_runtime_scheduler(configured);
+
+    std::promise<void> release;
+    auto gate = release.get_future().share();
+    std::atomic<bool> started{false};
+    auto running = doof::submit_async<int>([&, gate] {
+        started.store(true);
+        gate.wait();
+        return 1;
+    });
+    wait_until([&] { return started.load(); }, "first async job did not start");
+    auto queued = doof::submit_async<int>([] { return 2; });
+    std::atomic<bool> submitted{false};
+    std::optional<doof::Promise<int>> third;
+    std::thread submitter([&] {
+        third.emplace(doof::submit_async<int>([] { return 3; }));
+        submitted.store(true);
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    require(!submitted.load(), "submission was accepted beyond the async queue capacity");
+    release.set_value();
+    submitter.join();
+    require(success(std::move(running)) + success(std::move(queued)) + success(std::move(*third)) == 6,
+        "bounded async submissions lost results");
+
+    // Started jobs release their slot, so nested submissions keep progressing.
+    auto nested = doof::submit_async<int>([] {
+        int total = 0;
+        for (int i = 0; i < 8; ++i) total += success(doof::submit_async<int>([i] { return i; }));
+        return total;
+    });
+    require(success(std::move(nested)) == 28, "nested bounded submissions deadlocked");
 }
 
 void test_collection_indexing() {
@@ -804,6 +1006,9 @@ int main(int argc, char** argv) {
     else if (mode == "release") test_token_release_and_retirement();
     else if (mode == "priority") test_reacquire_priority();
     else if (mode == "configuration") test_configuration();
+    else if (mode == "deadlock") test_deadlock_detection();
+    else if (mode == "mailbox-capacity") test_actor_mailbox_capacity();
+    else if (mode == "async-capacity") test_async_queue_capacity();
     else if (mode == "collections") { test_collection_indexing(); test_key_hashing(); }
     else if (mode == "nulls") test_null_carriers();
     else if (mode == "serial-integers") test_serial_integers();

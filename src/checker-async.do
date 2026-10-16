@@ -181,8 +181,9 @@ export function asyncResultViolation(result: AnalysisResult, type_: ResolvedType
 // One recursive walk; capture and result policies differ only at handle leaves.
 function findAsyncViolation(result: AnalysisResult, type_: ResolvedType, seen: string[], safe: string[], resultMode: bool): string | none {
   case type_ {
-    _: ActorType -> { if resultMode { return "Actor<T> references are persistent domains" } }
-    _: PromiseType -> { if resultMode { return "Promise<T> values are asynchronous handles" } }
+    // Actor and promise handles are synchronized and may be captured or yielded.
+    _: ActorType -> { return none }
+    _: PromiseType -> { return none }
     _: FunctionType -> { return if resultMode then "actor-affine callbacks cannot be transferred from async blocks" else "actor-affine callbacks cannot cross into async blocks" }
     _: WeakResolvedType -> { return if resultMode then "weak references cannot be transferred from async blocks" else "weak references cannot cross into async blocks" }
     _: StreamResolvedType -> { return if resultMode then "streams cannot be transferred from async blocks" else "streams cannot cross into async blocks" }

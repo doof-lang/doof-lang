@@ -428,6 +428,116 @@ inline detail::CallbackDomain* current_actor_domain() {
 }
 
 // ============================================================================
+// Wait-for graph — blocking-wait cycle detection between serial domains
+// ============================================================================
+
+namespace detail {
+
+// Set by the producer of an awaited result before it can begin another wait,
+// so a satisfied waiter that has not yet woken never contributes a false cycle.
+struct WaitSignal {
+    std::atomic<bool> satisfied{false};
+
+    void satisfy() { satisfied.store(true, std::memory_order_release); }
+    bool is_satisfied() const { return satisfied.load(std::memory_order_acquire); }
+};
+
+// Static initialization runs on the thread that owns the application mailbox.
+inline const std::thread::id application_thread_id = std::this_thread::get_id();
+
+// The temporary domain of the isolated async job running on this thread.
+inline thread_local const void* active_task_node = nullptr;
+
+class ActiveTaskScope {
+    const void* previous_;
+public:
+    explicit ActiveTaskScope(const void* node) : previous_(active_task_node) {
+        active_task_node = node;
+    }
+
+    ~ActiveTaskScope() {
+        active_task_node = previous_;
+    }
+};
+
+// The serial domain that a blocking wait on this thread stalls. Threads that
+// are neither actors, isolated jobs, nor the application thread are untracked:
+// nothing can wait on them, so they never appear inside a cycle.
+inline const void* current_wait_node() {
+    if (active_actor_domain) return active_actor_domain;
+    if (active_task_node) return active_task_node;
+    if (std::this_thread::get_id() == application_thread_id) return &ApplicationDomain::shared();
+    return nullptr;
+}
+
+// Each serial domain blocks on at most one target at a time. A wait whose
+// target chain leads back to the waiter can never be satisfied, so it panics
+// with the chain instead of hanging. Waits on several producers at once (such
+// as takeFirstCompleted) are not tracked.
+class WaitGraph {
+    struct Edge {
+        const void* target;
+        std::shared_ptr<WaitSignal> signal;
+        const char* kind;
+    };
+
+    std::mutex mutex_;
+    std::unordered_map<const void*, Edge> edges_;
+
+public:
+    static WaitGraph& shared() {
+        static auto* graph = new WaitGraph();
+        return *graph;
+    }
+
+    // Records waiter -> target unless the wait is already satisfied or untracked.
+    bool enter(const void* waiter, const void* target, std::shared_ptr<WaitSignal> signal, const char* kind) {
+        if (!waiter || !target || !signal) return false;
+        std::string cycle;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (signal->is_satisfied()) return false;
+            cycle = kind;
+            const void* node = target;
+            for (std::size_t hops = 0; node != waiter; ++hops) {
+                auto edge = edges_.find(node);
+                if (edge == edges_.end() || edge->second.signal->is_satisfied() || hops > edges_.size()) {
+                    edges_[waiter] = Edge{target, std::move(signal), kind};
+                    return true;
+                }
+                cycle += " -> ";
+                cycle += edge->second.kind;
+                node = edge->second.target;
+            }
+        }
+        doof::panic("deadlock: blocking wait would never complete (" + cycle + ")");
+    }
+
+    void leave(const void* waiter) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        edges_.erase(waiter);
+    }
+};
+
+class WaitScope {
+    const void* waiter_ = nullptr;
+public:
+    WaitScope(const void* target, std::shared_ptr<WaitSignal> signal, const char* kind) {
+        const void* waiter = current_wait_node();
+        if (WaitGraph::shared().enter(waiter, target, std::move(signal), kind)) waiter_ = waiter;
+    }
+
+    WaitScope(const WaitScope&) = delete;
+    WaitScope& operator=(const WaitScope&) = delete;
+
+    ~WaitScope() {
+        if (waiter_) WaitGraph::shared().leave(waiter_);
+    }
+};
+
+} // namespace detail
+
+// ============================================================================
 // Runtime scheduler — bounded CPU execution for async and actor work
 // ============================================================================
 
@@ -435,6 +545,11 @@ struct RuntimeSchedulerOptions {
     std::size_t maximum_cpu_parallelism;
     std::size_t retained_worker_count;
     std::chrono::milliseconds excess_worker_idle_timeout;
+    // Senders block once an actor holds this many accepted calls and posts.
+    // Completion deliveries and retirement requests are never bounded.
+    std::size_t actor_mailbox_capacity;
+    // Async-block and isolated-call submissions that have not yet started.
+    std::size_t async_queue_capacity;
 
     RuntimeSchedulerOptions()
         : maximum_cpu_parallelism([] {
@@ -442,7 +557,9 @@ struct RuntimeSchedulerOptions {
               return static_cast<std::size_t>(detected == 0 ? 1 : detected);
           }()),
           retained_worker_count(maximum_cpu_parallelism),
-          excess_worker_idle_timeout(std::chrono::seconds(30)) {}
+          excess_worker_idle_timeout(std::chrono::seconds(30)),
+          actor_mailbox_capacity(65536),
+          async_queue_capacity(65536) {}
 };
 
 namespace detail {
@@ -466,6 +583,9 @@ class RuntimeScheduler {
     std::size_t starting_worker_threads_ = 0;
     std::size_t idle_worker_threads_ = 0;
     std::size_t reacquire_waiters_ = 0;
+    std::size_t pending_async_jobs_ = 0;
+    std::condition_variable async_space_;
+    std::atomic<std::size_t> actor_mailbox_capacity_{RuntimeSchedulerOptions().actor_mailbox_capacity};
 
     // Keep these initialized inline in-class. Apple Clang otherwise emits a
     // strong TLS wrapper in every generated translation unit.
@@ -579,12 +699,51 @@ public:
         if (options.excess_worker_idle_timeout.count() < 0) {
             doof::panic("runtime scheduler excess-worker idle timeout cannot be negative");
         }
+        if (options.actor_mailbox_capacity == 0) {
+            doof::panic("runtime scheduler actor mailbox capacity must be at least 1");
+        }
+        if (options.async_queue_capacity == 0) {
+            doof::panic("runtime scheduler async queue capacity must be at least 1");
+        }
 
         std::lock_guard<std::mutex> lock(mutex_);
         if (started_) {
             doof::panic("runtime scheduler cannot be configured after work has started");
         }
         options_ = options;
+        actor_mailbox_capacity_.store(options.actor_mailbox_capacity);
+    }
+
+    std::size_t actor_mailbox_capacity() const {
+        return actor_mailbox_capacity_.load();
+    }
+
+    // Reserve one not-yet-started async submission. A full queue blocks the
+    // submitter with its CPU token released, so started work keeps draining it.
+    void acquire_async_slot() {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            started_ = true;
+            if (pending_async_jobs_ < options_.async_queue_capacity) {
+                ++pending_async_jobs_;
+                return;
+            }
+        }
+        const bool released = relinquish_current_worker_token();
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
+            async_space_.wait(lock, [this] { return pending_async_jobs_ < options_.async_queue_capacity; });
+            ++pending_async_jobs_;
+        }
+        if (released) reacquire_current_worker_token();
+    }
+
+    void release_async_slot() {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            --pending_async_jobs_;
+        }
+        async_space_.notify_one();
     }
 
     void submit(std::function<void()> job) {
@@ -2837,6 +2996,8 @@ class PromiseState {
     std::optional<doof::Success<T>> value_;
     std::exception_ptr error_;
     std::function<void()> continuation_;
+    const void* producer_ = nullptr;
+    std::shared_ptr<WaitSignal> signal_ = std::make_shared<WaitSignal>();
 
     void check_unclaimed() const {
         if (claimed_) doof::panic("promise result already claimed");
@@ -2847,6 +3008,7 @@ class PromiseState {
             std::lock_guard<std::mutex> lock(mutex_);
             if (settled_) return;
         }
+        WaitScope blocked(producer_, signal_, "promise wait");
         CpuTokenRelease release;
         std::unique_lock<std::mutex> lock(mutex_);
         ready_.wait(lock, [this] { return settled_; });
@@ -2854,6 +3016,12 @@ class PromiseState {
     }
 
 public:
+    // The serial domain (actor, isolated job, or application) that settles
+    // this promise, recorded for deadlock detection. Unset means untracked.
+    explicit PromiseState(const void* producer = nullptr) : producer_(producer) {}
+
+    void set_producer(const void* producer) { producer_ = producer; }
+
     bool ready() {
         std::lock_guard<std::mutex> lock(mutex_);
         check_unclaimed();
@@ -2897,6 +3065,7 @@ public:
             }
             error_ = std::move(error);
             settled_ = true;
+            signal_->satisfy();
             dispatch = std::move(continuation_);
         }
         ready_.notify_all();
@@ -2996,10 +3165,17 @@ doof::Result<T, std::string> promise_take_first_completed(
 // cannot starve.
 template <typename R, typename F>
 doof::Promise<R> submit_async(F&& f) {
+    auto& scheduler = doof::detail::RuntimeScheduler::shared();
+    scheduler.acquire_async_slot();
     auto state = std::make_shared<doof::detail::PromiseState<R>>();
+    // The job's promise state doubles as its temporary domain's identity.
+    const void* node = state.get();
+    state->set_producer(node);
     auto task = std::make_shared<std::decay_t<F>>(std::forward<F>(f));
-    doof::detail::RuntimeScheduler::shared().submit([state, task]() mutable {
+    scheduler.submit([state, task, node]() mutable {
+        doof::detail::RuntimeScheduler::shared().release_async_slot();
         doof::detail::IsolatedTaskScope isolated;
+        doof::detail::ActiveTaskScope active(node);
         state->complete([&]() -> R { return (*task)(); });
     });
     return doof::Promise<R>(std::move(state));
@@ -3012,7 +3188,7 @@ doof::Promise<R> callback<R(Args...)>::post(Args... args) const {
     }
     auto owner = owner_ ? owner_ : &doof::detail::ApplicationDomain::shared();
 
-    auto state = std::make_shared<doof::detail::PromiseState<R>>();
+    auto state = std::make_shared<doof::detail::PromiseState<R>>(static_cast<const void*>(owner));
     auto self = *this;
     auto packedArgs = std::make_tuple(std::forward<Args>(args)...);
     owner->enqueue_callback([self, state, packedArgs = std::move(packedArgs)]() mutable {
@@ -3031,22 +3207,80 @@ doof::Promise<R> callback<R(Args...)>::post(Args... args) const {
 
 template <typename T>
 class Actor : public detail::CallbackDomain {
+    // Calls and posts count against the mailbox capacity. Completion
+    // deliveries were reserved at registration and retirement is a lifecycle
+    // request, so neither can block a producer.
+    struct Message {
+        std::function<void()> run;
+        bool bounded;
+    };
+
     // Actor state remains reachable only through this actor until retirement,
     // but class methods require shared ownership for Doof's `this` lowering.
     std::shared_ptr<T> instance_;
-    std::queue<std::function<void()>> mailbox_;
+    std::queue<Message> mailbox_;
     std::mutex mutex_;
+    std::condition_variable space_;
     bool accepting_ = true;
     bool scheduled_ = false;
     std::size_t pending_completions_ = 0;
+    std::size_t bounded_messages_ = 0;
+    std::vector<std::shared_ptr<detail::WaitSignal>> capacity_waiters_;
     std::function<void()> retirement_;
+
+    // Matches the domain pointer that ActiveActorScope publishes for this actor.
+    const void* wait_node() const {
+        return static_cast<const detail::CallbackDomain*>(this);
+    }
 
     void finish_retirement_locked() {
         if (pending_completions_ == 0 && retirement_) {
-            mailbox_.push(std::move(retirement_));
+            mailbox_.push(Message{std::move(retirement_), false});
             retirement_ = {};
             schedule_locked();
         }
+    }
+
+    void release_capacity_waiters_locked() {
+        if (capacity_waiters_.empty()) return;
+        for (auto& waiter : capacity_waiters_) waiter->satisfy();
+        capacity_waiters_.clear();
+        space_.notify_all();
+    }
+
+    // Blocked senders observe retirement instead of waiting for space.
+    void stop_accepting_locked() {
+        accepting_ = false;
+        release_capacity_waiters_locked();
+    }
+
+    // Accept one call or post. A full mailbox blocks the sender with its CPU
+    // token released; that capacity wait is a wait on this actor's progress.
+    void push_bounded(std::function<void()> run) {
+        std::unique_lock<std::mutex> lock(mutex_);
+        while (accepting_ && bounded_messages_ >= detail::RuntimeScheduler::shared().actor_mailbox_capacity()) {
+            auto signal = std::make_shared<detail::WaitSignal>();
+            capacity_waiters_.push_back(signal);
+            lock.unlock();
+            {
+                detail::WaitScope blocked(wait_node(), signal, "actor mailbox capacity");
+                CpuTokenRelease release;
+                std::unique_lock<std::mutex> waiting(mutex_);
+                space_.wait(waiting, [&] { return signal->is_satisfied(); });
+            }
+            lock.lock();
+        }
+        if (!accepting_) doof::panic("actor is retiring or retired");
+        mailbox_.push(Message{std::move(run), true});
+        ++bounded_messages_;
+        schedule_locked();
+    }
+
+    template <typename Future>
+    void wait_on_actor(Future& future, const std::shared_ptr<detail::WaitSignal>& signal, const char* kind) {
+        if (future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) return;
+        detail::WaitScope blocked(wait_node(), signal, kind);
+        doof::wait_with_cpu_token_released(future);
     }
 
     void schedule_locked() {
@@ -3064,8 +3298,13 @@ class Actor : public detail::CallbackDomain {
         std::function<void()> task;
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            task = std::move(mailbox_.front());
+            auto message = std::move(mailbox_.front());
             mailbox_.pop();
+            task = std::move(message.run);
+            if (message.bounded) {
+                --bounded_messages_;
+                release_capacity_waiters_locked();
+            }
         }
 
         try {
@@ -3090,43 +3329,41 @@ public:
     explicit Actor(Args&&... args)
         : instance_(std::make_shared<T>(std::forward<Args>(args)...)) {}
 
-    // Synchronous call — enqueue and block until complete
+    // Synchronous call — enqueue and block until complete. The completion
+    // signal is raised before the result is published so the waiter's edge
+    // disappears before this actor can start another wait.
     template <typename R, typename F>
     R call_sync(F&& f) {
+        auto signal = std::make_shared<detail::WaitSignal>();
         if constexpr (std::is_void_v<R>) {
             auto prom = std::make_shared<std::promise<void>>();
             auto fut = prom->get_future();
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                if (!accepting_) doof::panic("actor is retiring or retired");
-                mailbox_.push([this, f = std::forward<F>(f), prom]() {
-                    try {
-                        f(*instance_);
-                        prom->set_value();
-                    } catch (...) {
-                        prom->set_exception(std::current_exception());
-                    }
-                });
-                schedule_locked();
-            }
-            doof::wait_with_cpu_token_released(fut);
+            push_bounded([this, f = std::forward<F>(f), prom, signal]() {
+                try {
+                    f(*instance_);
+                    signal->satisfy();
+                    prom->set_value();
+                } catch (...) {
+                    signal->satisfy();
+                    prom->set_exception(std::current_exception());
+                }
+            });
+            wait_on_actor(fut, signal, "synchronous actor call");
             return fut.get();
         } else {
             auto prom = std::make_shared<std::promise<R>>();
             auto fut = prom->get_future();
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                if (!accepting_) doof::panic("actor is retiring or retired");
-                mailbox_.push([this, f = std::forward<F>(f), prom]() {
-                    try {
-                        prom->set_value(f(*instance_));
-                    } catch (...) {
-                        prom->set_exception(std::current_exception());
-                    }
-                });
-                schedule_locked();
-            }
-            doof::wait_with_cpu_token_released(fut);
+            push_bounded([this, f = std::forward<F>(f), prom, signal]() {
+                try {
+                    auto value = f(*instance_);
+                    signal->satisfy();
+                    prom->set_value(std::move(value));
+                } catch (...) {
+                    signal->satisfy();
+                    prom->set_exception(std::current_exception());
+                }
+            });
+            wait_on_actor(fut, signal, "synchronous actor call");
             return fut.get();
         }
     }
@@ -3134,15 +3371,10 @@ public:
     // Asynchronous call — enqueue and return a Promise
     template <typename R, typename F>
     doof::Promise<R> call_async(F&& f) {
-        auto state = std::make_shared<doof::detail::PromiseState<R>>();
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            if (!accepting_) doof::panic("actor is retiring or retired");
-            mailbox_.push([this, f = std::forward<F>(f), state]() mutable {
-                state->complete([&]() -> R { return f(*instance_); });
-            });
-            schedule_locked();
-        }
+        auto state = std::make_shared<doof::detail::PromiseState<R>>(wait_node());
+        push_bounded([this, f = std::forward<F>(f), state]() mutable {
+            state->complete([&]() -> R { return f(*instance_); });
+        });
         return doof::Promise<R>(std::move(state));
     }
 
@@ -3160,40 +3392,39 @@ public:
 
     void enqueue_completion(std::function<void()> task) override {
         std::lock_guard<std::mutex> lock(mutex_);
-        mailbox_.push(std::move(task));
+        mailbox_.push(Message{std::move(task), false});
         --pending_completions_;
         finish_retirement_locked();
         schedule_locked();
     }
 
     void enqueue_callback(std::function<void()> task) override {
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            if (!accepting_) doof::panic("actor is retiring or retired");
-            mailbox_.push(std::move(task));
-            schedule_locked();
-        }
+        push_bounded(std::move(task));
     }
 
     // Retire the actor — drain accepted work, stop, and return owned state.
     std::shared_ptr<T> retire() {
         auto prom = std::make_shared<std::promise<std::shared_ptr<T>>>();
         auto fut = prom->get_future();
+        auto signal = std::make_shared<detail::WaitSignal>();
         {
             std::lock_guard<std::mutex> lock(mutex_);
             if (!accepting_) doof::panic("actor is already retiring or retired");
-            accepting_ = false;
-            retirement_ = [this, prom]() {
+            stop_accepting_locked();
+            retirement_ = [this, prom, signal]() {
                 try {
                     if (!instance_) doof::panic("actor is already retired");
-                    prom->set_value(std::move(instance_));
+                    auto state = std::move(instance_);
+                    signal->satisfy();
+                    prom->set_value(std::move(state));
                 } catch (...) {
+                    signal->satisfy();
                     prom->set_exception(std::current_exception());
                 }
             };
             finish_retirement_locked();
         }
-        doof::wait_with_cpu_token_released(fut);
+        wait_on_actor(fut, signal, "actor retirement");
         std::shared_ptr<T> value = fut.get();
         return value;
     }
@@ -3202,18 +3433,20 @@ public:
     void stop() {
         auto prom = std::make_shared<std::promise<void>>();
         auto fut = prom->get_future();
+        auto signal = std::make_shared<detail::WaitSignal>();
         {
             std::lock_guard<std::mutex> lock(mutex_);
             if (!accepting_) {
                 return;
             }
-            accepting_ = false;
-            retirement_ = [prom] {
+            stop_accepting_locked();
+            retirement_ = [prom, signal] {
+                signal->satisfy();
                 prom->set_value();
             };
             finish_retirement_locked();
         }
-        doof::wait_with_cpu_token_released(fut);
+        wait_on_actor(fut, signal, "actor stop");
         fut.get();
     }
 

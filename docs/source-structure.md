@@ -227,8 +227,11 @@ Async-block capture decoration and transfer restrictions belong to
 decorated isolated calls, and async blocks through the runtime's
 scheduling-policy-neutral submission boundary. `runtime/doof_runtime.hpp` owns
 the process-wide bounded scheduler, CPU-token release around blocking waits,
-and per-actor serial mailbox admission; compiler lowering does not select
-threads or reconstruct scheduling policy.
+per-actor serial mailbox admission, actor-mailbox and async-submission
+capacity, and the wait-for graph that turns blocking-wait cycles into deadlock
+panics; compiler lowering does not select threads or reconstruct scheduling
+policy. `checker-actor-boundary.do` treats actor and promise handles as
+boundary-safe synchronized handles.
 
 `checker-resolution.do` supplies the `Promise.onComplete` callback signature.
 The runtime owns shared single-consumer promise state, producer notification,

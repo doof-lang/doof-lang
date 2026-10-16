@@ -9,6 +9,13 @@ the payload to its sole consumer without a polling or waiting task per callback.
 Native producers must use the shared completion state (or `submit_async`);
 the old constructors accepting `std::future`/`std::shared_future` are removed.
 
+Each promise state records its producing serial domain (the actor, the async
+job, or the posted callback's owner) for deadlock detection. Blocking waits
+enter a `detail::WaitGraph` edge carrying a `WaitSignal` that the producer
+raises before it can start another wait, so a satisfied waiter that has not yet
+woken never forms a false cycle. Native producers that leave the producer unset
+are untracked.
+
 Completion reservations retain the destination domain and application-loop
 keep-alive until invocation finishes. Actor retirement delays its final state
 transfer until reserved deliveries have entered and drained through its mailbox.
