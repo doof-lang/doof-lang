@@ -175,7 +175,7 @@ Native hosts may call `doof::configure_runtime_scheduler` with
 `doof::RuntimeSchedulerOptions` before the first scheduled job. Configuration
 after scheduling begins is a runtime logic error. The maximum must be at least
 one, the retained count cannot exceed it, the idle timeout cannot be
-negative, and both queue capacities must be at least one.
+negative, and every queue capacity must be at least one.
 
 ### Queue capacity
 
@@ -188,11 +188,18 @@ until one starts. Both waits relinquish a runtime worker's CPU token. An `async`
 expression can therefore block its caller while the destination is full.
 
 Deliveries for accepted `onComplete` registrations and retirement requests are
-never blocked by capacity. The application mailbox is not bounded.
+never blocked by capacity. The application mailbox does not block senders.
+
+`callback.tryPost` never blocks. It reports `"full"` instead of waiting when an
+owning actor holds its capacity of accepted calls and posts, or when the
+application mailbox already holds its own capacity of queued messages. Only
+`tryPost` observes the application mailbox capacity; it counts every queued
+application message, including completion deliveries and posts from other
+sources.
 
 Each capacity defaults to 65,536. Native hosts may change them through the
-`actor_mailbox_capacity` and `async_queue_capacity` fields of
-`doof::RuntimeSchedulerOptions`.
+`actor_mailbox_capacity`, `async_queue_capacity`, and
+`application_mailbox_capacity` fields of `doof::RuntimeSchedulerOptions`.
 
 ### Deadlock detection
 
@@ -566,6 +573,28 @@ run on the caller's stack. A callback created in the root application domain is
 posted to the root mailbox. The host or generated entrypoint decides which
 thread drains that mailbox, so UI runtimes can preserve strict thread affinity.
 
+`tryPost` is the non-blocking form. It returns `Result<Promise<R>, string>`
+and never waits for mailbox capacity:
+
+```doof check
+callback := (n: int): int => n + 1
+case callback.tryPost(1) {
+    s: Success -> s.value.onComplete((result) => println(result!)),
+    f: Failure -> println("not accepted: ${f.error}"),
+}
+```
+
+When the owner accepts the invocation, the promise behaves exactly as one
+returned by `post`. Otherwise nothing is queued and the failure is one of:
+
+- `"full"`: the owner's mailbox is at capacity (see
+  [Queue capacity](#queue-capacity));
+- `"retired"`: the owning actor is retiring or retired, or no longer exists.
+
+The root application domain never retires, so a root-owned callback fails only
+with `"full"`. Use `tryPost` where blocking the sender is unacceptable, such as
+a producer that sheds load or applies its own backpressure.
+
 Function-typed parameters in native imports also lower to `doof::callback`; the
 compiler does not assume whether bodiless C++ will call locally, store, or
 schedule the callback.
@@ -766,7 +795,8 @@ isolated work outside the current actor domain.
   isolated blocks.
 - Runtime CPU execution is bounded; blocked workers are not hard-capped.
 - Actor mailboxes and pending async submissions are bounded; a full
-  destination blocks the sender.
+  destination blocks the sender. `callback.tryPost` reports `"full"` instead of
+  blocking.
 - Blocking-wait cycles panic as deadlocks instead of hanging.
 - `retire actor` drains accepted work and returns the actor state.
 - Immutable values, actor and promise handles, and `import isolated class`

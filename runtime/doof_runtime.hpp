@@ -234,10 +234,20 @@ std::optional<std::variant<std::shared_ptr<T>...>> lock_weak(const std::variant<
 }
 
 namespace detail {
+enum class TryEnqueueResult {
+    Accepted,
+    Full,
+    Retired,
+};
+
 class CallbackDomain : public std::enable_shared_from_this<CallbackDomain> {
 public:
     virtual ~CallbackDomain() = default;
     virtual void enqueue_callback(std::function<void()> task) = 0;
+    // Accept one callback post without blocking. A full mailbox or a domain
+    // that no longer accepts work rejects the task instead of waiting or
+    // panicking.
+    virtual TryEnqueueResult try_enqueue_callback(std::function<void()> task) = 0;
     // Accepted completions reserve a future mailbox delivery across retirement.
     virtual void reserve_completion() {}
     virtual void cancel_completion() {}
@@ -300,6 +310,10 @@ public:
         }
         notify_ready();
     }
+
+    // Only non-blocking posts observe the application mailbox capacity; every
+    // other delivery to the application domain stays unbounded.
+    TryEnqueueResult try_enqueue_callback(std::function<void()> task) override;
 
     bool enqueue_release(std::function<void()> task) override {
         {
@@ -595,6 +609,9 @@ struct RuntimeSchedulerOptions {
     std::size_t actor_mailbox_capacity;
     // Async-block and isolated-call submissions that have not yet started.
     std::size_t async_queue_capacity;
+    // Queued application-domain messages at which `tryPost` reports "full".
+    // Other application deliveries never observe this capacity.
+    std::size_t application_mailbox_capacity;
 
     RuntimeSchedulerOptions()
         : maximum_cpu_parallelism([] {
@@ -604,7 +621,8 @@ struct RuntimeSchedulerOptions {
           retained_worker_count(maximum_cpu_parallelism),
           excess_worker_idle_timeout(std::chrono::seconds(30)),
           actor_mailbox_capacity(65536),
-          async_queue_capacity(65536) {}
+          async_queue_capacity(65536),
+          application_mailbox_capacity(65536) {}
 };
 
 namespace detail {
@@ -631,6 +649,7 @@ class RuntimeScheduler {
     std::size_t pending_async_jobs_ = 0;
     std::condition_variable async_space_;
     std::atomic<std::size_t> actor_mailbox_capacity_{RuntimeSchedulerOptions().actor_mailbox_capacity};
+    std::atomic<std::size_t> application_mailbox_capacity_{RuntimeSchedulerOptions().application_mailbox_capacity};
 
     // Keep these initialized inline in-class. Apple Clang otherwise emits a
     // strong TLS wrapper in every generated translation unit.
@@ -750,6 +769,9 @@ public:
         if (options.async_queue_capacity == 0) {
             doof::panic("runtime scheduler async queue capacity must be at least 1");
         }
+        if (options.application_mailbox_capacity == 0) {
+            doof::panic("runtime scheduler application mailbox capacity must be at least 1");
+        }
 
         std::lock_guard<std::mutex> lock(mutex_);
         if (started_) {
@@ -757,10 +779,15 @@ public:
         }
         options_ = options;
         actor_mailbox_capacity_.store(options.actor_mailbox_capacity);
+        application_mailbox_capacity_.store(options.application_mailbox_capacity);
     }
 
     std::size_t actor_mailbox_capacity() const {
         return actor_mailbox_capacity_.load();
+    }
+
+    std::size_t application_mailbox_capacity() const {
+        return application_mailbox_capacity_.load();
     }
 
     // Reserve one not-yet-started async submission. A full queue blocks the
@@ -840,6 +867,20 @@ public:
         };
     }
 };
+
+// The capacity counts every queued application message, so completions and
+// other deliveries waiting to run also hold back new non-blocking posts.
+inline TryEnqueueResult ApplicationDomain::try_enqueue_callback(std::function<void()> task) {
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (mailbox_.size() >= RuntimeScheduler::shared().application_mailbox_capacity()) {
+            return TryEnqueueResult::Full;
+        }
+        mailbox_.push(std::move(task));
+    }
+    notify_ready();
+    return TryEnqueueResult::Accepted;
+}
 
 } // namespace detail
 
@@ -928,6 +969,9 @@ public:
 
 template <typename T>
 class Promise;
+
+template <typename T> struct Success;
+template <typename E> struct Failure;
 
 template <typename Signature>
 class callback;
@@ -1023,6 +1067,9 @@ public:
     }
 
     doof::Promise<R> post(Args... args) const;
+
+    // Spelled as the variant because Result is declared after callbacks.
+    std::variant<doof::Success<doof::Promise<R>>, doof::Failure<std::string>> tryPost(Args... args) const;
 
     void dispatch(Args... args) const {
         static_assert(std::is_void_v<R>, "callback.dispatch is only available for void callbacks");
@@ -3277,6 +3324,46 @@ doof::Promise<R> callback<R(Args...)>::post(Args... args) const {
     return doof::Promise<R>(std::move(state));
 }
 
+// Like post, but never blocks: a full owner mailbox reports "full", and an
+// owner that is retiring, retired, or gone reports "retired". A rejected
+// post leaves no queued work and its unused promise state is dropped.
+template <typename R, typename... Args>
+doof::Result<doof::Promise<R>, std::string> callback<R(Args...)>::tryPost(Args... args) const {
+    if (!static_cast<bool>(*this)) {
+        doof::panic("callback posted before initialization");
+    }
+    std::shared_ptr<doof::detail::CallbackDomain> retained;
+    doof::detail::CallbackDomain* owner = &doof::detail::ApplicationDomain::shared();
+    if (owner_ && !doof::detail::ApplicationDomain::is_application_domain(owner_)) {
+        // Keep the actor alive while the message is offered to it.
+        retained = owner_lifetime_.lock();
+        if (!retained) {
+            return doof::Failure<std::string>{"retired"};
+        }
+        owner = retained.get();
+    }
+
+    auto state = std::make_shared<doof::detail::PromiseState<R>>(static_cast<const void*>(owner));
+    auto self = *this;
+    auto packedArgs = std::make_tuple(std::forward<Args>(args)...);
+    auto accepted = owner->try_enqueue_callback([self, state, packedArgs = std::move(packedArgs)]() mutable {
+        state->complete([&]() -> R {
+            return std::apply([&](auto&&... unpacked) -> R {
+                return doof::detail::call_callback_unchecked(self, std::forward<decltype(unpacked)>(unpacked)...);
+            }, std::move(packedArgs));
+        });
+    });
+    switch (accepted) {
+    case doof::detail::TryEnqueueResult::Accepted:
+        return doof::Success<doof::Promise<R>>{doof::Promise<R>(std::move(state))};
+    case doof::detail::TryEnqueueResult::Full:
+        return doof::Failure<std::string>{"full"};
+    case doof::detail::TryEnqueueResult::Retired:
+        break;
+    }
+    return doof::Failure<std::string>{"retired"};
+}
+
 // ============================================================================
 // Actor<T> — serial message queue actor
 // ============================================================================
@@ -3484,6 +3571,18 @@ public:
 
     void enqueue_callback(std::function<void()> task) override {
         push_bounded(std::move(task));
+    }
+
+    detail::TryEnqueueResult try_enqueue_callback(std::function<void()> task) override {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!accepting_) return detail::TryEnqueueResult::Retired;
+        if (bounded_messages_ >= detail::RuntimeScheduler::shared().actor_mailbox_capacity()) {
+            return detail::TryEnqueueResult::Full;
+        }
+        mailbox_.push(Message{std::move(task), true});
+        ++bounded_messages_;
+        schedule_locked();
+        return detail::TryEnqueueResult::Accepted;
     }
 
     // Retire the actor — drain accepted work, stop, and return owned state.

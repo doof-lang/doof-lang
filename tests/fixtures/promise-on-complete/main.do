@@ -1,6 +1,8 @@
 class Receiver {
   let total: int = 0
 
+  doubler(): (n: int): int => (n: int): int => n * 2
+
   start(): none {
     promise := async { yield [3, 4] }
     promise.onComplete((result) => {
@@ -48,6 +50,17 @@ function main(): int {
   callback := (): int => 11
   posted := callback.post()
   posted.onComplete((result) => { assert(result! == 11, "posted callback promises support completion") })
+
+  tried := callback.tryPost()!
+  tried.onComplete((result) => { assert(result! == 11, "accepted tryPost delivers through the root mailbox") })
+  doubling := Actor<Receiver>()
+  double := doubling.doubler()
+  assert(double.tryPost(4)!.get()! == 8, "actor tryPost runs on the owning actor")
+  retire doubling
+  case double.tryPost(1) {
+    _: Success -> assert(false, "tryPost to a retired actor must be rejected"),
+    f: Failure -> assert(f.error == "retired", "retired owner reports retired"),
+  }
 
   consumed := async { yield 5 }
   pending := [consumed]

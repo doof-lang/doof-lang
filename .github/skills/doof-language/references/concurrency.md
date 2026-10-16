@@ -99,7 +99,9 @@ Actor mailboxes and not-yet-started async submissions are bounded (65,536 each
 by default). A sender to a full actor blocks, so an `async` actor call or
 `callback.post` can block its caller; a submitter blocks while the async queue
 is full. `onComplete` deliveries and retirement are never blocked by capacity,
-and the application mailbox is unbounded.
+and the application mailbox never blocks senders. `callback.tryPost` never
+blocks: it reports `"full"` when the owning actor's mailbox, or the
+application mailbox (65,536 queued messages by default), is at capacity.
 
 Blocking waits (synchronous actor calls, retirement, mailbox-capacity waits, and
 `Promise.get()`) are tracked between serial domains. A wait that would close a
@@ -300,6 +302,19 @@ owning actor domain. Use `callback.post(args)` to enqueue callback work back
 onto the owning actor; it returns `Promise<R>` for callback return type `R`.
 Root-domain callbacks post to the root application mailbox. The host decides
 which thread drains that mailbox, which preserves UI runtime thread affinity.
+
+`callback.tryPost(args)` is the non-blocking form. It returns
+`Result<Promise<R>, string>`: on success the promise behaves like `post`'s;
+otherwise nothing is queued and the error is `"full"` (owner mailbox at
+capacity) or `"retired"` (owning actor retiring, retired, or gone). Use it for
+producers that shed load rather than block:
+
+```doof
+case callback.tryPost(request) {
+    s: Success -> track(s.value),
+    f: Failure -> if f.error == "full" then reject() else stop(),
+}
+```
 
 Actor-affine callback values may cross actor method boundaries, but their
 parameter and return payload types must also be boundary-safe. Captures may be

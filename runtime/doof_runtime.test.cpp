@@ -416,6 +416,13 @@ void test_configuration() {
         fail("zero async queue capacity was accepted");
     } catch (const doof::Panic&) {}
 
+    auto zero_application = options(1, 1);
+    zero_application.application_mailbox_capacity = 0;
+    try {
+        doof::configure_runtime_scheduler(zero_application);
+        fail("zero application mailbox capacity was accepted");
+    } catch (const doof::Panic&) {}
+
     doof::configure_runtime_scheduler(options(1, 1));
     require(success(doof::submit_async<int>([] { return 1; })) == 1, "configured scheduler did not run");
     try {
@@ -573,6 +580,67 @@ void test_actor_mailbox_capacity() {
     hold.set_value();
     retirer.join();
     (void)success(std::move(busy));
+}
+
+template <typename T>
+doof::Promise<T> accepted_post(doof::Result<doof::Promise<T>, std::string> posted, const std::string& message) {
+    require(doof::is_success(posted), message);
+    return std::move(std::get<doof::Success<doof::Promise<T>>>(posted).value);
+}
+
+template <typename T>
+std::string rejected_post(const doof::Result<doof::Promise<T>, std::string>& posted) {
+    if (!doof::is_failure(posted)) return "accepted";
+    return std::get<doof::Failure<std::string>>(posted).error;
+}
+
+void test_try_post() {
+    auto configured = options(2, 2);
+    configured.actor_mailbox_capacity = 1;
+    configured.application_mailbox_capacity = 2;
+    doof::configure_runtime_scheduler(configured);
+    auto& application = doof::detail::ApplicationDomain::shared();
+
+    // Root posts observe the application capacity and never block.
+    {
+        doof::detail::ActiveActorScope scope(&application);
+        doof::callback<int(int)> root([](int n) { return n + 1; });
+        auto first = accepted_post(root.tryPost(1), "first root post was rejected");
+        auto second = accepted_post(root.tryPost(2), "second root post was rejected");
+        require(rejected_post(root.tryPost(3)) == "full", "root post beyond capacity was accepted");
+        require(application.drain_ready() == 2, "rejected root post was queued");
+        require(success(std::move(first)) == 2 && success(std::move(second)) == 3, "root post results changed");
+        auto third = accepted_post(root.tryPost(4), "root post after draining was rejected");
+        require(application.drain_ready() == 1 && success(std::move(third)) == 5, "drained root post did not run");
+    }
+
+    // Actor posts observe the actor mailbox capacity without blocking.
+    auto actor = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    auto owned = actor->call_sync<doof::callback<int(int)>>([](ActorState& state) {
+        return doof::callback<int(int)>([&state](int n) { return state.value += n; });
+    });
+    std::promise<void> release;
+    auto gate = release.get_future().share();
+    std::atomic<bool> running{false};
+    auto blocker = actor->call_async<int>([gate, &running](ActorState&) {
+        running.store(true);
+        gate.wait();
+        return 0;
+    });
+    wait_until([&] { return running.load(); }, "blocking actor message did not start");
+    auto queued = accepted_post(owned.tryPost(5), "actor post within capacity was rejected");
+    require(rejected_post(owned.tryPost(6)) == "full", "actor post beyond capacity was accepted");
+    release.set_value();
+    (void)success(std::move(blocker));
+    require(success(std::move(queued)) == 5, "accepted actor post did not run once");
+    auto after = accepted_post(owned.tryPost(2), "actor post after draining was rejected");
+    require(success(std::move(after)) == 7, "rejected actor post ran");
+
+    // Retiring, retired, and released owners report retirement instead of panicking.
+    actor->retire();
+    require(rejected_post(owned.tryPost(1)) == "retired", "post to a retired actor was not rejected");
+    actor.reset();
+    require(rejected_post(owned.tryPost(1)) == "retired", "post to a released actor was not rejected");
 }
 
 void test_async_queue_capacity() {
@@ -1082,6 +1150,7 @@ int main(int argc, char** argv) {
     else if (mode == "deadlock") test_deadlock_detection();
     else if (mode == "mailbox-capacity") test_actor_mailbox_capacity();
     else if (mode == "async-capacity") test_async_queue_capacity();
+    else if (mode == "try-post") test_try_post();
     else if (mode == "collections") { test_collection_indexing(); test_key_hashing(); }
     else if (mode == "nulls") test_null_carriers();
     else if (mode == "serial-integers") test_serial_integers();

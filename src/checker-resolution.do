@@ -123,6 +123,7 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
       return case property {
         "call" -> function_,
         "post" -> functionType(function_.params, promiseType(function_.returnType)),
+        "tryPost" -> functionType(function_.params, resultType(promiseType(function_.returnType), primitive("string"))),
         "dispatch" -> functionType(function_.params, noneType()),
         _ -> unknownType()
       }

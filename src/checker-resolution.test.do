@@ -46,6 +46,34 @@ export function testPromiseOnCompleteRejectsInvalidCallbackSignatures(): none {
   }
 }
 
+export function testCallbackTryPostReturnsPromiseResult(): none {
+  for source of [
+    `function use(callback: (value: int): int): Result<Promise<int>, string> => callback.tryPost(1)`,
+    `function use(callback: (): none): none { case callback.tryPost() { s: Success -> s.value.onComplete((result) => { result! }), f: Failure -> println(f.error) } }`,
+    `function use(callback: (value: int): int): int => callback.tryPost(1)!.get()!`,
+  ] {
+    result := checked(source)
+    for diagnostic of result.diagnostics { println(diagnostic.message) }
+    Assert.isFalse(hasErrorDiagnostics(result.diagnostics))
+  }
+}
+
+export function testCallbackTryPostChecksArgumentsAndResult(): none {
+  for source of [
+    `function use(callback: (value: int): int): none { callback.tryPost() }`,
+    `function use(callback: (value: int): int): none { callback.tryPost("one") }`,
+    `function use(callback: (value: int): int): Promise<int> => callback.tryPost(1)`,
+    `function use(callback: (value: int): int): Result<Promise<string>, string> => callback.tryPost(1)`,
+  ] {
+    result := checked(source)
+    Assert.isTrue(hasErrorDiagnostics(result.diagnostics))
+    for diagnostic of result.diagnostics {
+      Assert.equal(diagnostic.module, "/main.do")
+      Assert.isTrue(diagnostic.span.start.line > 0)
+    }
+  }
+}
+
 export function testInterfaceBoundMembers(): none {
   result := checked("interface Reader<V> { read(): V }\nclass IntReader { read(): int => 7 }\nfunction readOne<T: Reader<int>>(reader: T): int => reader.read()\nfunction main(): int => readOne(IntReader {})")
   for diagnostic of result.diagnostics { println(diagnostic.message) }

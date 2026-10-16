@@ -741,7 +741,10 @@ function apply(f: (x: int): int, x: int): int => f.call(x)
 
 `f.call(...)` executes immediately and is valid only in the callback's owning
 actor domain. `f.post(...)` enqueues the invocation on the owning actor and
-returns `Promise<R>`, where `R` is the callback return type. Function-typed
+returns `Promise<R>`, where `R` is the callback return type.
+`f.tryPost(...)` is the non-blocking form: it returns `Result<Promise<R>, string>`
+and fails with `"full"` or `"retired"` instead of waiting or panicking (see
+[Actor-Affine Callbacks](10-concurrency.md#actor-affine-callbacks)). Function-typed
 parameters in native imports also lower to `doof::callback`; native C++ must
 integrate with that callback type and choose the appropriate execution mode
 explicitly.
