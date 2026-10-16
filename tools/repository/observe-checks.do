@@ -26,7 +26,7 @@ export function lastSseId(stream: string): Result<string, string> {
 }
 
 class ObservedChild {
-  readonly process: Exec
+  process: Exec
   destructor {
     if process.isRunning() { _ := process.terminate(9) else {} }
     _ := process.wait() else {}

@@ -230,11 +230,13 @@ Allowed:
 - deeply immutable objects and collections;
 - `Actor<T>` handles;
 - `Promise<T>` values;
-- actor-affine callbacks whose parameter and return types are allowed.
+- actor-affine callbacks whose parameter and return types are allowed;
+- native classes declared `import isolated class`.
 
 Rejected:
 
 - mutable objects and collections;
+- other native (`import class`) objects;
 - streams.
 
 Actor and promise handles are synchronized runtime handles, so sharing them
@@ -278,6 +280,54 @@ Actor construction is also a boundary. Every explicit `Actor<T>(...)`
 constructor argument must be boundary-safe. Mutable arguments are rejected even
 when the caller will not reassign its binding, because Doof does not currently
 have uniqueness or move types that could prove ownership transfer.
+
+Native objects are opaque, so the compiler treats an extern class as mutable
+unless its declaration promises a synchronized handle with `import isolated
+class` (see [Sharing Across Actor Domains](11-modules.md#sharing-across-actor-domains)).
+A native buffer cannot be handed to an actor while the caller keeps writing it:
+
+```doof reject
+import class NativeBuffer from "./native_buffer.hpp" {
+    isolated append(value: int): none
+}
+
+class Writer {
+    fill(buffer: NativeBuffer): none { buffer.append(1) }
+}
+
+function main(buffer: NativeBuffer): none {
+    writer := Actor<Writer>()
+    writer.fill(buffer)  // ❌ NativeBuffer is not declared isolated
+}
+```
+
+Every type argument of a crossing class must be boundary-safe too, even when no
+field mentions it. A wrapper over an isolated native handle may carry its type
+argument only through native code, as a channel sender carries its message
+type, so `Sender<int[]>` would otherwise let an actor send an array and keep
+mutating it:
+
+```doof reject
+import isolated class NativeChannel from "./native_channel.hpp" {
+    isolated close(): bool
+}
+
+class Sender<T> {
+    private readonly native: NativeChannel
+    send(value: T): none { }
+}
+
+class Producer {
+    start(sender: Sender<int[]>): none { }
+    share(sender: Sender<readonly int[]>): none { }
+}
+
+function main(mutable: Sender<int[]>, frozen: Sender<readonly int[]>): none {
+    producer := Actor<Producer>()
+    producer.start(mutable)  // ❌ type argument "T" is a mutable array
+    producer.share(frozen)  // ✅ OK
+}
+```
 
 For interface-typed values, boundary safety must hold for every known concrete
 implementation. A readonly interface field must be implemented by a readonly
@@ -719,6 +769,7 @@ isolated work outside the current actor domain.
   destination blocks the sender.
 - Blocking-wait cycles panic as deadlocks instead of hanging.
 - `retire actor` drains accepted work and returns the actor state.
-- Immutable values and actor and promise handles may cross domains.
+- Immutable values, actor and promise handles, and `import isolated class`
+  native handles may cross domains.
 - Mutable state transfers through actor retirement or a single-consumer owned
   async result, including delivery through `onComplete`.

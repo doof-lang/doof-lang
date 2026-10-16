@@ -3,7 +3,8 @@
 // Validation is deliberately performed at call sites after generic
 // substitution. The same method may be called locally without crossing an
 // actor domain, while an Actor<T> receiver requires deeply immutable payloads or
-// synchronized runtime handles (actors, promises, and actor-affine callbacks).
+// synchronized runtime handles (actors, promises, actor-affine callbacks, and
+// `import isolated class` native handles).
 
 import { AnalysisResult } from "./analyzer"
 import {
@@ -134,6 +135,11 @@ function findClassViolation(result: AnalysisResult, type_: ClassType, seen: stri
   nextSeen.push(key)
   declaration := findClassDeclaration(result, type_.symbol.module, type_.symbol.name)
   if declaration == none { return none }
+  // Native state is invisible to the checker, so only an explicit
+  // `import isolated class` contract makes a native handle shareable.
+  if declaration!.native_ && !declaration!.nativeIsolated {
+    return ActorBoundaryViolation { reason: "native class \"" + declaration!.name + "\" is not declared \"import isolated class\"" }
+  }
   for field of declaration!.fields {
     if field.static_ { continue }
     if field.let_ {
@@ -147,6 +153,15 @@ function findClassViolation(result: AnalysisResult, type_: ClassType, seen: stri
     if violation != none {
       name := fieldDisplayName(field)
       return ActorBoundaryViolation { reason: "field \"" + name + "\" cannot cross actor boundaries: " + violation!.reason }
+    }
+  }
+  // Native code may carry a type argument that no field mentions (a channel's
+  // message type), so every type argument must be boundary-safe itself.
+  for index of 0..<type_.typeArgs.length {
+    violation := findViolation(result, type_.typeArgs[index], nextSeen, unbound)
+    if violation != none {
+      parameterName := if index < declaration!.typeParams.length then declaration!.typeParams[index] else typeName(type_.typeArgs[index])
+      return ActorBoundaryViolation { reason: "type argument \"" + parameterName + "\" cannot cross actor boundaries: " + violation!.reason }
     }
   }
   return none

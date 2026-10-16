@@ -190,6 +190,7 @@ import class NativeEvent from "./native_event.hpp" as native::Event {
 - Prefer `import function` for narrow stateless bridges instead of introducing synthetic bridge classes
 - Use `import isolated function` for a bodyless native free function whose implementation does not access mutable shared state; actor-dispatched code may only call it with this explicit contract.
 - Mark bodyless native class methods `isolated` only when their implementation does not access mutable shared state; the contract is required for calls from actor-dispatched code.
+- Use `import isolated class` only for native handles that synchronize their own state and may be shared across actor domains; other native classes cannot cross actor/async boundaries or appear in `readonly` fields, so wrap them in plain fields. Method `isolated` contracts are declared separately.
 
 Example:
 

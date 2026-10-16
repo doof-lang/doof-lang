@@ -44,25 +44,17 @@ export function commandOutputChecks(compiler: string, fixtures: string, work: st
 
 // `script` supplies the operating-system PTY; Doof owns input and assertions.
 export function interactiveCheck(compiler: string, fixture: string, stdlib: string): Result<none, string> {
-  try process := Exec.spawn("/usr/bin/script", ["-q", "/dev/null", compiler, "run", fixture], ExecOptions { cwd: fixture, env: { DOOF_STDLIB_ROOT: stdlib }, withStdin: true, mergeStderrIntoStdout: true, timeout: Duration.ofSeconds(60L) })
-  // A concurrent deadline prevents a blocked stream read from hanging the gate.
-  deadline := async {
-    let completed = false
-    for attempt of 0..<600 {
-      if !process.isRunning() { completed = true; break }
-      Thread.sleep(Duration.ofMillis(100L))
-    }
-    if !completed { _ := process.terminate(9) else {} }
-    yield completed
-  }
+  // Stream reads block without a deadline, and a process handle cannot be
+  // shared with a watchdog task, so an alarm armed before `exec` (timers
+  // survive it) kills `script` and ends the stream if the fixture hangs.
+  try process := Exec.spawn("/usr/bin/perl", ["-e", "alarm shift @ARGV; exec @ARGV or die", "60", "/usr/bin/script", "-q", "/dev/null", compiler, "run", fixture], ExecOptions { cwd: fixture, env: { DOOF_STDLIB_ROOT: stdlib }, withStdin: true, mergeStderrIntoStdout: true, timeout: Duration.ofSeconds(60L) })
   let output = ""; let sent = false
   for chunk of process.stdoutStream() {
     output += text(chunk)
     if !sent && output.contains("Enter value:") { try process.writeStdinText("hello\n"); sent = true }
   }
-  try completed := deadline.get()
   try status := process.wait()
-  try require(completed && sent && status == 0 && output.contains("received: hello"), "Interactive prompt/input failed: " + output)
+  try require(sent && status == 0 && output.contains("received: hello"), "Interactive prompt/input failed: " + output)
   return Success()
 }
 

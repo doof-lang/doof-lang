@@ -72,6 +72,7 @@ Key reminders:
 - Mutable arrays support `.reserve(capacity)` to pre-size backing storage without changing their length.
 - Runtime counters use `metricsIncrement(name: string, value: long)` and `metricsSnapshotPrometheus()`.
 - Native free functions callable from actor-dispatched code require an explicit `import isolated function` contract.
+- Native `import class` objects cannot cross actor/async boundaries or sit in `readonly` fields unless declared `import isolated class` (a synchronized handle). Crossing generic classes need boundary-safe type arguments.
 - `none` is both the unit/absence type and its sole value. Use `T | none` for optional values; deprecated `void` and `null` aliases warn.
 - `never` is the uninhabited bottom type. `panic(...)` and functions returning `never` terminate their control-flow path.
 

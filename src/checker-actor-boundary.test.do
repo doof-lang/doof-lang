@@ -95,3 +95,47 @@ export function testReadonlyTypeParameterFieldsAreCheckedPerInstantiation(): non
   Assert.equal(rejected.length, 1)
   Assert.stringContains(rejected[0], "field \"payload\" cannot cross actor boundaries")
 }
+
+readonly nativeHandles = "import class Builder from \"builder.hpp\" { isolated append(value: int): none }\n" +
+  "import isolated class Channel from \"channel.hpp\" { isolated close(): bool }\n"
+
+export function testNativeClassesCrossOnlyWhenDeclaredIsolated(): none {
+  rejected := boundaryMessages(nativeHandles + "class Worker { take(builder: Builder): none { } }\n" +
+    "function main(builder: Builder): none { worker := Actor<Worker>()\nworker.take(builder) }")
+  Assert.equal(rejected.length, 1)
+  Assert.stringContains(rejected[0], "native class \"Builder\" is not declared \"import isolated class\"")
+  Assert.equal(boundaryMessages(nativeHandles + "class Worker { take(channel: Channel): none { } }\n" +
+    "function main(channel: Channel): none { worker := Actor<Worker>()\nworker.take(channel) }").length, 0)
+}
+
+export function testNativeHandlesInsideReadonlyFieldsMustBeIsolated(): none {
+  rejected := boundaryMessages(nativeHandles + "class Wrapper { readonly builder: Builder }\nclass Shared { readonly channel: Channel }")
+  Assert.equal(rejected.length, 1)
+  Assert.stringContains(rejected[0], "Readonly field \"Wrapper.builder\" must be deeply immutable: native class \"Builder\"")
+  Assert.equal(boundaryMessages(nativeHandles + "class Wrapper { builder: Builder }").length, 0)
+}
+
+export function testIsolatedNativeClassFieldsAreStillChecked(): none {
+  rejected := boundaryMessages("import isolated class Point from \"point.hpp\" { let x: int }\nclass Worker { take(point: Point): none { } }\n" +
+    "function main(point: Point): none { worker := Actor<Worker>()\nworker.take(point) }")
+  Assert.equal(rejected.length, 1)
+  Assert.stringContains(rejected[0], "field \"x\" is mutable")
+}
+
+export function testPhantomTypeArgumentsMustBeBoundarySafe(): none {
+  prefix := nativeHandles + "class Sender<T> { private readonly native: Channel\nsend(value: T): none { } }\n"
+  Assert.equal(boundaryMessages(prefix + "class Worker { take(sender: Sender<readonly int[]>): none { } }\n" +
+    "function main(sender: Sender<readonly int[]>): none { worker := Actor<Worker>()\nworker.take(sender) }").length, 0)
+  rejected := boundaryMessages(prefix + "class Worker { take(sender: Sender<int[]>): none { } }\n" +
+    "function main(sender: Sender<int[]>): none { worker := Actor<Worker>()\nworker.take(sender) }")
+  Assert.equal(rejected.length, 1)
+  Assert.stringContains(rejected[0], "type argument \"T\" cannot cross actor boundaries: array type \"int[]\" is mutable")
+}
+
+export function testAsyncCapturesRejectNonIsolatedNativeClasses(): none {
+  rejected := boundaryMessages(nativeHandles + "function main(builder: Builder, channel: Channel): none {\n" +
+    "first := async { builder.append(1)\nyield 1 }\nsecond := async { yield channel }\nprintln(first.get()! + 1)\nsecond.get()! }")
+  Assert.equal(rejected.length, 1)
+  Assert.stringContains(rejected[0], "Async block capture \"builder\"")
+  Assert.stringContains(rejected[0], "native class \"Builder\"")
+}

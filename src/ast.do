@@ -730,6 +730,9 @@ export class ClassDeclaration {
   exported: bool
   private_: bool
   native_: bool = false
+  // `import isolated class`: the native author promises instances are safe to
+  // share across actor domains.
+  nativeIsolated: bool = false
   nativeHeader: string = ""
   nativeCppName: string = ""
   let resolvedSymbol: Symbol | none = none

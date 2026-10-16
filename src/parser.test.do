@@ -1570,6 +1570,21 @@ export function testParsesIsolatedNativeFunction(): none {
   }
 }
 
+export function testParsesIsolatedNativeClasses(): none {
+  program := parse("import isolated class Channel from \"chan.hpp\" { isolated close(): bool }\nexport import isolated class Handle from \"chan.hpp\" { }\nimport class Plain from \"chan.hpp\" { }")
+  for index of 0..<3 {
+    case program.statements[index] {
+      class_: ClassDeclaration -> {
+        Assert.equal(class_.native_, true)
+        Assert.equal(class_.nativeIsolated, index < 2)
+        Assert.equal(class_.exported, index == 1)
+      }
+      _ -> { panic("expected native class") }
+    }
+  }
+  assertFieldParseError("import isolated { x } from \"m\"", "Expected class or function after import isolated")
+}
+
 export function testParsesDestructuringDeclarationsAndAssignments(): none {
   program := parse("function main(): void { values := [1, 2, 3]\n[first, _, third] := values\nlet (left, right) = (1, 2)\n{ name as displayName, age } := Person { name: \"Ada\", age: 37 }\n[first, third] = values\n(left, right) = (3, 4)\n{ name as displayName } = Person { name: \"Grace\", age: 40 } }")
   case program.statements[0] {

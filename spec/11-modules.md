@@ -928,6 +928,50 @@ function main(): none {
 
 This ensures consistent memory management across Doof and C++ code — all class instances use the same reference-counting mechanism, preventing ownership issues at the boundary.
 
+### Sharing Across Actor Domains
+
+The compiler cannot see native state, so an extern class is mutable by default:
+its values cannot cross actor or async boundaries, and readonly fields and
+bindings cannot hold them. A native class whose instances are synchronized
+handles, safe to use from several actor domains at once, declares that contract
+with `import isolated class` (or `export import isolated class`):
+
+```doof check
+import isolated class NativeChannel from "./native_channel.hpp" {
+    isolated close(): bool
+}
+
+import class NativeBuffer from "./native_buffer.hpp" {
+    isolated append(value: int): none
+}
+
+class Mailbox {
+    readonly channel: NativeChannel  // ✅ OK - shared handle
+}
+
+class Writer {
+    buffer: NativeBuffer  // not readonly: the native buffer is mutable
+}
+```
+
+```doof reject
+import class NativeBuffer from "./native_buffer.hpp" {
+    isolated append(value: int): none
+}
+
+class Packet {
+    readonly buffer: NativeBuffer  // ❌ native class is not declared isolated
+}
+```
+
+The class modifier is independent of method contracts: each bodyless method
+that isolated code may call still declares `isolated` itself. The compiler
+trusts the class contract, so the native implementation must synchronize its
+own state and must not hand a value it receives to another domain unless that
+value's Doof type is boundary-safe. Declared fields are still checked, so an
+isolated native class with a `let` field cannot cross. See
+[Concurrency](10-concurrency.md#actor-boundaries).
+
 ### C++ Namespace Mapping
 
 When the C++ class lives in a namespace, use `as` to provide the fully-qualified C++ name:

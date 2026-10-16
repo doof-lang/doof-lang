@@ -23,8 +23,8 @@ export function parseExport(parser: Parser): Statement {
   parser.expect(TokenType.Export)
   if parser.check(TokenType.Import) {
     parser.advance()
-    if parser.check(TokenType.Class) { return parseNativeClass(parser, true, start) }
     isolated_ := parser.match(TokenType.Isolated)
+    if parser.check(TokenType.Class) { return parseNativeClass(parser, true, isolated_, start) }
     if parser.check(TokenType.Function) { return parseNativeFunction(parser, true, isolated_, start) }
     parser.fail("Expected class or function after export import")
   }
@@ -462,10 +462,10 @@ function parseDescription(parser: Parser): string {
 export function parseImport(parser: Parser): Statement {
   start := parser.location()
   parser.expect(TokenType.Import)
-  if parser.check(TokenType.Class) { return parseNativeClass(parser, false, start) }
   isolated_ := parser.match(TokenType.Isolated)
+  if parser.check(TokenType.Class) { return parseNativeClass(parser, false, isolated_, start) }
   if parser.check(TokenType.Function) { return parseNativeFunction(parser, false, isolated_, start) }
-  if isolated_ { parser.fail("Expected function after import isolated") }
+  if isolated_ { parser.fail("Expected class or function after import isolated") }
   typeOnly := parser.match(TokenType.Type)
   let specifiers: NamedImport[] = []
   if parser.check(TokenType.Star) { parser.fail("Namespace imports are not supported; import names with 'import { name } from ...'") }
@@ -513,7 +513,7 @@ export function parseMockImport(parser: Parser): Statement {
   return MockImportDirective { kind: "mock-import-directive", sourcePattern, mappings, span: parser.span(start) }
 }
 
-function parseNativeClass(parser: Parser, exported: bool, start: AstLocation): ClassDeclaration {
+function parseNativeClass(parser: Parser, exported: bool, isolated_: bool, start: AstLocation): ClassDeclaration {
   parser.expect(TokenType.Class)
   name := parser.text(parser.expect(TokenType.Identifier))
   binding := parseNativeBinding(parser)
@@ -532,7 +532,7 @@ function parseNativeClass(parser: Parser, exported: bool, start: AstLocation): C
   parser.expect(TokenType.RightBrace)
   return ClassDeclaration {
     kind: "class-declaration", name, typeParams: [], implements_: [], fields, methods,
-    exported, private_: false, native_: true, nativeHeader: binding.header, nativeCppName: binding.cppName,
+    exported, private_: false, native_: true, nativeIsolated: isolated_, nativeHeader: binding.header, nativeCppName: binding.cppName,
     span: parser.span(start),
   }
 }

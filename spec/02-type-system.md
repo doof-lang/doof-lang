@@ -1788,12 +1788,13 @@ points.push(MutablePoint { x: 3.0, y: 4.0 })  // ❌ Error - readonly array
 When `readonly` appears on a binding or class field, the referenced value must be deeply immutable. A type is deeply readonly-compatible if:
 
 1. **Primitives** — `int`, `long`, `float`, `double`, `string`, `bool` — always readonly-compatible
-2. **Classes and structs** — no instance field may use `let`, and every field type must itself be deeply readonly-compatible; static fields are not part of the instance graph
+2. **Classes and structs** — no instance field may use `let`, and every field type must itself be deeply readonly-compatible; static fields are not part of the instance graph. Every type argument must also be deeply readonly-compatible, even one no field mentions, because native code may carry it (a channel's message type)
 3. **Arrays** — are treated as `readonly T[]`, and `T` must itself be deeply readonly-compatible
 4. **Collections** — are treated as `ReadonlyMap<K, V>` / `ReadonlySet<T>`, and nested types must be deeply readonly-compatible
 5. **Unions** — all variants must be readonly-compatible
 6. **Functions** — always readonly-compatible (immutable references)
 7. **Type parameters** — a readonly field typed by a type parameter is checked per instantiation: `Box<int>` is deeply immutable and `Box<int[]>` is not. A readonly context converts the argument, so `readonly inner: Box<int[]>` has type `Box<readonly int[]>`. Where a widened interface value has lost the argument, the parameter must have a deeply immutable constraint (see [Actor Boundaries](10-concurrency.md#actor-boundaries))
+8. **Native classes** — an extern `import class` is never readonly-compatible unless declared `import isolated class` (see [Sharing Across Actor Domains](11-modules.md#sharing-across-actor-domains))
 
 Readonly collection annotations are shallow at the collection boundary: they stop collection mutation, but they do not require element or value types to be deeply immutable. Collection mutability is still part of the type, so `int[]` is not assignable to `readonly int[]`, `ReadonlyMap<K, V>`, or `ReadonlySet<T>`, and the reverse conversions are also rejected.
 

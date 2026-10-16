@@ -266,6 +266,16 @@ implements I { readonly payload: T }`) makes `I` unsafe. Bind the parameter
 through the interface (`implements I<T>`) or constrain it to a boundary-safe
 type. A `readonly` field typed by a type parameter is deeply immutable only for
 deeply immutable instantiations: `G<int>` may cross, `G<int[]>` may not.
+Every type argument of a crossing class must be boundary-safe even when no field
+mentions it, because native code may carry it: `ChannelSender<int[]>` cannot
+cross, `ChannelSender<readonly int[]>` can.
+
+Native `import class` objects are opaque and treated as mutable: they cannot
+cross actor or async boundaries or sit in readonly fields and bindings. Declare
+`import isolated class` only for a synchronized native handle (internally
+locked, safe from several domains at once) that never hands a received value to
+another domain unless its Doof type is boundary-safe. Otherwise hold the native
+object in a plain (non-`readonly`) field.
 
 Calling a method through `Actor<T>` requires that method to be inferred
 isolated, including all transitive helper calls.
