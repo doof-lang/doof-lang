@@ -236,6 +236,78 @@ void test_application_domain() {
     require(success(std::move(callback_promise)) == 9, "root callback result changed");
 }
 
+// Records the domain that releases a callback's captured state.
+struct ReleaseProbe {
+    std::atomic<bool>* released;
+    std::atomic<const void*>* domain;
+
+    ReleaseProbe(std::atomic<bool>* released, std::atomic<const void*>* domain)
+        : released(released), domain(domain) {}
+    ReleaseProbe(const ReleaseProbe&) = delete;
+
+    ~ReleaseProbe() {
+        domain->store(doof::current_actor_domain());
+        released->store(true);
+    }
+};
+
+void test_callback_release_domain() {
+    doof::configure_runtime_scheduler(options(2, 2));
+    auto& application = doof::detail::ApplicationDomain::shared();
+    doof::detail::ActiveActorScope scope(&application);
+    std::atomic<bool> released{false};
+    std::atomic<const void*> domain{nullptr};
+
+    // A root callback whose last copy drops inside an actor is released on the root.
+    {
+        auto probe = std::make_shared<ReleaseProbe>(&released, &domain);
+        doof::callback<int()> root([probe] { return 1; });
+        probe.reset();
+        auto actor = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+        auto dropped = actor->call_async<int>([root = std::move(root)](ActorState&) mutable {
+            root = {};
+            return 0;
+        });
+        require(success(std::move(dropped)) == 0, "actor did not drop the root callback");
+        actor->retire();
+        require(!released.load(), "root callback captures were released inside the actor");
+        require(application.drain_ready() == 0, "a callback release counted as a dispatched callback");
+        require(released.load(), "pumping the application mailbox did not release the root callback");
+        require(domain.load() == &application, "root callback captures were released outside the application domain");
+    }
+
+    // An actor callback whose last copy drops on the root is released on the actor.
+    {
+        released.store(false);
+        domain.store(nullptr);
+        auto actor = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+        auto made = actor->call_sync<doof::callback<int()>>([&](ActorState&) {
+            auto probe = std::make_shared<ReleaseProbe>(&released, &domain);
+            return doof::callback<int()>([probe] { return 2; });
+        });
+        made = {};
+        wait_until([&] { return released.load(); }, "actor callback was not released");
+        require(domain.load() == static_cast<const void*>(static_cast<doof::detail::CallbackDomain*>(actor.get())),
+            "actor callback captures were released outside the actor");
+        actor->retire();
+    }
+
+    // A retired owner can no longer run work, so its callbacks release in place.
+    {
+        released.store(false);
+        domain.store(nullptr);
+        auto actor = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+        auto made = actor->call_sync<doof::callback<int()>>([&](ActorState&) {
+            auto probe = std::make_shared<ReleaseProbe>(&released, &domain);
+            return doof::callback<int()>([probe] { return 3; });
+        });
+        actor->retire();
+        made = {};
+        require(released.load(), "retired actor callback was not released in place");
+        require(domain.load() == &application, "retired actor callback was not released by the dropping domain");
+    }
+}
+
 void test_token_release_and_retirement() {
     doof::configure_runtime_scheduler(options(1, 0, std::chrono::milliseconds(20)));
     std::promise<void> allow_reacquire;
@@ -1003,6 +1075,7 @@ int main(int argc, char** argv) {
     else if (mode == "actor-waits") test_actor_waits();
     else if (mode == "failures") test_failures();
     else if (mode == "application") test_application_domain();
+    else if (mode == "callback-release") test_callback_release_domain();
     else if (mode == "release") test_token_release_and_retirement();
     else if (mode == "priority") test_reacquire_priority();
     else if (mode == "configuration") test_configuration();

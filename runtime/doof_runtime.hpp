@@ -244,6 +244,10 @@ public:
     virtual void enqueue_completion(std::function<void()> task) {
         enqueue_callback(std::move(task));
     }
+    // Queue the release of state owned by this domain. Releases never block
+    // and do not count against mailbox capacity; false means the domain no
+    // longer accepts work and the caller must release the state itself.
+    virtual bool enqueue_release(std::function<void()> task) = 0;
 };
 
 inline thread_local CallbackDomain* active_actor_domain = nullptr;
@@ -297,9 +301,41 @@ public:
         notify_ready();
     }
 
+    bool enqueue_release(std::function<void()> task) override {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            releases_.push(std::move(task));
+        }
+        notify_ready();
+        return true;
+    }
+
+    // Release root-owned state that other domains dropped. Every dispatch
+    // below runs queued releases first, so pumping the mailbox also releases;
+    // native command-line entrypoints drain them once more after main.
+    int32_t drain_releases() {
+        int32_t released = 0;
+        while (true) {
+            std::function<void()> task;
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                if (releases_.empty()) {
+                    return released;
+                }
+                task = std::move(releases_.front());
+                releases_.pop();
+            }
+
+            ActiveActorScope active(this);
+            task();
+            ++released;
+        }
+    }
+
     int32_t drain_ready() {
         int32_t dispatched = 0;
         while (true) {
+            drain_releases();
             std::function<void()> task;
             {
                 std::lock_guard<std::mutex> lock(mutex_);
@@ -317,44 +353,52 @@ public:
     }
 
     bool wait_and_dispatch_one() {
-        std::function<void()> task;
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            ready_.wait(lock, [this] {
-                return !mailbox_.empty() || keep_alive_count_ == 0;
-            });
-            if (mailbox_.empty()) {
-                return false;
+        while (true) {
+            drain_releases();
+            std::function<void()> task;
+            {
+                std::unique_lock<std::mutex> lock(mutex_);
+                ready_.wait(lock, [this] {
+                    return !releases_.empty() || !mailbox_.empty() || keep_alive_count_ == 0;
+                });
+                if (mailbox_.empty()) {
+                    if (!releases_.empty()) continue;
+                    return false;
+                }
+                task = std::move(mailbox_.front());
+                mailbox_.pop();
             }
-            task = std::move(mailbox_.front());
-            mailbox_.pop();
-        }
 
-        ActiveActorScope active(this);
-        task();
-        return true;
+            ActiveActorScope active(this);
+            task();
+            return true;
+        }
     }
 
     // Native command-line entrypoints drain only registered promise
     // completions after main; other keep-alive sources (channels, timers)
     // still require the host or `runMainEventLoop` to pump the mailbox.
     bool dispatch_pending_completion() {
-        std::function<void()> task;
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            ready_.wait(lock, [this] {
-                return !mailbox_.empty() || pending_completion_count_ == 0;
-            });
-            if (pending_completion_count_ == 0) {
-                return false;
+        while (true) {
+            drain_releases();
+            std::function<void()> task;
+            {
+                std::unique_lock<std::mutex> lock(mutex_);
+                ready_.wait(lock, [this] {
+                    return !releases_.empty() || !mailbox_.empty() || pending_completion_count_ == 0;
+                });
+                if (pending_completion_count_ == 0) {
+                    return false;
+                }
+                if (mailbox_.empty()) continue;
+                task = std::move(mailbox_.front());
+                mailbox_.pop();
             }
-            task = std::move(mailbox_.front());
-            mailbox_.pop();
-        }
 
-        ActiveActorScope active(this);
-        task();
-        return true;
+            ActiveActorScope active(this);
+            task();
+            return true;
+        }
     }
 
     void add_pending_completion() {
@@ -417,6 +461,7 @@ private:
     std::mutex mutex_;
     std::condition_variable ready_;
     std::queue<std::function<void()>> mailbox_;
+    std::queue<std::function<void()>> releases_;
     int64_t keep_alive_count_ = 0;
     int64_t pending_completion_count_ = 0;
     std::function<void()> wake_handler_;
@@ -890,6 +935,33 @@ class callback;
 namespace detail {
 template <typename R, typename... Args>
 R call_callback_unchecked(const doof::callback<R(Args...)>& cb, Args... args);
+
+// Closure state holds captures of its owning domain, but callback copies may
+// cross into other domains. When the last copy drops elsewhere, the state is
+// released on its owner so captured destructors run where they were created.
+// A retired or expired actor owner can no longer run work; its captures were
+// created by isolated actor code, so releasing them here is safe. Unowned
+// state (isolated jobs, untracked native threads) is released in place.
+template <typename State>
+struct CallbackStateRelease {
+    CallbackDomain* owner = nullptr;
+    std::weak_ptr<CallbackDomain> lifetime;
+
+    void operator()(State* state) const {
+        if (!owner || current_wait_node() == static_cast<const void*>(owner)) {
+            delete state;
+            return;
+        }
+        auto release = [state] { delete state; };
+        if (ApplicationDomain::is_application_domain(owner)) {
+            ApplicationDomain::shared().enqueue_release(std::move(release));
+            return;
+        }
+        auto locked = lifetime.lock();
+        if (locked && locked->enqueue_release(std::move(release))) return;
+        delete state;
+    }
+};
 }
 
 template <typename R, typename... Args>
@@ -908,10 +980,14 @@ public:
         typename = std::enable_if_t<!std::is_same_v<std::decay_t<F>, callback>>
     >
     callback(F&& f)
-        : fn_(std::make_shared<std::function<R(Args...)>>(std::forward<F>(f))),
-          owner_(doof::current_actor_domain()),
+        : owner_(doof::current_actor_domain()),
           owner_lifetime_(owner_ ? owner_->weak_from_this() : std::weak_ptr<detail::CallbackDomain>{}),
-          isolated_(!owner_ && detail::active_isolated_task) {}
+          isolated_(!owner_ && detail::active_isolated_task) {
+        using State = std::function<R(Args...)>;
+        fn_ = std::shared_ptr<State>(
+            new State(std::forward<F>(f)),
+            detail::CallbackStateRelease<State>{owner_, owner_lifetime_});
+    }
 
     explicit operator bool() const {
         return fn_ && static_cast<bool>(*fn_);
@@ -3376,6 +3452,14 @@ public:
             state->complete([&]() -> R { return f(*instance_); });
         });
         return doof::Promise<R>(std::move(state));
+    }
+
+    bool enqueue_release(std::function<void()> task) override {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!accepting_) return false;
+        mailbox_.push(Message{std::move(task), false});
+        schedule_locked();
+        return true;
     }
 
     void reserve_completion() override {

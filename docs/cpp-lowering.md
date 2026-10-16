@@ -23,10 +23,16 @@ Callbacks retain weak domain identities to validate completion registration
 without introducing actor/closure ownership cycles. Isolated jobs mark
 callbacks created without an owning domain so they cannot be registered for
 deferred delivery; their ordinary call, dispatch, and post behavior is unchanged.
+Closure state uses a `CallbackStateRelease` deleter: dropping the last copy
+outside the owning domain queues the release with `enqueue_release` on that
+owner, which never blocks or counts against mailbox capacity. The application
+domain runs queued releases before each dispatch. A retiring or expired actor
+refuses the release, so the dropping domain releases the state in place.
 
 Native executable wrappers emitted by `emitter-module.do` pump the application
 mailbox after normal main/script return until pending completion reservations
-reach zero (`dispatch_pending_completion`), preserving the integer exit code.
+reach zero (`dispatch_pending_completion`), then run remaining callback releases
+(`drain_releases`), preserving the integer exit code.
 Other keep-alive sources do not extend the process past `main`.
 Host-owned app entrypoints leave mailbox pumping to the host. Terminal
 completion panics use `unhandled_panic` in the receiving domain.

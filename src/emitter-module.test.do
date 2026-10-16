@@ -25,7 +25,7 @@ export function testPromiseOnCompleteEmitsCallbackAndDrainsExecutableMailbox(): 
     Assert.equal(result.diagnostics.length, 0)
     output := result.emission!.modules[0].source
     Assert.stringContains(output, ".onComplete(")
-    Assert.stringContains(output, "while (__doof_application_domain.dispatch_pending_completion()) {}")
+    Assert.stringContains(output, "while (__doof_application_domain.dispatch_pending_completion()) {} __doof_application_domain.drain_releases();")
     if source.contains("return 7") {
       Assert.stringContains(output, "auto __doof_exit_code = ")
       Assert.stringContains(output, "return __doof_exit_code;")
@@ -39,6 +39,7 @@ export function testPromiseOnCompleteLeavesAppMailboxToHost(): none {
   output := result.emission!.modules[0].source
   Assert.stringContains(output, "doof_entry_main")
   Assert.stringNotContains(output, "dispatch_pending_completion")
+  Assert.stringNotContains(output, "drain_releases")
 }
 
 export function testExplicitlyImportedClassUsedOnlyAsSharedPointerGetsCompleteDefinition(): none {

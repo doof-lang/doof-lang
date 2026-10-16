@@ -524,6 +524,42 @@ Actor-affine callback values may cross actor method boundaries. Their parameter
 and return payload types are still validated with the actor boundary rules,
 because posted callback arguments and results cross actor domains.
 
+A callback's captures stay in its owning domain. A crossing callback may
+capture mutable objects, because another domain can hold, pass on, or `post`
+it, but never run it. The runtime also releases closure state on its owner:
+when the last copy of a callback is dropped in another domain, releasing its
+captures is queued back to the owning domain, so captured destructors run
+where the captures were created:
+
+```doof check
+let counter: int[] = []
+
+class Tracked {
+    let uses: int = 0
+    destructor { counter.push(this.uses) }
+}
+
+class Registry {
+    let saved: ((): int) | none = none
+    keep(listener: (): int): none { this.saved = listener }
+    clear(): none { this.saved = none }
+}
+
+registry := Actor<Registry>()
+tracked := Tracked {}
+registry.keep((): int => tracked.uses)  // ✅ OK - the capture stays in the root domain
+registry.clear()  // the Tracked destructor still runs on the root domain
+```
+
+Releases owned by the root domain run whenever the application mailbox is
+pumped, before any queued callback. Native command-line entrypoints run the
+remaining releases once more after `main` returns. Root-owned closure state
+dropped after that point is never released. A retiring or retired actor runs no
+more work, so closure state it owns is released by the domain that drops it.
+That is safe, because objects created in an actor domain have isolated
+destructors. Callbacks created in isolated async work have no owning domain and
+are released in place.
+
 ---
 
 ## Isolated Functions
@@ -591,8 +627,10 @@ A value that crosses into another domain may be released there instead. Every
 class an actor method argument, `Actor<T>(...)` argument, `async` call argument,
 or async block capture can own, through its fields, containers, unions, and
 interface implementations, must therefore have an isolated destructor. The
-error is reported where the value crosses. Code that keeps such objects in the
-root domain may still use destructors that touch module state:
+error is reported where the value crosses. Callback captures are exempt,
+because the runtime releases closure state on its owning domain (see
+[Actor-Affine Callbacks](#actor-affine-callbacks)). Code that keeps such objects
+in the root domain may still use destructors that touch module state:
 
 ```doof reject
 let counter: int[] = []

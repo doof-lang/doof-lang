@@ -135,6 +135,7 @@ convertible to that `Stream<T>`. `T.fromSerialValue(...)` counts as constructing
 every class the decoded value can hold. A value passed to an actor method,
 `Actor<T>(...)`, or an `async` call, or captured by an async block, may be
 released in that domain, so every class it can own needs an isolated destructor.
+Callback captures are exempt because they are released on the callback's owner.
 Root-domain objects that never cross may use destructors that touch module state.
 
 Bodyless native code needs an explicit trusted contract because the compiler
@@ -291,7 +292,12 @@ Root-domain callbacks post to the root application mailbox. The host decides
 which thread drains that mailbox, which preserves UI runtime thread affinity.
 
 Actor-affine callback values may cross actor method boundaries, but their
-parameter and return payload types must also be boundary-safe. Function-typed
+parameter and return payload types must also be boundary-safe. Captures may be
+mutable: they stay in the owning domain, which is the only one that can run the
+callback. When another domain drops the last copy, the runtime queues the
+release of its closure state back to the owner, so captured destructors run
+there. Root-owned releases run when the application mailbox is pumped, and
+once more after native `main` returns. Function-typed
 parameters in native imports lower to `doof::callback`; native C++ must choose
 local call or posting behavior explicitly instead of receiving an erased
 `std::function`.
