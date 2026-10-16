@@ -1,8 +1,8 @@
 // Transitive mutable-global effect analysis for isolated and actor-dispatched code.
 
 import { AnalysisResult, ModuleInfo } from "./analyzer"
-import { ActorType, Binding, Diagnostic, InterfaceType, SemanticSpan } from "./semantic"
-import { ActorCreationExpression, AsyncExpression, Block, CallExpression, ClassDeclaration, ConstDeclaration, Expression, FunctionDeclaration, Identifier, ImmutableBinding, InterfaceDeclaration, LetDeclaration, MemberExpression, ReadonlyDeclaration, SourceSpan, Statement } from "./ast"
+import { ActorType, Binding, ClassType, Diagnostic, InterfaceType, ResolvedType, SemanticSpan, TypeParameterType, UnionResolvedType } from "./semantic"
+import { ActorCreationExpression, AsyncExpression, Block, CallArgument, CallExpression, CheckedConstruction, ClassDeclaration, ConstructExpression, ConstDeclaration, Expression, FunctionDeclaration, Identifier, ImmutableBinding, InterfaceDeclaration, LetDeclaration, MemberExpression, ObjectLiteral, ObjectProperty, ReadonlyDeclaration, SourceSpan, Statement, TupleLiteral } from "./ast"
 import { findActorBoundaryViolation, isActorMethodCall } from "./checker-actor-boundary"
 import { validateAsyncBlock } from "./checker-async"
 import { collectExpressionTree, collectBlockExpressions, collectStatementExpressions } from "./ast-walk"
@@ -159,10 +159,6 @@ function functionExpressionRoots(fn: FunctionDeclaration): Expression[] {
   return roots
 }
 
-function functionExpressions(fn: FunctionDeclaration): Expression[] {
-  return allExpressions(functionExpressionRoots(fn))
-}
-
 function nodeForDeclaration(graph: IsolationGraph, declaration: FunctionDeclaration): IsolationNode | none {
   for node of graph.nodes { if node.declaration == declaration { return node } }
   return none
@@ -206,28 +202,133 @@ function nodesForDeclaration(result: AnalysisResult, graph: IsolationGraph, decl
   return targets
 }
 
-function callDeclaration(result: AnalysisResult, call: CallExpression): FunctionDeclaration | none {
-  if call.resolvedFunction != none { return call.resolvedFunction }
-  case call.callee {
-    member: MemberExpression -> {
-      if member.object.resolvedType == none { return none }
-      case member.object.resolvedType! {
-        interface_: InterfaceType -> {
-          declaration := declarationFor(result, interface_.symbol)
-          if declaration == none { return none }
-          case declaration! {
-            interfaceDeclaration: InterfaceDeclaration -> {
-              for method of interfaceDeclaration.methods { if method.name == member.property { return method } }
-            }
-            _ -> { }
+// Every method a member call may dispatch to. Union receivers contribute each
+// member's method; interface methods expand to implementations later through
+// nodesForDeclaration.
+function receiverMethods(result: AnalysisResult, receiver: ResolvedType, property: string, targets: FunctionDeclaration[]): none {
+  case receiver {
+    class_: ClassType -> {
+      declaration := findClassDeclaration(result, class_.symbol.module, class_.symbol.name)
+      if declaration == none { return }
+      for method of declaration!.methods {
+        if method.name == property && !method.static_ && !targets.contains(method) { targets.push(method) }
+      }
+    }
+    interface_: InterfaceType -> {
+      declaration := declarationFor(result, interface_.symbol)
+      if declaration == none { return }
+      case declaration! {
+        interfaceDeclaration: InterfaceDeclaration -> {
+          for method of interfaceDeclaration.methods {
+            if method.name == property && !targets.contains(method) { targets.push(method) }
           }
         }
         _ -> { }
       }
     }
+    union_: UnionResolvedType -> { for member of union_.types { receiverMethods(result, member, property, targets) } }
+    parameter: TypeParameterType -> {
+      if parameter.constraint != none { receiverMethods(result, parameter.constraint!, property, targets) }
+    }
     _ -> { }
   }
-  return none
+}
+
+function callDeclarations(result: AnalysisResult, call: CallExpression): FunctionDeclaration[] {
+  if call.resolvedFunction != none { return [call.resolvedFunction!] }
+  let targets: FunctionDeclaration[] = []
+  if call.resolvedConstructor != none { targets.push(call.resolvedConstructor!) }
+  case call.callee {
+    member: MemberExpression -> {
+      if member.object.resolvedType != none && member.resolvedStaticOwner == none {
+        case member.object.resolvedType! {
+          // Actor calls run in the actor's domain and are validated separately.
+          _: ActorType -> { }
+          _ -> { receiverMethods(result, member.object.resolvedType!, member.property, targets) }
+        }
+      }
+    }
+    _ -> { }
+  }
+  return targets
+}
+
+// Direct mutable-state accesses and call edges reachable from a set of
+// expressions, in source order. Construction contributes the checked plan's
+// static factory or the omitted field defaults it evaluates; reasons found inside
+// a default are attributed to the construction expression that evaluates it.
+class IsolationEffects {
+  let direct: IsolationReason | none = none
+  // Number of calls collected before the first direct reason.
+  let callsBeforeDirect: int = 0
+  calls: IsolationCall[] = []
+  visitedDefaults: Expression[] = []
+}
+
+function collectEffects(result: AnalysisResult, roots: Expression[], effects: IsolationEffects, via: SourceSpan | none = none): none {
+  for expression of allExpressions(roots) {
+    if effects.direct == none {
+      let reason = mutableModuleReason(result, expression)
+      if reason == none { reason = mutableStaticReason(result, expression) }
+      if reason != none {
+        effects.direct = if via == none then reason else IsolationReason { kind: reason!.kind, name: reason!.name, span: via! }
+        effects.callsBeforeDirect = effects.calls.length
+      }
+    }
+    case expression {
+      call: CallExpression -> {
+        span := via ?? call.span
+        for declaration of callDeclarations(result, call) { effects.calls.push(IsolationCall { declaration, span }) }
+        collectConstructionEffects(result, call.resolvedConstruction, suppliedArguments(call.args), span, effects)
+      }
+      object: ObjectLiteral -> { collectConstructionEffects(result, object.resolvedConstruction, suppliedProperties(object.properties, []), via ?? object.span, effects) }
+      tuple: TupleLiteral -> { collectConstructionEffects(result, tuple.resolvedConstruction, suppliedPositions(tuple.elements.length), via ?? tuple.span, effects) }
+      construct: ConstructExpression -> { collectConstructionEffects(result, construct.resolvedConstruction, suppliedProperties(construct.args, construct.spreadFields), via ?? construct.span, effects) }
+      actor: ActorCreationExpression -> { collectConstructionEffects(result, actor.resolvedConstruction, suppliedPositions(actor.args.length), via ?? actor.span, effects) }
+      _ -> { }
+    }
+  }
+}
+
+class SuppliedArguments {
+  names: string[] = []
+  let positional: int = 0
+}
+
+function suppliedArguments(args: CallArgument[]): SuppliedArguments {
+  supplied := SuppliedArguments {}
+  for argument of args { if argument.name != none { supplied.names.push(argument.name!) } }
+  if supplied.names.length == 0 { supplied.positional = args.length }
+  return supplied
+}
+
+function suppliedProperties(properties: ObjectProperty[], spreadFields: string[]): SuppliedArguments {
+  supplied := SuppliedArguments {}
+  for property of properties { supplied.names.push(property.name) }
+  for name of spreadFields { supplied.names.push(name) }
+  return supplied
+}
+
+function suppliedPositions(count: int): SuppliedArguments {
+  return SuppliedArguments { positional: count }
+}
+
+function collectConstructionEffects(result: AnalysisResult, plan: CheckedConstruction | none, supplied: SuppliedArguments, span: SourceSpan, effects: IsolationEffects): none {
+  if plan == none { return }
+  if plan!.factory != none {
+    // Factory parameter defaults belong to the factory's own isolation node.
+    effects.calls.push(IsolationCall { declaration: plan!.factory!, span })
+    return
+  }
+  for index of 0..<plan!.signature.params.length {
+    if index >= plan!.defaults.length || plan!.defaults[index].value == none { continue }
+    name := plan!.signature.params[index].name
+    if index < supplied.positional || supplied.names.contains(name) { continue }
+    default_ := plan!.defaults[index].value!
+    if effects.visitedDefaults.contains(default_) { continue }
+    effects.visitedDefaults.push(default_)
+    collectEffects(result, [default_], effects, span)
+  }
 }
 
 function analyzeNode(result: AnalysisResult, graph: IsolationGraph, node: IsolationNode): none {
@@ -235,21 +336,10 @@ function analyzeNode(result: AnalysisResult, graph: IsolationGraph, node: Isolat
     node.directReason = IsolationReason { kind: "bodyless", name: node.declaration.name, span: node.declaration.span }
     return
   }
-  for expression of functionExpressions(node.declaration) {
-    if node.directReason == none {
-      node.directReason = mutableModuleReason(result, expression)
-      if node.directReason == none { node.directReason = mutableStaticReason(result, expression) }
-    }
-    case expression {
-      call: CallExpression -> {
-        declaration := callDeclaration(result, call)
-        if declaration != none {
-          node.calls.push(IsolationCall { declaration: declaration!, span: call.span })
-        }
-      }
-      _ -> { }
-    }
-  }
+  effects := IsolationEffects {}
+  collectEffects(result, functionExpressionRoots(node.declaration), effects)
+  node.directReason = effects.direct
+  for call of effects.calls { node.calls.push(call) }
 }
 
 function inferIsolation(result: AnalysisResult, graph: IsolationGraph): none {
@@ -285,63 +375,31 @@ function reasonText(reason: IsolationReason): string {
   return "uses bodyless function \"" + reason.name + "\" without an isolated contract"
 }
 
-function probeReason(result: AnalysisResult, graph: IsolationGraph, expression: Expression): IsolationReason | none {
-  for nested of allExpressions([expression]) {
-    let reason = mutableModuleReason(result, nested)
-    if reason == none { reason = mutableStaticReason(result, nested) }
-    if reason != none { return reason }
-    case nested {
-      call: CallExpression -> {
-        declaration := callDeclaration(result, call)
-        if declaration != none {
-          for target of nodesForDeclaration(result, graph, declaration!) {
-            if target.reason != none {
-              return IsolationReason { kind: "call", name: target.declaration.name, span: call.span }
-            }
-          }
-        }
+function effectsReason(result: AnalysisResult, graph: IsolationGraph, effects: IsolationEffects): IsolationReason | none {
+  for index of 0..<effects.calls.length {
+    if effects.direct != none && index == effects.callsBeforeDirect { return effects.direct }
+    call := effects.calls[index]
+    for target of nodesForDeclaration(result, graph, call.declaration) {
+      if target.reason != none {
+        return IsolationReason { kind: "call", name: target.declaration.name, span: call.span }
       }
-      _ -> { }
     }
   }
-  return none
+  return effects.direct
 }
 
+function probeReason(result: AnalysisResult, graph: IsolationGraph, expression: Expression): IsolationReason | none {
+  effects := IsolationEffects {}
+  collectEffects(result, [expression], effects)
+  return effectsReason(result, graph, effects)
+}
+
+/** The constructor factory or omitted field defaults run to build actor state;
+ * arguments are evaluated in the creating domain and are checked there. */
 function actorConstructionReason(result: AnalysisResult, graph: IsolationGraph, actor: ActorCreationExpression): IsolationReason | none {
-  if actor.resolvedType == none { return none }
-  let class_: ClassDeclaration | none = none
-  case actor.resolvedType! {
-    actorType_: ActorType -> {
-      declaration := declarationFor(result, actorType_.innerClass.symbol)
-      if declaration != none {
-        case declaration! {
-          resolved: ClassDeclaration -> { class_ = resolved }
-          _ -> { }
-        }
-      }
-    }
-    _ -> { }
-  }
-  if class_ == none { return none }
-  for method of class_!.methods {
-    if method.static_ && method.name == "constructor" {
-      node := nodeForDeclaration(graph, method)
-      if node != none && node!.reason != none {
-        return IsolationReason { kind: "call", name: method.name, span: actor.span }
-      }
-      return none
-    }
-  }
-  let positionalIndex = 0
-  for field of class_!.fields {
-    if field.static_ { continue }
-    if positionalIndex >= actor.args.length && field.defaultValue != none {
-      reason := probeReason(result, graph, field.defaultValue!)
-      if reason != none { return reason }
-    }
-    positionalIndex = positionalIndex + 1
-  }
-  return none
+  effects := IsolationEffects {}
+  collectConstructionEffects(result, actor.resolvedConstruction, suppliedPositions(actor.args.length), actor.span, effects)
+  return effectsReason(result, graph, effects)
 }
 
 function moduleExpressions(module: ModuleInfo): Expression[] {

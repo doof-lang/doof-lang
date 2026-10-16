@@ -2,9 +2,9 @@
 // result validation.
 
 import { AnalysisResult } from "./analyzer"
-import { ActorType, ArrayResolvedType, ClassType, Diagnostic, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, Scope, SuccessResolvedType, FailureResolvedType, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ActorType, ArrayResolvedType, ClassType, Diagnostic, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, Scope, SuccessResolvedType, FailureResolvedType, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { AsyncExpression, Block, CallExpression, ClassDeclaration, Expression, Identifier, InterfaceDeclaration, MemberExpression, SourceSpan, ThisExpression } from "./ast"
-import { findActorBoundaryViolation, isActorMethodCall } from "./checker-actor-boundary"
+import { findActorBoundaryViolation, implementationType, isActorMethodCall } from "./checker-actor-boundary"
 import { collectBlockExpressions, collectExpressionTree } from "./ast-walk"
 import { declarationFor, fieldDisplayName } from "./checker-symbols"
 import { neverType, promiseType, substituteTypeParams, typeName, unknownType } from "./checker-types"
@@ -146,7 +146,7 @@ function validateIdentifierCapture(result: AnalysisResult, async_: AsyncExpressi
   boundaryViolation := findActorBoundaryViolation(result, binding.type_)
   if boundaryViolation != none { reason = boundaryViolation!.reason }
   if reason == none {
-    reason = findAsyncViolation(result, binding.type_, [], [], false)
+    reason = findAsyncViolation(result, binding.type_, [], [], false, false)
   }
   if reason != none {
     pushDiagnostic(diagnostics, module, identifier.span,
@@ -164,50 +164,56 @@ function addCapture(names: string[], name: string): none {
 }
 
 export function asyncResultViolation(result: AnalysisResult, type_: ResolvedType): string | none {
-  return findAsyncViolation(result, type_, [], [], true)
+  return findAsyncViolation(result, type_, [], [], true, false)
 }
 
 // One recursive walk; capture and result policies differ only at handle leaves.
-function findAsyncViolation(result: AnalysisResult, type_: ResolvedType, seen: string[], safe: string[], resultMode: bool): string | none {
+function findAsyncViolation(result: AnalysisResult, type_: ResolvedType, seen: string[], safe: string[], resultMode: bool, unbound: bool): string | none {
   case type_ {
+    // Implementation walks lose the widened value's type arguments; see implementationType.
+    parameter: TypeParameterType -> {
+      if !unbound { return none }
+      if parameter.constraint != none && parameter.constraint!.kind != "unknown" { return findAsyncViolation(result, parameter.constraint!, seen, safe, resultMode, unbound) }
+      return "unbound type parameter \"" + parameter.name + "\" may hold callbacks, weak references, or streams"
+    }
     // Actor and promise handles are synchronized and may be captured or yielded.
     _: ActorType -> { return none }
     _: PromiseType -> { return none }
     _: FunctionType -> { return if resultMode then "actor-affine callbacks cannot be transferred from async blocks" else "actor-affine callbacks cannot cross into async blocks" }
     _: WeakResolvedType -> { return if resultMode then "weak references cannot be transferred from async blocks" else "weak references cannot cross into async blocks" }
     _: StreamResolvedType -> { return if resultMode then "streams cannot be transferred from async blocks" else "streams cannot cross into async blocks" }
-    array: ArrayResolvedType -> { return findAsyncViolation(result, array.elementType, seen, safe, resultMode) }
+    array: ArrayResolvedType -> { return findAsyncViolation(result, array.elementType, seen, safe, resultMode, unbound) }
     map: MapResolvedType -> {
-      violation := findAsyncViolation(result, map.keyType, seen, safe, resultMode)
+      violation := findAsyncViolation(result, map.keyType, seen, safe, resultMode, unbound)
       if violation != none { return violation }
-      return findAsyncViolation(result, map.valueType, seen, safe, resultMode)
+      return findAsyncViolation(result, map.valueType, seen, safe, resultMode, unbound)
     }
-    set_: SetResolvedType -> { return findAsyncViolation(result, set_.elementType, seen, safe, resultMode) }
+    set_: SetResolvedType -> { return findAsyncViolation(result, set_.elementType, seen, safe, resultMode, unbound) }
     result_: ResultResolvedType -> {
-      violation := findAsyncViolation(result, result_.valueType, seen, safe, resultMode)
+      violation := findAsyncViolation(result, result_.valueType, seen, safe, resultMode, unbound)
       if violation != none { return violation }
-      return findAsyncViolation(result, result_.errorType, seen, safe, resultMode)
+      return findAsyncViolation(result, result_.errorType, seen, safe, resultMode, unbound)
     }
-    success: SuccessResolvedType -> { return findAsyncViolation(result, success.valueType, seen, safe, resultMode) }
-    failure: FailureResolvedType -> { return findAsyncViolation(result, failure.errorType, seen, safe, resultMode) }
+    success: SuccessResolvedType -> { return findAsyncViolation(result, success.valueType, seen, safe, resultMode, unbound) }
+    failure: FailureResolvedType -> { return findAsyncViolation(result, failure.errorType, seen, safe, resultMode, unbound) }
     tuple: TupleResolvedType -> {
       for element of tuple.elements {
-        violation := findAsyncViolation(result, element, seen, safe, resultMode)
+        violation := findAsyncViolation(result, element, seen, safe, resultMode, unbound)
         if violation != none { return violation }
       }
     }
     union_: UnionResolvedType -> {
       for member of union_.types {
-        violation := findAsyncViolation(result, member, seen, safe, resultMode)
+        violation := findAsyncViolation(result, member, seen, safe, resultMode, unbound)
         if violation != none { return violation }
       }
     }
     class_: ClassType -> {
-      violation := findClassAsyncViolation(result, class_, seen, resultMode, safe)
+      violation := findClassAsyncViolation(result, class_, seen, resultMode, safe, unbound)
       if violation != none { return violation!.reason }
     }
     interface_: InterfaceType -> {
-      violation := findInterfaceAsyncViolation(result, interface_, seen, resultMode, safe)
+      violation := findInterfaceAsyncViolation(result, interface_, seen, resultMode, safe, unbound)
       if violation != none { return violation!.reason }
     }
     _ -> { }
@@ -215,8 +221,8 @@ function findAsyncViolation(result: AnalysisResult, type_: ResolvedType, seen: s
   return none
 }
 
-function findClassAsyncViolation(result: AnalysisResult, type_: ClassType, seen: string[], resultMode: bool, safe: string[]): AsyncBoundaryViolation | none {
-  key := "class:" + type_.symbol.module + ":" + typeName(type_)
+function findClassAsyncViolation(result: AnalysisResult, type_: ClassType, seen: string[], resultMode: bool, safe: string[], unbound: bool): AsyncBoundaryViolation | none {
+  key := (if unbound then "unbound-" else "") + "class:" + type_.symbol.module + ":" + typeName(type_)
   if safe.contains(key) { return none }
   if seen.contains(key) { return none }
   next := appended(seen, key)
@@ -227,7 +233,7 @@ function findClassAsyncViolation(result: AnalysisResult, type_: ClassType, seen:
       for field of class_.fields {
         if field.resolvedType == none { continue }
         effective := substituteTypeParams(field.resolvedType!, class_.typeParams, type_.typeArgs)
-        reason := findAsyncViolation(result, effective, next, safe, resultMode)
+        reason := findAsyncViolation(result, effective, next, safe, resultMode, unbound)
         if reason != none {
           name := fieldDisplayName(field)
           return AsyncBoundaryViolation { reason: "field \"" + name + "\" cannot cross the async boundary: " + reason! }
@@ -240,8 +246,8 @@ function findClassAsyncViolation(result: AnalysisResult, type_: ClassType, seen:
   return none
 }
 
-function findInterfaceAsyncViolation(result: AnalysisResult, type_: InterfaceType, seen: string[], resultMode: bool, safe: string[]): AsyncBoundaryViolation | none {
-  key := "interface:" + type_.symbol.module + ":" + typeName(type_)
+function findInterfaceAsyncViolation(result: AnalysisResult, type_: InterfaceType, seen: string[], resultMode: bool, safe: string[], unbound: bool): AsyncBoundaryViolation | none {
+  key := (if unbound then "unbound-" else "") + "interface:" + type_.symbol.module + ":" + typeName(type_)
   if safe.contains(key) { return none }
   if seen.contains(key) { return none }
   next := appended(seen, key)
@@ -252,12 +258,12 @@ function findInterfaceAsyncViolation(result: AnalysisResult, type_: InterfaceTyp
       for field of interface_.fields {
         if field.resolvedType == none { continue }
         effective := substituteTypeParams(field.resolvedType!, interface_.typeParams, type_.typeArgs)
-        reason := findAsyncViolation(result, effective, next, safe, resultMode)
+        reason := findAsyncViolation(result, effective, next, safe, resultMode, unbound)
         if reason != none { return AsyncBoundaryViolation { reason: "field \"" + field.name + "\" cannot cross the async boundary: " + reason! } }
       }
       if interface_.resolvedSymbol != none {
         for implementation of interface_.resolvedSymbol!.implementations {
-          violation := findClassAsyncViolation(result, ClassType { name: implementation.name, symbol: implementation }, next, resultMode, safe)
+          violation := findClassAsyncViolation(result, implementationType(result, type_, implementation), next, resultMode, safe, true)
           if violation != none { return AsyncBoundaryViolation { reason: "implementation \"" + implementation.name + "\" cannot cross the async boundary: " + violation!.reason } }
         }
       }

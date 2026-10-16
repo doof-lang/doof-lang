@@ -53,3 +53,45 @@ export function testActorMethodCallRequiresAnActorReceiver(): none {
   Assert.isFalse(isActorMethodCall(functionBody(analysis, 2)))
   Assert.isFalse(isActorMethodCall(functionBody(analysis, 3)))
 }
+
+function boundaryMessages(source: string): string[] {
+  result := compile([SourceFile { path: "/main.do", source }], "/main.do")
+  let messages: string[] = []
+  for diagnostic of result.diagnostics { if diagnostic.severity == "error" { messages.push(diagnostic.message) } }
+  return messages
+}
+
+export function testUnboundImplementationTypeParametersAreUnsafe(): none {
+  messages := boundaryMessages(
+    "interface Holder { describe(): string }\nclass Generic<T> implements Holder { readonly payload: T\ndescribe(): string => \"g\" }\n" +
+    "class Worker { take(h: Holder): none { } }\nfunction main(): none { values := [1]\nworker := Actor<Worker>()\nworker.take(Generic<int[]> { payload: values }) }")
+  Assert.equal(messages.length, 1)
+  Assert.stringContains(messages[0], "implementation \"Generic\" cannot cross actor boundaries")
+  Assert.stringContains(messages[0], "unbound type parameter \"T\" may hold mutable values")
+}
+
+export function testImplementationTypeParametersBindThroughTheInterface(): none {
+  prefix := "interface Box<T> { describe(): string }\nclass Forward<T> implements Box<T> { readonly value: T\ndescribe(): string => \"f\" }\n"
+  Assert.equal(boundaryMessages(prefix + "class Worker { take(b: Box<int>): none { } }\nfunction main(): none { worker := Actor<Worker>()\nworker.take(Forward<int> { value: 1 }) }").length, 0)
+  rejected := boundaryMessages(prefix + "class Worker { take(b: Box<int[]>): none { } }\nfunction main(): none { worker := Actor<Worker>()\nworker.take(Forward<int[]> { value: [1] }) }")
+  Assert.equal(rejected.length, 1)
+  Assert.stringContains(rejected[0], "array type \"int[]\" is mutable")
+}
+
+export function testBoundaryConstraintsMakeImplementationTypeParametersSafe(): none {
+  prefix := "interface Plain { readonly value: int }\nclass Fixed implements Plain { readonly value: int }\ninterface Holder { describe(): string }\n" +
+    "class Worker { take(h: Holder): none { } }\n"
+  Assert.equal(boundaryMessages(prefix + "class Bounded<T: Plain> implements Holder { readonly payload: T\ndescribe(): string => \"b\" }\n" +
+    "function main(): none { worker := Actor<Worker>()\nworker.take(Bounded<Fixed> { payload: Fixed { value: 1 } }) }").length, 0)
+  Assert.equal(boundaryMessages(prefix + "class Numeric<T: int | long> implements Holder { readonly payload: T\ndescribe(): string => \"n\" }\n" +
+    "function main(): none { worker := Actor<Worker>()\nworker.take(Numeric<int> { payload: 1 }) }").length, 0)
+}
+
+export function testReadonlyTypeParameterFieldsAreCheckedPerInstantiation(): none {
+  Assert.equal(boundaryMessages("class Generic<T> { readonly payload: T }\nclass Worker { take(g: Generic<int>): none { } }\n" +
+    "function main(): none { worker := Actor<Worker>()\nworker.take(Generic<int> { payload: 1 }) }").length, 0)
+  rejected := boundaryMessages("class Generic<T> { readonly payload: T }\nclass Worker { take(g: Generic<int[]>): none { } }\n" +
+    "function main(): none { worker := Actor<Worker>()\nworker.take(Generic<int[]> { payload: [1] }) }")
+  Assert.equal(rejected.length, 1)
+  Assert.stringContains(rejected[0], "field \"payload\" cannot cross actor boundaries")
+}

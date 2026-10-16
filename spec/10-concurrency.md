@@ -283,6 +283,34 @@ For interface-typed values, boundary safety must hold for every known concrete
 implementation. A readonly interface field must be implemented by a readonly
 class field, so widening cannot hide mutable storage at the boundary.
 
+A widened value no longer records its implementation's type arguments. An
+implementation type parameter forwarded to the interface (`class Box<T>
+implements Holder<T>`) takes the interface's argument; any other implementation
+type parameter is unbound and is safe only when its constraint is
+boundary-safe. An unconstrained parameter may stand for a mutable graph, so a
+field typed by it makes the interface unsafe:
+
+```doof reject
+interface Holder {
+    describe(): string
+}
+
+class Generic<T> implements Holder {
+    readonly payload: T
+    describe(): string => "generic"
+}
+
+class Worker {
+    take(holder: Holder): none { }
+}
+
+worker := Actor<Worker>()
+worker.take(Generic<int> { payload: 1 })  // ❌ Holder may hide Generic<int[]>
+```
+
+The same rule applies to async captures and results, where an unbound parameter
+may also hide a callback, weak reference, or stream.
+
 Omitted field defaults and static constructor factories used by actor creation
 must be isolated. They may construct fresh mutable actor state, but they must not
 capture mutable module or static state into the new domain.
@@ -521,6 +549,36 @@ accesses mutable global state or reaches a non-isolated callee. Bodyless/native
 functions must explicitly declare `isolated` to provide that contract. Native
 free functions use `import isolated function name(...): Type from "header"`;
 native class methods place `isolated` before `static` or the method name.
+
+The call graph includes every method a call may reach. A call through a union
+receiver reaches each member's method, and a call through an interface or a
+constrained type parameter reaches every known implementation. Constructing a
+class, whether by `T { ... }`, `T(...)`, a contextual object or positional
+literal, or `Actor<T>(...)`, runs its static `constructor` factory or the field
+defaults it omits, so those count as calls made by the constructing code:
+
+```doof reject
+let counter: int[] = []
+
+class Touches {
+    touch(): none { counter.push(1) }
+}
+
+class Quiet {
+    touch(): none { }
+}
+
+class Thing {
+    n: int = counter.length
+}
+
+isolated function poke(target: Touches | Quiet): none {
+    target.touch()  // ❌ Touches.touch accesses mutable module state
+}
+
+isolated function make(): int => Thing {}.n  // ❌ the omitted default reads counter
+isolated function given(): int => Thing { n: 1 }.n  // ✅ OK - no default runs
+```
 
 Source class methods use the same modifier order without a `function` keyword:
 `isolated run(): none` and `isolated static create(): Worker`. The modifier is

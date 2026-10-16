@@ -10,10 +10,10 @@ import {
   ActorType, ArrayResolvedType, ClassType, Diagnostic, EnumType, FunctionType, InterfaceType,
   SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType,
   ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType,
-  TypeParameterType, UnionResolvedType, UnknownType, WeakResolvedType,
+  Symbol, TypeParameterType, UnionResolvedType, UnknownType, WeakResolvedType,
 } from "./semantic"
-import { CallExpression, ClassDeclaration, Expression, InterfaceDeclaration, MemberExpression } from "./ast"
-import { classType, substituteTypeParams, typeName } from "./checker-types"
+import { ArrayType, AstFunctionType, CallExpression, ClassDeclaration, Expression, InterfaceDeclaration, MemberExpression, NamedType, TypeAnnotation, UnionType, WeakType } from "./ast"
+import { classType, substituteTypeParams, typeName, typeParameter } from "./checker-types"
 import { fieldDisplayName, findClassDeclaration, findInterfaceDeclaration } from "./checker-symbols"
 import { pushDiagnostic } from "./checker-validation"
 
@@ -22,7 +22,7 @@ export class ActorBoundaryViolation {
 }
 
 export function findActorBoundaryViolation(result: AnalysisResult, type_: ResolvedType): ActorBoundaryViolation | none {
-  return findViolation(result, type_, [])
+  return findViolation(result, type_, [], false)
 }
 
 export function validateDeepReadonlyFields(result: AnalysisResult): Diagnostic[] {
@@ -33,7 +33,7 @@ export function validateDeepReadonlyFields(result: AnalysisResult): Diagnostic[]
         class_: ClassDeclaration -> {
           for field of class_.fields {
             if !field.readonly_ || field.resolvedType == none { continue }
-            violation := findViolation(result, field.resolvedType!, [])
+            violation := findViolation(result, field.resolvedType!, [], false)
             if violation == none { continue }
             name := fieldDisplayName(field)
             pushDiagnostic(diagnostics, module.path, field.span, "Readonly field \"" + class_.name + "." + name + "\" must be deeply immutable: " + violation!.reason)
@@ -42,7 +42,7 @@ export function validateDeepReadonlyFields(result: AnalysisResult): Diagnostic[]
         interface_: InterfaceDeclaration -> {
           for field of interface_.fields {
             if !field.readonly_ || field.resolvedType == none { continue }
-            violation := findViolation(result, field.resolvedType!, [])
+            violation := findViolation(result, field.resolvedType!, [], false)
             if violation == none { continue }
             pushDiagnostic(diagnostics, module.path, field.span, "Readonly field \"" + interface_.name + "." + field.name + "\" must be deeply immutable: " + violation!.reason)
           }
@@ -54,73 +54,80 @@ export function validateDeepReadonlyFields(result: AnalysisResult): Diagnostic[]
   return diagnostics
 }
 
-function findViolation(result: AnalysisResult, type_: ResolvedType, seen: string[]): ActorBoundaryViolation | none {
+// `unbound` is set while walking interface implementations whose type arguments
+// the widened value no longer records. Their unbound type parameters may hold
+// any instantiation, so only a boundary-safe constraint makes them safe.
+function findViolation(result: AnalysisResult, type_: ResolvedType, seen: string[], unbound: bool): ActorBoundaryViolation | none {
   case type_ {
     _: PrimitiveType -> { return none }
     _: EnumType -> { return none }
     _: NoneType -> { return none }
     _: UnknownType -> { return none }
-    _: TypeParameterType -> { return none }
+    parameter: TypeParameterType -> {
+      if !unbound { return none }
+      if parameter.constraint != none && parameter.constraint!.kind != "unknown" { return findViolation(result, parameter.constraint!, seen, unbound) }
+      return ActorBoundaryViolation { reason: "unbound type parameter \"" + parameter.name + "\" may hold mutable values" }
+    }
     _: SerialValueResolvedType -> { return none }
     // Actor and promise handles are synchronized runtime handles: actor state
     // stays behind messages, and a promise result has a single runtime-claimed
     // consumer, so neither shares mutable state across domains.
     _: ActorType -> { return none }
     _: PromiseType -> { return none }
-    weak_: WeakResolvedType -> { return findViolation(result, weak_.inner, seen) }
+    weak_: WeakResolvedType -> { return findViolation(result, weak_.inner, seen, unbound) }
     array: ArrayResolvedType -> {
       if !array.readonly_ { return ActorBoundaryViolation { reason: "array type \"" + typeName(type_) + "\" is mutable" } }
-      return findViolation(result, array.elementType, seen)
+      return findViolation(result, array.elementType, seen, unbound)
     }
     map: MapResolvedType -> {
       if !map.readonly_ { return ActorBoundaryViolation { reason: "map type \"" + typeName(type_) + "\" is mutable" } }
-      keyViolation := findViolation(result, map.keyType, seen)
+      keyViolation := findViolation(result, map.keyType, seen, unbound)
       if keyViolation != none { return keyViolation }
-      return findViolation(result, map.valueType, seen)
+      return findViolation(result, map.valueType, seen, unbound)
     }
     set_: SetResolvedType -> {
       if !set_.readonly_ { return ActorBoundaryViolation { reason: "set type \"" + typeName(type_) + "\" is mutable" } }
-      return findViolation(result, set_.elementType, seen)
+      return findViolation(result, set_.elementType, seen, unbound)
     }
     stream: StreamResolvedType -> { return ActorBoundaryViolation { reason: "stream type \"" + typeName(stream) + "\" is mutable" } }
     result_: ResultResolvedType -> {
-      valueViolation := findViolation(result, result_.valueType, seen)
+      valueViolation := findViolation(result, result_.valueType, seen, unbound)
       if valueViolation != none { return valueViolation }
-      return findViolation(result, result_.errorType, seen)
+      return findViolation(result, result_.errorType, seen, unbound)
     }
-    success: SuccessResolvedType -> { return findViolation(result, success.valueType, seen) }
-    failure: FailureResolvedType -> { return findViolation(result, failure.errorType, seen) }
+    success: SuccessResolvedType -> { return findViolation(result, success.valueType, seen, unbound) }
+    failure: FailureResolvedType -> { return findViolation(result, failure.errorType, seen, unbound) }
     tuple: TupleResolvedType -> {
       for element of tuple.elements {
-        violation := findViolation(result, element, seen)
+        violation := findViolation(result, element, seen, unbound)
         if violation != none { return violation }
       }
       return none
     }
     union_: UnionResolvedType -> {
       for member of union_.types {
-        violation := findViolation(result, member, seen)
+        violation := findViolation(result, member, seen, unbound)
         if violation != none { return violation }
       }
       return none
     }
     function_: FunctionType -> {
       for parameter of function_.params {
-        violation := findViolation(result, parameter.type_, seen)
+        violation := findViolation(result, parameter.type_, seen, unbound)
         if violation != none {
           return ActorBoundaryViolation { reason: "callback parameter \"" + parameter.name + "\" cannot cross actor boundaries: " + violation!.reason }
         }
       }
-      return findViolation(result, function_.returnType, seen)
+      return findViolation(result, function_.returnType, seen, unbound)
     }
-    class_: ClassType -> { return findClassViolation(result, class_, seen) }
-    interface_: InterfaceType -> { return findInterfaceViolation(result, interface_, seen) }
+    class_: ClassType -> { return findClassViolation(result, class_, seen, unbound) }
+    interface_: InterfaceType -> { return findInterfaceViolation(result, interface_, seen, unbound) }
   }
   return none
 }
 
-function findClassViolation(result: AnalysisResult, type_: ClassType, seen: string[]): ActorBoundaryViolation | none {
-  key := "class:" + type_.symbol.module + ":" + typeName(type_)
+function findClassViolation(result: AnalysisResult, type_: ClassType, seen: string[], unbound: bool): ActorBoundaryViolation | none {
+  key := (if unbound then "unbound-" else "") + "class:" + type_.symbol.module + ":" + typeName(type_)
   if seen.contains(key) { return none }
   let nextSeen: string[] = []
   for item of seen { nextSeen.push(item) }
@@ -136,7 +143,7 @@ function findClassViolation(result: AnalysisResult, type_: ClassType, seen: stri
     fieldType := field.resolvedType
     if fieldType == none { continue }
     effective := substituteTypeParams(fieldType!, declaration!.typeParams, type_.typeArgs)
-    violation := findViolation(result, effective, nextSeen)
+    violation := findViolation(result, effective, nextSeen, unbound)
     if violation != none {
       name := fieldDisplayName(field)
       return ActorBoundaryViolation { reason: "field \"" + name + "\" cannot cross actor boundaries: " + violation!.reason }
@@ -145,8 +152,8 @@ function findClassViolation(result: AnalysisResult, type_: ClassType, seen: stri
   return none
 }
 
-function findInterfaceViolation(result: AnalysisResult, type_: InterfaceType, seen: string[]): ActorBoundaryViolation | none {
-  key := "interface:" + type_.symbol.module + ":" + typeName(type_)
+function findInterfaceViolation(result: AnalysisResult, type_: InterfaceType, seen: string[], unbound: bool): ActorBoundaryViolation | none {
+  key := (if unbound then "unbound-" else "") + "interface:" + type_.symbol.module + ":" + typeName(type_)
   if seen.contains(key) { return none }
   let nextSeen: string[] = []
   for item of seen { nextSeen.push(item) }
@@ -157,21 +164,68 @@ function findInterfaceViolation(result: AnalysisResult, type_: InterfaceType, se
     if field.let_ { return ActorBoundaryViolation { reason: "field \"" + field.name + "\" is mutable" } }
     if field.resolvedType == none { continue }
     effective := substituteTypeParams(field.resolvedType!, declaration!.typeParams, type_.typeArgs)
-    violation := findViolation(result, effective, nextSeen)
+    violation := findViolation(result, effective, nextSeen, unbound)
     if violation != none {
       return ActorBoundaryViolation { reason: "field \"" + field.name + "\" cannot cross actor boundaries: " + violation!.reason }
     }
   }
   if declaration!.resolvedSymbol != none {
     for implementation of declaration!.resolvedSymbol!.implementations {
-      implementationType := classType(implementation.name, implementation)
-      violation := findClassViolation(result, implementationType, nextSeen)
+      violation := findClassViolation(result, implementationType(result, type_, implementation), nextSeen, true)
       if violation != none {
         return ActorBoundaryViolation {
           reason: "implementation \"" + implementation.name + "\" cannot cross actor boundaries: " + violation!.reason,
         }
       }
     }
+  }
+  return none
+}
+
+/** The implementation type reachable from a widened interface value. Type
+ * parameters forwarded directly to this interface's arguments are bound; the
+ * rest stay unbound type parameters carrying their declared constraints. */
+export function implementationType(result: AnalysisResult, interface_: InterfaceType, implementation: Symbol): ClassType {
+  declaration := findClassDeclaration(result, implementation.module, implementation.name)
+  if declaration == none || declaration!.typeParams.length == 0 { return classType(implementation.name, implementation) }
+  let typeArgs: ResolvedType[] = []
+  for index of 0..<declaration!.typeParams.length {
+    let constraint: ResolvedType | none = none
+    if index < declaration!.typeParamConstraints.length && declaration!.typeParamConstraints[index].type_ != none {
+      constraint = annotationType(declaration!.typeParamConstraints[index].type_!)
+    }
+    typeArgs.push(typeParameter(declaration!.typeParams[index], "", constraint))
+  }
+  for reference of declaration!.implements_ {
+    if reference.resolvedType == none { continue }
+    case reference.resolvedType! {
+      implemented: InterfaceType -> {
+        if implemented.symbol.module != interface_.symbol.module || implemented.symbol.name != interface_.symbol.name { continue }
+        for index of 0..<implemented.typeArgs.length {
+          if index >= interface_.typeArgs.length { break }
+          case implemented.typeArgs[index] {
+            parameter: TypeParameterType -> {
+              for position of 0..<declaration!.typeParams.length {
+                if declaration!.typeParams[position] == parameter.name { typeArgs[position] = interface_.typeArgs[index] }
+              }
+            }
+            _ -> { }
+          }
+        }
+      }
+      _ -> { }
+    }
+  }
+  return classType(implementation.name, implementation, typeArgs)
+}
+
+function annotationType(annotation: TypeAnnotation): ResolvedType | none {
+  case annotation {
+    named: NamedType -> { return named.resolvedType }
+    array: ArrayType -> { return array.resolvedType }
+    union_: UnionType -> { return union_.resolvedType }
+    function_: AstFunctionType -> { return function_.resolvedType }
+    weak_: WeakType -> { return weak_.resolvedType }
   }
   return none
 }

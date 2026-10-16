@@ -63,3 +63,11 @@ export function testAsyncThisCaptureReportsAtThis(): none {
   for diagnostic of errors { println(diagnostic.message) }
   Assert.isTrue(found)
 }
+
+export function testAsyncResultsRejectUnboundImplementationTypeParameters(): none {
+  prefix := "interface Holder { describe(): string }\nclass Generic<T> implements Holder { readonly payload: T\ndescribe(): string => \"g\" }\n"
+  rejected := asyncErrors(prefix + "function run(): Promise<Holder> => async {\nlet holder: Holder = Generic { payload: (): int => 1 }\nyield holder }")
+  Assert.equal(rejected.length, 1)
+  Assert.stringContains(rejected[0], "unbound type parameter \"T\" may hold callbacks, weak references, or streams")
+  Assert.equal(asyncErrors("function relay<T>(value: T): Promise<T> => async { yield value }").length, 0)
+}

@@ -125,6 +125,11 @@ locals, and freshly created values. Ordinary functions are inferred isolated
 when they meet the same rules. The modifier does not create worker-pool
 execution by itself; use `async functionCall(args)` or an async block.
 
+Calls through a union receiver reach every member's method, and calls through a
+constrained type parameter reach the constraint's implementations. Constructing a
+class runs its static `constructor` factory or the field defaults it omits, so
+those count as calls made by the constructing code.
+
 Bodyless native code needs an explicit trusted contract because the compiler
 cannot inspect its implementation. Use `import isolated function` for native
 free functions and `isolated` on native class methods.
@@ -247,6 +252,12 @@ isolated so they cannot capture mutable module/static state into the new actor.
 Interface-typed payloads are safe only when every known concrete implementation
 is safe. A readonly interface field must be implemented by a readonly class
 field; widening cannot be used to conceal mutable storage.
+A widened value forgets its implementation's type arguments, so an
+implementation field typed by an unconstrained type parameter (`class G<T>
+implements I { readonly payload: T }`) makes `I` unsafe. Bind the parameter
+through the interface (`implements I<T>`) or constrain it to a boundary-safe
+type. A `readonly` field typed by a type parameter is deeply immutable only for
+deeply immutable instantiations: `G<int>` may cross, `G<int[]>` may not.
 
 Calling a method through `Actor<T>` requires that method to be inferred
 isolated, including all transitive helper calls.

@@ -1793,6 +1793,7 @@ When `readonly` appears on a binding or class field, the referenced value must b
 4. **Collections** — are treated as `ReadonlyMap<K, V>` / `ReadonlySet<T>`, and nested types must be deeply readonly-compatible
 5. **Unions** — all variants must be readonly-compatible
 6. **Functions** — always readonly-compatible (immutable references)
+7. **Type parameters** — a readonly field typed by a type parameter is checked per instantiation: `Box<int>` is deeply immutable and `Box<int[]>` is not. A readonly context converts the argument, so `readonly inner: Box<int[]>` has type `Box<readonly int[]>`. Where a widened interface value has lost the argument, the parameter must have a deeply immutable constraint (see [Actor Boundaries](10-concurrency.md#actor-boundaries))
 
 Readonly collection annotations are shallow at the collection boundary: they stop collection mutation, but they do not require element or value types to be deeply immutable. Collection mutability is still part of the type, so `int[]` is not assignable to `readonly int[]`, `ReadonlyMap<K, V>`, or `ReadonlySet<T>`, and the reverse conversions are also rejected.
 
