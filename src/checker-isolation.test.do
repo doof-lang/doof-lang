@@ -121,12 +121,37 @@ export function testRecursiveDestructorConstructionTerminates(): none {
   Assert.isTrue(hasMessage(source, "accesses mutable module binding \"counter\""))
 }
 
-export function testImmutableClassDestructorsMustBeIsolated(): none {
-  Assert.isTrue(hasMessage("let counter: int[] = []\nclass Noisy {\nid: int\ndestructor { counter.push(id) } }",
-    "Destructor of immutable class \"Noisy\" must be isolated because its instances can cross domains: accesses mutable module binding \"counter\""))
-  Assert.isTrue(hasMessage("let counter: int[] = []\nfunction touch(): none { counter.push(1) }\nclass Noisy { destructor { touch() } }",
-    "Destructor of immutable class \"Noisy\" must be isolated because its instances can cross domains: calls non-isolated function \"touch\""))
-  // Mutable instances stay in their domain and are covered at construction.
-  Assert.equal(errorCount("let counter: int[] = []\nclass Local {\nlet n: int = 0\ndestructor { counter.push(n) } }"), 0)
-  Assert.equal(errorCount("class Plain {\nid: int\ndestructor { println(id) } }"), 0)
+export function testValuesCrossingDomainsNeedIsolatedDestructors(): none {
+  prefix := "let counter: int[] = []\nclass Token {\nid: int\ndestructor { counter.push(id) } }\nclass Holder { token: Token }\n"
+  worker := "class Worker { take(holder: Holder): int => holder.token.id\nhold(token: Token): int => token.id }\n"
+  Assert.isTrue(hasMessage(prefix + worker + "function main(): none { worker := Actor<Worker>()\nprintln(worker.take(Holder { token: Token { id: 1 } })) }",
+    "Value passed to actor method \"take\" may be released there, but the destructor of class \"Token\" accesses mutable module binding \"counter\""))
+  Assert.isTrue(hasMessage(prefix + "class Keeper { token: Token }\nfunction main(): none { keeper := Actor<Keeper>(Token { id: 1 }) }",
+    "Value passed to Actor<Keeper> construction may be released there"))
+  Assert.isTrue(hasMessage(prefix + "isolated function read(token: Token): int => token.id\nfunction main(): none { pending := async read(Token { id: 1 })\nprintln(pending.get()) }",
+    "Value passed to an async call may be released there"))
+  Assert.isTrue(hasMessage(prefix + "function main(): none { token := Token { id: 1 }\npending := async { yield token.id }\nprintln(pending.get()) }",
+    "Async block capture \"token\" may be released in the worker"))
+  // Root-domain code may release such objects, and isolated destructors may cross.
+  Assert.equal(errorCount(prefix + "function main(): none { token := Token { id: 1 }\nprintln(token.id) }"), 0)
+  Assert.equal(errorCount("class Token {\nid: int\ndestructor { println(id) } }\nclass Worker { hold(token: Token): int => token.id }\n" +
+    "function main(): none { worker := Actor<Worker>()\nprintln(worker.hold(Token { id: 1 })) }"), 0)
+}
+
+export function testCrossingDestructorsReachInterfaceImplementations(): none {
+  source := "let counter: int[] = []\ninterface Named { name: string }\nclass Token implements Named {\nname: string\ndestructor { counter.push(1) } }\n" +
+    "class Worker { hold(named: Named): string => named.name }\nfunction main(): none { worker := Actor<Worker>()\nnamed: Named := Token { name: \"a\" }\nprintln(worker.hold(named)) }"
+  Assert.isTrue(hasMessage(source, "the destructor of class \"Token\" accesses mutable module binding \"counter\""))
+}
+
+export function testDecodingCountsAsConstruction(): none {
+  prefix := "let counter: int[] = []\nclass Tracked {\nuses: int\ndestructor { counter.push(uses) } }\nclass Defaulted { n: int = counter.length }\n"
+  Assert.isTrue(hasMessage(prefix + "isolated function load(): int {\nt := Tracked.fromSerialValue({ uses: 1 }) else { return 0 }\nreturn t.uses }", "accesses mutable module binding \"counter\""))
+  Assert.isTrue(hasMessage(prefix + "class Box { items: Tracked[] }\nisolated function load(): bool => Box.fromSerialValue({ items: [] }).isSuccess()", "accesses mutable module binding \"counter\""))
+  Assert.isTrue(hasMessage(prefix + "isolated function load(): bool => Defaulted.fromSerialValue({}).isSuccess()", "accesses mutable module binding \"counter\""))
+  Assert.equal(errorCount("class Plain { n: int }\nisolated function load(): bool => Plain.fromSerialValue({ n: 1 }).isSuccess()"), 0)
+}
+
+export function testUncrossedDestructorsMayTouchModuleState(): none {
+  Assert.equal(errorCount("let depth = 0\nclass Guard { destructor { depth -= 1 } }\nfunction enter(): Guard {\ndepth += 1\nreturn Guard {} }\nfunction main(): none { guard := enter() }"), 0)
 }

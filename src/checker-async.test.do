@@ -71,3 +71,46 @@ export function testAsyncResultsRejectUnboundImplementationTypeParameters(): non
   Assert.stringContains(rejected[0], "unbound type parameter \"T\" may hold callbacks, weak references, or streams")
   Assert.equal(asyncErrors("function relay<T>(value: T): Promise<T> => async { yield value }").length, 0)
 }
+
+import { asyncBlockCaptures } from "./checker-async"
+import { AsyncExpression, Block, Expression, FunctionDeclaration } from "./ast"
+import { collectBlockExpressions, collectExpressionTree } from "./ast-walk"
+
+export function testAsyncBlockCapturesListOuterLocalsOnce(): none {
+  result := analyzed("function main(): none {\nouter := 1\nother := 2\npending := async {\ninner := outer + other + outer\nyield inner + outer }\nprintln(pending.get()) }")
+  checked := createChecker(result, "/main.do").check("/main.do")
+  Assert.equal(checked.diagnostics.length, 0)
+  let names: string[] = []
+  for module of result.modules {
+    for statement of module.program.statements {
+      case statement {
+        fn: FunctionDeclaration -> {
+          case fn.body {
+            body: Block -> {
+              let roots: Expression[] = []
+              collectBlockExpressions(body, roots)
+              let all: Expression[] = []
+              for root of roots { collectExpressionTree(root, all) }
+              for expression of all {
+                case expression {
+                  async_: AsyncExpression -> {
+                    case async_.expression {
+                      block: Block -> { for capture of asyncBlockCaptures(block) { names.push(capture.name) } }
+                      _ -> { }
+                    }
+                  }
+                  _ -> { }
+                }
+              }
+            }
+            _ -> { }
+          }
+        }
+        _ -> { }
+      }
+    }
+  }
+  Assert.equal(names.length, 2)
+  Assert.equal(names[0], "outer")
+  Assert.equal(names[1], "other")
+}

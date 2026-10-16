@@ -580,13 +580,19 @@ isolated function make(): int => Thing {}.n  // ❌ the omitted default reads co
 isolated function given(): int => Thing { n: 1 }.n  // ✅ OK - no default runs
 ```
 
-Construction also commits the constructing code to the class `destructor`. An
-object is released in the domain that drops its last reference, and mutable
-objects stay in the domain that creates them unless retirement or an async
-result transfers them out, so the destructor's effects count as calls made by
-the constructing code. Deeply immutable instances may cross into any domain and
-be released there, so the destructor of a deeply immutable class must itself be
-isolated, whether or not the program sends its instances anywhere:
+A `destructor` runs in the domain that drops the object's last reference.
+Objects stay in the domain that creates them unless they cross a boundary, so
+constructing a class also counts its destructor as a call made by the
+constructing code. `T.fromSerialValue(...)` counts as constructing every class
+the decoded value can hold: it evaluates their omitted field defaults and commits
+to their destructors.
+
+A value that crosses into another domain may be released there instead. Every
+class an actor method argument, `Actor<T>(...)` argument, `async` call argument,
+or async block capture can own, through its fields, containers, unions, and
+interface implementations, must therefore have an isolated destructor. The
+error is reported where the value crosses. Code that keeps such objects in the
+root domain may still use destructors that touch module state:
 
 ```doof reject
 let counter: int[] = []
@@ -598,9 +604,11 @@ class Tracked {
 
 class Token {
     id: int
-    destructor {
-        counter.push(this.id) // ❌ Token instances can cross domains
-    }
+    destructor { counter.push(this.id) }
+}
+
+class Worker {
+    hold(token: Token): int => token.id
 }
 
 isolated function track(): none {
@@ -609,6 +617,10 @@ isolated function track(): none {
 
 function trackLocally(): none {
     tracked := Tracked {} // ✅ OK - root-domain code may touch counter
+}
+
+function send(worker: Actor<Worker>): int {
+    return worker.hold(Token { id: 1 }) // ❌ the actor may release the Token
 }
 ```
 

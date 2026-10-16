@@ -131,8 +131,11 @@ class runs its static `constructor` factory or the field defaults it omits, and
 later its `destructor` in the domain that releases it, so those count as calls
 made by the constructing code. A `for` loop over a class stream calls its
 `next()` and `value()` methods; one over a `Stream<T>` value reaches every class
-convertible to that `Stream<T>`. Instances of a deeply immutable class can cross
-domains and be released anywhere, so its destructor must itself be isolated.
+convertible to that `Stream<T>`. `T.fromSerialValue(...)` counts as constructing
+every class the decoded value can hold. A value passed to an actor method,
+`Actor<T>(...)`, or an `async` call, or captured by an async block, may be
+released in that domain, so every class it can own needs an isolated destructor.
+Root-domain objects that never cross may use destructors that touch module state.
 
 Bodyless native code needs an explicit trusted contract because the compiler
 cannot inspect its implementation. Use `import isolated function` for native

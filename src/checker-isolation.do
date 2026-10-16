@@ -1,14 +1,14 @@
 // Transitive mutable-global effect analysis for isolated and actor-dispatched code.
 
 import { AnalysisResult, ModuleInfo } from "./analyzer"
-import { ActorType, Binding, ClassType, Diagnostic, InterfaceType, ResolvedType, SemanticSpan, StreamResolvedType, TypeParameterType, UnionResolvedType } from "./semantic"
+import { ActorType, ArrayResolvedType, Binding, ClassType, Diagnostic, FailureResolvedType, InterfaceType, MapResolvedType, ResolvedType, ResultResolvedType, SemanticSpan, SetResolvedType, StreamResolvedType, SuccessResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType } from "./semantic"
 import { ActorCreationExpression, AsyncExpression, Block, CallArgument, CallExpression, CheckedConstruction, ClassDeclaration, ConstructExpression, ConstDeclaration, Expression, ForOfStatement, FunctionDeclaration, Identifier, ImmutableBinding, InterfaceDeclaration, LetDeclaration, MemberExpression, ObjectLiteral, ObjectProperty, ReadonlyDeclaration, SourceSpan, Statement, TupleLiteral } from "./ast"
-import { findActorBoundaryViolation, isActorMethodCall } from "./checker-actor-boundary"
-import { validateAsyncBlock } from "./checker-async"
+import { findActorBoundaryViolation, implementationType, isActorMethodCall } from "./checker-actor-boundary"
+import { asyncBlockCaptures, validateAsyncBlock } from "./checker-async"
 import { collectExpressionTree, collectBlockExpressions, collectStatementExpressions } from "./ast-walk"
 import { declarationFor, findClassDeclaration } from "./checker-symbols"
 import { findModule } from "./checker-interfaces"
-import { classType, containsTypeParameter, isAssignable } from "./checker-types"
+import { classType, containsTypeParameter, isAssignable, substituteTypeParams, typeName } from "./checker-types"
 import { pushDiagnostic } from "./checker-validation"
 
 export class IsolationReason {
@@ -334,6 +334,7 @@ function collectEffects(result: AnalysisResult, roots: Expression[], effects: Is
         span := via ?? call.span
         for declaration of callDeclarations(result, call) { effects.calls.push(IsolationCall { declaration, span }) }
         collectConstructionEffects(result, call.resolvedConstruction, suppliedArguments(call.args), span, effects)
+        collectDecodeEffects(result, call, span, effects)
       }
       object: ObjectLiteral -> { collectConstructionEffects(result, object.resolvedConstruction, suppliedProperties(object.properties, []), via ?? object.span, effects) }
       tuple: TupleLiteral -> { collectConstructionEffects(result, tuple.resolvedConstruction, suppliedPositions(tuple.elements.length), via ?? tuple.span, effects) }
@@ -376,16 +377,7 @@ function suppliedPositions(count: int): SuppliedArguments {
 
 function collectConstructionEffects(result: AnalysisResult, plan: CheckedConstruction | none, supplied: SuppliedArguments, span: SourceSpan, effects: IsolationEffects): none {
   if plan == none { return }
-  if plan!.declaration != none && plan!.declaration!.destructor_ != none {
-    releaser := plan!.declaration!.destructor_!
-    if !effects.visitedDestructors.contains(releaser) {
-      effects.visitedDestructors.push(releaser)
-      let roots: Expression[] = []
-      let statements: Statement[] = []
-      collectBlockExpressions(releaser, roots, statements)
-      collectEffects(result, roots, effects, span, statements)
-    }
-  }
+  if plan!.declaration != none { collectDestructorEffects(result, plan!.declaration!, span, effects) }
   if plan!.factory != none {
     // Factory parameter defaults belong to the factory's own isolation node.
     effects.calls.push(IsolationCall { declaration: plan!.factory!, span })
@@ -399,6 +391,102 @@ function collectConstructionEffects(result: AnalysisResult, plan: CheckedConstru
     if effects.visitedDefaults.contains(default_) { continue }
     effects.visitedDefaults.push(default_)
     collectEffects(result, [default_], effects, span)
+  }
+}
+
+// An object is released in the domain that drops its last reference. Objects
+// stay in the domain that creates them unless they cross a boundary, which
+// validateModuleIsolationEffects checks, so creation commits to the destructor.
+function collectDestructorEffects(result: AnalysisResult, class_: ClassDeclaration, span: SourceSpan | none, effects: IsolationEffects): none {
+  if class_.destructor_ == none { return }
+  releaser := class_.destructor_!
+  if effects.visitedDestructors.contains(releaser) { return }
+  effects.visitedDestructors.push(releaser)
+  let roots: Expression[] = []
+  let statements: Statement[] = []
+  collectBlockExpressions(releaser, roots, statements)
+  collectEffects(result, roots, effects, span, statements)
+}
+
+// `T.fromSerialValue(json)` builds every object the decoded value can hold
+// without a construction expression, evaluating omitted field defaults.
+function collectDecodeEffects(result: AnalysisResult, call: CallExpression, span: SourceSpan, effects: IsolationEffects): none {
+  if call.resolvedFunction != none || call.resolvedType == none { return }
+  case call.callee {
+    member: MemberExpression -> { if member.property != "fromSerialValue" { return } }
+    _ -> { return }
+  }
+  case call.resolvedType! {
+    decoded: ResultResolvedType -> {
+      for class_ of reachableClasses(result, decoded.valueType) {
+        for field of class_.fields {
+          if field.static_ || field.defaultValue == none || effects.visitedDefaults.contains(field.defaultValue!) { continue }
+          effects.visitedDefaults.push(field.defaultValue!)
+          collectEffects(result, [field.defaultValue!], effects, span)
+        }
+        collectDestructorEffects(result, class_, span, effects)
+      }
+    }
+    _ -> { }
+  }
+}
+
+/** Every class whose instances a value of this type can own, through instance
+ * fields, containers, unions, and interface implementations. */
+function reachableClasses(result: AnalysisResult, type_: ResolvedType): ClassDeclaration[] {
+  let classes: ClassDeclaration[] = []
+  let seen: string[] = []
+  collectReachableClasses(result, type_, classes, seen)
+  return classes
+}
+
+function collectReachableClasses(result: AnalysisResult, type_: ResolvedType, classes: ClassDeclaration[], seen: string[]): none {
+  case type_ {
+    class_: ClassType -> {
+      key := class_.symbol.module + ":" + typeName(class_)
+      if seen.contains(key) { return }
+      seen.push(key)
+      declaration := findClassDeclaration(result, class_.symbol.module, class_.symbol.name)
+      if declaration == none { return }
+      if !classes.contains(declaration!) { classes.push(declaration!) }
+      for field of declaration!.fields {
+        if field.static_ || field.resolvedType == none { continue }
+        collectReachableClasses(result, substituteTypeParams(field.resolvedType!, declaration!.typeParams, class_.typeArgs), classes, seen)
+      }
+    }
+    interface_: InterfaceType -> {
+      key := interface_.symbol.module + ":" + typeName(interface_)
+      if seen.contains(key) { return }
+      seen.push(key)
+      for implementation of interface_.symbol.implementations {
+        collectReachableClasses(result, implementationType(result, interface_, implementation), classes, seen)
+      }
+    }
+    array: ArrayResolvedType -> { collectReachableClasses(result, array.elementType, classes, seen) }
+    map: MapResolvedType -> {
+      collectReachableClasses(result, map.keyType, classes, seen)
+      collectReachableClasses(result, map.valueType, classes, seen)
+    }
+    set_: SetResolvedType -> { collectReachableClasses(result, set_.elementType, classes, seen) }
+    tuple: TupleResolvedType -> { for element of tuple.elements { collectReachableClasses(result, element, classes, seen) } }
+    union_: UnionResolvedType -> { for member of union_.types { collectReachableClasses(result, member, classes, seen) } }
+    result_: ResultResolvedType -> {
+      collectReachableClasses(result, result_.valueType, classes, seen)
+      collectReachableClasses(result, result_.errorType, classes, seen)
+    }
+    success: SuccessResolvedType -> { collectReachableClasses(result, success.valueType, classes, seen) }
+    failure: FailureResolvedType -> { collectReachableClasses(result, failure.errorType, classes, seen) }
+    stream: StreamResolvedType -> {
+      for class_ of streamClasses(result, stream) {
+        if class_.resolvedSymbol != none { collectReachableClasses(result, classType(class_.name, class_.resolvedSymbol!), classes, seen) }
+      }
+    }
+    parameter: TypeParameterType -> {
+      if parameter.constraint != none { collectReachableClasses(result, parameter.constraint!, classes, seen) }
+    }
+    // Actor state stays behind messages; weak references never release their
+    // target; a promise's value is created in the domain that completes it.
+    _ -> { }
   }
 }
 
@@ -475,18 +563,32 @@ function actorConstructionReason(result: AnalysisResult, graph: IsolationGraph, 
   return effectsReason(result, graph, effects)
 }
 
-/** Construction adds a destructor's effects to the domain that creates the
- * object. Deeply immutable instances may also cross into another domain and be
- * released there, so their destructors must be isolated outright. */
-function crossingDestructorReason(result: AnalysisResult, graph: IsolationGraph, class_: ClassDeclaration): IsolationReason | none {
-  if class_.destructor_ == none || class_.resolvedSymbol == none { return none }
-  if findActorBoundaryViolation(result, classType(class_.name, class_.resolvedSymbol!)) != none { return none }
-  effects := IsolationEffects { visitedDestructors: [class_.destructor_!] }
-  let roots: Expression[] = []
-  let statements: Statement[] = []
-  collectBlockExpressions(class_.destructor_!, roots, statements)
-  collectEffects(result, roots, effects, none, statements)
-  return effectsReason(result, graph, effects)
+class ReleaseReason {
+  className: string
+  reason: IsolationReason
+}
+
+/** A value that crosses into another domain may be released there, running the
+ * destructor of any class it can own, so each such destructor must be isolated. */
+function crossingReleaseReason(result: AnalysisResult, graph: IsolationGraph, type_: ResolvedType): ReleaseReason | none {
+  // Values that cannot cross at all are already rejected at the boundary.
+  if findActorBoundaryViolation(result, type_) != none { return none }
+  for class_ of reachableClasses(result, type_) {
+    if class_.destructor_ == none { continue }
+    effects := IsolationEffects {}
+    collectDestructorEffects(result, class_, none, effects)
+    reason := effectsReason(result, graph, effects)
+    if reason != none { return ReleaseReason { className: class_.name, reason: reason! } }
+  }
+  return none
+}
+
+function validateCrossingValue(result: AnalysisResult, graph: IsolationGraph, module: ModuleInfo, value: Expression, destination: string, diagnostics: Diagnostic[]): none {
+  if value.resolvedType == none { return }
+  release := crossingReleaseReason(result, graph, value.resolvedType!)
+  if release == none { return }
+  pushDiagnostic(diagnostics, module.path, value.span,
+    "Value passed to " + destination + " may be released there, but the destructor of class \"" + release!.className + "\" " + reasonText(release!.reason))
 }
 
 function moduleExpressions(module: ModuleInfo): Expression[] {
@@ -519,25 +621,19 @@ function validateModuleIsolationEffects(result: AnalysisResult, graph: Isolation
     pushDiagnostic(diagnostics, module.path, node.reason!.span, message)
   }
 
-  for statement of module.program.statements {
-    case statement {
-      class_: ClassDeclaration -> {
-        reason := crossingDestructorReason(result, graph, class_)
-        if reason != none {
-          pushDiagnostic(diagnostics, module.path, reason!.span,
-            "Destructor of immutable class \"" + class_.name + "\" must be isolated because its instances can cross domains: " + reasonText(reason!))
-        }
-      }
-      _ -> { }
-    }
-  }
-
   for expression of moduleExpressions(module) {
     case expression {
       async_: AsyncExpression -> {
         case async_.expression {
-          _: Block -> {
+          block: Block -> {
             validateAsyncBlock(result, async_, module.path, diagnostics)
+            for capture of asyncBlockCaptures(block) {
+              release := crossingReleaseReason(result, graph, capture.resolvedBinding!.type_)
+              if release != none {
+                pushDiagnostic(diagnostics, module.path, capture.span,
+                  "Async block capture \"" + capture.name + "\" may be released in the worker, but the destructor of class \"" + release!.className + "\" " + reasonText(release!.reason))
+              }
+            }
             reason := probeReason(result, graph, async_)
             if reason != none {
               pushDiagnostic(diagnostics, module.path, reason!.span,
@@ -546,6 +642,12 @@ function validateModuleIsolationEffects(result: AnalysisResult, graph: Isolation
           }
           inner: Expression -> {
             if !isActorMethodCall(inner) {
+              case inner {
+                call: CallExpression -> {
+                  for argument of call.args { validateCrossingValue(result, graph, module, argument.value, "an async call", diagnostics) }
+                }
+                _ -> { }
+              }
               reason := probeReason(result, graph, inner)
               if reason != none {
                 pushDiagnostic(diagnostics, module.path, reason!.span,
@@ -556,6 +658,10 @@ function validateModuleIsolationEffects(result: AnalysisResult, graph: Isolation
         }
       }
       call: CallExpression -> {
+        if isActorMethodCall(call) {
+          name := case call.callee { member: MemberExpression -> member.property, _ -> "" }
+          for argument of call.args { validateCrossingValue(result, graph, module, argument.value, "actor method \"" + name + "\"", diagnostics) }
+        }
         if isActorMethodCall(call) && call.resolvedFunction != none {
           target := nodeForDeclaration(graph, call.resolvedFunction!)
           if target != none && target!.reason != none {
@@ -565,6 +671,7 @@ function validateModuleIsolationEffects(result: AnalysisResult, graph: Isolation
         }
       }
       actor: ActorCreationExpression -> {
+        for argument of actor.args { validateCrossingValue(result, graph, module, argument, "Actor<" + actor.className + "> construction", diagnostics) }
         reason := actorConstructionReason(result, graph, actor)
         if reason != none {
           pushDiagnostic(diagnostics, module.path, actor.span,

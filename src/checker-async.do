@@ -2,7 +2,7 @@
 // result validation.
 
 import { AnalysisResult } from "./analyzer"
-import { ActorType, ArrayResolvedType, ClassType, Diagnostic, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, Scope, SuccessResolvedType, FailureResolvedType, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ActorType, ArrayResolvedType, Binding, ClassType, Diagnostic, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, Scope, SuccessResolvedType, FailureResolvedType, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { AsyncExpression, Block, CallExpression, ClassDeclaration, Expression, Identifier, InterfaceDeclaration, MemberExpression, SourceSpan, ThisExpression } from "./ast"
 import { findActorBoundaryViolation, implementationType, isActorMethodCall } from "./checker-actor-boundary"
 import { collectBlockExpressions, collectExpressionTree } from "./ast-walk"
@@ -133,9 +133,7 @@ function validateIdentifierCapture(result: AnalysisResult, async_: AsyncExpressi
       "Async blocks cannot capture 'this' through \"" + identifier.name + "\"; copy deeply immutable values into local bindings first")
     return
   }
-  if binding.symbol != none || binding.kind == "builtin" || binding.kind == "import" ||
-      binding.kind == "script-global" || binding.kind == "script-arguments" { return }
-  if inside(block.span, binding.span) { return }
+  if !capturesBinding(block, binding) { return }
   addCapture(async_.resolvedCaptureNames, binding.name)
   if binding.mutable {
     pushDiagnostic(diagnostics, module, identifier.span,
@@ -152,6 +150,34 @@ function validateIdentifierCapture(result: AnalysisResult, async_: AsyncExpressi
     pushDiagnostic(diagnostics, module, identifier.span,
       "Async block capture \"" + identifier.name + "\" of type \"" + typeName(binding.type_) + "\" cannot cross to the worker: " + reason!)
   }
+}
+
+// Whether a binding an async block refers to is a local declared outside the
+// block, so its value is copied into the worker. Fields and methods are
+// rejected separately as 'this' captures.
+function capturesBinding(block: Block, binding: Binding): bool {
+  if binding.kind == "field" || binding.kind == "method" { return false }
+  if binding.symbol != none || binding.kind == "builtin" || binding.kind == "import" ||
+      binding.kind == "script-global" || binding.kind == "script-arguments" { return false }
+  return !inside(block.span, binding.span)
+}
+
+/** The first reference to each local an async block captures, in source order. */
+export function asyncBlockCaptures(block: Block): Identifier[] {
+  let captures: Identifier[] = []
+  let names: string[] = []
+  for nested of blockExpressions(block) {
+    case nested {
+      identifier: Identifier -> {
+        if identifier.resolvedBinding == none || !capturesBinding(block, identifier.resolvedBinding!) { continue }
+        if names.contains(identifier.resolvedBinding!.name) { continue }
+        names.push(identifier.resolvedBinding!.name)
+        captures.push(identifier)
+      }
+      _ -> { }
+    }
+  }
+  return captures
 }
 
 function inside(outer: SourceSpan, inner: SemanticSpan): bool {
