@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import { Parser, parse } from "./parser"
-import { Block, ClassDeclaration, ConstDeclaration, ForStatement, FunctionDeclaration, LetDeclaration, YieldBlockExpression } from "./ast"
+import { Block, ClassDeclaration, ConstDeclaration, ExportList, ForStatement, FunctionDeclaration, ImportDeclaration, LetDeclaration, YieldBlockExpression } from "./ast"
 
 function parseFailure(source: string): Parser {
   parser := Parser { source }
@@ -96,4 +96,30 @@ export function testLetDeclaratorsAcrossStatementsAndForInitializers(): none {
 export function testConstDeclarationKeepsKeywordSpan(): none {
   declaration := parse("const limit = 3").statements[0] as ConstDeclaration else { panic("expected const") }
   Assert.equal(declaration.keywordSpan.end.offset, "const".length)
+}
+
+export function testImportAndExportSpecifiersShareAliasParsing(): none {
+  import_ := parse("import { a, b as c } from \"./m\"").statements[0] as ImportDeclaration else { panic("expected import") }
+  Assert.isTrue(import_.specifiers[0].alias == none)
+  Assert.equal(import_.specifiers[1].alias!, "c")
+  export_ := parse("export { d as e, f }").statements[0] as ExportList else { panic("expected export list") }
+  Assert.equal(export_.specifiers[0].alias!, "e")
+  Assert.isTrue(export_.specifiers[1].alias == none)
+}
+
+export function testNativeClassMethodModifiersAndOptionalBodies(): none {
+  class_ := parse("import class Clock from \"clock.hpp\" {\nisolated static now(): long\nstatic zone(): string\nisolated tick(): none\nlabel(): string => \"clock\"\nrate: int\nstatic count: int\n}").statements[0] as ClassDeclaration else { panic("expected native class") }
+  Assert.equal(class_.methods.length, 4)
+  Assert.equal(class_.fields.length, 2)
+  let shapes = ""
+  for method of class_.methods {
+    shapes = shapes + (if method.isolated_ then "i" else "-") + (if method.static_ then "s" else "-") + (if method.bodyless then "b" else "d") + ";"
+  }
+  Assert.equal(shapes, "isb;-sb;i-b;--d;")
+}
+
+export function testLiteralValuedFieldsAcceptNegativeNumbers(): none {
+  class_ := onlyClass("class Point { kind: -1 }")
+  Assert.isTrue(class_.fields[0].const_)
+  Assert.equal(class_.fields[0].defaultValue!.kind, "unary-expression")
 }

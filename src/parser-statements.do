@@ -8,7 +8,7 @@ import {
   IfStatement, WhileStatement, ForOfStatement, ForStatement, WithStatement,
   BreakStatement, ContinueStatement, ReturnStatement, YieldStatement,
   ExpressionStatement, DestructuringStatement, DestructureBinding, ConstDeclaration, ReadonlyDeclaration, ImmutableBinding, TryStatement,
-  UnaryExpression, Identifier, LetDeclaration, LambdaExpression, CallExpression,
+  LetDeclaration, LambdaExpression, CallExpression,
   CallArgument, AstLocation, SourceSpan, YieldBlockExpression, YieldBlockAssignmentStatement,
   FunctionDeclaration, NamedType,
 } from "./ast"
@@ -360,6 +360,14 @@ function parseJumpLabel(parser: Parser): string | none {
   return label
 }
 
+// The `{ ... }` after a `<-` that has already been consumed.
+export function parseYieldBlock(parser: Parser): YieldBlockExpression {
+  start := parser.location()
+  if !parser.check(TokenType.LeftBrace) { parser.fail("Expected block after '<-'") }
+  body := parseBlock(parser)
+  return YieldBlockExpression { body, span: parser.span(start) }
+}
+
 export function parseBlock(parser: Parser): Block {
   start := parser.location()
   parser.expect(TokenType.LeftBrace)
@@ -474,8 +482,9 @@ export function parseDestructuring(parser: Parser, shape: string, bindingKind: s
       let alias: string | none = none
       if parser.match(TokenType.As) { alias = parser.text(parser.expect(TokenType.Identifier)) }
       namedBindings.push(DestructureBinding { name, alias, span: parser.span(bindingStart) })
-    } else if parser.check(TokenType.Underscore) { bindings.push("_"); parser.advance() }
-    else { bindings.push(parser.text(parser.expect(TokenType.Identifier))) }
+    } else {
+      bindings.push(parseDiscardableBindingName(parser, "Expected destructuring binding name or '_'"))
+    }
     if !parser.match(TokenType.Comma) { break }
   }
   parser.expect(close)
@@ -492,10 +501,7 @@ function parseExpressionStatement(parser: Parser): Statement {
   if parser.check(TokenType.Identifier) && parser.peek(1).kind == TokenType.LeftArrow {
     name := parser.text(parser.advance())
     parser.advance()
-    blockStart := parser.location()
-    if !parser.check(TokenType.LeftBrace) { parser.fail("Expected block after '<-'") }
-    body := parseBlock(parser)
-    value := YieldBlockExpression { body, span: parser.span(blockStart) }
+    value := parseYieldBlock(parser)
     parser.consumeSemicolon()
     return YieldBlockAssignmentStatement { name, value, span: parser.span(start) }
   }
@@ -537,18 +543,11 @@ function parseTrailingLambdaExpressionStatement(parser: Parser, expression: Expr
 }
 
 export isolated function parseTryStatement(parser: Parser): Statement {
+  // The removed `try!`/`try?` prefixes are ordinary expressions so the checker
+  // can report their postfix spelling wherever they appear.
+  if parser.peek(1).kind == TokenType.Bang || parser.peek(1).kind == TokenType.Question { return parseExpressionStatement(parser) }
   start := parser.location()
   parser.expect(TokenType.Try)
-  if parser.check(TokenType.Bang) || parser.check(TokenType.Question) {
-    operator := if parser.advance().kind == TokenType.Bang then "try!" else "try?"
-    operand := parser.parseUnary()
-    parser.consumeSemicolon()
-    return ExpressionStatement {
-      kind: "expression-statement",
-      expression: UnaryExpression { kind: "unary-expression", operator, operand, prefix: true, span: SourceSpan { start, end: operand.span.end } },
-      span: parser.span(start),
-    }
-  }
   if parser.check(TokenType.Const) {
     case parser.parseConst(false) {
       binding: ConstDeclaration -> { return TryStatement { kind: "try-statement", binding, span: parser.span(start) } }
@@ -568,10 +567,9 @@ export isolated function parseTryStatement(parser: Parser): Statement {
       _ -> { parser.fail("Expected named let declaration after try") }
     }
   }
-  shape := destructuringShape(parser)
-  if shape != "" {
-    if looksLikePattern(parser, TokenType.ColonEqual) { return wrapTryDestructuring(parser, start, shape, "immutable", TokenType.ColonEqual) }
-    if looksLikePattern(parser, TokenType.Equal) { return wrapTryDestructuring(parser, start, shape, "assignment", TokenType.Equal) }
+  case parseDestructuringStatement(parser) {
+    binding: DestructuringStatement -> { return TryStatement { kind: "try-statement", binding, span: parser.span(start) } }
+    _ -> { }
   }
   if parser.check(TokenType.Identifier) && startsImmutableBinding(parser) {
     binding := parseImmutableBinding(parser, false)
@@ -584,14 +582,6 @@ export isolated function parseTryStatement(parser: Parser): Statement {
     binding: ExpressionStatement { kind: "expression-statement", expression: value, span: parser.span(start) },
     span: parser.span(start),
   }
-}
-
-function wrapTryDestructuring(parser: Parser, start: AstLocation, shape: string, bindingKind: string, separator: TokenType): Statement {
-  case parseDestructuring(parser, shape, bindingKind, separator) {
-    binding: DestructuringStatement -> { return TryStatement { kind: "try-statement", binding, span: parser.span(start) } }
-    _ -> { parser.fail("Expected destructuring after try") }
-  }
-  return ExpressionStatement { kind: "expression-statement", expression: Identifier { kind: "identifier", name: "<error>", span: parser.locationSpan() }, span: parser.span(start) }
 }
 
 // `name := value`, `name: Type := value`, or the discarding `_ := value`.

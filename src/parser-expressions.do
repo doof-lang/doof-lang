@@ -1,9 +1,9 @@
 // Expression and literal parsing for the Doof parser.
 
 import type { Parser } from "./parser"
-import { Token, TokenType, charTokenValue, tokenValue } from "./lexer"
+import { Token, TokenType, charTokenValue, isNumericLiteral, tokenValue } from "./lexer"
 import {
-  Parameter, Identifier, CallArgument, ObjectProperty,
+  Block, Parameter, Identifier, CallArgument, ObjectProperty,
   SourceSpan, AstLocation, AssignmentExpression, BinaryExpression,
   UnaryExpression, MemberExpression, IndexExpression, CallExpression,
   IntLiteral, LongLiteral, FloatLiteral, DoubleLiteral, ArrayLiteral,
@@ -321,10 +321,7 @@ isolated function parsePrimary(parser: Parser): Expression {
   if parser.check(TokenType.LeftParen) { return parseParenExpression(parser) }
   if parser.check(TokenType.LeftBrace) { return parseObjectLiteral(parser) }
   if parser.check(TokenType.TagOpen) { return parseTagCall(parser) }
-  if parser.check(TokenType.Dot) && parser.peek(1).kind == TokenType.Identifier {
-    parser.advance()
-    return DotShorthand { kind: "dot-shorthand", name: parser.text(parser.expect(TokenType.Identifier)), span: parser.span(start) }
-  }
+  if startsDotShorthand(parser) { return parseDotShorthand(parser) }
   if parser.check(TokenType.Identifier) {
     name := parser.text(parser.advance())
     identifierSpan := parser.span(start)
@@ -333,12 +330,7 @@ isolated function parsePrimary(parser: Parser): Expression {
       className := parser.text(parser.expect(TokenType.Identifier, "Expected actor class name"))
       parser.expect(TokenType.Greater)
       parser.expect(TokenType.LeftParen)
-      let args: Expression[] = []
-      while !parser.check(TokenType.RightParen) && !parser.atEnd() {
-        args.push(parser.parseExpression())
-        if !parser.match(TokenType.Comma) { break }
-      }
-      parser.expect(TokenType.RightParen)
+      args := parseExpressionList(parser, TokenType.RightParen)
       return ActorCreationExpression { kind: "actor-creation-expression", className, args, span: parser.span(start) }
     }
     // A plain `name.member` is left to parsePostfix.
@@ -453,26 +445,26 @@ function parseTagAttributeValue(parser: Parser, name: string): Expression {
     parser.expect(TokenType.RightBrace, "Expected '}' after tag attribute '" + name + "'")
     return value
   }
-  if parser.check(TokenType.StringLiteral) || parser.check(TokenType.CharLiteral)
-      || parser.check(TokenType.IntLiteral) || parser.check(TokenType.LongLiteral)
-      || parser.check(TokenType.FloatLiteral) || parser.check(TokenType.DoubleLiteral)
-      || parser.check(TokenType.True) || parser.check(TokenType.False)
-      || parser.check(TokenType.None) || parser.check(TokenType.Null)
-      || (parser.check(TokenType.Minus) && isNumericLiteralToken(parser.peek(1).kind)) {
+  kind := parser.current().kind
+  if isNumericLiteral(kind) || parser.negativeNumberAt(0) || kind == TokenType.StringLiteral || kind == TokenType.CharLiteral
+      || kind == TokenType.True || kind == TokenType.False || kind == TokenType.None || kind == TokenType.Null {
     return parseUnary(parser)
   }
-  if parser.check(TokenType.Dot) && parser.peek(1).kind == TokenType.Identifier {
-    start := parser.location()
-    parser.advance()
-    memberName := parser.text(parser.expect(TokenType.Identifier))
-    return DotShorthand { kind: "dot-shorthand", name: memberName, span: parser.span(start) }
-  }
+  if startsDotShorthand(parser) { return parseDotShorthand(parser) }
   parser.fail("Tag attribute '" + name + "' requires a scalar literal, dot shorthand, or '{expression}'")
   return NoneLiteral { kind: "none-literal", span: parser.locationSpan() }
 }
 
-function isNumericLiteralToken(kind: TokenType): bool {
-  return kind == TokenType.IntLiteral || kind == TokenType.LongLiteral || kind == TokenType.FloatLiteral || kind == TokenType.DoubleLiteral
+function startsDotShorthand(parser: Parser): bool {
+  return parser.check(TokenType.Dot) && parser.peek(1).kind == TokenType.Identifier
+}
+
+// `.name`, an enum member or static member resolved against the expected type.
+function parseDotShorthand(parser: Parser): Expression {
+  start := parser.location()
+  parser.expect(TokenType.Dot)
+  name := parser.text(parser.expect(TokenType.Identifier))
+  return DotShorthand { kind: "dot-shorthand", name, span: parser.span(start) }
 }
 
 function normalizeTagText(raw: string): string {
@@ -505,22 +497,18 @@ function parseStringLiteral(parser: Parser): Expression {
     parts.push(value)
     return StringLiteral { kind: "string-literal", value, parts, interpolations, span: parser.span(start) }
   }
+  // Text segments alternate with interpolations: start, (expression, middle)*, expression, end.
   let value = ""
-  raw := tokenValue(parser.expect(TokenType.TemplateLiteralStart), parser.source)
-  parts.push(raw)
-  value = value + raw
-  expression := parser.parseExpression()
-  interpolations.push(expression)
-  parts.push("<expression>")
-  value = value + "<expression>"
-  while parser.check(TokenType.TemplateLiteralMiddle) {
-    raw := tokenValue(parser.advance(), parser.source)
+  let segment = parser.expect(TokenType.TemplateLiteralStart)
+  while true {
+    raw := tokenValue(segment, parser.source)
     parts.push(raw)
     value = value + raw
-    expression := parser.parseExpression()
-    interpolations.push(expression)
+    interpolations.push(parser.parseExpression())
     parts.push("<expression>")
     value = value + "<expression>"
+    if !parser.check(TokenType.TemplateLiteralMiddle) { break }
+    segment = parser.advance()
   }
   endRaw := tokenValue(parser.expect(TokenType.TemplateLiteralEnd, "Expected end of string interpolation"), parser.source)
   parts.push(endRaw)
@@ -531,12 +519,7 @@ function parseStringLiteral(parser: Parser): Expression {
 function parseArrayLiteral(parser: Parser): ArrayLiteral {
   start := parser.location()
   parser.expect(TokenType.LeftBracket)
-  let elements: Expression[] = []
-  while !parser.check(TokenType.RightBracket) && !parser.atEnd() {
-    elements.push(parser.parseExpression())
-    if !parser.match(TokenType.Comma) { break }
-  }
-  parser.expect(TokenType.RightBracket)
+  elements := parseExpressionList(parser, TokenType.RightBracket)
   return ArrayLiteral { kind: "array-literal", elements, readonly_: false, span: parser.span(start) }
 }
 
@@ -561,15 +544,23 @@ function parseParenthesizedGroup(parser: Parser, start: AstLocation): Expression
   first := parser.parseExpression()
   if parser.match(TokenType.Comma) {
     let elements: Expression[] = [first]
-    while !parser.check(TokenType.RightParen) && !parser.atEnd() {
-      elements.push(parser.parseExpression())
-      if !parser.match(TokenType.Comma) { break }
-    }
-    parser.expect(TokenType.RightParen)
+    for element of parseExpressionList(parser, TokenType.RightParen) { elements.push(element) }
     return TupleLiteral { kind: "tuple-literal", elements, span: parser.span(start) }
   }
   parser.expect(TokenType.RightParen)
   return first
+}
+
+// Comma-separated expressions up to and including `close`; a trailing comma
+// is allowed. The caller has consumed the opening delimiter.
+function parseExpressionList(parser: Parser, close: TokenType): Expression[] {
+  let elements: Expression[] = []
+  while !parser.check(close) && !parser.atEnd() {
+    elements.push(parser.parseExpression())
+    if !parser.match(TokenType.Comma) { break }
+  }
+  parser.expect(close)
+  return elements
 }
 
 // A colon inside the parameter list belongs to a lambda parameter, not to a
@@ -613,12 +604,15 @@ function parseLambdaParameters(parser: Parser): Parameter[] {
 function finishLambda(parser: Parser, params: Parameter[], start: AstLocation): Expression {
   returnType := parser.parseOptionalType()
   parser.expect(TokenType.Arrow)
-  if parser.check(TokenType.LeftBrace) {
-    body := parser.parseBlock()
-    return LambdaExpression { kind: "lambda-expression", params, returnType, body, parameterless: params.length == 0, trailing: false, span: parser.span(start) }
-  }
-  body := parser.parseExpression()
+  body := parseLambdaBody(parser)
   return LambdaExpression { kind: "lambda-expression", params, returnType, body, parameterless: params.length == 0, trailing: false, span: parser.span(start) }
+}
+
+// Keep the Expression/Block promotion at a typed boundary so generated C++
+// does not try to represent this choice as a native conditional expression.
+function parseLambdaBody(parser: Parser): Expression | Block {
+  if parser.check(TokenType.LeftBrace) { return parser.parseBlock() }
+  return parser.parseExpression()
 }
 
 function parseParameterlessLambda(parser: Parser): Expression { return finishLambda(parser, [], parser.location()) }
@@ -629,8 +623,8 @@ function parseObjectLiteral(parser: Parser): Expression {
   let properties: ObjectProperty[] = []
   let spread: Expression | none = none
   while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
-    if parser.match(TokenType.Ellipsis) {
-      spread = parser.parseExpression()
+    if parser.check(TokenType.Ellipsis) {
+      spread = parseFieldSpread(parser, spread, "Object literals support only one field spread")
     } else {
       propertyStart := parser.location()
       let name = ""
@@ -640,18 +634,8 @@ function parseObjectLiteral(parser: Parser): Expression {
         name = tokenValue(parser.advance(), parser.source)
         parser.expect(TokenType.Colon, "Expected ':' after string map key")
         value = parser.parseExpression()
-      } else if parser.check(TokenType.Dot) && parser.peek(1).kind == TokenType.Identifier && parser.peek(2).kind == TokenType.Colon {
-        key = parser.parseExpression()
-        parser.expect(TokenType.Colon, "Expected ':' after map key")
-        value = parser.parseExpression()
-      } else if parser.check(TokenType.LeftParen) {
-        // A parenthesized key admits any expression, such as a tuple or a
-        // construction; the colon after it starts the value, not a lambda type.
-        key = parseParenthesizedGroup(parser, parser.location())
-        parser.expect(TokenType.Colon, "Expected ':' after map key")
-        value = parser.parseExpression()
-      } else if looksLikeExpressionMapKey(parser) {
-        key = parser.parseExpression()
+      } else if parser.check(TokenType.LeftParen) || looksLikeExpressionMapKey(parser) {
+        key = parseMapKey(parser)
         parser.expect(TokenType.Colon, "Expected ':' after map key")
         value = parser.parseExpression()
       } else {
@@ -666,17 +650,29 @@ function parseObjectLiteral(parser: Parser): Expression {
   return ObjectLiteral { kind: "object-literal", properties, spread, span: parser.span(start) }
 }
 
+// `...source`; a later spread would silently replace the earlier one.
+function parseFieldSpread(parser: Parser, previous: Expression | none, duplicateMessage: string): Expression {
+  if previous != none { parser.fail(duplicateMessage) }
+  parser.expect(TokenType.Ellipsis)
+  return parser.parseExpression()
+}
+
+// A parenthesized key admits any expression, such as a tuple or a
+// construction; the colon after it starts the value, not a lambda type.
+function parseMapKey(parser: Parser): Expression {
+  if parser.check(TokenType.LeftParen) { return parseParenthesizedGroup(parser, parser.location()) }
+  return parser.parseExpression()
+}
+
+// Literal, `.member`, and `Enum.Member` keys followed by `:`.
 function looksLikeExpressionMapKey(parser: Parser): bool {
   kind := parser.peek(0).kind
-  if (kind == TokenType.IntLiteral || kind == TokenType.LongLiteral
-      || kind == TokenType.FloatLiteral || kind == TokenType.DoubleLiteral
-      || kind == TokenType.CharLiteral || kind == TokenType.True || kind == TokenType.False)
+  if (isNumericLiteral(kind) || kind == TokenType.CharLiteral || kind == TokenType.True || kind == TokenType.False)
       && parser.peek(1).kind == TokenType.Colon {
     return true
   }
-  if kind == TokenType.Minus && isNumericLiteralToken(parser.peek(1).kind) && parser.peek(2).kind == TokenType.Colon {
-    return true
-  }
+  if parser.negativeNumberAt(0) && parser.peek(2).kind == TokenType.Colon { return true }
+  if startsDotShorthand(parser) && parser.peek(2).kind == TokenType.Colon { return true }
   return kind == TokenType.Identifier && parser.peek(1).kind == TokenType.Dot
       && parser.peek(2).kind == TokenType.Identifier && parser.peek(3).kind == TokenType.Colon
 }
@@ -686,9 +682,8 @@ function parseConstruction(parser: Parser, start: AstLocation, name: string, typ
   let properties: ObjectProperty[] = []
   let spread: Expression | none = none
   while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
-    if parser.match(TokenType.Ellipsis) {
-      if spread != none { parser.fail("Named construction supports only one field spread") }
-      spread = parser.parseExpression()
+    if parser.check(TokenType.Ellipsis) {
+      spread = parseFieldSpread(parser, spread, "Named construction supports only one field spread")
     } else {
       propertyStart := parser.location()
       propertyName := parser.text(parser.expect(TokenType.Identifier))

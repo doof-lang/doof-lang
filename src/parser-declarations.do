@@ -1,14 +1,14 @@
 // Declaration and import/export parsing for the Doof parser.
 
 import type { Parser } from "./parser"
-import { TokenType } from "./lexer"
+import { TokenType, isNumericLiteral } from "./lexer"
 import {
   Block, NamedType, Parameter, ClassField,
   InterfaceField, EnumVariant, ExportSpecifier, AstLocation,
   Identifier, ConstDeclaration, ReadonlyDeclaration, LetDeclaration,
   FunctionDeclaration, ImportDeclaration, NamedImport,
   TypeAliasDeclaration, ClassDeclaration, InterfaceDeclaration, EnumDeclaration,
-  ExportList, MockImportDirective, MockImportMapping, YieldBlockExpression, TypeParameterConstraint,
+  ExportList, MockImportDirective, MockImportMapping, TypeParameterConstraint,
   StringLiteral, UnaryExpression, MemberExpression,
 } from "./ast"
 import type { Statement, Expression, TypeAnnotation, SourceSpan } from "./ast"
@@ -44,8 +44,7 @@ export function parseExport(parser: Parser): Statement {
     while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
       itemStart := parser.location()
       name := parser.text(parser.expect(TokenType.Identifier))
-      let alias: string | none = none
-      if parser.match(TokenType.As) { alias = parser.text(parser.expect(TokenType.Identifier)) }
+      alias := parseAlias(parser)
       specifiers.push(ExportSpecifier { name, alias, span: parser.span(itemStart) })
       if !parser.match(TokenType.Comma) { break }
     }
@@ -105,12 +104,7 @@ export function parseLetDeclarator(parser: Parser, start: AstLocation, forInitia
 function parseInitializer(parser: Parser, allowYieldBlock: bool = true): Expression {
   if parser.match(TokenType.Equal) { return parser.parseExpression() }
   if !allowYieldBlock { parser.fail("Expected '=' in declaration") }
-  if parser.match(TokenType.LeftArrow) {
-    start := parser.location()
-    if !parser.check(TokenType.LeftBrace) { parser.fail("Expected block after '<-'") }
-    body := parser.parseBlock()
-    return YieldBlockExpression { body, span: parser.span(start) }
-  }
+  if parser.match(TokenType.LeftArrow) { return parser.parseYieldBlock() }
   parser.fail("Expected '=' or '<-' in declaration")
   return Identifier { kind: "identifier", name: "<error>", span: parser.locationSpan() }
 }
@@ -152,6 +146,13 @@ function parseFunctionAfterName(parser: Parser, start: AstLocation, name: string
 function parseFunctionBody(parser: Parser): Expression | Block {
   if parser.check(TokenType.Arrow) { return parseExpressionBody(parser) }
   return parser.parseBlock()
+}
+
+// A native method either implements itself in Doof or ends without a body.
+function parseOptionalFunctionBody(parser: Parser, start: AstLocation): Expression | Block {
+  if parser.check(TokenType.Arrow) || parser.check(TokenType.LeftBrace) { return parseFunctionBody(parser) }
+  parser.consumeSemicolon()
+  return bodylessBlock(parser, start)
 }
 
 // Interface, native, and other bodyless declarations carry an empty body.
@@ -208,8 +209,8 @@ export function parseClass(parser: Parser, exported: bool, private_: bool): Stat
   typeParams := parsedTypeParams.names
   let implements_: NamedType[] = []
   if parser.match(TokenType.Implements) {
-    implements_.push(parseNamedType(parser))
-    while parser.match(TokenType.Comma) { implements_.push(parseNamedType(parser)) }
+    implements_.push(parser.parseNamedType())
+    while parser.match(TokenType.Comma) { implements_.push(parser.parseNamedType()) }
   }
   parser.expect(TokenType.LeftBrace)
 
@@ -279,13 +280,6 @@ function parseIsolatedMethod(parser: Parser, private_: bool): FunctionDeclaratio
   return parseMethod(parser, static_, true, private_)
 }
 
-function parseNamedType(parser: Parser): NamedType {
-  start := parser.location()
-  name := parser.text(parser.expect(TokenType.Identifier))
-  typeArgs: TypeAnnotation[] := if parser.check(TokenType.Less) then parser.parseTypeArguments() else []
-  return NamedType { kind: "named-type", name, typeArgs, span: parser.span(start) }
-}
-
 function parseClassField(parser: Parser, static_: bool, private_: bool): ClassField {
   start := parser.location()
   rejectMisplacedFieldModifier(parser)
@@ -339,13 +333,8 @@ function startsFieldLiteral(parser: Parser, offset: int): bool {
     after := parser.peek(next).kind
     return after != TokenType.Dot && after != TokenType.Equal && after != TokenType.Less && after != TokenType.Pipe && after != TokenType.LeftBracket
   }
-  if kind == TokenType.Minus {
-    next := parser.peek(offset + 1).kind
-    return next == TokenType.IntLiteral || next == TokenType.LongLiteral || next == TokenType.FloatLiteral || next == TokenType.DoubleLiteral
-  }
-  return kind == TokenType.StringLiteral || kind == TokenType.TemplateLiteralStart || kind == TokenType.CharLiteral || kind == TokenType.IntLiteral ||
-    kind == TokenType.LongLiteral || kind == TokenType.FloatLiteral || kind == TokenType.DoubleLiteral ||
-    kind == TokenType.True || kind == TokenType.False
+  return parser.negativeNumberAt(offset) || isNumericLiteral(kind) || kind == TokenType.StringLiteral ||
+    kind == TokenType.TemplateLiteralStart || kind == TokenType.CharLiteral || kind == TokenType.True || kind == TokenType.False
 }
 
 function rejectMisplacedFieldModifier(parser: Parser): none {
@@ -374,14 +363,14 @@ function isFieldLiteral(expression: Expression): bool {
   case expression {
     member: MemberExpression -> { return !member.optional && !member.force && isQualifiedName(member.object) }
     string_: StringLiteral -> { return string_.interpolations.length == 0 }
-    unary: UnaryExpression -> {
-      return unary.operator == "-" && (unary.operand.kind == "int-literal" || unary.operand.kind == "long-literal" || unary.operand.kind == "float-literal" || unary.operand.kind == "double-literal")
-    }
-    _ -> {
-      return expression.kind == "int-literal" || expression.kind == "long-literal" || expression.kind == "float-literal" ||
-        expression.kind == "double-literal" || expression.kind == "char-literal" || expression.kind == "bool-literal"
-    }
+    unary: UnaryExpression -> { return unary.operator == "-" && isNumericLiteralNode(unary.operand) }
+    _ -> { return isNumericLiteralNode(expression) || expression.kind == "char-literal" || expression.kind == "bool-literal" }
   }
+}
+
+function isNumericLiteralNode(expression: Expression): bool {
+  kind := expression.kind
+  return kind == "int-literal" || kind == "long-literal" || kind == "float-literal" || kind == "double-literal"
 }
 
 export function parseInterface(parser: Parser, exported: bool): Statement {
@@ -484,8 +473,7 @@ export function parseImport(parser: Parser): Statement {
   while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
     itemStart := parser.location()
     name := parser.text(parser.expect(TokenType.Identifier))
-    let alias: string | none = none
-    if parser.match(TokenType.As) { alias = parser.text(parser.expect(TokenType.Identifier)) }
+    alias := parseAlias(parser)
     specifiers.push(NamedImport { kind: "named-import-specifier", name, alias, span: parser.span(itemStart) })
     if !parser.match(TokenType.Comma) { break }
   }
@@ -494,6 +482,12 @@ export function parseImport(parser: Parser): Statement {
   sourceValue := parser.text(parser.expect(TokenType.StringLiteral))
   parser.consumeSemicolon()
   return ImportDeclaration { kind: "import-declaration", specifiers, source: sourceValue, typeOnly, span: parser.span(start) }
+}
+
+// The optional `as alias` after an imported or exported name.
+function parseAlias(parser: Parser): string | none {
+  if !parser.match(TokenType.As) { return none }
+  return parser.text(parser.expect(TokenType.Identifier))
 }
 
 export function parseMockImport(parser: Parser): Statement {
@@ -511,7 +505,7 @@ export function parseMockImport(parser: Parser): Statement {
     parser.expect(TokenType.Arrow, "Expected => in mock import mapping")
     replacement := parser.text(parser.expect(TokenType.StringLiteral))
     mappings.push(MockImportMapping { dependency, replacement, span: parser.span(mappingStart) })
-    if !parser.match(TokenType.Comma) { parser.match(TokenType.Semicolon) }
+    if !parser.match(TokenType.Comma) { parser.consumeSemicolon() }
   }
 
   parser.expect(TokenType.RightBrace)
@@ -527,10 +521,7 @@ function parseNativeClass(parser: Parser, exported: bool, start: AstLocation): C
   let fields: ClassField[] = []
   let methods: FunctionDeclaration[] = []
   while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
-    if (parser.check(TokenType.Identifier) && parser.peek(1).kind == TokenType.LeftParen) ||
-        (parser.check(TokenType.Static) && parser.peek(1).kind == TokenType.Identifier && parser.peek(2).kind == TokenType.LeftParen) ||
-        (parser.check(TokenType.Isolated) && parser.peek(1).kind == TokenType.Identifier && parser.peek(2).kind == TokenType.LeftParen) ||
-        (parser.check(TokenType.Isolated) && parser.peek(1).kind == TokenType.Static && parser.peek(2).kind == TokenType.Identifier && parser.peek(3).kind == TokenType.LeftParen) {
+    if startsNativeMethod(parser) {
       methods.push(parseNativeMethod(parser))
     } else if parser.match(TokenType.Static) {
       fields.push(parseClassField(parser, true, false))
@@ -546,6 +537,14 @@ function parseNativeClass(parser: Parser, exported: bool, start: AstLocation): C
   }
 }
 
+// `[isolated] [static] name(` opens a native class method.
+function startsNativeMethod(parser: Parser): bool {
+  let offset = 0
+  if parser.peek(offset).kind == TokenType.Isolated { offset += 1 }
+  if parser.peek(offset).kind == TokenType.Static { offset += 1 }
+  return parser.peek(offset).kind == TokenType.Identifier && parser.peek(offset + 1).kind == TokenType.LeftParen
+}
+
 function parseNativeMethod(parser: Parser): FunctionDeclaration {
   start := parser.location()
   isolated_ := parser.match(TokenType.Isolated)
@@ -556,18 +555,11 @@ function parseNativeMethod(parser: Parser): FunctionDeclaration {
   parser.expect(TokenType.RightParen)
   parser.expect(TokenType.Colon)
   returnType := parser.parseTypeAnnotation()
-  if parser.check(TokenType.Arrow) || parser.check(TokenType.LeftBrace) {
-    body := parseFunctionBody(parser)
-    return FunctionDeclaration {
-      kind: "function-declaration", name, typeParams: [], params, returnType, body,
-      exported: false, static_, isolated_, private_: false, bodyless: false,
-      span: parser.span(start),
-    }
-  }
-  parser.consumeSemicolon()
+  bodyless := !parser.check(TokenType.Arrow) && !parser.check(TokenType.LeftBrace)
+  body := parseOptionalFunctionBody(parser, start)
   return FunctionDeclaration {
-    kind: "function-declaration", name, typeParams: [], params, returnType, body: bodylessBlock(parser, start),
-    exported: false, static_, isolated_, private_: false, bodyless: true,
+    kind: "function-declaration", name, typeParams: [], params, returnType, body,
+    exported: false, static_, isolated_, private_: false, bodyless,
     span: parser.span(start),
   }
 }

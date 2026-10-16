@@ -29,3 +29,22 @@ export function testMissingTypeNameIsReportedAtTheOffendingToken(): none {
   Assert.equal(parser.errorMessage, "Expected a type name")
   Assert.equal(parser.errorOffset, "type Broken = ".length)
 }
+
+export function testImplementsClauseAcceptsOnlyNominalTypes(): none {
+  class_ := parse("class Store implements Reader<string> { }").statements[0] as ClassDeclaration else { panic("expected class") }
+  Assert.equal(class_.implements_[0].name, "Reader")
+  Assert.equal(class_.implements_[0].span.end.offset, "class Store implements Reader<string>".length)
+  // Keyword types are type names elsewhere but never interfaces.
+  parser := parseFailure("class Store implements none { }")
+  Assert.equal(parser.errorOffset, "class Store implements ".length)
+}
+
+export function testReadonlyAndWeakRecognizeBothCollectionSpellings(): none {
+  for source of ["type T = readonly Map<string, int>", "type T = readonly ReadonlyMap<string, int>"] {
+    alias := parse(source).statements[0] as TypeAliasDeclaration else { panic("expected alias") }
+    named := alias.type_ as NamedType else { panic("expected named type") }
+    Assert.equal(named.name, "ReadonlyMap")
+  }
+  Assert.stringContains(parseFailure("type T = weak ReadonlyMap<string, Node>").errorMessage, "for a weak reference to the map")
+  Assert.stringContains(parseFailure("type T = weak ReadonlySet<Node>").errorMessage, "for a weak reference to the set")
+}

@@ -930,6 +930,17 @@ println(extended2.port)
 
 Spread sources must be type-compatible — the compiler verifies field types match.
 
+A construction or object literal takes at most one spread; combine sources by
+spreading one and naming the remaining fields explicitly.
+
+```doof reject
+class Point { x: int; y: int }
+
+readonly a = Point { x: 1, y: 2 }
+readonly b = Point { x: 3, y: 4 }
+let mixed = Point { ...a, ...b }    // ❌ Error: only one field spread
+```
+
 ---
 
 ## Interfaces (Structural)

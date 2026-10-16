@@ -5,7 +5,7 @@
 // token state here preserves the existing Parser { source }.parse() API while
 // allowing each grammar area to stay independently focused.
 
-import { Lexer, LexerDiagnostic, Token, TokenType, tokenValue } from "./lexer"
+import { Lexer, LexerDiagnostic, Token, TokenType, isNumericLiteral, tokenValue } from "./lexer"
 import {
   parseExport as parseExportImpl, parseConst as parseConstImpl,
   parseReadonly as parseReadonlyImpl, parseLet as parseLetImpl,
@@ -18,17 +18,17 @@ import {
   parseStatement as parseStatementImpl, parseBlock as parseBlockImpl,
   parseCaseExpression as parseCaseExpressionImpl,
   looksLikePattern as looksLikePatternImpl, destructuringShape as destructuringShapeImpl,
-  parseDestructuring as parseDestructuringImpl,
+  parseDestructuring as parseDestructuringImpl, parseYieldBlock as parseYieldBlockImpl,
   parseLocalStatement,
 } from "./parser-statements"
 import {
   parseOptionalType as parseOptionalTypeImpl, parseTypeAnnotation as parseTypeAnnotationImpl,
-  parseTypeArguments as parseTypeArgumentsImpl,
+  parseTypeArguments as parseTypeArgumentsImpl, parseNamedType as parseNamedTypeImpl,
 } from "./parser-types"
 import { parseExpression as parseExpressionImpl, parseAdditive as parseAdditiveImpl, parseUnary as parseUnaryImpl } from "./parser-expressions"
 import {
-  Program, Block, FunctionDeclaration, LetDeclaration,
-  Statement, Expression, TypeAnnotation, AstLocation, SourceSpan,
+  Program, Block, FunctionDeclaration, LetDeclaration, NamedType,
+  Statement, Expression, TypeAnnotation, AstLocation, SourceSpan, YieldBlockExpression,
 } from "./ast"
 
 export class ParserIssue {
@@ -270,6 +270,11 @@ export class Parser {
 
   consumeSemicolon(): none { match(TokenType.Semicolon) }
 
+  // A `-` immediately followed by a numeric literal, such as `-1` or `-2.5`.
+  negativeNumberAt(offset: int): bool {
+    return peek(offset).kind == TokenType.Minus && isNumericLiteral(peek(offset + 1).kind)
+  }
+
   locationSpan(): SourceSpan { start := location(); return SourceSpan { start, end: start } }
 
   // --------------------------------------------------------------------------
@@ -293,6 +298,7 @@ export class Parser {
   parseMockImport(): Statement { return parseMockImportImpl(this) }
 
   parseBlock(): Block { return parseBlockImpl(this) }
+  parseYieldBlock(): YieldBlockExpression { return parseYieldBlockImpl(this) }
   parseCaseExpression(): Expression { return parseCaseExpressionImpl(this) }
   destructuringShape(): string { return destructuringShapeImpl(this) }
   looksLikePattern(separator: TokenType): bool { return looksLikePatternImpl(this, separator) }
@@ -303,6 +309,7 @@ export class Parser {
   parseOptionalType(weakField: bool = false): TypeAnnotation | none { return parseOptionalTypeImpl(this, weakField) }
   parseTypeAnnotation(): TypeAnnotation { return parseTypeAnnotationImpl(this) }
   parseTypeArguments(): TypeAnnotation[] { return parseTypeArgumentsImpl(this) }
+  parseNamedType(): NamedType { return parseNamedTypeImpl(this) }
 
   parseExpression(): Expression { return parseExpressionImpl(this) }
   parseAdditive(): Expression { return parseAdditiveImpl(this) }

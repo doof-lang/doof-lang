@@ -1,7 +1,7 @@
 import { Assert as EditorAssert } from "std/assert"
 import { Parser as EditorParser } from "./parser"
 import { Assert } from "std/assert"
-import { BinaryExpression, CallExpression, ConstructExpression, DoubleLiteral, ExpressionStatement, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral, UnaryExpression } from "./ast"
+import { ActorCreationExpression, ArrayLiteral, BinaryExpression, CallExpression, ConstructExpression, DoubleLiteral, ExpressionStatement, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral, StringLiteral, TupleLiteral, UnaryExpression } from "./ast"
 import type { Expression } from "./ast"
 import { parse } from "./parser"
 
@@ -119,4 +119,63 @@ export function testFloatingLiteralValuesIgnoreDigitSeparators(): none {
   // Integral digits beyond long accumulate as a double instead of wrapping.
   huge := expressionOf("12345678901234567890123.0") as DoubleLiteral else { panic("expected double literal") }
   Assert.isTrue(huge.value > 1.2e22 && huge.value < 1.3e22)
+}
+
+function expressionFailure(source: string): EditorParser {
+  parser := EditorParser { source }
+  case catchPanic(=> parser.parse()) {
+    _: Failure<string> -> { }
+    _ -> { panic("expected parse failure for: " + source) }
+  }
+  return parser
+}
+
+export function testObjectLiteralsAndConstructionsAcceptOneSpread(): none {
+  object := expressionOf("({ ...base, name: 1 })") as ObjectLiteral else { panic("expected object literal") }
+  Assert.isTrue(object.spread != none)
+  Assert.equal(object.properties.length, 1)
+  // A second spread used to replace the first silently.
+  objectFailure := expressionFailure("x := { ...a, ...b }")
+  Assert.equal(objectFailure.errorMessage, "Object literals support only one field spread")
+  Assert.equal(objectFailure.errorOffset, "x := { ...a, ".length)
+  constructFailure := expressionFailure("x := Box { ...a, ...b }")
+  Assert.equal(constructFailure.errorMessage, "Named construction supports only one field spread")
+  Assert.equal(constructFailure.errorOffset, "x := Box { ...a, ".length)
+}
+
+export function testTemplateLiteralsAlternateTextAndInterpolations(): none {
+  one := expressionOf("\"a\${x}b\"") as StringLiteral else { panic("expected string") }
+  Assert.equal(joinedParts(one), "a|<expression>|b|")
+  Assert.equal(one.interpolations.length, 1)
+  three := expressionOf("\"\${x}-\${y}-\${z}\"") as StringLiteral else { panic("expected string") }
+  Assert.equal(joinedParts(three), "|<expression>|-|<expression>|-|<expression>||")
+  Assert.equal(three.value, "<expression>-<expression>-<expression>")
+  Assert.equal(three.interpolations.length, 3)
+}
+
+function joinedParts(literal: StringLiteral): string {
+  let result = ""
+  for part of literal.parts { result = result + part + "|" }
+  return result
+}
+
+export function testDelimitedExpressionListsAllowTrailingCommas(): none {
+  array := expressionOf("[1, 2,]") as ArrayLiteral else { panic("expected array") }
+  Assert.equal(array.elements.length, 2)
+  tuple := expressionOf("(1, 2, 3,)") as TupleLiteral else { panic("expected tuple") }
+  Assert.equal(tuple.elements.length, 3)
+  actor := expressionOf("Actor<Worker>(1, \"a\",)") as ActorCreationExpression else { panic("expected actor creation") }
+  Assert.equal(actor.className, "Worker")
+  Assert.equal(actor.args.length, 2)
+}
+
+export function testScalarKeysAndTagAttributesShareLiteralRecognition(): none {
+  map := expressionOf("({ -1: \"neg\", 2.5: \"half\", .Red: \"red\", Color.Blue: \"blue\" })") as ObjectLiteral else { panic("expected map literal") }
+  let kinds = ""
+  for property of map.properties { kinds = kinds + property.key!.kind + ";" }
+  Assert.equal(kinds, "unary-expression;double-literal;dot-shorthand;member-expression;")
+  tag := expressionOf("<Gauge min=-1 max=2.5 tone=.Warm />") as CallExpression else { panic("expected tag call") }
+  let values = ""
+  for argument of tag.args { values = values + argument.value.kind + ";" }
+  Assert.equal(values, "unary-expression;double-literal;dot-shorthand;")
 }

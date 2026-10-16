@@ -60,10 +60,10 @@ function parseTypeMember(parser: Parser, weakOperandStart: AstLocation | none): 
   if readonlyPrefix {
     case result {
       named: NamedType -> {
-        if named.name == "Map" || named.name == "ReadonlyMap" {
+        if isMapTypeName(named.name) {
           named.name = "ReadonlyMap"
           readonlyPrefix = false
-        } else if named.name == "Set" || named.name == "ReadonlySet" {
+        } else if isSetTypeName(named.name) {
           named.name = "ReadonlySet"
           readonlyPrefix = false
         }
@@ -87,15 +87,18 @@ function rejectBareWeakCollection(parser: Parser, member: TypeAnnotation, operan
       parser.failAt(start, "'weak " + text + "' is ambiguous; write '" + prefix + "(weak " + element + ")[]' for an array of weak references or 'weak (" + text + ")' for a weak reference to the array")
     }
     named: NamedType -> {
-      if named.name == "Map" || named.name == "ReadonlyMap" {
+      if isMapTypeName(named.name) {
         parser.failAt(start, "'weak " + text + "' is ambiguous; write 'Map<K, weak V>' for weak values or 'weak (" + text + ")' for a weak reference to the map")
-      } else if named.name == "Set" || named.name == "ReadonlySet" {
+      } else if isSetTypeName(named.name) {
         parser.failAt(start, "'weak " + text + "' is ambiguous; write 'weak (" + text + ")' for a weak reference to the set")
       }
     }
     _ -> { }
   }
 }
+
+function isMapTypeName(name: string): bool { return name == "Map" || name == "ReadonlyMap" }
+function isSetTypeName(name: string): bool { return name == "Set" || name == "ReadonlySet" }
 
 function parsePrimaryType(parser: Parser): TypeAnnotation {
   start := parser.location()
@@ -125,7 +128,17 @@ function parsePrimaryType(parser: Parser): TypeAnnotation {
   if kind != TokenType.Identifier && kind != TokenType.None && kind != TokenType.Void && kind != TokenType.Null {
     parser.fail("Expected a type name")
   }
-  name := parser.text(parser.advance())
+  return finishNamedType(parser, start, parser.text(parser.advance()))
+}
+
+// A nominal `Name<T>` reference such as an `implements` clause entry, where
+// keyword types like `none` are not accepted.
+export function parseNamedType(parser: Parser): NamedType {
+  start := parser.location()
+  return finishNamedType(parser, start, parser.text(parser.expect(TokenType.Identifier)))
+}
+
+function finishNamedType(parser: Parser, start: AstLocation, name: string): NamedType {
   typeArgs: TypeAnnotation[] := if parser.check(TokenType.Less) then parseTypeArguments(parser) else []
   return NamedType { kind: "named-type", name, typeArgs, span: parser.span(start) }
 }

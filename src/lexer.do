@@ -159,12 +159,13 @@ function decodeEscapeCharacter(escaped: char): string {
   return string(escaped)
 }
 
+export function isNumericLiteral(kind: TokenType): bool {
+  return kind == TokenType.IntLiteral || kind == TokenType.LongLiteral || kind == TokenType.FloatLiteral || kind == TokenType.DoubleLiteral
+}
+
 export function tokenValue(token: Token, source: string): string {
   raw := source.substring(token.valueOffset, token.valueOffset + token.valueLength)
-  if token.kind == TokenType.IntLiteral
-      || token.kind == TokenType.LongLiteral
-      || token.kind == TokenType.FloatLiteral
-      || token.kind == TokenType.DoubleLiteral {
+  if isNumericLiteral(token.kind) {
     if raw.contains("_") { return raw.replaceAll("_", "") }
     return raw
   }

@@ -104,7 +104,8 @@ Rules:
   construction arguments and the expected type: `Box { value: 42 }` is
   `Box<int>`. Every type parameter must be determined; `Container { result:
   Success { value: 42 } }` is an error until written `Container<int, string> { ... }`.
-- Spread fields work in named construction.
+- Spread fields work in named construction. A construction or object literal
+  takes at most one `...source` spread.
 - Typed tags are named calls: classes and structs construct normally, while
   functions, callbacks, and callable members are invoked normally. Scalar
   attributes may be bare; general expressions use `{expression}`. Paired

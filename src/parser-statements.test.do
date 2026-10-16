@@ -1,8 +1,9 @@
 import { Assert as EditorAssert } from "std/assert"
 import { Parser as EditorParser, parse } from "./parser"
 import {
-  Block, BreakStatement, CaseExpression, CaseStatement, ContinueStatement, ForOfStatement, ForStatement, FunctionDeclaration, ImmutableBinding,
-  LambdaExpression, MemberExpression, NamedType, TryStatement, UnaryExpression, ValuePattern, RangePattern, DotShorthand, WhileStatement,
+  BinaryExpression, Block, BreakStatement, CaseExpression, CaseStatement, ContinueStatement, ForOfStatement, ForStatement, FunctionDeclaration, ImmutableBinding,
+  ExpressionStatement, LambdaExpression, LetDeclaration, MemberExpression, NamedType, TryStatement, UnaryExpression, ValuePattern, RangePattern, DotShorthand, WhileStatement,
+  YieldBlockAssignmentStatement,
 } from "./ast"
 
 export function testEditorStatementRecoveryKeepsLaterDeclarations(): none {
@@ -268,4 +269,35 @@ export function testRangePatternForms(): none {
     shapes = shapes + (if range.start == none then "_" else "s") + (if range.end == none then "_" else "e") + (if range.inclusive then "=" else "<") + ";"
   }
   EditorAssert.equal(shapes, "_e<;se=;s_=;se<;")
+}
+
+export function testRemovedTryPrefixesParseAsWholeExpressionStatements(): none {
+  // The statement form used to stop after the operand and start a new statement at `+`.
+  program := parse("try! load() + 1\ntry? load() ?? 2")
+  EditorAssert.equal(program.statements.length, 2)
+  let shapes = ""
+  for statement of program.statements {
+    expression := statement as ExpressionStatement else { panic("expected expression statement") }
+    binary := expression.expression as BinaryExpression else { panic("expected binary expression") }
+    prefix := binary.left as UnaryExpression else { panic("expected removed prefix form") }
+    shapes = shapes + prefix.operator + binary.operator + ";"
+  }
+  EditorAssert.equal(shapes, "try!+;try???;")
+}
+
+export function testPositionalDestructuringBindingDiagnostic(): none {
+  parser := parseFailure("(a, 1) := pair")
+  EditorAssert.equal(parser.errorMessage, "Expected destructuring binding name or '_'")
+  EditorAssert.equal(parser.errorOffset, "(a, ".length)
+}
+
+export function testYieldBlocksShareOneParser(): none {
+  program := parse("let a <- { yield 1 }\nb <- { yield 2 }")
+  declaration := program.statements[0] as LetDeclaration else { panic("expected let") }
+  EditorAssert.equal(declaration.value.kind, "yield-block-expression")
+  assignment := program.statements[1] as YieldBlockAssignmentStatement else { panic("expected yield-block assignment") }
+  EditorAssert.equal(assignment.value.body.statements.length, 1)
+  for source of ["let a <- 1", "b <- 2"] {
+    EditorAssert.equal(parseFailure(source).errorMessage, "Expected block after '<-'")
+  }
 }

@@ -1,6 +1,6 @@
 import { Assert as EditorAssert } from "std/assert"
 import { Assert } from "std/assert"
-import { Lexer, TokenType, charTokenValue, tokenValue } from "./lexer"
+import { Lexer, TokenType, charTokenValue, isNumericLiteral, tokenValue } from "./lexer"
 import isolated function codePointToUtf8(value: int): string from "doof_runtime.hpp" as doof::char_to_utf8
 
 function types(source: string): TokenType[] {
@@ -57,6 +57,12 @@ export function testNumericFormsAndSeparators(): none {
   Assert.equal(tokens[3].kind, TokenType.DoubleLiteral)
   Assert.equal(tokens[4].kind, TokenType.FloatLiteral)
   Assert.equal(lexer.diagnostics.length, 1)
+}
+
+export function testNumericLiteralKinds(): none {
+  tokens := Lexer { source: "1 2L 3.0 4.0f 'c' \"s\" true" }.tokenize()
+  for i of 0..<4 { Assert.isTrue(isNumericLiteral(tokens[i].kind)) }
+  for i of 4..<tokens.length { Assert.isFalse(isNumericLiteral(tokens[i].kind)) }
 }
 
 export function testLargeSourceCorpus(): none {
