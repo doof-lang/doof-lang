@@ -663,7 +663,9 @@ export function testActorCallsMaterializeOmittedMethodDefaults(): none {
     "function asyncDefaulted(worker: Actor<Worker>): Promise<int> => async worker.add()",
   )
   Assert.stringContains(result.source, "_self.add(20, 22)")
-  Assert.stringContains(result.source, "_self.add(20, 7)")
+  // A supplied argument is evaluated by the caller; only defaults stay in the message.
+  Assert.stringContains(result.source, "_self.add(20, _actor_arg_")
+  Assert.stringContains(result.source, " = 7; return ")
   Assert.equal(result.source.contains("_self.add()"), false)
 }
 
@@ -699,10 +701,10 @@ export function testEmitsNoneAsyncBlocksAsVoidTasks(): none {
 
 export function testEmitsIsolatedAsyncFunctionCalls(): none {
   result := emit("function compute(value: int): int => value * 2\nfunction run(value: int): Promise<int> => async compute(value)")
-  Assert.stringContains(result.source, "doof::submit_async<int32_t>([=]() -> int32_t { return compute(value); })")
+  Assert.stringContains(result.source, " = value; return doof::submit_async<int32_t>([=]() -> int32_t { return compute(_async_arg_")
 
   noneResult := emit("function notify(value: int): none { println(value) }\nfunction run(value: int): Promise<none> => async notify(value)")
-  Assert.stringContains(noneResult.source, "doof::submit_async<void>([=]() { notify(value); })")
+  Assert.stringContains(noneResult.source, " = value; return doof::submit_async<void>([=]() { notify(_async_arg_")
 }
 
 export function testPostfixBangPanicIncludesOriginAndStringFailure(): none {

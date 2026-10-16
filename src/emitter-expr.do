@@ -17,11 +17,15 @@ import { emitCaseExpression, emitCatchExpression, emitDotShorthand, emitIfExpres
 import { emitLambdaExpression } from "./emitter-expr-lambda"
 import { decoratedExpressionType } from "./emitter-expr-utils"
 import { specializeEmitType } from "./emitter-types"
-import { emitActorCreation, emitAsyncExpression, emitRetireActor } from "./emitter-expr-actor"
+import { emitActorCreation, emitAsyncExpression, emitHoistedOperand, emitRetireActor } from "./emitter-expr-actor"
 import { moduleDiagnosticPath } from "./emitter-names"
 import { emitIdentifierValue, emitMemberValue } from "./emitter-function-refs"
 
 export function emitExpression(expression: Expression, context: EmitContext, expected: ResolvedType | none = none): string {
+  if context.hoistedOperands.length > 0 {
+    hoisted := emitHoistedOperand(expression, context, expected)
+    if hoisted != none { return hoisted! }
+  }
   let value = ""
   let sourcePosition: CarrierPosition = .Value
   case expression {

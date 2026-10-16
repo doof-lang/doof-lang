@@ -59,3 +59,82 @@ export function testReadonlyEmissionActorUsesExplicitNames(): none {
   Assert.stringContains(output, "::mapped::types::Item")
   Assert.stringNotContains(output, "app_vendor_types_")
 }
+
+class HoistBox {
+  let value: int = 0
+  get(): int => this.value
+  set(value: int): none { this.value = value }
+  configure(first: int, second: int = 10, third: int = 100): int {
+    this.value = first * 100 + second * 10 + third
+    return this.value
+  }
+}
+
+function hoistTake(values: int[]): int => values.pop()!
+
+isolated function hoistTwice(value: int): int => value * 2
+
+export function testActorCallArgumentsLowerBeforeDispatch(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Box { let value: int = 0\nget(): int => this.value\nset(value: int): none { this.value = value } }\nfunction main(): none { box := Actor<Box>()\nbox.set(box.get() + 1)\ntask := async box.set(2) }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  // The receiver and argument are caller-side locals; the message only reads them.
+  Assert.stringContains(source, "auto _actor_arg_")
+  Assert.stringContains(source, "->template call_sync<int32_t>([](Box& _self) -> int32_t { return _self.get(); })")
+  Assert.stringContains(source, "->template call_sync<void>([&](Box& _self) { _self.set(_actor_arg_")
+  Assert.stringContains(source, "->template call_async<void>([=](Box& _self) { _self.set(_actor_arg_")
+}
+
+export function testIsolatedAsyncCallArgumentsLowerBeforeSubmit(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "isolated function twice(value: int): int => value * 2\nfunction main(): none { let values = [1, 2, 3]\ntask := async twice(values.pop()!) }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "auto _async_arg_")
+  Assert.stringContains(source, "doof::submit_async<int32_t>([=]() -> int32_t { return twice(_async_arg_")
+}
+
+export function testSyncActorCallArgumentReadsSameActor(): none {
+  box := Actor<HoistBox>()
+  // The argument call completes before `set` is queued, so this is not a
+  // self-call from inside the actor.
+  box.set(box.get() + 1)
+  Assert.equal(box.get(), 1)
+}
+
+export function testActorCallArgumentUsesCallerCallback(): none {
+  box := Actor<HoistBox>()
+  double := (value: int): int => value * 2
+  box.set(double(21))
+  Assert.equal(box.get(), 42)
+}
+
+export function testAsyncActorCallArgumentRunsBeforeReturn(): none {
+  box := Actor<HoistBox>()
+  values := [1, 2, 3]
+  task := async box.set(hoistTake(values))
+  // The caller's array is popped before `async` returns, not on the actor.
+  Assert.equal(values.length, 2)
+  task.get()!
+  Assert.equal(box.get(), 3)
+}
+
+export function testActorCallNamedArgumentsAndDefaults(): none {
+  box := Actor<HoistBox>()
+  Assert.equal(box.configure{ third: 3, first: 1 }, 203)
+  Assert.equal(box.configure(2, 5), 350)
+  task := async box.configure{ second: 4, first: 7 }
+  Assert.equal(task.get()!, 840)
+}
+
+export function testIsolatedAsyncCallArgumentRunsBeforeReturn(): none {
+  values := [1, 2, 3]
+  task := async hoistTwice(hoistTake(values))
+  Assert.equal(values.length, 2)
+  Assert.equal(task.get()!, 6)
+}

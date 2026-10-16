@@ -31,6 +31,17 @@ Other keep-alive sources do not extend the process past `main`.
 Host-owned app entrypoints leave mailbox pumping to the host. Terminal
 completion panics use `unhandled_panic` in the receiving domain.
 
+Actor method calls and `async` isolated calls lower their receiver and argument
+expressions into caller-side `auto` temporaries inside an immediately invoked
+`[&]` lambda, then queue a message or job that reads only those temporaries
+(`[&]` for synchronous calls, `[=]` for asynchronous ones). Actor calls emit the
+temporaries directly in `emitter-expr-actor.do`; isolated calls register each
+operand span in `EmitContext.hoistedOperands`, so `emitExpression` replaces the
+operand with its temporary while the ordinary call lowering runs unchanged.
+Default parameter values are still emitted inside the message or job. Actor
+calls without arguments, and isolated calls with no operands, keep the direct
+form.
+
 Callback instantiation keys and emitted names include recursively resolved
 parameter and return types, including nominal module identities in checked
 keys. Runtime callbacks share callable storage across copies, preserving

@@ -92,6 +92,11 @@ export class EmitContext {
   let coverageModuleId: int = -1
   coverageInstrumentedLines: int[] = []
 
+  // Operands of the `async` or actor call being lowered. Each is evaluated
+  // once into a caller-side temporary before work is dispatched to another
+  // domain; see emitter-expr-actor.do.
+  let hoistedOperands: HoistedOperand[] = []
+
   /** A number not yet used for a generated local in this context. */
   nextTemporaryId(): int {
     temporaryCounter += 1
@@ -127,4 +132,12 @@ export function createEmitContextForModule(program: Program, modulePath: string,
   context.modulePath = modulePath
   context.sourcePath = modulePath
   return context
+}
+
+/** A call operand that is evaluated in the caller's domain before dispatch. */
+export class HoistedOperand {
+  span: SourceSpan
+  kind: string
+  let temporary: string = ""
+  let initializer: string = ""
 }

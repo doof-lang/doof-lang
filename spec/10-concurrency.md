@@ -80,6 +80,13 @@ p.get()!
 `async actor.method(args)` returns `Promise<T>`, where `T` is the actor method's
 return type.
 
+The receiver and argument expressions of a synchronous or `async` actor call
+are evaluated in the caller's domain, left to right, before the message is
+queued. Only their values cross the boundary, so `counter.increment(counter.get())`
+is two consecutive messages rather than a call from inside the actor. Omitted
+parameters take their defaults when the message runs, as in a local call on the
+actor's state.
+
 `async` is also valid with a value-producing block:
 
 ```doof check body
@@ -127,6 +134,10 @@ input := 21
 promise := async compute(input)
 println(promise.get()!)  // 42
 ```
+
+As with actor calls, the receiver and argument expressions are evaluated in the
+caller's domain before the call is submitted; only `compute` itself runs on the
+worker.
 
 The direct form is rejected when `compute` reaches mutable module/static state
 or other non-isolated code. Use an async block when the worker needs local

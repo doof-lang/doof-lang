@@ -12,6 +12,9 @@ Core rules:
   `Promise<T>` handles, which the runtime synchronizes.
 - Cross-domain mutable interaction happens through actor method calls. Direct field reads/writes through `Actor<T>` are rejected, including readonly and callback fields; use a method. Fields on the inner state returned by `retire` are accessible normally.
 - Actor method calls are synchronous by default.
+- The receiver and arguments of an actor call or `async` call are evaluated in
+  the caller's domain before the work is queued; omitted parameters take their
+  defaults on the callee side.
 - `async` supports actor method calls and isolated value-producing blocks.
 - `retire actor` drains accepted work, stops the actor, and returns the inner
   state.
