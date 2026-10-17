@@ -93,10 +93,11 @@ import {
 
 The current Apple Multipeer Connectivity backend discovers local peers,
 invites/connects them, and sends reliable UTF-8 messages. Configure a Bonjour
-`serviceType`, protocol id/version, display name, host/client role, and event
-capacity. `session.events` is a `ChannelReceiver<MultiplayerEvent>`; use
-`onEvent`, `start`, `invite`, `send`, and `stop`. Events cover discovery,
-invitations, connections, messages, validated protocol hellos, and errors.
+`serviceType`, protocol id/version, display name, and host/client role.
+`createMultiplayerSession(config, onEvent)` posts every `MultiplayerEvent` to
+`onEvent` in order on the actor that created it; use `start`, `invite`, `send`,
+and `stop` on the session. Events cover discovery, invitations, connections,
+messages, validated protocol hellos, and errors.
 
 ## `std/game`
 

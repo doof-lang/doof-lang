@@ -214,8 +214,8 @@ drains previously registered completions and rejects new registrations.
 Avoid blocking dependency cycles while retiring actors.
 
 Native command-line entrypoints deliver pending completions after normal
-main/script completion, preserving the exit code. Event channels and timers
-do not keep the process alive past `main` without an explicit event loop. UI/application hosts pump their own
+main/script completion, preserving the exit code. Timers and other event
+sources do not keep the process alive past `main` without an explicit event loop. UI/application hosts pump their own
 mailboxes. Callbacks created in temporary isolated async work cannot be used as
 completion receivers; create them in a persistent actor or root domain.
 Doof panics are not Failure values: an unhandled producer or terminal callback
@@ -269,8 +269,10 @@ through the interface (`implements I<T>`) or constrain it to a boundary-safe
 type. A `readonly` field typed by a type parameter is deeply immutable only for
 deeply immutable instantiations: `G<int>` may cross, `G<int[]>` may not.
 Every type argument of a crossing class must be boundary-safe even when no field
-mentions it, because native code may carry it: `ChannelSender<int[]>` cannot
-cross, `ChannelSender<readonly int[]>` can.
+mentions it, because native code may carry it: a native-backed `Handle<int[]>`
+cannot cross, `Handle<readonly int[]>` can. A callback crosses only when every
+parameter and its return type are boundary-safe: an actor cannot receive a
+`(values: int[]): none` callback to post a mutable array back through it.
 
 Native `import class` objects are opaque and treated as mutable: they cannot
 cross actor or async boundaries or sit in readonly fields and bindings. Declare

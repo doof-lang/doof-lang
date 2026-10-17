@@ -267,12 +267,13 @@ the operation.
 
 ## Serve routed HTTP
 
-The server delivers each request through a bounded channel. Route it, respond
-exactly once, and run the main event loop. A handler that never responds will
-eventually produce a 504 according to `responseTimeoutMillis`.
+The server posts each request to a handler on the actor that created it. Route
+it, respond exactly once, and run the main event loop. A full handler mailbox
+produces 503, and a handler that never responds eventually produces a 504
+according to `responseTimeoutMillis`.
 
 ```doof
-import { createChannel, runMainEventLoop } from "std/event"
+import { runMainEventLoop } from "std/event"
 import { Request, Response, Server, ServerOptions } from "std/http-server"
 import { Router, RouteMatch } from "std/http-router"
 
@@ -284,18 +285,12 @@ router := Router()
     Response.jsonValue(200, { id: match.get("id") })
   )
 
-(requests, receiver) := createChannel<Request>{
-  capacity: 128,
-  keepsAlive: true,
-}
-receiver.onMessage((request: Request): none => {
-  response := router.handle(request) ?? Response.text(404, "not found")
-  request.respond(response)!
-})
-
 server := Server.listen{
   options: ServerOptions { host: "127.0.0.1", port: 8080 },
-  requests,
+  onRequest: (request: Request): none => {
+    response := router.handle(request) ?? Response.text(404, "not found")
+    request.respond(response)!
+  },
 }!
 println("listening on http://${server.host}:${server.port}")
 runMainEventLoop()
@@ -303,8 +298,9 @@ server.close()!
 ```
 
 Use `Router.staticFiles` rather than joining decoded URL segments manually; its
-path mapping rejects traversal and decoded separators. Choose channel capacity,
-body limits, and timeouts from the service's load and memory budget.
+path mapping rejects traversal and decoded separators. Choose body limits,
+timeouts, and the runtime's mailbox capacities from the service's load and
+memory budget.
 
 ## Query SQLite into typed values
 

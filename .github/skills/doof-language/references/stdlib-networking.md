@@ -22,23 +22,29 @@ Cookie utilities include `Cookie`, `SetCookie`, `parseCookieHeader`,
 `renderCookieHeader`, `parseSetCookieHeader`, `renderSetCookieHeader`, and
 `cookieValue`. They operate on explicit header values and do not maintain a jar.
 
-`connectWebSocket(url, options)` returns a `WebSocketConnection` with bounded
-`events: ChannelReceiver<WebSocketEvent>` and
-`commands: ChannelSender<WebSocketCommand>`. Events cover open, text, binary,
-writable, close, and errors; commands cover text/binary send, ping, and close.
+`connectWebSocket(url, onEvent, options)` returns
+`Result<WebSocketConnection, HttpError>`. Open, text, binary, writable, close,
+and error events are posted to `onEvent` in order on the actor that created it.
+Write with `sendText`, `sendBinary`, `ping`, and `close` on the connection.
+Native reads pause once `WebSocketOptions.eventCapacity` events are posted but
+unhandled; sends fail with a backpressure error once `outboundCapacity` writes
+are queued, and `WebSocketWritable` reports the queue drained. An open
+connection keeps `runMainEventLoop()` running.
 
 ## `std/http-server`
 
 ```doof
 import { Request, Response, Server, ServerOptions } from "std/http-server"
-import { createChannel, runMainEventLoop } from "std/event"
+import { runMainEventLoop } from "std/event"
 ```
 
-Create a `ChannelSender<Request>` and pass it to `Server.listen{options,
-requests}`. Attach the application handler to the receiver and complete every
-request with `request.respond(response)` or
-`request.upgradeToWebSocket(connection)`. A full/closed channel produces 503;
-an uncompleted request reaches `responseTimeoutMillis` and produces 504.
+Pass a request handler to `Server.listen{options, onRequest}`. The server
+`tryPost`s each `Request` to it, so the handler runs in arrival order on the
+actor that created it; create it inside an actor to serve requests there.
+Complete every request with `request.respond(response)` or
+`request.upgradeToWebSocket(connection)`. A full mailbox or retired owner
+produces 503; an uncompleted request reaches `responseTimeoutMillis` and
+produces 504. An open server keeps `runMainEventLoop()` running until `close()`.
 
 `Request` exposes method/path/headers plus `getBlob`, `getText`, and
 `getJsonValue`. `Response.empty`, `.blob`, `.text`, `.html`, `.jsonValue`, and
@@ -48,8 +54,9 @@ accepted.
 
 `ServerOptions` includes host, port, body limit, idle timeout, response timeout,
 and maximum requests per connection. HTTP/1.1 keep-alive and sequential
-requests are supported. The WebSocket API uses the same paired-channel shape as
-the outbound client and applies inbound backpressure to socket reads.
+requests are supported. `createWebSocketConnection(onEvent, options)` builds
+the connection passed to `upgradeToWebSocket`; it uses the same event-handler
+shape as the outbound client and pauses socket reads at `eventCapacity`.
 
 ## `std/http-router`
 

@@ -143,16 +143,18 @@ resolve, normalize, or rebuild complete URLs.
 
 ```doof
 import {
-  Backpressure, SendError, ChannelSender, ChannelReceiver, createChannel,
-  Timer, setTimeout, setInterval, runMainEventLoop, drainMainEventLoop,
+  Timer, setTimeout, setInterval, MainEventLoopHold, retainMainEventLoop,
+  runMainEventLoop, drainMainEventLoop,
 } from "std/event"
 ```
 
-`createChannel<T>{capacity, highWater, lowWater, keepsAlive}` returns a one-way
-`Tuple<ChannelSender<T>, ChannelReceiver<T>>`. `send(value, key?)` is
-nonblocking and returns `Backpressure.None`/`.High` or `SendError.Full`/`.Closed`.
-A repeated present key replaces the queued value in place. Register
-`onMessage`, `onReady`, and `onClosed` handlers before pumping the main loop.
+`std/event` has no channels. To hand work to another domain, post to a
+callback created there: `callback.post(...)` queues it on the owning actor (or
+the root mailbox), and `callback.tryPost(...)` returns `"full"`/`"retired"`
+failures instead of blocking, for producers that shed load. Native sources such
+as servers and WebSockets deliver events the same way.
+`retainMainEventLoop()` returns a `MainEventLoopHold` that keeps the loop
+running until `release()`d or dropped.
 
 `setTimeout` and `setInterval` accept `Duration`, a handler, and optional
 `keepsAlive`. `Timer.cancel()` reports whether it canceled an active timer.

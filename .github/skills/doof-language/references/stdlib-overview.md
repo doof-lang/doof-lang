@@ -25,7 +25,7 @@ declarations in `index.do` are the exact callable surface.
 | `std/crypto` | Digests, HMAC, secret storage, encodings, UUID, JWT |
 | `std/csv` | Strict CSV parsing and generation with source locations |
 | `std/dom` | Typed live browser DOM, canvas, and WebGL APIs for Wasm |
-| `std/event` | Bounded channels, main-loop integration, and timers |
+| `std/event` | Main-loop integration, keep-alive holds, and timers |
 | `std/fs` | Files, directories, metadata, resources, and streams |
 | `std/game` | Metal-backed game/app host, rendering, input, UI, assets, sound |
 | `std/gzip` | One-shot and streaming gzip compression |
