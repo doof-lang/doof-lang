@@ -1,6 +1,7 @@
 import { Assert } from "std/assert"
-import { driverOutputPath, ensureOutputDirectory, materializeGeneratedText } from "./materialize-driver"
-import { exists, isDirectory, metadata, readText } from "std/fs"
+import { ProjectEmission, ProjectNativeCopy } from "./emitter-project"
+import { driverOutputPath, ensureOutputDirectory, materializeGeneratedText, materializeProject } from "./materialize-driver"
+import { exists, isDirectory, metadata, readText, writeText } from "std/fs"
 import { Instant } from "std/time"
 
 export function testOutputPathsJoinWithSingleSeparator(): none {
@@ -26,4 +27,29 @@ export function testEnsureOutputDirectoryIsIdempotent(): none {
   ensureOutputDirectory(root)
   Assert.isTrue(exists(root))
   Assert.isTrue(isDirectory(root))
+}
+
+export function testNativeCopiesMaterializeNestedPackageInputs(): none {
+  root := "/tmp/doof-materialize-driver-copy-" + string(Instant.now().toEpochMillis())
+  ensureOutputDirectory(root + "/package/include")
+  writeText(root + "/package/include/native.hpp", "// native\n")!
+  project := ProjectEmission {
+    nativeCopies: [ProjectNativeCopy { sourcePath: root + "/package/include", relativePath: "pkg/include" }],
+  }
+  materializeProject(root + "/out", project)!
+  Assert.equal(readText(root + "/out/pkg/include/native.hpp")!, "// native\n")
+}
+
+export function testMissingNativeCopyReportsSourcePath(): none {
+  root := "/tmp/doof-materialize-driver-missing-" + string(Instant.now().toEpochMillis())
+  missing := root + "/package/native_test_support.hpp"
+  project := ProjectEmission {
+    nativeCopies: [ProjectNativeCopy { sourcePath: missing, relativePath: "pkg/native_test_support.hpp" }],
+  }
+  message := case materializeProject(root + "/out", project) {
+    _: Success -> "",
+    failure: Failure -> failure.error,
+  }
+  Assert.isTrue(message.contains(missing), "expected missing source path, got: " + message)
+  Assert.isTrue(message.contains("build.native"), "expected manifest hint, got: " + message)
 }

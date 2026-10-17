@@ -22,16 +22,22 @@ export function ensureOutputDirectory(path: string): none {
   mkdir(path)!
 }
 
-function materializeNativeCopy(sourcePath: string, outputPath: string): none {
+function materializeNativeCopy(sourcePath: string, outputPath: string): Result<none, string> {
+  if !exists(sourcePath) {
+    return Failure("Native package input " + sourcePath + " does not exist; check build.native paths in its doof.json")
+  }
   if isDirectory(sourcePath) {
     ensureOutputDirectory(outputPath)
-    for entry of readDir(sourcePath)! {
-      materializeNativeCopy(joinPath(sourcePath, entry.name), joinPath(outputPath, entry.name))
+    entries := readDir(sourcePath) else { return Failure("Could not read native package directory " + sourcePath) }
+    for entry of entries {
+      try materializeNativeCopy(joinPath(sourcePath, entry.name), joinPath(outputPath, entry.name))
     }
-    return
+    return Success()
   }
   ensureOutputDirectory(parentPath(outputPath))
-  writeBlobIfChanged(outputPath, readBlob(sourcePath)!)
+  content := readBlob(sourcePath) else { return Failure("Could not read native package input " + sourcePath) }
+  writeBlobIfChanged(outputPath, content)
+  return Success()
 }
 
 export function writeTextIfChanged(path: string, content: string): none {
@@ -64,7 +70,7 @@ function blobsEqual(left: readonly byte[], right: readonly byte[]): bool {
   return true
 }
 
-export function materializeProject(outputDirectory: string, project: ProjectEmission): none {
+export function materializeProject(outputDirectory: string, project: ProjectEmission): Result<none, string> {
   ensureOutputDirectory(outputDirectory)
   for module of project.modules {
     if module.reused { continue }
@@ -77,11 +83,12 @@ export function materializeProject(outputDirectory: string, project: ProjectEmis
     writeTextIfChanged(outputPath, supportFile.content)
   }
   for nativeCopy of project.nativeCopies {
-    materializeNativeCopy(
+    try materializeNativeCopy(
       nativeCopy.sourcePath,
       driverOutputPath(outputDirectory, nativeCopy.relativePath),
     )
   }
+  return Success()
 }
 
 export function materializeExecutableResources(resources: PackageResource[], outputDirectory: string): none {
@@ -90,7 +97,7 @@ export function materializeExecutableResources(resources: PackageResource[], out
     outputPath := if isDirectory(resource.sourcePath)
       then destinationRoot
       else driverOutputPath(destinationRoot, fileName(resource.sourcePath))
-    materializeNativeCopy(resource.sourcePath, outputPath)
+    materializeNativeCopy(resource.sourcePath, outputPath)!
   }
 }
 
@@ -129,7 +136,7 @@ function materializeTrackedResource(
       return
     }
   }
-  materializeNativeCopy(sourcePath, outputPath)
+  materializeNativeCopy(sourcePath, outputPath)!
   outputInfo := metadata(outputPath)!
   next.files.push(MaterializedResource {
     sourcePath,

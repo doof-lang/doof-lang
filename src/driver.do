@@ -218,7 +218,10 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
   )
   timings.finish("command.project-planning", projectStart)
   materializationStart := timings.start()
-  materializeProject(outputDirectory, emission)
+  _ := materializeProject(outputDirectory, emission) else error {
+    println("error: " + error)
+    return 1
+  }
   materializeRuntimeHeader(outputDirectory)
   if request.command == "observe" {
     materializeObserverRuntime(outputDirectory)

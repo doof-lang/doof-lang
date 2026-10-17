@@ -191,3 +191,49 @@ export function testStdlibBundleRejectsMissingVendoredLicense(): none {
   assert(message.contains("vendor/libwebp/PATENTS"), "expected actionable missing-license diagnostic")
   removeTree(root)
 }
+
+export function testStdlibBundleKeepsManifestDeclaredTestSupportHeaders(): none {
+  root := "build/stdlib-bundle-test-support-test"
+  removeTree(root)
+  mkdir(root)!
+  packageRoot := path(root, "http-server")
+  mkdir(packageRoot)!
+  writeText(path(packageRoot, "doof.json"),
+    "{\"name\":\"std/http-server\",\"version\":\"0.2.0\",\"build\":{\"native\":{\"extraCopyPaths\":" +
+      "[\"native_server.hpp\",\"./native_server_test_support.hpp\"]}},\"dependencies\":{}}\n")!
+  writeText(path(packageRoot, "index.do"), "export function serve(): none {}\n")!
+  writeText(path(packageRoot, "native_server.hpp"), "// server\n")!
+  writeText(path(packageRoot, "native_server_test_support.hpp"), "// test support\n")!
+
+  bundle := buildStdlibBundle(root, 3)!
+  native := readTarBlob(zstdDecompress(entryData(bundle.data, "native/http-server.tar.zst"))!)!
+  let foundSupport = false
+  for entry of native.entries { if entry.name == "native_server_test_support.hpp" { foundSupport = true } }
+  assert(foundSupport, "expected manifest-declared test support header in the native member")
+  removeTree(root)
+}
+
+export function testStdlibBundleRejectsDeclaredNativePathItOmits(): none {
+  root := "build/stdlib-bundle-declared-path-test"
+  removeTree(root)
+  mkdir(root)!
+  packageRoot := path(root, "json")
+  mkdir(packageRoot)!
+  mkdir(path(packageRoot, "tests"))!
+  writeText(path(packageRoot, "doof.json"),
+    "{\"name\":\"std/json\",\"version\":\"0.2.0\",\"build\":{\"native\":{\"extraCopyPaths\":" +
+      "[\"tests/native_fixture.hpp\"],\"linux\":{\"includePaths\":[\".doof-build/linux/include\"]}}}," +
+      "\"dependencies\":{}}\n")!
+  writeText(path(packageRoot, "index.do"), "export function answer(): int => 42\n")!
+  writeText(path(packageRoot, "tests/native_fixture.hpp"), "// fixture\n")!
+
+  message := case buildStdlibBundle(root, 3) {
+    _: Success -> "",
+    failure: Failure -> failure.error,
+  }
+  assert(
+    message.contains("std/json") && message.contains("extraCopyPaths") && message.contains("tests/native_fixture.hpp"),
+    "expected actionable declared-path diagnostic, got: " + message,
+  )
+  removeTree(root)
+}

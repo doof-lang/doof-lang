@@ -93,8 +93,7 @@ function isProjectOnlyFile(relativePath: string): bool {
   return relativePath == ".DS_Store" || relativePath == ".gitignore" ||
     relativePath == "doof-vendor.json" ||
     relativePath == "README.md" || relativePath == "sample.do" ||
-    relativePath == "test_support.do" || relativePath.endsWith(".test.do") ||
-    relativePath.contains("_test_support.")
+    relativePath == "test_support.do" || relativePath.endsWith(".test.do")
 }
 
 function vendorPathIncluded(packageName: string, relativePath: string, targets: string[]): bool {
@@ -282,6 +281,53 @@ function validateRequiredLicenses(packageName: string, files: CuratedFile[], tar
   return Success()
 }
 
+// Target-independent native paths are copied into every consumer build, so a
+// curation rule that drops one produces a bundle no consumer can package.
+// Target sections may name build-time state and are left to the native driver.
+function validateDeclaredNativePaths(
+  packageName: string,
+  manifestPath: string,
+  files: CuratedFile[],
+): Result<none, string> {
+  source := readText(manifestPath) else { return Failure("Could not read " + manifestPath) }
+  parsed := parseJsonValue(source) else error { return Failure("Invalid " + manifestPath + ": " + error) }
+  root := parsed as SerialObject else { return Success() }
+  buildValue := root.get("build") else { return Success() }
+  build := buildValue as SerialObject else { return Success() }
+  nativeValue := build.get("native") else { return Success() }
+  native := nativeValue as SerialObject else { return Success() }
+  for field of ["includePaths", "sourceFiles", "libraryPaths", "extraCopyPaths"] {
+    fieldValue := native.get(field) else { continue }
+    values := fieldValue as readonly SerialValue[] else { continue }
+    for value of values {
+      declared := value as string else { continue }
+      relativePath := declaredPackagePath(declared)
+      if relativePath == none { continue }
+      if !curatedPathPresent(files, relativePath!) {
+        return Failure(
+          packageName + " declares build.native." + field + " entry " + declared +
+            " but the stdlib bundle omits it",
+        )
+      }
+    }
+  }
+  return Success()
+}
+
+function declaredPackagePath(declared: string): string | none {
+  let relativePath = declared.replaceAll("\\", "/")
+  while relativePath.startsWith("./") { relativePath = relativePath.substring(2, relativePath.length) }
+  if relativePath == "" || relativePath.startsWith("/") || relativePath.contains("..") { return none }
+  return relativePath
+}
+
+function curatedPathPresent(files: CuratedFile[], relativePath: string): bool {
+  for file of files {
+    if within(file.relativePath, relativePath) { return true }
+  }
+  return false
+}
+
 function addMember(
   members: BundleMember[],
   kind: string,
@@ -391,6 +437,7 @@ export function buildStdlibBundle(
     let files: CuratedFile[] = []
     try collectFiles(package_.name, packageRoot, "", files, bundleTargets)
     try validateRequiredLicenses(package_.name, files, bundleTargets)
+    try validateDeclaredNativePaths(package_.name, path(packageRoot, "doof.json"), files)
 
     let nativeEntries: TarWriteEntry[] = []
     let nativeBytes = 0L

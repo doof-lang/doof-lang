@@ -376,7 +376,10 @@ export function testRequest(request: CliRequest): int {
     }
     emission := planProjectEmission(result.emission!, projectNativePackages(project.rootDirectory, rootManifest))
     if request.coverage { emission.nativeBuild.defines.push("DOOF_COVERAGE") }
-    materializeProject(outputDirectory, emission)
+    _ := materializeProject(outputDirectory, emission) else error {
+      println("error: " + error)
+      return 1
+    }
     materializeRuntimeHeader(outputDirectory)
     if cacheAllowed && cached == none && result.diagnostics.length == 0 {
       next := frontendStateForCompilation(result, configuration, rootManifest)
