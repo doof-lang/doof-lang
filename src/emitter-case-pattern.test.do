@@ -277,6 +277,76 @@ export function testClassPatternInsideInterfaceArmUsesNestedVariantTest(): none 
   Assert.stringNotContains(source, "std::holds_alternative<std::shared_ptr<Circle>>")
 }
 
+interface QuarkBodySource<T> { next(): T }
+class QuarkChunkSource { chunk: byte; next(): readonly byte[] => [chunk, chunk] }
+class QuarkEmptySource { next(): readonly byte[] => [] }
+
+function quarkBodyLength(body: readonly byte[] | QuarkBodySource<readonly byte[]>): string => case body {
+  bytes: readonly byte[] -> "bytes " + string(bytes.length)
+  source: QuarkBodySource<readonly byte[]> -> "source " + string(source.next().length)
+}
+
+function quarkBodySourceLength(body: readonly byte[] | QuarkBodySource<readonly byte[]>): int {
+  source := (body as QuarkBodySource<readonly byte[]>)!
+  return source.next().length
+}
+
+export function testInterfacePatternMatchesItsFlattenedImplementors(): none {
+  let bytes: readonly byte[] = [1, 2, 3]
+  Assert.equal(quarkBodyLength(bytes), "bytes 3")
+  Assert.equal(quarkBodyLength(QuarkChunkSource { chunk: 7 }), "source 2")
+  Assert.equal(quarkBodyLength(QuarkEmptySource {}), "source 0")
+  Assert.equal(quarkBodySourceLength(QuarkChunkSource { chunk: 7 }), 2)
+  let body: readonly byte[] | QuarkBodySource<readonly byte[]> = bytes
+  Assert.isTrue((body as QuarkBodySource<readonly byte[]>).isFailure())
+}
+
+class QuarkCountdown implements Stream<int> {
+  let remaining: int
+  next(): bool { if remaining == 0 { return false }; remaining = remaining - 1; return true }
+  value(): int => remaining
+}
+class QuarkRepeat implements Stream<int> {
+  let left: int
+  item: int
+  next(): bool { if left == 0 { return false }; left = left - 1; return true }
+  value(): int => item
+}
+
+function quarkStreamTotal(values: int[] | Stream<int>): int => case values {
+  items: int[] -> items.length
+  stream: Stream<int> -> {
+    let total = 0
+    for item of stream { total = total + item }
+    yield total
+  }
+}
+
+export function testStreamPatternMatchesItsFlattenedImplementors(): none {
+  let items: int[] = [4, 5]
+  Assert.equal(quarkStreamTotal(items), 2)
+  Assert.equal(quarkStreamTotal(QuarkCountdown { remaining: 3 }), 3)
+  Assert.equal(quarkStreamTotal(QuarkRepeat { left: 2, item: 5 }), 10)
+  let values: int[] | Stream<int> = QuarkRepeat { left: 1, item: 9 }
+  stream := (values as Stream<int>)!
+  Assert.isTrue(stream.next())
+  Assert.equal(stream.value(), 9)
+}
+
+export function testInterfacePatternUsesVariantTestAgainstFlattenedUnion(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "interface Shape { area(): int }\n" +
+    "class Circle { r: int; area(): int => r }\n" +
+    "class Square { s: int; area(): int => s }\n" +
+    "function check(value: int[] | Shape): int => case value { items: int[] -> items.length, shape: Shape -> shape.area() }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::variant_is<Shape>(")
+  Assert.stringContains(source, "doof::variant_narrow<Shape>(")
+  Assert.stringNotContains(source, "std::holds_alternative<Shape>")
+}
+
 function quarkBucketStatement(value: int): string {
   case value {
     ..<0 -> { return "negative" }

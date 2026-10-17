@@ -179,8 +179,11 @@ function emitJsonValuePattern(patternType: ResolvedType, subject: string, bindin
 }
 
 // A class pattern may name an implementor of an interface member, such as
-// `Circle` within `Shape | none`; only named members use `std::get`.
+// `Circle` within `Shape | none`; only named members use `std::get`. An
+// interface member, including a registered `Stream<T>`, is spliced into its
+// implementors, so it is never one arm.
 function isDirectVariantArm(patternType: ResolvedType, subjectType: ResolvedType): bool {
+  if patternType.kind == "interface" || patternType.kind == "stream" { return false }
   case subjectType {
     union_: UnionResolvedType -> {
       for member of union_.types { if sameType(member, patternType) { return true } }
