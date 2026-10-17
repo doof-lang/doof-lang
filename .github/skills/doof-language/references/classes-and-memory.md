@@ -2,7 +2,9 @@
 
 ## Class Declarations
 
-```doof
+```doof check
+function nextId(): int => 1
+
 class User {
     readonly id: int
     let name: string
@@ -26,7 +28,7 @@ When the expected type is a class or struct, `.member` may shorthand a static fi
 
 ## Struct Declarations
 
-```doof
+```doof check
 struct Point {
     x: int
     y: int
@@ -67,18 +69,28 @@ field slot itself must be reassigned.
 
 ## Construction
 
-```doof
-user := User { id: 1, name: "Alice" }
-user := User(1, "Alice")
+```doof check
+class User { id: int; name: string }
+class Config { host: string = "localhost"; timeout: int = 10 }
+struct Vec { x: float; y: float }
+struct Line { start: Vec; end: Vec }
+class Button { id: int; label: string }
+class Panel { title: string; children: string[] }
 
-readonly name = "Alice"
-user := User { id: 1, name }
+function main(): none {
+    first := User { id: 1, name: "Alice" }
+    second := User(1, "Alice")
 
-extended := ExtendedConfig { ...base, timeout: 30 }
-line := Line { start: { x: 0.0, y: 0.0 }, end: { x: 1.0, y: 1.0 } }
+    name := "Alice"
+    user := User { id: 1, name }
 
-button := <Button id=1 label="Save"/>
-panel := <Panel title="Welcome">Hello {user.name}</Panel>
+    base := Config {}
+    extended := Config { ...base, timeout: 30 }
+    line := Line { start: { x: 0.0, y: 0.0 }, end: { x: 1.0, y: 1.0 } }
+
+    button := <Button id=1 label="Save"/>
+    panel := <Panel title="Welcome">Hello {user.name}</Panel>
+}
 ```
 
 Rules:
@@ -126,14 +138,20 @@ Rules:
 
 Nominal construction auto-fills literal-valued fields, while structural construction requires them explicitly. The older `const kind = "Success"` spelling is deprecated and remains accepted temporarily with a warning.
 
-```doof
-result1 := Success { value: 42 }
-result2: Result = { kind: "Success", value: 42 }
+```doof check
+class Loaded { kind: "Loaded"; value: int }
+class Missing { kind: "Missing"; error: string }
+type Lookup = Loaded | Missing
+
+function main(): none {
+    nominal := Loaded { value: 42 }
+    structural: Lookup := { kind: "Loaded", value: 42 }
+}
 ```
 
 ## Methods and `this`
 
-```doof
+```doof check
 class Counter {
     let count = 0
 
@@ -154,7 +172,7 @@ class Counter {
 
 ## Static Members
 
-```doof
+```doof check
 class Rectangle {
     width: int
     static kind = "rectangle"
@@ -196,7 +214,7 @@ Rules:
 
 `private` is file-scoped.
 
-```doof
+```doof check
 class Config {
     private secret: string
     name: string
@@ -211,7 +229,9 @@ Private fields without defaults block external construction.
 
 ## Interfaces
 
-```doof
+```doof check
+class Canvas {}
+
 interface Drawable {
     draw(canvas: Canvas): none
 }
@@ -249,7 +269,9 @@ Struct values are stored directly and copied by value. Nullable structs use an o
 
 ### Destructors
 
-```doof
+```doof check
+function closeRawHandle(handle: int): none {}
+
 class FileHandle {
     handle: int
 
@@ -269,7 +291,7 @@ Rules:
 
 ### Weak References
 
-```doof
+```doof check
 class TreeNode {
     children: TreeNode[] = []
     parent: weak TreeNode | none = none
@@ -288,12 +310,14 @@ class TreeNode {
 
 ## Description Metadata
 
-```doof
+```doof check
 class Calculator "A simple calculator." {
     add "Adds two numbers."(a "First.": int, b "Second.": int): int => a + b
 }
 
-meta := Calculator.metadata
+function main(): none {
+    meta := Calculator.metadata
+}
 ```
 
 See [json-and-metadata.md](./json-and-metadata.md) for generated metadata, schemas, and `.invoke(...)` behavior.

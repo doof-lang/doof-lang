@@ -6,37 +6,40 @@ ESM-style. Each `.do` file is a module. All imports/exports resolved at compile 
 
 ### Exports
 
-```doof
+```doof check math.do
 // Inline exports
 export readonly PI = 3.14159
 export class Vector { x, y: float }
 export function add(a: int, b: int): int => a + b
 export enum Direction { North, South, East, West }
-export type MyResult<T> = MySuccess<T> | MyFailure
+export class Measured<T> { value: T }
+export class Unmeasured { reason: string }
+export type Measurement<T> = Measured<T> | Unmeasured
 
 // Separate export
-class Helper { /* ... */ }
+class Helper { name: string = "helper" }
 export { Helper }
 
 // Export with rename
-export { InternalVector as Vector }
+class InternalMatrix { cells: float[] = [] }
+export { InternalMatrix as Matrix }
 ```
 
 No default exports.
 
 ### Imports
 
-```doof
+```doof check imports.do
 import { Vector, add, PI } from "./math"
 import { Vector as Vec3 } from "./math"
-import type { Config } from "./types"       // type-only (erased at runtime)
+import type { Measurement } from "./math"  // type-only (erased at runtime)
 ```
 
 ### Re-exports
 
-```doof
-export { Vector } from "./math/linear"
-export { InternalVector as Vector } from "./internal"
+```doof check reexports.do
+export { Vector } from "./math"
+export { Matrix as Grid } from "./math"
 ```
 
 Re-exports require explicit names. `export * from "mod"` and
@@ -80,10 +83,10 @@ Nothing hoists. Strict declaration order. Functions can self-reference for recur
 A module with `main()` is executable:
 
 ```doof
-function main(): none { println("Hello!") }
-function main(args: string[]): none { /* ... */ }
-function main(): int { return 0 }
-function main(args: string[]): int { /* ... */ }
+function main(): none
+function main(arguments: string[]): none
+function main(): int
+function main(arguments: string[]): int
 ```
 
 `main()` must not be exported. Only one per module.
@@ -115,7 +118,7 @@ With `build.target = "wasm"` or `--target wasm`, exported top-level functions in
 
 Import external C++ classes:
 
-```doof
+```doof check
 // Header inferred as "Logger.hpp"
 import class Logger {
     log(message: string): none
@@ -134,7 +137,7 @@ import class Socket from "<sys/socket.h>" {
 }
 
 // C++ namespace mapping
-import class HttpClient from "<httplib.h>" as httplib::Client {
+import class HttplibClient from "<httplib.h>" as httplib::Client {
     get(path: string): Result<string, int>
 }
 ```
@@ -167,7 +170,7 @@ trailing underscore (`explicit.do` becomes `explicit_`); `std`, `doof`, and
 - No inheritance
 - Mismatches surface as C++ compile errors
 
-```doof
+```doof check
 import class NativeEvent from "./native_event.hpp" as native::Event {
     kind(): int
     text(): string
@@ -194,15 +197,15 @@ import class NativeEvent from "./native_event.hpp" as native::Event {
 
 Example:
 
-```doof
-// types.do
+```doof check types.do
 export enum NativeBoardgameEventKind {
     Unknown = 0,
     CloseRequested = 1,
     RenderRequested = 2
 }
+```
 
-// host-runtime.do
+```doof check host-runtime.do
 import { NativeBoardgameEventKind } from "./types"
 
 export import class NativeBoardgameEvent from "./native_boardgame_host.hpp" {

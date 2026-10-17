@@ -5,7 +5,7 @@
 `std/http` is the outbound client. Apple targets use Foundation transports;
 other targets use the pinned curl backend through the same API.
 
-```doof
+```doof check
 import {
   createClient, get, postJsonValue, send,
   HttpClient, HttpRequest, HttpResponse, HttpHeader, HttpError,
@@ -33,7 +33,7 @@ connection keeps `runMainEventLoop()` running.
 
 ## `std/http-server`
 
-```doof
+```doof check
 import { Request, Response, Server, ServerOptions } from "std/http-server"
 import { runMainEventLoop } from "std/event"
 ```
@@ -60,7 +60,7 @@ shape as the outbound client and pauses socket reads at `eventCapacity`.
 
 ## `std/http-router`
 
-```doof
+```doof check
 import { Router, RouteMatch, compileRoutePattern, matchRoute, matchRoutePrefix } from "std/http-router"
 ```
 
@@ -82,7 +82,7 @@ conditional 304 responses.
 
 ## `std/ssh`
 
-```doof
+```doof check
 import { connect, SshClient, SshConnectOptions, SshCommandResult, SftpClient } from "std/ssh"
 ```
 
@@ -102,7 +102,7 @@ import { connect, SshClient, SshConnectOptions, SshCommandResult, SftpClient } f
 
 ## `std/wol`
 
-```doof
+```doof check
 import { wakeOnLan } from "std/wol"
 
 wakeOnLan("aa:bb:cc:dd:ee:ff", "192.168.1.255")!

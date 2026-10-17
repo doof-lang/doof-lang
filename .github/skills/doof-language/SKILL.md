@@ -37,25 +37,31 @@ Use this base file as the entry point. Load only the reference file that matches
 
 ## Quick Syntax
 
-```doof
-function main(): none {
-    println("Hello, Doof!")
-}
-
-count := 1
-let total = 0
-readonly config = load()
+```doof check
 readonly VERSION = "0.1"
 
-result := loadConfig()!
-value := source as string else { return "" }
+function loadConfig(): Result<string, string> => Success("debug")
 
-message := `Hello ${name},
+function describe(source: string | int, name: string): string {
+    count := 1
+    let total = 0
+    total += count
+
+    config := loadConfig()!
+    value := source as string else { return "" }
+
+    message := `Hello ${name},
 Your build is ready.
 
 Run:
   doof test src
 `
+    return message + config + value
+}
+
+function main(): none {
+    println("Hello, Doof!")
+}
 ```
 
 Key reminders:

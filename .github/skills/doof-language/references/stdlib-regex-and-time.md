@@ -2,7 +2,7 @@
 
 ## `std/regex`
 
-```doof
+```doof check
 import { Regex, Match, RegexFlag, RegexError } from "std/regex"
 ```
 
@@ -18,7 +18,7 @@ pattern, flags, and the native diagnostic.
 
 ## `std/time`
 
-```doof
+```doof check
 import {
   Duration, Instant, Thread, Stopwatch, StopwatchSpan,
   Date, Time, DateTime, TimeZone, ZonedDateTime, DayOfWeek, Month,
@@ -44,7 +44,9 @@ import {
 Parsing and checked construction return `Result<..., string>`. `DayOfWeek` is
 Monday-first (`1..7`); `Month` runs January through December.
 
-```doof
+```doof check
+import { Duration, Instant, Thread } from "std/time"
+
 started := Instant.now()
 Thread.sleep(Duration.ofMillis(10L))
 elapsed := started.durationUntil(Instant.now())

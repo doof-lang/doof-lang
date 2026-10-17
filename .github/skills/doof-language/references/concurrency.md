@@ -21,7 +21,7 @@ Core rules:
 
 ## Actors
 
-```doof
+```doof check
 class Counter {
     let value: int
 
@@ -48,7 +48,12 @@ until the method completes.
 
 `async` enqueues an actor method call and returns `Promise<T>`:
 
-```doof
+```doof check
+class Counter {
+    let value: int
+    increment(n: int): int { value += n; return value }
+}
+
 worker := Actor<Counter>(0)
 p := async worker.increment(10)
 p.get()!
@@ -57,8 +62,12 @@ p.get()!
 Ordinary functions may be dispatched directly when they are inferred isolated
 and their arguments satisfy actor-call boundary rules:
 
-```doof
-promise := async compute(input)
+```doof check
+isolated function compute(input: int): int => input * 2
+
+function main(): none {
+    promise := async compute(21)
+}
 ```
 
 ## Async Blocks
@@ -66,7 +75,7 @@ promise := async compute(input)
 An async block runs outside the caller's actor domain and yields its result
 through `Promise<T>`:
 
-```doof
+```doof check body
 base := 20
 promise := async {
     let values = [base + 1]
@@ -151,7 +160,12 @@ instance method and `isolated static create(): Worker` for a static method.
 
 `retire actor` enqueues a retirement request after already accepted work:
 
-```doof
+```doof check
+class Counter {
+    let value: int
+    increment(n: int): int { value += n; return value }
+}
+
 job := Actor<Counter>(0)
 p := async job.increment(10)
 p.get()!
@@ -182,8 +196,8 @@ defines `stop`, `actor.stop()` is an ordinary actor method call. Use
 
 ```doof
 class Promise<T> {
-    function get(): Result<T, string>
-    function onComplete(callback: (result: Result<T, string>) => none): none
+    get(): Result<T, string>
+    onComplete(callback: (result: Result<T, string>): none): none
 }
 ```
 
@@ -198,7 +212,7 @@ waiting or when registering; reuse panics, even for `none` or failed results.
 
 Use `onComplete` for nonblocking terminal delivery:
 
-```doof
+```doof check
 promise := async { yield [1, 2, 3] }
 promise.onComplete((result) => {
     values := result else error { println(error); return }
@@ -223,7 +237,11 @@ panic terminates through the runtime's process panic boundary.
 
 A mutable promise array can drive completion-order work:
 
-```doof
+```doof check
+isolated function compute(input: int): int => input * 2
+function consume(value: int): none { println(value) }
+
+pending: Promise<int>[] := [async compute(1), async compute(2)]
 while pending.length > 0 {
     value := pending.takeFirstCompleted() else error {
         panic(error)
@@ -289,13 +307,13 @@ isolated, including all transitive helper calls.
 Function values lower to actor-affine callbacks. A callback belongs to the actor
 domain where it was created. Normal call syntax invokes the callback locally:
 
-```doof
+```doof check
 function apply(f: (x: int): int, x: int): int => f(x)
 ```
 
 The explicit local form is:
 
-```doof
+```doof check
 function apply(f: (x: int): int, x: int): int => f.call(x)
 ```
 
@@ -313,10 +331,15 @@ capacity) or `"retired"` (owning actor retiring, retired, or gone). Plain
 for a retired owner. Use `tryPost` for
 producers that shed load rather than block:
 
-```doof
-case callback.tryPost(request) {
+```doof check
+function track(promise: Promise<int>): none {}
+function reject(): none {}
+function stop(): none {}
+
+callback := (n: int): int => n + 1
+case callback.tryPost(1) {
     s: Success -> track(s.value),
-    f: Failure -> if f.error == "full" then reject() else stop(),
+    f: Failure -> { if f.error == "full" { reject() } else { stop() } },
 }
 ```
 
@@ -333,11 +356,15 @@ local call or posting behavior explicitly instead of receiving an erased
 
 ## Common Pattern: Isolated Background Work
 
-```doof
-promise := async {
-    yield compute()
+```doof check
+isolated function compute(): int => 42
+
+function main(): none {
+    promise := async {
+        yield compute()
+    }
+    answer := promise.get()!
 }
-answer := promise.get()!
 ```
 
 Use a temporary actor instead when the background work needs a persistent
@@ -345,7 +372,7 @@ mutable domain or sequential mailbox behavior.
 
 ## Common Pattern: Temporary Actor
 
-```doof
+```doof check
 class Computation {
     input: int
 

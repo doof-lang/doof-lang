@@ -2,7 +2,7 @@
 
 ## Imports
 
-```doof
+```doof check
 import { Assert } from "std/assert"
 ```
 
@@ -28,7 +28,7 @@ to the assertion call rather than the implementation in `std/assert`.
 
 ## Basic Example
 
-```doof
+```doof check
 import { Assert } from "std/assert"
 
 export function testAdd(): none {
@@ -51,9 +51,13 @@ or filesystem-backed component fixtures are appropriate; toolchain invocation,
 subprocess orchestration, whole-repository compatibility sweeps, packaging, and
 fixed-point and release-source workflows belong in an explicit integration or release gate.
 
-Example:
+Example, testing `math.do`:
 
-```doof
+```doof check math.do
+export function add(a: int, b: int): int => a + b
+```
+
+```doof check math.test.do
 import { add } from "./math"
 import { Assert } from "std/assert"
 
@@ -95,65 +99,46 @@ Runner behavior:
 
 ## Mocking
 
-Mocks are compile-time substitutions for imports and call sites.
+`mock import` substitutes a dependency for one source module within a test
+file's compilation graph. The substitute is an ordinary module that exports the
+same names; there are no `mock function` or `mock class` declarations and no
+recorded `.calls`.
 
-Core pieces:
+Rules:
 
-- `mock import` rewrites a dependency for a specific test module graph.
-- `mock function` declares a recorded stand-in for a free function.
-- `mock class` declares a recorded stand-in for a class with methods.
-- Mock callables expose `.calls`, a typed array of captured argument objects.
-
-Important rules:
-
-- Put `mock import` directives at the top of the root `.test.do` file.
+- Put `mock import` directives at the top of the root `.test.do` file; they are
+  rejected in other files.
 - Mock substitutions affect only that test file's module graph.
 - Source-module specifiers resolve to canonical module paths, so explicit `index` and barrel spellings can identify the same module; dependency specifiers match exactly and glob patterns are not supported.
-- `.calls` entries use the original parameter names as fields.
-- Generic mock functions, generic mock classes or methods, and static mock methods are rejected.
 
 ### `mock import`
 
-```doof
+```doof check checkout.test.do
 mock import for "./checkout" {
     "./payments" => "./payments.mock"
 }
 
 import { Assert } from "std/assert"
 import { checkout } from "./checkout"
-import { sendPayment } from "./payments.mock"
 
 export function testCheckoutUsesMockPayment(): none {
     Assert.isTrue(checkout("acct-1", 7))
-    Assert.equal(sendPayment.calls.length, 1)
-    Assert.equal(sendPayment.calls[0].targetId, "acct-1")
-    Assert.equal(sendPayment.calls[0].amount, 7)
 }
 ```
 
-### `mock class`
+Here `checkout.do` imports `./payments`, and `payments.mock.do` exports the
+same names:
 
-```doof
-import { Assert } from "std/assert"
+```doof check checkout.do
+import { sendPayment } from "./payments"
 
-mock class PaymentGateway {
-    sendPayment(targetId: string, amount: int): bool => true
-}
-
-export function testGatewayTracksCallsPerInstance(): none {
-    let gateway = PaymentGateway()
-    gateway.sendPayment("acct-1", 7)
-
-    Assert.equal(gateway.sendPayment.calls.length, 1)
-    Assert.equal(gateway.sendPayment.calls[0].targetId, "acct-1")
-    Assert.equal(gateway.sendPayment.calls[0].amount, 7)
-}
+export function checkout(accountId: string, amount: int): bool => sendPayment(accountId, amount)
 ```
 
-### Bodyless Mocks
-
-```doof
-mock function unexpectedNetworkCall(url: string): none
+```doof check payments.do
+export function sendPayment(targetId: string, amount: int): bool => false
 ```
 
-If execution reaches a bodyless mock, the emitted program panics immediately.
+```doof check payments.mock.do
+export function sendPayment(targetId: string, amount: int): bool => targetId != ""
+```

@@ -36,18 +36,20 @@ including `Success<int> | none`.
 
 ### Returning Results
 
-```doof
-function parseInt(s: string): Result<int, string> {
-    if invalid {
-        return Failure { error: "Invalid number" }
+```doof check
+function parseBit(s: string): Result<int, string> {
+    if s != "0" && s != "1" {
+        return Failure { error: "Invalid bit" }
     }
+    parsed := if s == "1" then 1 else 0
     return Success { value: parsed }
 }
 ```
 
 ### Handling with `case`
 
-```doof
+```doof check body
+result: Result<int, string> := Success(42)
 case result {
     s: Success -> println(s.value),
     f: Failure -> println(f.error)
@@ -75,8 +77,13 @@ has no return channel, statement-level `try` panics on failure.
 binding cannot take `else`; to handle the failure locally, drop `try` and use
 declaration-`else` (`x := load() else { ... }`).
 
-```doof
-function loadConfig(): Result<Config, Error> {
+```doof check
+class Config { name: string }
+function readFile(path: string): Result<string, string> => Success("{\"name\": \"app\"}")
+function parseJSON(text: string): Result<SerialValue, string> => Success({ name: "app" })
+function validate(value: SerialValue): Result<Config, string> => Config.fromSerialValue(value)
+
+function loadConfig(): Result<Config, string> {
     try content := readFile("config.json")
     try parsed := parseJSON(content)
     try config := validate(parsed)
@@ -86,14 +93,22 @@ function loadConfig(): Result<Config, Error> {
 
 Supported binding forms include declarations, typed declarations, destructuring, and assignment:
 
-```doof
-try x := expr
-try x: Type := expr
-try readonly x = expr
-try let x = expr
-try (a, b) := expr
-try { name, age } := expr
-try x = expr
+```doof check
+class Person { name: string; age: int }
+function load(): Result<int, string> => Success(1)
+function loadPair(): Result<Tuple<int, int>, string> => Success((1, 2))
+function loadPerson(): Result<Person, string> => Success(Person { name: "Ada", age: 36 })
+
+function bindings(): Result<none, string> {
+    try x := load()
+    try typed: int := load()
+    try readonly frozen = load()
+    try let counter = load()
+    try (a, b) := loadPair()
+    try { name, age } := loadPerson()
+    try counter = load()
+    return Success()
+}
 ```
 
 ### Absence: `!`, `?`, `??`
@@ -103,10 +118,17 @@ forms collapse absence to `none`, the `!` forms panic on it, and `??` replaces
 it. None of them propagates a `Failure`; use statement `try` for that.
 `Result<T | none, E>` and `Result<T, E> | none` both read as `T` once present.
 
-```doof
+```doof check
+class Config { name: string }
+function loadConfig(): Result<Config, string> => Success(Config { name: "app" })
+function saveState(): Result<none, string> => Success()
+function loadFromDisk(): string => "cached"
+
+defaultConfig := Config { name: "default" }
+
 config := loadConfig()!            // Config; panics on Failure (or a none success)
 maybe := loadConfig()?             // Config | none
-config := loadConfig() ?? defaultConfig
+fallback := loadConfig() ?? defaultConfig
 saveState()!                       // Result<none, E>: panics on Failure
 
 let cache: string | none = none
@@ -120,7 +142,14 @@ removed.
 
 ### Force and Optional Access
 
-```doof
+```doof check
+class Address { city: string }
+class User { name: string; email: string; address: Address | none = none }
+function loadUser(): Result<User, string> => Success(User { name: "Ada", email: "ada@example.com" })
+
+user: User | none := loadUser()?
+items: int[] | none := [1, 2, 3]
+
 user!.name                // (user!).name
 loadUser()!.email         // panics if loadUser() fails
 items![0]                 // (items!)[0]
@@ -136,10 +165,17 @@ returns `Result<U, E2>` keeps its own Failure: `loadUser()?.profile()` is
 
 Declaration-`else` provides an unwrap-or-bail pattern for nullable and `Result` values.
 
-```doof
-config := loadConfig() else error { return "load failed: " + error.message }
-name := maybeName else { panic("missing name") }
-_ := saveState() else error { println("save failed: " + error) }
+```doof check
+class LoadError { message: string }
+function loadConfig(): Result<string, LoadError> => Success("debug")
+function saveState(): Result<none, string> => Success()
+
+function describe(maybeName: string | none): string {
+    config := loadConfig() else error { return "load failed: " + error.message }
+    name := maybeName else { panic("missing name") }
+    _ := saveState() else error { println("save failed: " + error) }
+    return name + ": " + config
+}
 ```
 
 Rules:
@@ -154,11 +190,20 @@ Rules:
 - It applies only to nullable and/or `Result` types; nullable-only subjects
   cannot capture an error.
 
-```doof
-// loadSource(): Result<Source | none, Diagnostic>; none means "not found"
-source := loadSource(path) else diagnostic {
-    if diagnostic != none { report(diagnostic!) }
-    return none
+```doof check
+class Source { text: string }
+class Diagnostic { message: string }
+function report(diagnostic: Diagnostic): none { println(diagnostic.message) }
+
+// none means "not found"
+function loadSource(path: string): Result<Source | none, Diagnostic> => Success(none)
+
+function compile(path: string): Source | none {
+    source := loadSource(path) else diagnostic {
+        if diagnostic != none { report(diagnostic!) }
+        return none
+    }
+    return source
 }
 ```
 
@@ -168,9 +213,13 @@ When you need to keep a none success value while handling Failure, use `case`.
 
 Use statement-`else` to acknowledge and handle a `Result` returned from a side-effecting expression without a full `case` statement.
 
-```doof
-saveState() else error {
-    println("save failed: " + error)
+```doof check
+function saveState(): Result<none, string> => Success()
+
+function main(): none {
+    saveState() else error {
+        println("save failed: " + error)
+    }
 }
 ```
 
@@ -184,7 +233,7 @@ Rules:
 
 `as` performs checked runtime narrowing or conversion.
 
-```doof
+```doof check body
 x: int | string := "hello"
 s := x as string
 
@@ -204,17 +253,22 @@ Behavior:
 
 Useful combinations:
 
-```doof
-try s := x as string
-s := (x as string)!
-s := x as string else { return "" }
+```doof check
+function narrow(x: int | string): Result<string, string> {
+    try s := x as string
+    forced := (x as string)!
+    handled := x as string else { return Success("") }
+    return Success(s + forced + handled)
+}
 ```
 
 ## Catch Expressions
 
 `catch` captures fallible work locally instead of propagating it.
 
-```doof
+```doof check body
+a := (): Result<int, string> => Success(1)
+b := (): Result<none, string> => Failure("b failed")
 err := catch {
     try a()
     try b()
@@ -232,9 +286,12 @@ Inside `catch`:
 
 ## Panic
 
-```doof
-if index < 0 || index >= array.length {
-    panic("Index out of bounds: ${index}")
+```doof check
+function at(array: int[], index: int): int {
+    if index < 0 || index >= array.length {
+        panic("Index out of bounds: ${index}")
+    }
+    return array[index]
 }
 ```
 

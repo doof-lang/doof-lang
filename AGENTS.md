@@ -18,7 +18,7 @@ code is Doof source under `src/`; generated release snapshots are derived artifa
   browser JavaScript for the observability UI. Compiler and repository
   automation remains Doof.
 - Update `spec/` and the Doof language skill when syntax or semantics change.
-  Open complete, valid single-file spec examples with ` ```doof check ` (or
+  Open complete, valid single-file spec and skill examples with ` ```doof check ` (or
   ` ```doof check body ` for self-contained statements), and invalid ones with
   ` ```doof reject `, marking each erroneous line with ❌. Name files that
   import one another, as in ` ```doof check math.do `. The test suite checks

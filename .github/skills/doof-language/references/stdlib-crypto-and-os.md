@@ -2,7 +2,7 @@
 
 ## `std/cli`
 
-```doof
+```doof check
 import { CliSpec, CliArgs, CliError } from "std/cli"
 ```
 
@@ -18,7 +18,7 @@ Parsing supports long/short options, `--name=value`, attached short values,
 
 ## `std/console`
 
-```doof
+```doof check
 import { ConsoleError, prompt, choose } from "std/console"
 ```
 
@@ -32,7 +32,7 @@ tests.
 
 ## `std/parse`
 
-```doof
+```doof check
 import { parseBool, parseByte, parseInt, parseLong, parseFloat, parseDouble, ParsingError } from "std/parse"
 ```
 
@@ -44,7 +44,7 @@ non-finite spellings.
 
 ## `std/crypto`
 
-```doof
+```doof check
 import {
   SecretBytes, sha1, sha1String, sha1Hex, sha1HexString,
   sha256, sha256String, sha256Hex, sha256HexString, blobStreamToSha256,
@@ -67,7 +67,7 @@ import {
 
 ## `std/log`
 
-```doof
+```doof check
 import { ConsoleLogger, RollingFileLogger, LogLevel, Logger, setLogger, debug, info, warn, error, fatal } from "std/log"
 ```
 
@@ -88,7 +88,7 @@ and helpers `radians`, `degrees`, `lerp`, `approxEqual`, `mod`, and
 
 ## `std/random`
 
-```doof
+```doof check
 import { random, randomInt } from "std/random"
 ```
 
@@ -99,7 +99,7 @@ application-owned generator when deterministic tests or simulations matter.
 
 ## `std/os`
 
-```doof
+```doof check
 import { env, pid, platform, architecture, ExecOptions, Exec, ExecResult, run } from "std/os"
 ```
 

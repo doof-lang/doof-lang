@@ -6,9 +6,9 @@ Classes and structs with all-serializable fields and no dedicated `constructor` 
 
 ### `.toSerialObject()` — Instance Method
 
-Returns a `SerialObject` representation. `SerialObject` is the intrinsic alias for `Map<string, SerialValue>`, so it is still accepted anywhere a `SerialValue` is expected.
+Returns a `SerialObject` representation. `SerialObject` is the intrinsic alias for `readonly Map<string, SerialValue>`, so it is still accepted anywhere a `SerialValue` is expected.
 
-```doof
+```doof check
 import { formatJsonValue } from "std/json"
 
 class User {
@@ -49,21 +49,29 @@ Rules:
 
 ### `.fromSerialValue()` — Static Method
 
-```doof
-result := Point.fromSerialValue({ x: 1.5, y: 2.5 })  // Result<Point, string>
-lenient := Point.fromSerialValue({ x: 1, y: none }, true)
+```doof check
+struct Point { x: double; y: double = 0.0 }
+
+function main(): none {
+    result := Point.fromSerialValue({ x: 1.5, y: 2.5 })  // Result<Point, string>
+    lenient := Point.fromSerialValue({ x: 1, y: none }, true)
+}
 ```
 
 Generic helpers can deserialize through a type parameter when it is explicitly
 constrained with the intrinsic `Serializable` constraint:
 
-```doof
+```doof check
+class User { name: string }
+
 function decode<T: Serializable>(json: SerialValue): Result<T, string> {
     return T.fromSerialValue(json)
 }
 
-payload: SerialValue := { name: "Ada" }
-user := decode<User>{ json: payload }
+function main(): none {
+    payload: SerialValue := { name: "Ada" }
+    user := decode<User>{ json: payload }
+}
 ```
 
 `Serializable` is constraint-only, not a normal value type. Concrete
@@ -106,7 +114,7 @@ array elements, map values, and nullable fields follow the same per-direction
 rules, so a class with a `Shape[]` field encodes and decodes on demand, and
 recursive interfaces such as tree nodes work. Generic interfaces are not JSON types.
 
-```doof
+```doof check
 interface Shape { area(): double }
 
 class Circle implements Shape {
@@ -121,8 +129,8 @@ class Rect implements Shape {
     area(): double => width * height
 }
 
-Shape.fromSerialValue({ kind: "circle", radius: 5.0 })  // Result<Shape, string>
-Shape.fromSerialValue({ kind: "circle", radius: 5.0 }, true)
+decoded := Shape.fromSerialValue({ kind: "circle", radius: 5.0 })  // Result<Shape, string>
+lenient := Shape.fromSerialValue({ kind: "circle", radius: 5.0 }, true)
 shape: Shape := Circle { radius: 2.0 }
 shape.toSerialObject()  // {"kind":"circle","radius":2.0}
 ```
@@ -152,7 +160,7 @@ and structs cannot be union members.
 
 Optional description strings on declarations (pure metadata, no runtime effect):
 
-```doof
+```doof check
 class DevAssistant "AI assistant for development." {
     rootPath "Path to the project root.": string
     
@@ -173,7 +181,12 @@ Not supported on: `let`, `:=`, imports/exports.
 
 Classes and structs with descriptions can expose structured metadata (generated on-demand):
 
-```doof
+```doof check
+class Calculator "A simple calculator." {
+    add "Adds two numbers."(a "First.": int, b "Second.": int): int => a + b
+}
+
+instance := Calculator {}
 meta := Calculator.metadata
 
 meta.name               // "Calculator"
@@ -183,13 +196,13 @@ meta.methods[0].name            // "add"
 meta.methods[0].description     // "Adds two numbers."
 meta.methods[0].inputSchema     // SerialValue JSON Schema Draft 7 object
 meta.methods[0].outputSchema    // SerialValue JSON Schema Draft 7 object
-meta.methods[0].invoke(instance, { a: 1, b: 2 })  // Result<SerialValue, SerialValue>
+sum := meta.methods[0].invoke(instance, { a: 1, b: 2 })  // Result<SerialValue, SerialValue>
 ```
 
 Generic helpers can access metadata on a type parameter with the compiler-known
 `Reflectable` constraint:
 
-```doof
+```doof check
 function toolName<T: Reflectable>(tool: T): string {
   return T.metadata.name
 }

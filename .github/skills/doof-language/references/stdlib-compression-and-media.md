@@ -2,7 +2,7 @@
 
 ## `std/archive`
 
-```doof
+```doof check
 import { ZipEntry, ZipCompression, ArchiveEntryKind, readZip, writeZip, crc32, deflate, inflate } from "std/archive"
 ```
 
@@ -14,7 +14,7 @@ fallible. `crc32` computes the ZIP-compatible checksum.
 
 ## `std/gzip`
 
-```doof
+```doof check
 import { gzip, gunzip, GzipStream } from "std/gzip"
 ```
 
@@ -24,7 +24,7 @@ import { gzip, gunzip, GzipStream } from "std/gzip"
 
 ## `std/zstd`
 
-```doof
+```doof check
 import { zstdCompress, zstdCompressWithLevel, zstdDecompress, ZstdCompressStream } from "std/zstd"
 ```
 
@@ -35,7 +35,7 @@ clamps unsupported levels. `ZstdCompressStream(source)` and
 
 ## `std/image`
 
-```doof
+```doof check
 import {
   Image, ImageView, PixelBytes, PixelAlphaMode,
   ImageFormat, ImageResampling, ImageEncodeOptions,

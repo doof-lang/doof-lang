@@ -26,7 +26,7 @@ Translate errors where package boundaries differ, and reserve postfix `!` for st
 invariants, tests, and other failures that truly make continued execution
 invalid.
 
-```doof
+```doof check
 import { parseJsonValue } from "std/json"
 
 class Config {
@@ -44,8 +44,11 @@ function decodeConfig(text: string): Result<Config, string> {
 When one operation returns a different error type, add useful context at that
 boundary instead of flattening every error in advance.
 
-```doof
+```doof check
 import { readText } from "std/fs"
+
+class Config { name: string }
+function decodeConfig(text: string): Result<Config, string> => Success(Config { name: text })
 
 function loadConfig(path: string): Result<Config, string> {
   text := readText(path) else error {
@@ -61,7 +64,7 @@ Let `std/cli` validate argv shape, decode its flat `SerialObject` into a class,
 then use `std/parse` for numeric strings. Print both the error and generated
 usage for argv mistakes.
 
-```doof
+```doof check
 import { CliSpec } from "std/cli"
 import { parseInt } from "std/parse"
 
@@ -102,18 +105,20 @@ Use `std/console.prompt` or `choose` only for an intentionally interactive
 native program. EOF is a normal failure to handle, and `choose` returns a
 zero-based index even though it displays one-based choices.
 
-```doof
+```doof check
 import { choose, prompt } from "std/console"
 
-name := prompt("Name?") else error {
-  println(error.message)
-  return
+function main(): none {
+  name := prompt("Name?") else error {
+    println(error.message)
+    return
+  }
+  color := choose("Color?", ["Red", "Green", "Blue"]) else error {
+    println(error.message)
+    return
+  }
+  println("${name} selected option ${color}")
 }
-color := choose("Color?", ["Red", "Green", "Blue"]) else error {
-  println(error.message)
-  return
-}
-println("${name} selected option ${color}")
 ```
 
 ## Load packaged resources safely
@@ -129,12 +134,14 @@ do not build a resource path relative to the current working directory.
 }
 ```
 
-```doof
+```doof check
 import { readTextResource } from "std/fs"
 import { parseJsonObject } from "std/json"
 
-text := readTextResource("config/defaults.json")!
-defaults := parseJsonObject(text)!
+function main(): none {
+  text := readTextResource("config/defaults.json")!
+  defaults := parseJsonObject(text)!
+}
 ```
 
 Use `std/path.resourcePath` when an API needs a filesystem path rather than
@@ -146,7 +153,7 @@ Use `StringBuilder` inside loops, optionally reserve an estimated UTF-8 byte
 capacity, and drain it when finished. Use `splitLines` when complete input is
 already in memory; use `std/fs.readLineStream` for large files.
 
-```doof
+```doof check
 import { StringBuilder, join, splitLines } from "std/string"
 
 builder := StringBuilder()
@@ -166,22 +173,24 @@ Use the CSV model instead of manual splitting: quoted fields can contain
 delimiters and newlines. Report its byte index and one-based line/column to the
 caller.
 
-```doof
+```doof check
 import { CsvDocument, CsvRow, parseCsv, stringifyCsv } from "std/csv"
 
-input := "name,note\r\nAda,\"hello, world\""
-document := parseCsv(input) else error {
-  println("CSV ${error.line}:${error.column}: ${error.message}")
-  return
-}
-println(document.row(1).field(1))
+function main(): none {
+  input := "name,note\r\nAda,\"hello, world\""
+  document := parseCsv(input) else error {
+    println("CSV ${error.line}:${error.column}: ${error.message}")
+    return
+  }
+  println(document.row(1).field(1))
 
-output := stringifyCsv(CsvDocument {
-  rows: readonly [
-    CsvRow { fields: readonly ["name", "score"] },
-    CsvRow { fields: readonly ["Ada", "10"] },
-  ]
-})!
+  output := stringifyCsv(CsvDocument {
+    rows: readonly [
+      CsvRow { fields: readonly ["name", "score"] },
+      CsvRow { fields: readonly ["Ada", "10"] },
+    ]
+  })!
+}
 ```
 
 ## Read practical XML
@@ -190,21 +199,23 @@ Use `childElements()` to ignore comments/text while walking structure and
 `textContent()` when mixed text and CDATA should be combined. Use checked
 `attribute(name)` rather than assuming an attribute exists.
 
-```doof
+```doof check
 import { parseXml } from "std/xml"
 
-document := parseXml("<catalog><book id=\"1\"><title>Doof</title></book></catalog>") else error {
-  println("XML ${error.line}:${error.column}: ${error.message}")
-  return
-}
-
-for book of document.root.childElements() {
-  id := book.attribute("id") else error {
-    println(error)
-    continue
+function main(): none {
+  document := parseXml("<catalog><book id=\"1\"><title>Doof</title></book></catalog>") else error {
+    println("XML ${error.line}:${error.column}: ${error.message}")
+    return
   }
-  title := book.childElements()[0].textContent()
-  println("${id}: ${title}")
+
+  for book of document.root.childElements() {
+    id := book.attribute("id") else error {
+      println(error)
+      continue
+    }
+    title := book.childElements()[0].textContent()
+    println("${id}: ${title}")
+  }
 }
 ```
 
@@ -217,7 +228,7 @@ the input requires those features.
 `Chain` transformations are lazy. Passing the chain to `writeLineStream`
 consumes it once without loading the complete input or output into memory.
 
-```doof
+```doof check
 import { readLineStream, writeLineStream } from "std/fs"
 import { Chain } from "std/stream"
 
@@ -238,7 +249,7 @@ stream can fail.
 Reuse one client, distinguish transport failure from HTTP status, then parse
 and type-check the payload.
 
-```doof
+```doof check
 import { HttpClient, createClient, get } from "std/http"
 
 class User {
@@ -257,8 +268,10 @@ function fetchUser(client: HttpClient, id: int): Result<User, string> {
   return User.fromSerialValue(json)
 }
 
-client := createClient()
-user := fetchUser(client, 42)!
+function main(): none {
+  client := createClient()
+  user := fetchUser(client, 42)!
+}
 ```
 
 HTTP 4xx and 5xx are successful transport results, so always inspect status.
@@ -272,7 +285,7 @@ it, respond exactly once, and run the main event loop. A full handler mailbox
 produces 503, and a handler that never responds eventually produces a 504
 according to `responseTimeoutMillis`.
 
-```doof
+```doof check
 import { runMainEventLoop } from "std/event"
 import { Request, Response, Server, ServerOptions } from "std/http-server"
 import { Router, RouteMatch } from "std/http-router"
@@ -307,7 +320,7 @@ memory budget.
 Prepare reusable statements and remember that `query` is fallible twice: once
 when creating the stream and once for each streamed row.
 
-```doof
+```doof check
 import {
   SqliteError, SqliteValue, open, close, executeSql,
   prepare, query, toJsonRow,
@@ -331,8 +344,10 @@ function loadTodos(path: string): Result<Todo[], SqliteError> {
       return Failure {
         error: SqliteError {
           stage: "read",
-          code: 0,
+          code: none,
+          sqlState: none,
           message: error,
+          detail: none,
           sql: none,
         }
       }
@@ -356,27 +371,29 @@ Pass the executable and argv separately; `std/os` does not invoke a shell.
 Bound captured output for untrusted or potentially noisy children and set a
 timeout. Merge stderr when consuming only one live stream.
 
-```doof
+```doof check
 import { ExecOptions, run } from "std/os"
 import { Duration } from "std/time"
 
-result := run(
-  "/usr/bin/git",
-  ["status", "--short"],
-  ExecOptions {
-    timeout: Duration.ofSeconds(10L),
-    maxOutputBytes: 1_048_576L,
-  },
-) else error {
-  println("git failed to run: ${error}")
-  return
-}
+function main(): none {
+  result := run(
+    "/usr/bin/git",
+    ["status", "--short"],
+    ExecOptions {
+      timeout: Duration.ofSeconds(10L),
+      maxOutputBytes: 1_048_576L,
+    },
+  ) else error {
+    println("git failed to run: ${error}")
+    return
+  }
 
-if result.exitCode != 0 {
-  println("git exited with ${result.exitCode}")
-}
-if result.stdoutTruncated || result.stderrTruncated {
-  println("child output was truncated")
+  if result.exitCode != 0 {
+    println("git exited with ${result.exitCode}")
+  }
+  if result.stdoutTruncated || result.stderrTruncated {
+    println("child output was truncated")
+  }
 }
 ```
 
@@ -386,7 +403,7 @@ For small payloads, combine `readBlob`/`writeBlob` with the one-shot gzip or
 zstd functions. For large payloads, feed `readBlockStream` through a compression
 stream into `writeBlobStream`.
 
-```doof
+```doof check
 import { readBlockStream, writeBlobStream } from "std/fs"
 import { GzipStream } from "std/gzip"
 
@@ -403,7 +420,7 @@ Use a plain outer TAR when large independently compressed artifacts need direct
 access. `scanTarFile` reads TAR headers and PAX metadata while seeking over
 ordinary payloads; `readTarEntry` then reads only the selected byte range.
 
-```doof
+```doof check
 import { readTarEntry, scanTarFile } from "std/archive"
 import { zstdDecompress } from "std/zstd"
 
@@ -427,7 +444,7 @@ central directory, and `readZipEntry` loads, decompresses, and CRC-checks only
 the selected member. Store already-compressed `.tar.zst` members with
 `ZipCompression.Store` when building the ZIP.
 
-```doof
+```doof check
 import { readZipEntry, scanZipFile } from "std/archive"
 
 entries := scanZipFile("stdlib.zip")!
@@ -448,7 +465,7 @@ timezone-free wall clock, and `ZonedDateTime` when both local fields and a zone
 matter. Preserve either the instant or the local time deliberately during zone
 changes.
 
-```doof
+```doof check
 import { DateTime, Duration, Instant, TimeZone } from "std/time"
 
 deadline := Instant.now().plus(Duration.ofSeconds(30L))

@@ -83,8 +83,10 @@ summary HTML, and annotated per-file HTML output.
   rejected with exactly the `// expect-error: <line>:<column> <message>`
   diagnostics it declares, and `doof emit` must write no output for it. See
   that directory's README.
-- Spec code fences opened with ` ```doof check ` are written to standalone files
-  under `build/spec-examples/<chapter>/` and must pass `doof check`. A fence
+- Code fences opened with ` ```doof check ` in `spec/` and in the Doof
+  language skill (`.github/skills/doof-language/`) are written to standalone
+  files under `build/spec-examples/<chapter>/` or
+  `build/skill-examples/<page>/` and must pass `doof check`. A fence
   opened with ` ```doof check math.do ` (any mode may end with a relative
   `.do` path) is written under that name, and every chapter file is written
   before any is checked, so examples can import one another. Fences opened with

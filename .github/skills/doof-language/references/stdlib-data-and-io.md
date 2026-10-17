@@ -2,7 +2,7 @@
 
 ## `std/string`
 
-```doof
+```doof check
 import { StringBuilder, join, splitLines } from "std/string"
 ```
 
@@ -15,7 +15,7 @@ lines, and omits an extra line after a final terminator.
 
 ## `std/blob`
 
-```doof
+```doof check
 import { BlobBuilder, BlobReader, EncodingError, Endian, TextEncoding, decodeUtf8 } from "std/blob"
 ```
 
@@ -32,7 +32,7 @@ behavior. `build()` returns `readonly byte[]` and resets the builder.
 
 ## `std/fs`
 
-```doof
+```doof check
 import {
   FileInfo, IoError, readText, readBlob, writeText, writeBlob,
   appendText, appendBlob, metadata, readDir, mkdir, remove, rename, copy,
@@ -54,7 +54,7 @@ whole input.
 
 ## `std/json`
 
-```doof
+```doof check
 import { parseJsonValue, parseJsonObject, formatJsonValue } from "std/json"
 ```
 
@@ -67,7 +67,7 @@ exponent forms become `double`. Parse errors include line and column.
 
 ## `std/csv`
 
-```doof
+```doof check
 import { CsvDocument, CsvRow, CsvError, parseCsv, stringifyCsv } from "std/csv"
 ```
 
@@ -80,7 +80,7 @@ defaults to comma and CRLF and quotes only when required.
 
 ## `std/xml`
 
-```doof
+```doof check
 import { XmlDocument, XmlElement, XmlNode, XmlError, parseXml, stringifyXml } from "std/xml"
 ```
 
@@ -94,7 +94,7 @@ comments, and CDATA and escapes text and attributes.
 
 ## `std/path`
 
-```doof
+```doof check
 import {
   absolute, homeDirectory, tempDirectory, dataDirectory, cacheDirectory,
   currentWorkingDirectory, setCurrentWorkingDirectory,
@@ -114,7 +114,7 @@ executable as `Result<string, string>`; discovery failures remain recoverable.
 
 ## `std/stream`
 
-```doof
+```doof check
 import { Chain, blobStreamToLineStream } from "std/stream"
 ```
 
@@ -125,7 +125,7 @@ unterminated line.
 
 ## `std/url`
 
-```doof
+```doof check
 import { parsePath, parseAuthority, parseQueryParams, Path, Authority, QueryParams, UrlError } from "std/url"
 ```
 
@@ -141,7 +141,7 @@ resolve, normalize, or rebuild complete URLs.
 
 ## `std/event`
 
-```doof
+```doof check
 import {
   Timer, setTimeout, setInterval, MainEventLoopHold, retainMainEventLoop,
   runMainEventLoop, drainMainEventLoop,

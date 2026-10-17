@@ -2,7 +2,7 @@
 
 ## `std/dom`
 
-```doof
+```doof check
 import { button, div, input, canvas, domDocument } from "std/dom"
 ```
 
@@ -19,7 +19,7 @@ invoke exported Wasm entry points through it.
 
 ## `std/apple-intelligence`
 
-```doof
+```doof check
 import { AppleIntelligenceSession } from "std/apple-intelligence"
 ```
 
@@ -34,7 +34,7 @@ Apple Silicon, Apple Intelligence, and the Apple Swift/Clang toolchain.
 
 ## `std/js`
 
-```doof
+```doof check
 import { JsEngine, JsError, JsJsonHandler } from "std/js"
 ```
 
@@ -48,7 +48,7 @@ override them explicitly for trusted workloads that need more.
 
 ## `std/ts`
 
-```doof
+```doof check
 import { transpile, transpileTsx, TsError, TsxOptions } from "std/ts"
 ```
 
@@ -63,7 +63,7 @@ or byte offsets and does not emit source maps.
 
 ## `std/webshell`
 
-```doof
+```doof check
 import {
   initWebShellApp, WebShellApp, WebShellOptions,
   installWebShellDialogs, configureWebShellMenus,
@@ -84,7 +84,7 @@ implemented.
 
 ## `std/multiplayer`
 
-```doof
+```doof check
 import {
   MultiplayerConfig, MultiplayerRole, MultiplayerSession,
   MultiplayerEvent, MultiplayerEventKind, createMultiplayerSession,
@@ -119,7 +119,7 @@ keyboard input is not currently exposed there.
 
 ## `std/appkit`
 
-```doof
+```doof check
 import { Button, Text, TextField, Window, runApp } from "std/appkit"
 
 function main(): none {
@@ -145,7 +145,7 @@ standard application menus. Objective-C and AppKit types stay private.
 
 ## `std/uikit`
 
-```doof
+```doof check
 import { Screen, Text, runApp } from "std/uikit"
 ```
 
@@ -159,7 +159,7 @@ simulator`; `runApp(screen)` attaches to the generated iOS shell.
 
 ## `std/layout`
 
-```doof
+```doof check
 import { LayoutEdges, LayoutNode, LayoutRect, LayoutStyle, layout } from "std/layout"
 ```
 

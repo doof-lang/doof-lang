@@ -9,7 +9,7 @@
 
 ## Hello World and Entry Points
 
-```doof
+```doof check
 function main(): none {
     println("Hello, Doof!")
 }
@@ -20,8 +20,8 @@ A module with a `main()` function is executable. Valid signatures are:
 ```doof
 function main(): none
 function main(): int
-function main(args: string[]): none
-function main(args: string[]): int
+function main(arguments: string[]): none
+function main(arguments: string[]): int
 ```
 
 `main()` must not be exported. A native entry can also execute top-level
@@ -42,9 +42,9 @@ implicit top-level `arguments` binding.
 | `:=` | no | immutable binding, value may still have mutable interior; allowed globally or locally |
 | `let` | yes | mutable local or module binding; module access is non-isolated |
 
-```doof
+```doof check
 readonly MAX = 100
-readonly config = loadConfig()
+readonly NAMES = ["a", "b"]
 items := [1, 2, 3]
 let total = 0
 ```
@@ -53,7 +53,14 @@ Prefer `readonly` for deeply immutable values and `:=` for immutable bindings wi
 
 ### `with` Scoped Bindings
 
-```doof
+```doof check
+class Connection { destructor { println("closed") } }
+class Guard { destructor { println("released") } }
+function openDatabase(): Connection => Connection {}
+function query(connection: Connection, sql: string): none {}
+function acquireGuard(): Guard => Guard {}
+function updateProtectedState(): none {}
+
 with connection := openDatabase() {
     query(connection, "SELECT 1")
 }
@@ -68,7 +75,12 @@ but cannot discard a `Result`.
 
 ### Destructuring
 
-```doof
+```doof check
+class User { name: string; email: string }
+
+point := (1, 2)
+values := [1, 2, 3]
+user := User { name: "Ada", email: "ada@example.com" }
 (x, y) := point
 [head, _, tail] := values
 { name, email } := user
@@ -88,7 +100,7 @@ Rules:
 
 ## Functions and Lambdas
 
-```doof
+```doof check
 function double(x: int): int => x * 2
 
 function factorial(n: int): int {
@@ -115,13 +127,14 @@ body.
 
 ### Calling Functions
 
-```doof
+```doof check
 function clamp(value: int, min: int, max: int): int {
     if value < min { return min }
     if value > max { return max }
     return value
 }
 
+score := 120
 clamp(score, 0, 100)
 clamp{ value: score, min: 0, max: 100 }
 clamp{ min: 0, max: 100, value: score }
@@ -137,10 +150,18 @@ Named-call syntax is independent of capitalization: `GroupBox{title: "Account"}`
 Typed tags are another named-call spelling for classes, structs, functions,
 callbacks, and callable members:
 
-```doof
-button := <Button id=1 label="Save" onClick=>println("clicked")/>
-guarded := <Button label="Submit" onClick=>{ if pending.length > 0 { submit() } }/>
-panel := <Panel title="Welcome">Hello {user.name}</Panel>
+```doof check
+class Button { id: int = 0; label: string; onClick: (): none }
+class Panel { title: string; children: string[] }
+function submit(): none {}
+
+function main(): none {
+    pending := [1]
+    name := "Ada"
+    button := <Button id=1 label="Save" onClick=>println("clicked")/>
+    guarded := <Button label="Submit" onClick=>{ if pending.length > 0 { submit() } }/>
+    panel := <Panel title="Welcome">Hello {name}</Panel>
+}
 ```
 
 Scalar attributes may be bare; other values use `{expression}`. Paired content
@@ -153,7 +174,7 @@ parenthesized so it is not mistaken for the tag terminator.
 
 `SourceLocation` is a builtin class for source attribution. Use `@caller` only in parameter or field defaults when you want the call or construction site:
 
-```doof
+```doof check
 function info(message: string, source: SourceLocation = @caller): none {
     println(source.fileName + ":" + string(source.line))
 }
@@ -172,19 +193,25 @@ class Failure {
 
 ### Lambdas
 
-```doof
-square := (x: int): int => x * 2
-
+```doof check
+class User { name: string }
 type Transform = (x: int): int
-transform: Transform := (x) => x * 2
 
-numbers.map(=> it * 2)
-numbers.filter(=> it > 10)
-numbers.reduce(0, => acc + it)
-numbers.map(=> it * index)
-numbers.map((index) => index)               // signature names bind by name
-users.map((user) => user.name)              // other names bind by position
-events.reduce(0, (count, _, _): int => count + 1)
+function main(): none {
+    square := (x: int): int => x * 2
+    transform: Transform := (x) => x * 2
+
+    numbers := [5, 12, 20]
+    users := [User { name: "Ada" }]
+    events := ["start", "stop"]
+    numbers.map(=> it * 2)
+    numbers.filter(=> it > 10)
+    numbers.reduce(0, => acc + it)
+    numbers.map(=> it * index)
+    numbers.map((index) => index)               // signature names bind by name
+    users.map((user) => user.name)              // other names bind by position
+    events.reduce(0, (count, _, _): int => count + 1)
+}
 ```
 
 Explicit lambda parameters that all name signature parameters bind by name:
@@ -244,7 +271,11 @@ Collection shorthand parameter names are:
 
 A same-line block after `)` becomes a trailing lambda only when the call is the complete expression statement:
 
-```doof
+```doof check
+function withTransaction(body: (it: string): none): none { body("tx-1") }
+function writeAuditLog(id: string): none { println(id) }
+
+items := ["a", "b"]
 items.forEach() { println(it) }
 withTransaction() {
     writeAuditLog(it)
@@ -262,7 +293,7 @@ Use an explicit lambda for value-producing callbacks, binding initializers, assi
 
 ### Function Types and Modifiers
 
-```doof
+```doof check
 type Callback = (value: int, label: string): none
 type Predicate<T> = (item: T): bool
 ```
@@ -282,7 +313,8 @@ Common modifiers:
 
 Value-producing blocks work in `case` expression arms and in local declarations or reassignment via `<-`:
 
-```doof
+```doof check body
+cached := true
 let score <- {
     if cached {
         yield 10
@@ -305,7 +337,18 @@ Rules:
 
 ## Control Flow
 
-```doof
+```doof check
+enum Suit { Hearts, Spades }
+class Pile { cards: string[] = [] }
+function doWork(): none {}
+
+score := 85
+items := ["a", "b"]
+entries: Map<string, int> := { a: 1 }
+foundations: Map<Suit, Pile> := { (.Hearts): Pile {} }
+let count = 0
+let condition = false
+
 grade := if score >= 90 then "A" else if score >= 80 then "B" else "C"
 
 for item of items { println(item) }
@@ -349,7 +392,16 @@ type. Use explicit narrowing tools when you need a present or narrowed binding.
 
 ## Pattern Matching
 
-```doof
+```doof check
+class Circle { radius: float }
+class Rect { width: float; height: float }
+enum Direction { North, South, East, West }
+function move(dx: int, dy: int): none {}
+
+status := 404
+shape: Circle | Rect := Circle { radius: 1.0 }
+direction := Direction.North
+
 result := case status {
     200 | 201 -> "success",
     404 -> "not found",
@@ -363,10 +415,10 @@ case shape {
 }
 
 case direction {
-    .North -> moveUp(),
-    .South -> moveDown(),
-    .East -> moveRight(),
-    .West -> moveLeft()
+    .North -> move(0, -1),
+    .South -> move(0, 1),
+    .East -> move(1, 0),
+    .West -> move(-1, 0)
 }
 ```
 
@@ -406,7 +458,10 @@ Notes:
 
 ## String Interpolation
 
-```doof
+```doof check body
+name := "Ada"
+score := 21
+value := 3.5
 message := "Hello, ${name}! Score: ${score * 2}"
 
 multiline := `Line 1
@@ -424,7 +479,7 @@ parameters must be converted to a meaningful supported value first. Every
 
 ### Discriminated Unions
 
-```doof
+```doof check
 class TextMsg { kind: "text"; content: string }
 class ImageMsg { kind: "image"; url: string; width, height: int }
 type Message = TextMsg | ImageMsg
@@ -432,7 +487,7 @@ type Message = TextMsg | ImageMsg
 
 ### Builder or Fluent APIs
 
-```doof
+```doof check
 class Builder {
     let value = 0
     add(n: int): Builder { value += n; return this }
@@ -442,8 +497,13 @@ class Builder {
 
 ### Result Pipelines
 
-```doof
-function process(): Result<Output, Error> {
+```doof check
+function readFile(path: string): Result<string, string> => Success("42")
+function parse(text: string): Result<int, string> => if text == "" then Failure("empty") else Success(42)
+function validate(value: int): Result<int, string> => if value >= 0 then Success(value) else Failure("negative")
+function transform(value: int): int => value * 2
+
+function process(): Result<int, string> {
     try input := readFile("data.txt")
     try parsed := parse(input)
     try validated := validate(parsed)

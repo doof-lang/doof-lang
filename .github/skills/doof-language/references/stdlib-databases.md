@@ -9,7 +9,7 @@ objects rather than panicking for database errors.
 
 ## `std/sqlite`
 
-```doof
+```doof check
 import {
   open, close, prepare, execute, executeSql, query, queryOne,
   begin, commit, rollback, toJsonRow,
@@ -31,7 +31,7 @@ import {
 
 ## `std/postgres`
 
-```doof
+```doof check
 import {
   open, close, prepare, execute, executeSql, query, queryOne,
   begin, commit, rollback, toJsonRow,
@@ -58,7 +58,7 @@ connections when their work is complete.
 
 ## `std/mysql`
 
-```doof
+```doof check
 import {
   open, close, prepare, execute, executeSql, query, queryOne,
   begin, commit, rollback, toJsonRow,

@@ -169,18 +169,25 @@ export function falseNegativeChecks(root: string, compiler: string, stdlib: stri
 }
 
 export function specExampleChecks(root: string, compiler: string, stdlib: string): Result<none, string> {
-  spec := path(root, "spec")
-  work := path(root, "build/spec-examples")
+  try markdownExampleChecks(root, compiler, stdlib, "spec", "build/spec-examples", "Spec examples")
+  return markdownExampleChecks(root, compiler, stdlib, ".github/skills/doof-language", "build/skill-examples", "Skill examples")
+}
+
+// Checks every marked fence in the Markdown files under `source` (relative to
+// root). Each Markdown file's examples share a directory under `output`.
+function markdownExampleChecks(root: string, compiler: string, stdlib: string, source: string, output: string, label: string): Result<none, string> {
+  corpus := path(root, source)
+  work := path(root, output)
   try erase(work)
   environment: Map<string, string> := { DOOF_STDLIB_ROOT: stdlib }
   failures: string[] := []
-  try names := files(spec)
+  try names := files(corpus)
   let count = 0
   let rejectedCount = 0
   for name of names {
     if !name.endsWith(".md") { continue }
-    try markdown := read(path(spec, name))
-    try examples := checkedSpecExamples("spec/" + name, markdown)
+    try markdown := read(path(corpus, name))
+    try examples := checkedSpecExamples(source + "/" + name, markdown)
     chapter := name.substring(0, name.length - 3)
     samples: string[] := []
     for example of examples {
@@ -194,19 +201,19 @@ export function specExampleChecks(root: string, compiler: string, stdlib: string
       count += 1
       location := example.file + ":" + string(example.line)
       try checked := execute(compiler, ["check", sample], environment)
-      output := text(checked.stdout).trimEnd()
+      checkOutput := text(checked.stdout).trimEnd()
       if !example.rejected {
-        if checked.exitCode != 0 { failures.push(location + ": example does not check\n" + output) }
+        if checked.exitCode != 0 { failures.push(location + ": example does not check\n" + checkOutput) }
         continue
       }
       rejectedCount += 1
       if checked.exitCode == 0 { failures.push(location + ": rejected example was accepted"); continue }
-      mismatch := rejectionMismatch(example.markedLines, reportedDiagnostics(output, sample))
-      if mismatch != "" { failures.push(location + ": rejected example errors do not match its " + rejectionMarker + " lines (extracted-file lines)\n" + mismatch + "\n" + output) }
+      mismatch := rejectionMismatch(example.markedLines, reportedDiagnostics(checkOutput, sample))
+      if mismatch != "" { failures.push(location + ": rejected example errors do not match its " + rejectionMarker + " lines (extracted-file lines)\n" + mismatch + "\n" + checkOutput) }
     }
   }
-  try require(count > 0, "No doof check examples found in " + spec)
-  try require(failures.length == 0, "Spec examples failed:\n" + joinStrings(failures.cloneReadonly(), "\n"))
-  println("Spec examples: " + string(count) + " checked (" + string(rejectedCount) + " rejected as marked)")
+  try require(count > 0, "No doof check examples found in " + corpus)
+  try require(failures.length == 0, label + " failed:\n" + joinStrings(failures.cloneReadonly(), "\n"))
+  println(label + ": " + string(count) + " checked (" + string(rejectedCount) + " rejected as marked)")
   return Success()
 }

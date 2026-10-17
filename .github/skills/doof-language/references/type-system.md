@@ -54,7 +54,7 @@ produces no values.
 
 ### Numeric Literals and Conversions
 
-```doof
+```doof check
 a := 42
 b := 42L
 c := 3.14
@@ -84,7 +84,9 @@ Rules:
 
 Explicit numeric casts use function-call syntax:
 
-```doof
+```doof check body
+large := 42L
+count := 3
 small := int(large)
 ratio := double(count)
 codePoint := int('A')
@@ -101,15 +103,17 @@ beyond the end produce an empty string.
 
 ### String Conversion and Parse Helpers
 
-```doof
+```doof check
 import { parseDouble, parseInt, parseLong } from "std/parse"
 
-label := string(42)
-ok := string(true)
+function main(): none {
+    label := string(42)
+    ok := string(true)
 
-parsed := parseInt("42")
-big := parseLong("9007199254740991")
-ratio := parseDouble("3.14")
+    parsed := parseInt("42")
+    big := parseLong("9007199254740991")
+    ratio := parseDouble("3.14")
+}
 ```
 
 `string(...)` accepts primitives, enums, and unions of them (not `| none`). The `std/parse` helpers return
@@ -127,7 +131,7 @@ Integer division, remainder and bitwise operations require integer bounds; `/`
 requires a floating operand for every possible combination. `Serializable` is
 a compiler-known constraint-only intrinsic used for generic JSON helpers:
 
-```doof
+```doof check
 function decode<T: Serializable>(json: SerialValue): Result<T, string> {
     return T.fromSerialValue(json)
 }
@@ -145,7 +149,7 @@ method. Runtime- and native-owned C++ templates remain external.
 Interface bounds expose declared instance members while retaining the concrete
 `T`. For example:
 
-```doof
+```doof check
 interface Reader<V> { read(): V }
 function readOne<T: Reader<int>>(reader: T): int => reader.read()
 function keep<T: Reader<int>>(reader: T): T => reader
@@ -163,7 +167,9 @@ function keep<T: Reader<int>>(reader: T): T => reader
 
 Doof uses single-step, context-aware inference.
 
-```doof
+```doof check
+function process(values: int[]): none {}
+
 names := ["Alice", "Bob"]
 process([1, 2, 3])
 
@@ -173,7 +179,7 @@ maybeName: string | none := none
 
 Binding kind affects inference:
 
-```doof
+```doof check
 items := [1, 2, 3]
 let buffer = [1, 2, 3]
 readonly frozen = [1, 2, 3]
@@ -195,10 +201,11 @@ present type of an optional. Terminating (`never`) paths contribute no value.
 Use an explicit binding, parameter, return, or contextual lambda return type
 when distinct alternatives are intentional:
 
-```doof
+```doof reject body
+ready := true
 optional := if ready then 1 else none             // int | none
 value: int | string := if ready then 1 else "one"
-bad := if ready then 1 else "one"                 // annotation required
+bad := if ready then 1 else "one"                 // ❌ annotation required
 ```
 
 Every path must fit an explicit expected type; an annotation does not allow an
@@ -212,16 +219,22 @@ success path. The same rules apply inside expression-bodied lambdas.
 
 Nullability is explicit through unions.
 
-```doof
+```doof reject body
 name: string | none := none
-value: int := none
+value: int := none                // ❌ none is not an int
 ```
 
 The second line is a compile error.
 
 Important rule: plain `if value != none` and `if value == none` do not change the static type. Use declaration-`else`, `case`, `as`, or postfix `!` for explicit narrowing.
 
-```doof
+```doof check
+class Address { city: string }
+class User { age: int; address: Address | none = none }
+
+name: string | none := "Ada"
+user: User | none := User { age: 36 }
+
 if name != none {
     println(name!)
 }
@@ -240,17 +253,17 @@ such as `Map<string, int[]> | Map<string, readonly int[]>`. Use one mutability o
 wrapper types. Identical duplicate arms, optional collections, and different
 element types remain valid.
 
-```doof
+```doof check
 type Value = int | string | bool
 type Optional<T> = T | none
 ```
 
 Discriminated unions usually use shared literal-valued fields.
 
-```doof
-class Success { kind: "Success"; value: int }
-class Failure { kind: "Failure"; error: string }
-type ParseResult = Success | Failure
+```doof check
+class Parsed { kind: "Parsed"; value: int }
+class Unparsed { kind: "Unparsed"; error: string }
+type ParseResult = Parsed | Unparsed
 ```
 
 Direct member access on a multi-member union is allowed only when every present
@@ -281,7 +294,7 @@ and `5000000000` are not), while `float`/`double` accept any number. Nothing
 truncates or wraps, so `n: int -> ..., d: double -> ...` splits whole numbers
 from the rest without matching every numeric type.
 
-```doof
+```doof check
 payload: SerialValue := { name: "Ada", scores: [1, 2, 3] }
 ```
 
@@ -297,19 +310,19 @@ Rules:
 
 - Contextual typing keeps literals ergonomic.
 - Pre-built `int[]` or `Map<string, int>` values do not implicitly convert to `SerialValue`.
-- `SerialObject` is a built-in alias for the exact object carrier type `Map<string, SerialValue>`.
+- `SerialObject` is a built-in alias for the exact object carrier type `readonly Map<string, SerialValue>`.
 - `long` values are preserved, including parsed JSON integers beyond `int` range.
 - Object key insertion order is preserved for literals, formatting, and generated JSON methods.
 - Assignments from `SerialValue[]` or `Map<string, SerialValue>` preserve shared-container reference semantics.
 
-```doof
+```doof check body
 payload: SerialObject := { "name": "Ada" }
-row: Map<string, SerialValue> := payload
+row: readonly Map<string, SerialValue> := payload
 ```
 
 ## Enum Types
 
-```doof
+```doof check
 enum Direction { North, South, East, West }
 enum HttpStatus { OK = 200, NotFound = 404 }
 enum Color { Red = "RED", Green = "GREEN", Blue = "BLUE" }
@@ -317,7 +330,10 @@ enum Color { Red = "RED", Green = "GREEN", Blue = "BLUE" }
 
 Features:
 
-```doof
+```doof check
+enum Direction { North, South, East, West }
+enum HttpStatus { OK = 200, NotFound = 404 }
+
 let d: Direction = .East
 d.name
 HttpStatus.OK.value
@@ -325,7 +341,7 @@ Direction.values()
 Direction.fromName("North")
 HttpStatus.fromValue(200)
 Direction.North.toSerialValue()
-Direction.fromSerialValue(0)
+decoded := Direction.fromSerialValue(0)  // Result<Direction, string>
 ```
 
 Every variant has a descriptive name and a unique backing value. Fully
@@ -349,7 +365,7 @@ fields, and returns. Dot-shorthand works when the target type is known.
 
 `T[]` is an ordered, reference-counted collection.
 
-```doof
+```doof check
 numbers := [1, 2, 3]
 names: string[] := ["Alice", "Bob"]
 ```
@@ -387,7 +403,7 @@ negative or greater than or equal to `.length`.
 
 ### Tuples
 
-```doof
+```doof check
 pair: Tuple<int, string> := (1, "one")
 (id, label) := pair
 ```
@@ -397,7 +413,7 @@ slots, so `t: Tuple<int | string, int | none> := ("id", none)` is valid.
 
 ### Maps
 
-```doof
+```doof check
 scores: Map<string, int> := { "Alice": 100, "Bob": 95 }
 ids: Map<long, string> := { 1L: "one", 2L: "two" }
 frozenScores: ReadonlyMap := { "Alice": 100 }
@@ -412,7 +428,15 @@ depth), arrays, maps, sets, callbacks, and weak references are rejected. Generic
 Wrap non-literal keys in parentheses in map literals; brackets take the key type
 as context:
 
-```doof
+```doof check
+class Player { name: string }
+enum Suit { Hearts, Spades }
+struct Node { x: int; y: int }
+
+node := Node { x: 2, y: 3 }
+alice := Player { name: "Alice" }
+counts: Map<Suit, int> := {}
+
 grid: Map<Tuple<int, int>, string> := { (0, 0): "origin", (node.x, node.y): "here" }
 owners: Map<Player, int> := { (alice): 1 }
 counts[.Spades] = 1
@@ -449,7 +473,9 @@ Deprecated `.buildReadonly()` remains accepted on mutable maps with a replacemen
 
 ### Sets
 
-```doof
+```doof check
+enum Color { Red, Green, Blue }
+
 unique: Set<int> := [1, 2, 3, 2, 1]
 palette: Set<Color> := [Color.Red, Color.Blue]
 frozenIds: ReadonlySet := [1, 2, 3]
@@ -478,7 +504,7 @@ Common APIs: `.size`, `.has()`, `.add()`, `.delete()`, `.values()`, `.drainToRea
 
 `Stream<T>` is a pull-based iteration surface with `next(): bool` and `value(): T`. Call `value()` only after `next()` returns `true`. Do not call `value()` multiple times per `next()`.
 
-```doof
+```doof check
 class Counter implements Stream<int> {
     let current = 0
     end: int
@@ -501,7 +527,8 @@ class Counter implements Stream<int> {
 - Interfaces are structural.
 - Interface types resolve against the closed world of matching classes at compile time.
 
-```doof
+```doof check
+class Canvas {}
 interface Drawable { draw(canvas: Canvas): none }
 ```
 
