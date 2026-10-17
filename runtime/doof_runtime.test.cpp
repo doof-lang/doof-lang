@@ -384,6 +384,41 @@ void test_reacquire_priority() {
     require(third_saw_resume.load(), "fresh work claimed a token before a reacquiring task");
 }
 
+void test_targeted_wakeups() {
+    doof::configure_runtime_scheduler(options(4, 4));
+    auto& scheduler = doof::detail::RuntimeScheduler::shared();
+
+    // A burst of claimable jobs must reach every token even though each
+    // submission notifies only one idle worker.
+    for (int round = 0; round < 2; ++round) {
+        std::atomic<int> started{0};
+        std::vector<doof::Promise<int>> burst;
+        for (int i = 0; i < 4; ++i) {
+            burst.push_back(doof::submit_async<int>([&started, i] {
+                started.fetch_add(1);
+                wait_until([&] { return started.load() == 4; }, "burst jobs did not all run concurrently");
+                return i;
+            }));
+        }
+        for (int i = 0; i < 4; ++i) {
+            require(success(std::move(burst[i])) == i, "burst job result changed");
+        }
+    }
+    wait_until([&] { return scheduler.snapshot().idle_worker_threads == 4; }, "burst workers did not become idle");
+
+    // Sequential jobs wake one idle worker each instead of every idle worker.
+    const auto before = scheduler.snapshot().idle_worker_wakeups;
+    constexpr int jobs = 200;
+    for (int i = 0; i < jobs; ++i) {
+        require(success(doof::submit_async<int>([i] { return i; })) == i, "sequential job result changed");
+    }
+    const auto woken = scheduler.snapshot().idle_worker_wakeups - before;
+    require(woken >= jobs / 2, "sequential jobs ran without waking idle workers");
+    require(woken <= jobs + jobs / 4,
+            "idle workers were woken " + std::to_string(woken) + " times for " + std::to_string(jobs) + " jobs");
+    require(scheduler.snapshot().live_worker_threads == 4, "sequential jobs started extra workers");
+}
+
 void test_configuration() {
     try {
         doof::configure_runtime_scheduler(options(0, 0));
@@ -1155,6 +1190,7 @@ int main(int argc, char** argv) {
     else if (mode == "callback-release") test_callback_release_domain();
     else if (mode == "release") test_token_release_and_retirement();
     else if (mode == "priority") test_reacquire_priority();
+    else if (mode == "wakeups") test_targeted_wakeups();
     else if (mode == "configuration") test_configuration();
     else if (mode == "deadlock") test_deadlock_detection();
     else if (mode == "mailbox-capacity") test_actor_mailbox_capacity();

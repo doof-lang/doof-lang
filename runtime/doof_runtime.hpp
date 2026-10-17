@@ -633,11 +633,18 @@ struct RuntimeSchedulerSnapshot {
     std::size_t idle_worker_threads;
     std::size_t pending_jobs;
     std::size_t reacquire_waiters;
+    // Times an idle worker returned from waiting, including spurious wakeups.
+    std::size_t idle_worker_wakeups;
 };
 
 class RuntimeScheduler {
     std::mutex mutex_;
+    // Idle workers wait on ready_; workers waiting to take back a released
+    // token wait on reacquire_ready_. Each state change wakes only as many
+    // waiters as it makes runnable, so idle workers stay asleep while the
+    // workers that already hold tokens keep draining the queue.
     std::condition_variable ready_;
+    std::condition_variable reacquire_ready_;
     std::queue<std::function<void()>> jobs_;
     RuntimeSchedulerOptions options_;
     bool started_ = false;
@@ -646,6 +653,7 @@ class RuntimeScheduler {
     std::size_t starting_worker_threads_ = 0;
     std::size_t idle_worker_threads_ = 0;
     std::size_t reacquire_waiters_ = 0;
+    std::size_t idle_worker_wakeups_ = 0;
     std::size_t pending_async_jobs_ = 0;
     std::condition_variable async_space_;
     std::atomic<std::size_t> actor_mailbox_capacity_{RuntimeSchedulerOptions().actor_mailbox_capacity};
@@ -662,13 +670,24 @@ class RuntimeScheduler {
             && reacquire_waiters_ == 0;
     }
 
-    void start_workers_locked() {
-        if (jobs_.empty() || reacquire_waiters_ != 0) {
-            return;
-        }
+    bool can_reacquire_locked() const {
+        return active_cpu_tokens_ < options_.maximum_cpu_parallelism;
+    }
 
-        const auto token_capacity = options_.maximum_cpu_parallelism - active_cpu_tokens_;
-        const auto desired = std::min(token_capacity, jobs_.size());
+    // Jobs that idle or starting workers could claim right now.
+    std::size_t claimable_jobs_locked() const {
+        if (jobs_.empty() || reacquire_waiters_ != 0) {
+            return 0;
+        }
+        return std::min(options_.maximum_cpu_parallelism - active_cpu_tokens_, jobs_.size());
+    }
+
+    // Ensure enough idle or starting workers exist to claim every claimable
+    // job. Callers notify one idle worker per job that their state change made
+    // claimable; woken and starting workers recheck claimability under the
+    // mutex, so a notification absorbed by a racing claim cannot strand a job.
+    void start_workers_locked() {
+        const auto desired = claimable_jobs_locked();
         while (idle_worker_threads_ + starting_worker_threads_ < desired) {
             ++live_worker_threads_;
             ++starting_worker_threads_;
@@ -680,7 +699,47 @@ class RuntimeScheduler {
                 throw;
             }
         }
-        ready_.notify_all();
+    }
+
+    // Wake at most `count` idle workers. Returns how many to notify after the
+    // caller releases the mutex.
+    std::size_t idle_wakeups_locked(std::size_t count) const {
+        return std::min(count, idle_worker_threads_);
+    }
+
+    void notify_idle_workers(std::size_t count) {
+        for (std::size_t i = 0; i < count; ++i) {
+            ready_.notify_one();
+        }
+    }
+
+    // Wait as an idle worker until a job is claimable. Returns false when an
+    // excess worker should retire instead.
+    bool wait_for_claimable_job(std::unique_lock<std::mutex>& lock) {
+        ++idle_worker_threads_;
+        if (live_worker_threads_ > options_.retained_worker_count) {
+            const auto deadline = std::chrono::steady_clock::now() + options_.excess_worker_idle_timeout;
+            while (!can_claim_job_locked()) {
+                const auto status = ready_.wait_until(lock, deadline);
+                ++idle_worker_wakeups_;
+                if (status == std::cv_status::timeout
+                    && live_worker_threads_ > options_.retained_worker_count
+                    && !can_claim_job_locked()) {
+                    --idle_worker_threads_;
+                    return false;
+                }
+                if (status == std::cv_status::timeout) {
+                    break;
+                }
+            }
+        } else {
+            while (!can_claim_job_locked()) {
+                ready_.wait(lock);
+                ++idle_worker_wakeups_;
+            }
+        }
+        --idle_worker_threads_;
+        return true;
     }
 
     void worker_loop() {
@@ -688,25 +747,10 @@ class RuntimeScheduler {
         --starting_worker_threads_;
 
         while (true) {
-            ++idle_worker_threads_;
-            if (live_worker_threads_ > options_.retained_worker_count) {
-                const bool ready = ready_.wait_for(
-                    lock,
-                    options_.excess_worker_idle_timeout,
-                    [this] { return can_claim_job_locked(); });
-                if (!ready
-                    && live_worker_threads_ > options_.retained_worker_count
-                    && !can_claim_job_locked()) {
-                    --idle_worker_threads_;
-                    --live_worker_threads_;
-                    ready_.notify_all();
-                    return;
-                }
-            } else {
-                ready_.wait(lock, [this] { return can_claim_job_locked(); });
+            if (!wait_for_claimable_job(lock)) {
+                --live_worker_threads_;
+                return;
             }
-            --idle_worker_threads_;
-
             if (!can_claim_job_locked()) {
                 continue;
             }
@@ -714,7 +758,6 @@ class RuntimeScheduler {
             auto job = std::move(jobs_.front());
             jobs_.pop();
             ++active_cpu_tokens_;
-            start_workers_locked();
 
             current_worker_scheduler_ = this;
             current_worker_holds_token_ = true;
@@ -727,21 +770,18 @@ class RuntimeScheduler {
             }
             lock.lock();
 
-            if (!current_worker_holds_token_) {
-                ++reacquire_waiters_;
-                ready_.wait(lock, [this] {
-                    return active_cpu_tokens_ < options_.maximum_cpu_parallelism;
-                });
-                --reacquire_waiters_;
-                ++active_cpu_tokens_;
-                current_worker_holds_token_ = true;
-            }
-
-            --active_cpu_tokens_;
+            // A job that ended with its token released has nothing to give
+            // back. Otherwise this worker keeps the freed token for its own next
+            // claim unless a reacquiring worker is owed it.
+            const bool held_token = current_worker_holds_token_;
             current_worker_holds_token_ = false;
             current_worker_scheduler_ = nullptr;
-            start_workers_locked();
-            ready_.notify_all();
+            if (held_token) {
+                --active_cpu_tokens_;
+                if (reacquire_waiters_ != 0) {
+                    reacquire_ready_.notify_one();
+                }
+            }
         }
     }
 
@@ -819,10 +859,20 @@ public:
     }
 
     void submit(std::function<void()> job) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        started_ = true;
-        jobs_.push(std::move(job));
-        start_workers_locked();
+        std::size_t wakeups = 0;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            started_ = true;
+            jobs_.push(std::move(job));
+            start_workers_locked();
+            // The new job is claimable only if a free token is left for it
+            // after every job queued ahead of it.
+            if (reacquire_waiters_ == 0
+                && jobs_.size() <= options_.maximum_cpu_parallelism - active_cpu_tokens_) {
+                wakeups = idle_wakeups_locked(1);
+            }
+        }
+        notify_idle_workers(wakeups);
     }
 
     bool relinquish_current_worker_token() {
@@ -830,13 +880,23 @@ public:
             return false;
         }
 
+        std::size_t wakeups = 0;
         {
             std::lock_guard<std::mutex> lock(mutex_);
             --active_cpu_tokens_;
             current_worker_holds_token_ = false;
-            start_workers_locked();
+            if (reacquire_waiters_ != 0) {
+                reacquire_ready_.notify_one();
+            } else {
+                start_workers_locked();
+                // The freed token makes one more queued job claimable when
+                // the queue already outnumbered the free tokens.
+                if (jobs_.size() >= options_.maximum_cpu_parallelism - active_cpu_tokens_) {
+                    wakeups = idle_wakeups_locked(1);
+                }
+            }
         }
-        ready_.notify_all();
+        notify_idle_workers(wakeups);
         return true;
     }
 
@@ -845,15 +905,27 @@ public:
             return;
         }
 
-        std::unique_lock<std::mutex> lock(mutex_);
-        ++reacquire_waiters_;
-        ready_.wait(lock, [this] {
-            return active_cpu_tokens_ < options_.maximum_cpu_parallelism;
-        });
-        --reacquire_waiters_;
-        ++active_cpu_tokens_;
-        current_worker_holds_token_ = true;
-        ready_.notify_all();
+        std::size_t wakeups = 0;
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
+            ++reacquire_waiters_;
+            reacquire_ready_.wait(lock, [this] { return can_reacquire_locked(); });
+            --reacquire_waiters_;
+            ++active_cpu_tokens_;
+            current_worker_holds_token_ = true;
+            if (reacquire_waiters_ != 0) {
+                // Each freed token notifies one reacquirer, but this one may
+                // have taken a token freed for a waiter it raced past.
+                if (can_reacquire_locked()) {
+                    reacquire_ready_.notify_one();
+                }
+            } else {
+                // New claims were blocked while reacquirers waited.
+                start_workers_locked();
+                wakeups = idle_wakeups_locked(claimable_jobs_locked());
+            }
+        }
+        notify_idle_workers(wakeups);
     }
 
     RuntimeSchedulerSnapshot snapshot() {
@@ -864,6 +936,7 @@ public:
             idle_worker_threads_,
             jobs_.size(),
             reacquire_waiters_,
+            idle_worker_wakeups_,
         };
     }
 };
