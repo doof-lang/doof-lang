@@ -210,6 +210,36 @@ void test_actor_batching() {
         require(state->order[static_cast<std::size_t>(i)] == i, "batched actor FIFO order changed");
     }
     require(otherPosition < flooded - 1, "a flooded actor kept its CPU token past one batch");
+
+    // Far fewer messages than one batch, but each outlasts the time budget,
+    // so the actor still gives its token back after the first of them.
+    auto slow = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    auto waiting = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    std::atomic<int> slowSequence{0};
+    std::promise<void> release;
+    auto released = release.get_future().share();
+    std::atomic<bool> holding{false};
+    std::vector<doof::Promise<int>> slowCalls;
+    slowCalls.push_back(slow->call_async<int>([released, &holding, &slowSequence](ActorState&) {
+        holding.store(true);
+        released.wait();
+        return slowSequence.fetch_add(1);
+    }));
+    wait_until([&] { return holding.load(); }, "first slow message did not start");
+    constexpr int slowCount = 10;
+    for (int i = 1; i < slowCount; ++i) {
+        slowCalls.push_back(slow->call_async<int>([&slowSequence](ActorState&) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(3));
+            return slowSequence.fetch_add(1);
+        }));
+    }
+    auto behindSlow = waiting->call_async<int>([&slowSequence](ActorState&) { return slowSequence.fetch_add(1); });
+    release.set_value();
+    const int waitingPosition = success(std::move(behindSlow));
+    for (auto& call : slowCalls) (void)success(std::move(call));
+    slow->retire();
+    waiting->retire();
+    require(waitingPosition <= 2, "slow messages held the CPU token past the batch time budget");
 }
 
 void test_actor_waits() {

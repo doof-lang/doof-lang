@@ -3573,10 +3573,13 @@ class Actor : public detail::CallbackDomain {
         });
     }
 
-    // Messages one scheduler job may run before it gives its CPU token back to
-    // the shared queue. Draining a batch keeps a busy actor off the global
-    // scheduler lock: messages posted while it runs need no new job.
+    // How much one scheduler job may run before it gives its CPU token back to
+    // the shared queue: up to this many messages, stopping early once the
+    // time budget is spent. Draining a batch keeps a busy actor off the global
+    // scheduler lock, since messages posted while it runs need no new job;
+    // the budget keeps long messages from holding a token for a whole batch.
     static constexpr std::size_t run_batch_limit = 64;
+    static constexpr std::chrono::microseconds run_batch_budget{1000};
 
     std::function<void()> take_front_locked() {
         auto message = std::move(mailbox_.front());
@@ -3595,6 +3598,7 @@ class Actor : public detail::CallbackDomain {
             task = take_front_locked();
         }
 
+        const auto batch_deadline = std::chrono::steady_clock::now() + run_batch_budget;
         for (std::size_t ran = 1;; ++ran) {
             try {
                 doof::detail::ActiveActorScope active(this);
@@ -3607,9 +3611,11 @@ class Actor : public detail::CallbackDomain {
             // Captures may post releases back to this actor, so destroy them
             // before taking the mailbox lock.
             task = nullptr;
+            const bool budget_spent = ran >= run_batch_limit
+                || std::chrono::steady_clock::now() >= batch_deadline;
 
             std::lock_guard<std::mutex> lock(mutex_);
-            if (mailbox_.empty() || ran >= run_batch_limit) {
+            if (mailbox_.empty() || budget_spent) {
                 scheduled_ = false;
                 schedule_locked();
                 return;
