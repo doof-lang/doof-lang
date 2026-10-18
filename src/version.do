@@ -1,6 +1,6 @@
 // Build scripts replace only these constants in an isolated source checkout.
 // Direct source builds are deliberately uncacheable: their identity is unknown.
-export readonly compilerVersion = "0.2.4-dev.unstamped"
+export readonly compilerVersion = "0.3.1-dev.unstamped"
 export readonly compilerVersionStamped = false
 
 export function versionCacheIdentity(version: string, stamped: bool): string {
