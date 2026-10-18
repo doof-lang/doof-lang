@@ -1,6 +1,6 @@
 {
   "name": "doof",
-  "version": "0.2.0",
+  "version": "0.2.4",
   "license": "ISC",
   "resources": [
     { "from": "runtime/doof_runtime.hpp", "to": "." },
