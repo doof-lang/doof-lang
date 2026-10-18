@@ -11,7 +11,7 @@ export function runtimeChecks(root: string): Result<none, string> {
   try makeDirectory(work)
   binary := path(work, "scheduler")
   try command("c++", ["-std=c++17", "-O0", "-pthread", path(root, "runtime/doof_runtime.test.cpp"), "-o", binary])
-  for mode of ["limit", "nested", "first-completed", "actor", "actor-waits", "failures", "application", "callback-release", "release", "priority", "wakeups", "configuration", "collections", "nulls", "serial-integers", "string-builder", "string-padding", "metrics", "deadlock", "mailbox-capacity", "async-capacity", "try-post"] { try command(binary, [mode]) }
+  for mode of ["limit", "nested", "first-completed", "actor", "actor-waits", "actor-batching", "failures", "application", "callback-release", "release", "priority", "wakeups", "configuration", "collections", "nulls", "serial-integers", "string-builder", "string-padding", "metrics", "deadlock", "mailbox-capacity", "async-capacity", "try-post"] { try command(binary, [mode]) }
   completionBinary := path(work, "promise-completion")
   try command("c++", ["-std=c++17", "-O0", "-pthread", path(root, "runtime/doof_promise.test.cpp"), "-o", completionBinary])
   try command(completionBinary, [])

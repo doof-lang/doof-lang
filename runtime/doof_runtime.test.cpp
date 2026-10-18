@@ -172,6 +172,46 @@ void test_actor_serialization() {
     }
 }
 
+void test_actor_batching() {
+    doof::configure_runtime_scheduler(options(1, 1));
+    auto busy = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    auto other = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    std::atomic<int> sequence{0};
+    std::promise<void> open;
+    auto gate = open.get_future().share();
+    std::atomic<bool> started{false};
+
+    // With the only CPU token held by `busy`, queue far more than one batch
+    // behind it, then one message for `other`.
+    constexpr int flooded = 200;
+    std::vector<doof::Promise<int>> calls;
+    calls.push_back(busy->call_async<int>([gate, &started, &sequence](ActorState& state) {
+        started.store(true);
+        gate.wait();
+        state.order.push_back(0);
+        return sequence.fetch_add(1);
+    }));
+    wait_until([&] { return started.load(); }, "first batched message did not start");
+    for (int i = 1; i < flooded; ++i) {
+        calls.push_back(busy->call_async<int>([i, &sequence](ActorState& state) {
+            state.order.push_back(i);
+            return sequence.fetch_add(1);
+        }));
+    }
+    auto interleaved = other->call_async<int>([&sequence](ActorState&) { return sequence.fetch_add(1); });
+    open.set_value();
+
+    const int otherPosition = success(std::move(interleaved));
+    for (auto& call : calls) (void)success(std::move(call));
+    auto state = busy->retire();
+    other->retire();
+    require(state->order.size() == static_cast<std::size_t>(flooded), "batched actor lost messages");
+    for (int i = 0; i < flooded; ++i) {
+        require(state->order[static_cast<std::size_t>(i)] == i, "batched actor FIFO order changed");
+    }
+    require(otherPosition < flooded - 1, "a flooded actor kept its CPU token past one batch");
+}
+
 void test_actor_waits() {
     doof::configure_runtime_scheduler(options(1, 1));
     auto outer = doof::submit_async<int>([] {
@@ -674,11 +714,35 @@ void test_try_post() {
     auto after = accepted_post(owned.tryPost(2), "actor post after draining was rejected");
     require(success(std::move(after)) == 7, "rejected actor post ran");
 
+    // tryDispatch follows the same capacity rules without a promise.
+    auto dispatched = std::make_shared<std::atomic<int>>(0);
+    auto counter = actor->call_sync<doof::callback<void(int)>>([dispatched](ActorState&) {
+        return doof::callback<void(int)>([dispatched](int n) { dispatched->fetch_add(n); });
+    });
+    std::promise<void> reopen;
+    auto reopened = reopen.get_future().share();
+    running.store(false);
+    auto held = actor->call_async<int>([reopened, &running](ActorState&) {
+        running.store(true);
+        reopened.wait();
+        return 0;
+    });
+    wait_until([&] { return running.load(); }, "second blocking actor message did not start");
+    require(counter.tryDispatch(3) == doof::detail::TryEnqueueResult::Accepted, "dispatch within capacity was rejected");
+    require(counter.tryDispatch(4) == doof::detail::TryEnqueueResult::Full, "dispatch beyond capacity was accepted");
+    reopen.set_value();
+    (void)success(std::move(held));
+    wait_until([&] { return dispatched->load() == 3; }, "accepted dispatch did not run");
+    (void)actor->call_sync<int>([](ActorState&) { return 0; });
+    require(dispatched->load() == 3, "rejected dispatch ran");
+
     // Retiring, retired, and released owners report retirement instead of panicking.
     actor->retire();
     require(rejected_post(owned.tryPost(1)) == "retired", "post to a retired actor was not rejected");
+    require(counter.tryDispatch(1) == doof::detail::TryEnqueueResult::Retired, "dispatch to a retired actor was not rejected");
     actor.reset();
     require(rejected_post(owned.tryPost(1)) == "retired", "post to a released actor was not rejected");
+    require(counter.tryDispatch(1) == doof::detail::TryEnqueueResult::Retired, "dispatch to a released actor was not rejected");
 
     // Blocking post and dispatch treat a destroyed owner as retired.
     require(panic_message([&] { (void)owned.post(1); }) == "actor is retiring or retired",
@@ -1185,6 +1249,7 @@ int main(int argc, char** argv) {
     else if (mode == "first-completed") test_first_completed_promise();
     else if (mode == "actor") test_actor_serialization();
     else if (mode == "actor-waits") test_actor_waits();
+    else if (mode == "actor-batching") test_actor_batching();
     else if (mode == "failures") test_failures();
     else if (mode == "application") test_application_domain();
     else if (mode == "callback-release") test_callback_release_domain();

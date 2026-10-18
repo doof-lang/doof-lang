@@ -1049,6 +1049,9 @@ template <typename E> struct Failure;
 template <typename Signature>
 class callback;
 
+// Native code can test for callback::tryDispatch.
+#define DOOF_RUNTIME_HAS_CALLBACK_TRY_DISPATCH 1
+
 namespace detail {
 template <typename R, typename... Args>
 R call_callback_unchecked(const doof::callback<R(Args...)>& cb, Args... args);
@@ -1166,6 +1169,31 @@ public:
             std::apply([&](auto&&... unpacked) {
                 self.call(std::forward<decltype(unpacked)>(unpacked)...);
             }, std::move(packedArgs));
+        });
+    }
+
+    // Like tryPost for void callbacks whose caller drops the promise: no
+    // promise state is allocated or completed. A failure while the callback
+    // runs is dropped, as an unobserved tryPost promise would drop it.
+    detail::TryEnqueueResult tryDispatch(Args... args) const {
+        static_assert(std::is_void_v<R>, "callback.tryDispatch is only available for void callbacks");
+        if (!static_cast<bool>(*this)) {
+            doof::panic("callback dispatched before initialization");
+        }
+        std::shared_ptr<detail::CallbackDomain> retained;
+        auto owner = posting_owner(retained);
+        if (!owner) {
+            return detail::TryEnqueueResult::Retired;
+        }
+        auto self = *this;
+        auto packedArgs = std::make_tuple(std::forward<Args>(args)...);
+        return owner->try_enqueue_callback([self, packedArgs = std::move(packedArgs)]() mutable {
+            try {
+                std::apply([&](auto&&... unpacked) {
+                    detail::call_callback_unchecked(self, std::forward<decltype(unpacked)>(unpacked)...);
+                }, std::move(packedArgs));
+            } catch (...) {
+            }
         });
     }
 
@@ -3545,31 +3573,49 @@ class Actor : public detail::CallbackDomain {
         });
     }
 
+    // Messages one scheduler job may run before it gives its CPU token back to
+    // the shared queue. Draining a batch keeps a busy actor off the global
+    // scheduler lock: messages posted while it runs need no new job.
+    static constexpr std::size_t run_batch_limit = 64;
+
+    std::function<void()> take_front_locked() {
+        auto message = std::move(mailbox_.front());
+        mailbox_.pop();
+        if (message.bounded) {
+            --bounded_messages_;
+            release_capacity_waiters_locked();
+        }
+        return std::move(message.run);
+    }
+
     void run_one() {
         std::function<void()> task;
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            auto message = std::move(mailbox_.front());
-            mailbox_.pop();
-            task = std::move(message.run);
-            if (message.bounded) {
-                --bounded_messages_;
-                release_capacity_waiters_locked();
+            task = take_front_locked();
+        }
+
+        for (std::size_t ran = 1;; ++ran) {
+            try {
+                doof::detail::ActiveActorScope active(this);
+                task();
+            } catch (...) {
+                // Language-facing actor and callback submissions capture their own
+                // failures. Preserve mailbox progress if native code enqueues a
+                // task that unexpectedly throws.
             }
-        }
+            // Captures may post releases back to this actor, so destroy them
+            // before taking the mailbox lock.
+            task = nullptr;
 
-        try {
-            doof::detail::ActiveActorScope active(this);
-            task();
-        } catch (...) {
-            // Language-facing actor and callback submissions capture their own
-            // failures. Preserve mailbox progress if native code enqueues a
-            // task that unexpectedly throws.
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (mailbox_.empty() || ran >= run_batch_limit) {
+                scheduled_ = false;
+                schedule_locked();
+                return;
+            }
+            task = take_front_locked();
         }
-
-        std::lock_guard<std::mutex> lock(mutex_);
-        scheduled_ = false;
-        schedule_locked();
     }
 
 public:
