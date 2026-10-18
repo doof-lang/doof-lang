@@ -25,7 +25,31 @@ function makeVariable(name: string, values: string[]): string {
  * Builds only the exact C/C++ graph emitted on the release host. Native
  * package inputs live below std/, while generated Doof modules are at root.
  */
-export function linuxMakefile(emittedFiles: string[]): string {
+/**
+ * Lists a stdlib manifest's Linux optional pkg-config probe sources as
+ * emitted paths. Probes are configure-time checks, not graph sources.
+ */
+export function linuxProbeSources(packageDirectory: string, manifest: SerialObject): string[] {
+  let result: string[] = []
+  build := manifest.get("build") else { return result }
+  buildObject := build as SerialObject else { return result }
+  native := buildObject.get("native") else { return result }
+  nativeObject := native as SerialObject else { return result }
+  linux := nativeObject.get("linux") else { return result }
+  linuxObject := linux as SerialObject else { return result }
+  packages := linuxObject.get("optionalPkgConfigPackages") else { return result }
+  values := packages as readonly SerialValue[] else { return result }
+  for value of values {
+    object := value as SerialObject else { continue }
+    probe := object.get("probeSource") else { continue }
+    probePath := probe as string else { continue }
+    relative := if probePath.startsWith("./") then probePath.substring(2) else probePath
+    result.push(packageDirectory + "/" + relative)
+  }
+  return result
+}
+
+export function linuxMakefile(emittedFiles: string[], excludedSources: string[] = []): string {
   let cpp: string[] = []
   let c: string[] = []
   let directories: string[] = []
@@ -37,6 +61,7 @@ export function linuxMakefile(emittedFiles: string[]): string {
       prefix = if prefix == "" then parts[index] else prefix + "/" + parts[index]
       if !directories.contains(prefix) { directories.push(prefix) }
     }
+    if excludedSources.contains(name) { continue }
     if name.contains("/test/") || name.contains("/tests/") || name.contains("/examples/") || name.contains("/contrib/") || name.contains("/legacy/") || name.contains("/deprecated/") || name.contains("/dictBuilder/") { continue }
     if name.endsWith(".cpp") { cpp.push(name) }
     else if name.endsWith(".c") { c.push(name) }

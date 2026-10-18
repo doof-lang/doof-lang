@@ -13,7 +13,7 @@ import { createSnapshot, isMachO } from "./snapshot"
 import { debuggerChecks, releaseVerification, testRepository } from "./verify"
 import { stdlibRevisions } from "./provenance"
 import { windowsBuildConfig, windowsBuildEnabled, windowsBuildScript, windowsProjectFile, windowsReleaseArchiveName, windowsVisualStudioCommand, windowsVisualStudioScript } from "./windows-build"
-import { LinuxReleaseTarget, linuxBuildScript, linuxContainerArguments, linuxMakefile, linuxReleaseArchiveName, linuxReleaseTargets } from "./linux-build"
+import { LinuxReleaseTarget, linuxBuildScript, linuxContainerArguments, linuxMakefile, linuxProbeSources, linuxReleaseArchiveName, linuxReleaseTargets } from "./linux-build"
 
 export function signingPreflight(identity: string, profile: string): Result<none, string> {
   try require(platform() == "darwin" && architecture() == "arm64", "Releases require macOS arm64")
@@ -100,6 +100,21 @@ function emitLinuxInputs(compiler: string, source: string, stdlib: string, emitt
   return command(compiler, ["emit", source, "--native-platform", "linux", "-o", emitted], environment)
 }
 
+function linuxEmittedProbeSources(stdlib: string, emittedFiles: string[]): Result<string[], string> {
+  let checked: string[] = []
+  let result: string[] = []
+  for name of emittedFiles {
+    parts := name.split("/")
+    if parts.length < 3 || parts[0] != "std" || checked.contains(parts[1]) { continue }
+    checked.push(parts[1])
+    manifest := path(stdlib, parts[1] + "/doof.json")
+    if !exists(manifest) { continue }
+    try parsed := jsonFile(manifest)
+    for probe of linuxProbeSources("std/" + parts[1], parsed) { result.push(probe) }
+  }
+  return Success(result)
+}
+
 function buildLinuxReleaseArtifact(compiler: string, source: string, stdlib: string, stdlibBundle: string, work: string, pending: string, version: string, target: LinuxReleaseTarget): Result<none, string> {
   linux := path(work, "linux-" + target.name)
   emitted := path(linux, "emitted")
@@ -107,7 +122,8 @@ function buildLinuxReleaseArtifact(compiler: string, source: string, stdlib: str
   try erase(linux); try makeDirectory(resources)
   try emitLinuxInputs(compiler, source, stdlib, emitted)
   try emittedFiles := files(emitted)
-  try write(path(linux, "Makefile"), linuxMakefile(emittedFiles))
+  try probes := linuxEmittedProbeSources(stdlib, emittedFiles)
+  try write(path(linux, "Makefile"), linuxMakefile(emittedFiles, probes))
   try write(path(linux, "build.sh"), linuxBuildScript(target))
   try command("chmod", ["+x", path(linux, "build.sh")])
   for name of ["doof_runtime.hpp", "doof_observer.hpp", "doof_observer_platform.hpp", "doof_wasm_test_runner_apple.swift"] {

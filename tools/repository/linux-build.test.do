@@ -1,5 +1,6 @@
 import { Assert } from "std/assert"
-import { linuxBuildScript, linuxContainerArguments, linuxMakefile, linuxReleaseArchiveName, linuxReleaseTargets } from "./linux-build"
+import { parseJsonObject } from "std/json"
+import { linuxBuildScript, linuxContainerArguments, linuxMakefile, linuxProbeSources, linuxReleaseArchiveName, linuxReleaseTargets } from "./linux-build"
 
 export function testLinuxReleaseArchiveNameIsStable(): none {
   targets := linuxReleaseTargets()
@@ -20,6 +21,27 @@ export function testLinuxMakefileBuildsExactStaticMuslGraph(): none {
   Assert.stringNotContains(makefile, ".doof-cache")
   Assert.stringNotContains(makefile, "zstd_v01.c")
   Assert.stringNotContains(makefile, "zdict.c")
+}
+
+export function testLinuxMakefileSkipsOptionalProbeSources(): none {
+  makefile := linuxMakefile(["src_driver.cpp", "std/crypto/doof_rsa.cpp", "std/crypto/rsa_openssl_probe.cpp"], ["std/crypto/rsa_openssl_probe.cpp"])
+  Assert.stringContains(makefile, "std/crypto/doof_rsa.cpp")
+  Assert.stringNotContains(makefile, "rsa_openssl_probe.cpp")
+}
+
+export function testLinuxProbeSourcesReadsManifestProbes(): none {
+  manifest := parseJsonObject(`{"build":{"native":{"sourceFiles":["./doof_rsa.cpp"],"linux":{"optionalPkgConfigPackages":[
+    {"name":"libcrypto","define":"RSA_EVP","probeSource":"./rsa_openssl_probe.cpp"},
+    {"name":"libz","define":"Z","probeSource":"probes/z.cpp"}]}}}}`)!
+  probes := linuxProbeSources("std/crypto", manifest)
+  Assert.equal(probes.length, 2)
+  Assert.equal(probes[0], "std/crypto/rsa_openssl_probe.cpp")
+  Assert.equal(probes[1], "std/crypto/probes/z.cpp")
+}
+
+export function testLinuxProbeSourcesIgnoresManifestsWithoutProbes(): none {
+  Assert.equal(linuxProbeSources("std/time", parseJsonObject(`{"build":{"native":{"sourceFiles":["./doof_time.cpp"]}}}`)!).length, 0)
+  Assert.equal(linuxProbeSources("std/time", parseJsonObject(`{"name":"std/time"}`)!).length, 0)
 }
 
 export function testLinuxContainerBuildChecksArchitectureVersionAndStaticElf(): none {
