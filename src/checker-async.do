@@ -56,10 +56,10 @@ export function checkAsync(state: CheckerState, async_: AsyncExpression, scope: 
             for i of 0..<call.args.length {
               argumentType := call.args[i].value.resolvedType
               if argumentType == none { continue }
-              violation := findActorBoundaryViolation(state.result, argumentType!)
+              violation := asyncCallOperandViolation(state.result, argumentType!)
               if violation != none {
                 typeError(state,
-                  "Async call argument " + string(i + 1) + " of type \"" + typeName(argumentType!) + "\" cannot cross to the worker: " + violation!.reason,
+                  "Async call argument " + string(i + 1) + " of type \"" + typeName(argumentType!) + "\" cannot cross to the worker: " + violation!,
                   call.args[i].span,
                 )
               }
@@ -67,10 +67,10 @@ export function checkAsync(state: CheckerState, async_: AsyncExpression, scope: 
             case call.callee {
               member: MemberExpression -> {
                 if member.resolvedStaticOwner == none && member.object.resolvedType != none {
-                  receiverViolation := findActorBoundaryViolation(state.result, member.object.resolvedType!)
+                  receiverViolation := asyncCallOperandViolation(state.result, member.object.resolvedType!)
                   if receiverViolation != none {
                     typeError(state,
-                      "Async call receiver of type \"" + typeName(member.object.resolvedType!) + "\" cannot cross to the worker: " + receiverViolation!.reason,
+                      "Async call receiver of type \"" + typeName(member.object.resolvedType!) + "\" cannot cross to the worker: " + receiverViolation!,
                       member.object.span,
                     )
                   }
@@ -96,6 +96,15 @@ export function checkAsync(state: CheckerState, async_: AsyncExpression, scope: 
     }
   }
   return unknownType()
+}
+
+// Isolated-call operands follow the async-block capture rules: an isolated
+// task is not an actor domain, so a weak reference or stream that reached it
+// could be read concurrently with its owner.
+function asyncCallOperandViolation(result: AnalysisResult, type_: ResolvedType): string | none {
+  boundaryViolation := findActorBoundaryViolation(result, type_)
+  if boundaryViolation != none { return boundaryViolation!.reason }
+  return findAsyncViolation(result, type_, [], [], false, false)
 }
 
 export function validateAsyncBlock(result: AnalysisResult, expression: AsyncExpression, module: string, diagnostics: Diagnostic[]): none {
@@ -205,7 +214,9 @@ function findAsyncViolation(result: AnalysisResult, type_: ResolvedType, seen: s
     // Actor and promise handles are synchronized and may be captured or yielded.
     _: ActorType -> { return none }
     _: PromiseType -> { return none }
-    _: FunctionType -> { return if resultMode then "actor-affine callbacks cannot be transferred from async blocks" else "actor-affine callbacks cannot cross into async blocks" }
+    // A captured callback stays affine to its creator. The runtime panics when
+    // the worker calls it and delivers post, tryPost, and dispatch to the owner.
+    _: FunctionType -> { return if resultMode then "actor-affine callbacks cannot be transferred from async blocks" else none }
     _: WeakResolvedType -> { return if resultMode then "weak references cannot be transferred from async blocks" else "weak references cannot cross into async blocks" }
     _: StreamResolvedType -> { return if resultMode then "streams cannot be transferred from async blocks" else "streams cannot cross into async blocks" }
     array: ArrayResolvedType -> { return findAsyncViolation(result, array.elementType, seen, safe, resultMode, unbound) }

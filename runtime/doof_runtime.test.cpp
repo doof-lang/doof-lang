@@ -598,6 +598,45 @@ void test_deadlock_detection() {
     auto retired_result = panic_message([&] { (void)retired.get(); });
     require_deadlock(retired_result, "(actor retirement)");
 
+    // A doomed wait panics before its request is queued, so the request never
+    // runs against the caller's unwound frame and the actor keeps its state.
+    auto guarded = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    require_deadlock(panic_message([&] {
+        guarded->call_sync<void>([guarded](ActorState&) {
+            std::string operand(256, 'x');
+            guarded->call_sync<void>([&operand](ActorState& state) {
+                state.value += static_cast<int>(operand.size());
+            });
+        });
+    }), "(synchronous actor call)");
+    require(guarded->call_sync<int>([](ActorState& state) { return state.value; }) == 0,
+        "a deadlocked synchronous call was still queued");
+
+    auto left = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    auto right = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    require_deadlock(panic_message([&] {
+        left->call_sync<int>([left, right](ActorState&) {
+            return right->call_sync<int>([left](ActorState&) {
+                return left->call_sync<int>([](ActorState& state) { return ++state.value; });
+            });
+        });
+    }), "synchronous actor call -> synchronous actor call");
+    require(left->call_sync<int>([](ActorState& state) { return state.value; }) == 0,
+        "the call closing a deadlock cycle was still queued");
+
+    // Retiring an actor from its own message panics and leaves it running.
+    auto self_retiring = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    require_deadlock(panic_message([&] {
+        self_retiring->call_sync<int>([self_retiring](ActorState& state) {
+            state.value = 7;
+            self_retiring->retire();
+            return 0;
+        });
+    }), "(actor retirement)");
+    require(self_retiring->call_sync<int>([](ActorState& state) { return state.value + 1; }) == 8,
+        "self-retirement stopped the actor");
+    require(self_retiring->retire()->value == 7, "self-retirement dropped the actor state");
+
     // Waits that are satisfied before the waiter wakes must not form cycles.
     auto ping = std::make_shared<doof::Actor<ActorState>>(ActorState{});
     auto pong = std::make_shared<doof::Actor<ActorState>>(ActorState{});

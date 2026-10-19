@@ -262,29 +262,38 @@ public:
 
 inline thread_local CallbackDomain* active_actor_domain = nullptr;
 
+// Each isolated job is its own temporary callback domain. Callbacks created
+// there may run only inside the same job: they can capture the job's mutable
+// locals, so neither another job nor a posting owner may run them. Zero means
+// the thread is not running an isolated job.
+inline thread_local uint64_t active_isolated_task = 0;
+
+inline uint64_t next_isolated_task_id() {
+    static std::atomic<uint64_t> next{1};
+    return next.fetch_add(1, std::memory_order_relaxed);
+}
+
 class ActiveActorScope {
     CallbackDomain* previous_;
+    uint64_t previous_task_;
 public:
     explicit ActiveActorScope(CallbackDomain* actor)
-        : previous_(active_actor_domain) {
+        : previous_(active_actor_domain), previous_task_(active_isolated_task) {
         active_actor_domain = actor;
+        active_isolated_task = 0;
     }
 
     ~ActiveActorScope() {
         active_actor_domain = previous_;
+        active_isolated_task = previous_task_;
     }
 };
 
-// Isolated jobs have no owning domain. Callbacks created there keep their
-// existing unowned behavior, but are marked so they cannot be registered as
-// deferred completion receivers that would outlive the job.
-inline thread_local bool active_isolated_task = false;
-
 class IsolatedTaskScope {
-    bool previous_;
+    uint64_t previous_;
 public:
     IsolatedTaskScope() : previous_(active_isolated_task) {
-        active_isolated_task = true;
+        active_isolated_task = next_isolated_task_id();
     }
 
     ~IsolatedTaskScope() {
@@ -1090,7 +1099,8 @@ class callback<R(Args...)> {
     std::shared_ptr<std::function<R(Args...)>> fn_;
     detail::CallbackDomain* owner_ = nullptr;
     std::weak_ptr<detail::CallbackDomain> owner_lifetime_;
-    bool isolated_ = false;
+    // The isolated job that created this callback, or zero outside one.
+    uint64_t isolated_task_ = 0;
 
 public:
     callback() = default;
@@ -1102,7 +1112,7 @@ public:
     callback(F&& f)
         : owner_(doof::current_actor_domain()),
           owner_lifetime_(owner_ ? owner_->weak_from_this() : std::weak_ptr<detail::CallbackDomain>{}),
-          isolated_(!owner_ && detail::active_isolated_task) {
+          isolated_task_(owner_ ? 0 : detail::active_isolated_task) {
         using State = std::function<R(Args...)>;
         fn_ = std::shared_ptr<State>(
             new State(std::forward<F>(f)),
@@ -1121,7 +1131,11 @@ public:
         if (!fn || !*fn) {
             doof::panic("callback invoked before initialization");
         }
-        if (owner_ != doof::current_actor_domain()) {
+        if (isolated_task_) {
+            if (isolated_task_ != detail::active_isolated_task) {
+                doof::panic("callback created in isolated async work invoked outside that work");
+            }
+        } else if (owner_ != doof::current_actor_domain() || detail::active_isolated_task) {
             doof::panic("callback invoked outside owning actor domain");
         }
         if constexpr (std::is_void_v<R>) {
@@ -1153,7 +1167,14 @@ public:
             doof::panic("callback dispatched before initialization");
         }
 
-        if (!owner_) {
+        if (isolated_task_) {
+            // Isolated callbacks have no mailbox; they may only run in place.
+            call(std::forward<Args>(args)...);
+            return;
+        }
+        if (!owner_ && !doof::current_actor_domain() && !detail::active_isolated_task) {
+            // A root callback dispatched on the root domain runs in place;
+            // from an actor or async work it is queued to the root mailbox.
             detail::call_callback_unchecked(*this, std::forward<Args>(args)...);
             return;
         }
@@ -1180,6 +1201,7 @@ public:
         if (!static_cast<bool>(*this)) {
             doof::panic("callback dispatched before initialization");
         }
+        reject_isolated_posting();
         std::shared_ptr<detail::CallbackDomain> retained;
         auto owner = posting_owner(retained);
         if (!owner) {
@@ -1198,6 +1220,15 @@ public:
     }
 
 private:
+    // A callback created in isolated async work may capture that work's
+    // mutable locals. Delivering it to any mailbox would run it concurrently
+    // with the job that owns those locals.
+    void reject_isolated_posting() const {
+        if (isolated_task_) {
+            doof::panic("callbacks created in isolated async work cannot be posted");
+        }
+    }
+
     // Where posted work runs. An actor owner is retained while work is offered
     // to it; null means the owning actor no longer exists.
     detail::CallbackDomain* posting_owner(std::shared_ptr<detail::CallbackDomain>& retained) const {
@@ -3352,7 +3383,7 @@ public:
 
     void onComplete(const doof::callback<void(doof::Result<T, std::string>)>& cb) const {
         if (!cb) doof::panic("completion callback invoked before initialization");
-        if (cb.isolated_) doof::panic("completion callbacks created in isolated async work cannot receive deferred delivery");
+        if (cb.isolated_task_) doof::panic("completion callbacks created in isolated async work cannot receive deferred delivery");
         auto domain = cb.owner_ ? cb.owner_ : &detail::ApplicationDomain::shared();
         std::shared_ptr<detail::CallbackDomain> lifetime;
         if (!detail::ApplicationDomain::is_application_domain(domain)) {
@@ -3425,6 +3456,7 @@ doof::Promise<R> callback<R(Args...)>::post(Args... args) const {
     if (!static_cast<bool>(*this)) {
         doof::panic("callback posted before initialization");
     }
+    reject_isolated_posting();
     std::shared_ptr<doof::detail::CallbackDomain> retained;
     auto owner = posting_owner(retained);
     if (!owner) {
@@ -3453,6 +3485,7 @@ doof::Result<doof::Promise<R>, std::string> callback<R(Args...)>::tryPost(Args..
     if (!static_cast<bool>(*this)) {
         doof::panic("callback posted before initialization");
     }
+    reject_isolated_posting();
     std::shared_ptr<doof::detail::CallbackDomain> retained;
     auto owner = posting_owner(retained);
     if (!owner) {
@@ -3535,14 +3568,17 @@ class Actor : public detail::CallbackDomain {
 
     // Accept one call or post. A full mailbox blocks the sender with its CPU
     // token released; that capacity wait is a wait on this actor's progress.
-    void push_bounded(std::function<void()> run) {
+    // A caller that already records a wait on this actor passes `tracked` so
+    // the capacity wait does not replace its wait-for edge.
+    void push_bounded(std::function<void()> run, bool tracked = false) {
         std::unique_lock<std::mutex> lock(mutex_);
         while (accepting_ && bounded_messages_ >= detail::RuntimeScheduler::shared().actor_mailbox_capacity()) {
             auto signal = std::make_shared<detail::WaitSignal>();
             capacity_waiters_.push_back(signal);
             lock.unlock();
             {
-                detail::WaitScope blocked(wait_node(), signal, "actor mailbox capacity");
+                std::optional<detail::WaitScope> blocked;
+                if (!tracked) blocked.emplace(wait_node(), signal, "actor mailbox capacity");
                 CpuTokenRelease release;
                 std::unique_lock<std::mutex> waiting(mutex_);
                 space_.wait(waiting, [&] { return signal->is_satisfied(); });
@@ -3555,10 +3591,17 @@ class Actor : public detail::CallbackDomain {
         schedule_locked();
     }
 
+    // Blocking requests record their wait on this actor before anything is
+    // queued. A wait that would close a cycle panics while the request still
+    // belongs to the caller, so no message or retirement outlives the frame
+    // whose operands it refers to.
+    detail::WaitScope begin_wait(const std::shared_ptr<detail::WaitSignal>& signal, const char* kind) {
+        return detail::WaitScope(wait_node(), signal, kind);
+    }
+
     template <typename Future>
-    void wait_on_actor(Future& future, const std::shared_ptr<detail::WaitSignal>& signal, const char* kind) {
+    static void wait_on_actor(Future& future) {
         if (future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) return;
-        detail::WaitScope blocked(wait_node(), signal, kind);
         doof::wait_with_cpu_token_released(future);
     }
 
@@ -3638,6 +3681,7 @@ public:
     template <typename R, typename F>
     R call_sync(F&& f) {
         auto signal = std::make_shared<detail::WaitSignal>();
+        auto blocked = begin_wait(signal, "synchronous actor call");
         if constexpr (std::is_void_v<R>) {
             auto prom = std::make_shared<std::promise<void>>();
             auto fut = prom->get_future();
@@ -3650,8 +3694,8 @@ public:
                     signal->satisfy();
                     prom->set_exception(std::current_exception());
                 }
-            });
-            wait_on_actor(fut, signal, "synchronous actor call");
+            }, true);
+            wait_on_actor(fut);
             return fut.get();
         } else {
             auto prom = std::make_shared<std::promise<R>>();
@@ -3665,8 +3709,8 @@ public:
                     signal->satisfy();
                     prom->set_exception(std::current_exception());
                 }
-            });
-            wait_on_actor(fut, signal, "synchronous actor call");
+            }, true);
+            wait_on_actor(fut);
             return fut.get();
         }
     }
@@ -3730,6 +3774,8 @@ public:
         auto prom = std::make_shared<std::promise<std::shared_ptr<T>>>();
         auto fut = prom->get_future();
         auto signal = std::make_shared<detail::WaitSignal>();
+        // Self-retirement panics here and leaves the actor running.
+        auto blocked = begin_wait(signal, "actor retirement");
         {
             std::lock_guard<std::mutex> lock(mutex_);
             if (!accepting_) doof::panic("actor is already retiring or retired");
@@ -3747,7 +3793,7 @@ public:
             };
             finish_retirement_locked();
         }
-        wait_on_actor(fut, signal, "actor retirement");
+        wait_on_actor(fut);
         std::shared_ptr<T> value = fut.get();
         return value;
     }

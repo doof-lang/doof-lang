@@ -162,7 +162,14 @@ function emitActorMethodCall(expression: CallExpression, member: MemberExpressio
     temporaries.push(temporary)
   }
   args := emitActorMethodArguments(expression, methodType, temporaries, context)
-  capture := if args == "" then "[]" else if async_ then "[=]" else "[&]"
+  // The message owns its operands: a queued message may outlive the caller's
+  // frame, for example when the caller's wait panics or unwinds.
+  let capture = "[]"
+  if args != "" {
+    capture = "[="
+    for temporary of temporaries { capture = capture + ", " + temporary + " = std::move(" + temporary + ")" }
+    capture = capture + "]"
+  }
   let lambda = capture + "(" + className + "& _self)"
   if cppReturn == "void" {
     lambda = lambda + " { _self." + cppIdentifier(member.property) + "(" + args + "); }"

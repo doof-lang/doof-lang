@@ -182,18 +182,69 @@ void actor_delivery_and_retirement() {
     });
     require(doof::success_value(isolated.get()) == 1, "isolated callback guard consumed promise");
 
-    // The completion guard must not change ordinary unowned callback behavior
-    // in isolated work: dispatch stays inline and post targets the root domain.
+    // Each isolated job is its own callback domain: its callbacks may capture
+    // the job's mutable locals, so they run only inside that job and are never
+    // posted. Dispatch stays inline within the job.
     int dispatched = 0;
-    auto posted = doof::submit_async<doof::Promise<int>>([&dispatched] {
+    auto isolatedCallbacks = doof::submit_async<int>([&dispatched] {
         doof::callback<void()> local([&dispatched] { ++dispatched; });
         local.dispatch();
-        return doof::callback<int()>([] { return 5; }).post();
+        local.call();
+        doof::callback<int()> value([] { return 5; });
+        expect_panic([&] { (void)value.post(); }, "cannot be posted");
+        expect_panic([&] { (void)value.tryPost(); }, "cannot be posted");
+        doof::callback<void()> notify([] {});
+        expect_panic([&] { (void)notify.tryDispatch(); }, "cannot be posted");
+        // A nested job is a different domain.
+        auto nested = doof::submit_async<int>([value, local] {
+            expect_panic([&] { (void)value.call(); }, "invoked outside that work");
+            expect_panic([&] { local.dispatch(); }, "invoked outside that work");
+            return 0;
+        });
+        (void)nested.get();
+        return value.call();
     });
-    auto posted_result = doof::success_value(posted.get());
-    require(dispatched == 1, "isolated dispatch no longer ran inline");
+    require(doof::success_value(isolatedCallbacks.get()) == 5, "isolated callback guard broke local calls");
+    require(dispatched == 2, "isolated dispatch no longer ran inline");
+
+    // A root callback captured by async work stays root-affine: the job cannot
+    // call it, and post and dispatch deliver it to the root mailbox.
+    auto rootThread = std::this_thread::get_id();
+    int rootRuns = 0;
+    doof::callback<void()> rootNotify([&rootRuns, rootThread] {
+        require(std::this_thread::get_id() == rootThread, "root callback ran off the root thread");
+        ++rootRuns;
+    });
+    doof::callback<int(int)> rootDouble([rootThread](int n) {
+        require(std::this_thread::get_id() == rootThread, "posted root callback ran off the root thread");
+        return n * 2;
+    });
+    auto captured = doof::submit_async<doof::Promise<int>>([rootNotify, rootDouble] {
+        expect_panic([&] { rootNotify.call(); }, "outside owning actor domain");
+        rootNotify.dispatch();
+        return rootDouble.post(21);
+    });
+    auto doubled = doof::success_value(captured.get());
+    require(rootRuns == 0, "root dispatch from async work ran in place");
     drain();
-    require(doof::success_value(posted_result.get()) == 5, "isolated post no longer reached root");
+    require(rootRuns == 1, "root dispatch from async work was not delivered");
+    require(doof::success_value(doubled.get()) == 42, "root post from async work returned the wrong value");
+
+    // A callback that escapes its job cannot run in the root domain either.
+    auto escaped = doof::submit_async<doof::callback<int()>>([] {
+        return doof::callback<int()>([] { return 6; });
+    });
+    auto escapedCallback = doof::success_value(escaped.get());
+    expect_panic([&] { (void)escapedCallback.call(); }, "invoked outside that work");
+    expect_panic([&] { (void)escapedCallback.post(); }, "cannot be posted");
+
+    // Root callbacks cannot run inside isolated work.
+    doof::callback<int()> rootValue([] { return 7; });
+    auto rootInTask = doof::submit_async<int>([rootValue] {
+        expect_panic([&] { (void)rootValue.call(); }, "outside owning actor domain");
+        return 0;
+    });
+    (void)rootInTask.get();
 
     auto serial = std::make_shared<doof::Actor<ActorState>>();
     serial->call_sync<void>([](ActorState& state) {

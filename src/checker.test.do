@@ -1468,10 +1468,11 @@ export function testRejectsUnsafeAsyncBlockCaptures(): none {
   Assert.equal(mutableInterior.diagnostics.length > 0, true)
   Assert.equal(mutableInterior.diagnostics[0].message.contains("array type"), true)
 
-  callback := checked("function run(callback: (): int): Promise<int> => async { yield callback() }")
-  Assert.equal(callback.diagnostics.length > 0, true)
+  // Callbacks may be captured; only yielding one back out is rejected.
+  Assert.equal(checked("function run(callback: (): none): Promise<int> => async { callback.dispatch()\nyield 1 }").diagnostics.length, 0)
+  yielded := checked("function run(callback: (): none): Promise<(): none> => async { yield callback }")
   let foundCallback = false
-  for diagnostic of callback.diagnostics { if diagnostic.message.contains("actor-affine callbacks") { foundCallback = true } }
+  for diagnostic of yielded.diagnostics { if diagnostic.message.contains("actor-affine callbacks cannot be transferred from async blocks") { foundCallback = true } }
   Assert.equal(foundCallback, true)
 }
 

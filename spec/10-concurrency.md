@@ -106,9 +106,26 @@ thread affinity, or a particular worker.
 
 Values captured from the enclosing scope are copied into the task. A capture
 must use an immutable binding and its type must be deeply immutable and safe to
-cross a thread boundary. Actor and promise handles may be captured; callback,
-weak-reference, and stream handles cannot. Mutable locals and freshly constructed mutable
-graphs are allowed inside the task.
+cross a thread boundary. Actor and promise handles may be captured, and so may
+callbacks whose parameter and return types satisfy the actor boundary rules.
+Weak-reference and stream handles cannot be captured. Mutable locals and freshly
+constructed mutable graphs are allowed inside the task.
+
+A captured callback stays affine to the domain that created it. The task can
+`post`, `tryPost`, or `dispatch` it back to that owner, for example to report
+progress, but calling it directly panics at runtime:
+
+```doof check
+report := (done: int): int => done
+worker := async {
+    yield report.post(3)  // ✅ OK - runs on the root mailbox
+}
+worker.get()!.onComplete((result) => println(result!))
+```
+
+The checker does not trace how a captured callback is used inside the task, so
+a direct call such as `report(3)` inside the block compiles and then panics
+with `callback invoked outside owning actor domain`.
 
 Async-block code is isolated. It may call only transitively isolated functions,
 methods, constructors, and native contracts, and cannot access mutable
@@ -117,15 +134,18 @@ module/static state.
 An async block may yield an owned mutable object or collection. Its worker has
 no persistent mutable domain after completion, so ownership transfers to the
 promise consumer. Callback, weak-reference, and stream handles cannot occur
-recursively in the yielded graph; actor and promise handles may.
+recursively in the yielded graph; actor and promise handles may. A task may
+yield the promise returned by posting a captured callback.
 
 Nested async blocks and actor calls are allowed inside the block, including
 calls through captured actor handles.
 
 `async functionCall(args)` schedules an ordinary function call when the
 function is inferred isolated. Arguments must satisfy the same boundary rules
-as actor-call arguments, and the result must be transferable from a temporary
-worker domain:
+as actor-call arguments and, like async-block captures, cannot contain
+weak-reference or stream handles. A callback argument stays affine to its
+creator in the same way as a captured callback. The result must be transferable
+from a temporary worker domain:
 
 ```doof check
 function compute(n: int): int => n * 2
@@ -219,6 +239,12 @@ Cycles include an actor calling itself synchronously through its own handle,
 two actors calling each other synchronously, an actor retiring itself, and an
 actor sending to its own full mailbox. The panic is an ordinary Doof panic, and
 the other domains in the cycle continue with their queued work.
+
+A synchronous call or retirement records its wait before anything is queued, so
+a wait that would close a cycle panics before its request is accepted. The
+panicking call's message never runs, and an actor that tries to retire itself
+keeps running with its state intact; only a later retirement from another
+domain stops it.
 
 Detection is a safety net rather than a liveness guarantee. It does not cover
 livelock, waits on several promises through `takeFirstCompleted()`, the async
@@ -558,6 +584,15 @@ println(callback.call(1))
 
 Local callback calls execute immediately and are valid only in the owning actor
 domain. Calling a callback from another actor domain is a runtime logic error.
+
+Each running async block or isolated call is its own temporary domain, so a
+callback created there may be called only inside that same work, where it may
+capture the work's mutable locals. Calling it from any other domain, including
+nested async work and the root domain, panics, and `post`, `tryPost`,
+`dispatch` outside that work, `tryDispatch`, and `onComplete` registration
+reject it, because no mailbox could run it without racing the work that owns its
+captures. Root and actor callbacks likewise cannot be called from inside async
+work.
 
 Callbacks can also be posted back to their owning actor domain:
 

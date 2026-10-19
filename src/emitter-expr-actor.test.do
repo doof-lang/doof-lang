@@ -81,11 +81,14 @@ export function testActorCallArgumentsLowerBeforeDispatch(): none {
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
   source := result.emission!.modules[0].source
-  // The receiver and argument are caller-side locals; the message only reads them.
+  // The receiver and argument are caller-side locals moved into the message,
+  // so a queued message never refers to the caller's frame.
   Assert.stringContains(source, "auto _actor_arg_")
   Assert.stringContains(source, "->template call_sync<int32_t>([](Box& _self) -> int32_t { return _self.get(); })")
-  Assert.stringContains(source, "->template call_sync<void>([&](Box& _self) { _self.set(_actor_arg_")
-  Assert.stringContains(source, "->template call_async<void>([=](Box& _self) { _self.set(_actor_arg_")
+  Assert.stringContains(source, "->template call_sync<void>([=, _actor_arg_")
+  Assert.stringContains(source, "->template call_async<void>([=, _actor_arg_")
+  Assert.stringContains(source, " = std::move(_actor_arg_")
+  Assert.isFalse(source.contains("[&](Box& _self)"))
 }
 
 export function testIsolatedAsyncCallArgumentsLowerBeforeSubmit(): none {
@@ -137,4 +140,33 @@ export function testIsolatedAsyncCallArgumentRunsBeforeReturn(): none {
   task := async hoistTwice(hoistTake(values))
   Assert.equal(values.length, 2)
   Assert.equal(task.get()!, 6)
+}
+
+class SelfCallingPeer {
+  let peer: Actor<SelfCallingPeer> | none = none
+  let seen: string = "unset"
+  attach(peer: Actor<SelfCallingPeer>): none { this.peer = peer }
+  show(label: string, body: string): none { this.seen = label + ":" + string(body.length) }
+  poke(): string {
+    label := "label-" + string(42)
+    let body = ""
+    for i of 0..<512 { body = body + "x" }
+    result := catchPanic(=> { this.peer!.show(label, body) })
+    case result {
+      _: Success -> { return "no panic" }
+      failure: Failure -> { return failure.error }
+    }
+  }
+  read(): string => this.seen
+}
+
+export function testDeadlockedSyncActorCallIsNeverQueued(): none {
+  // The self-call panics before its message is queued, so the message cannot
+  // later run against the caller's unwound operands.
+  peer := Actor<SelfCallingPeer>()
+  peer.attach(peer)
+  Assert.stringContains(peer.poke(), "deadlock: blocking wait would never complete (synchronous actor call)")
+  Assert.equal(peer.read(), "unset")
+  state := retire peer
+  Assert.equal(state.seen, "unset")
 }

@@ -49,6 +49,23 @@ export function testAsyncExpressionsRequireYieldingBlocksOrIsolatedCalls(): none
   Assert.stringContains(notCall[0], "`async` requires an actor method call or an inferrably isolated function call")
 }
 
+export function testAsyncCallAcceptsCallbackOperands(): none {
+  // A callback stays affine to its creator; the runtime panics if the worker
+  // calls it, so the checker only validates the payload it can post back.
+  Assert.equal(asyncErrors("isolated function run(cb: (): none): int { cb.dispatch()\nreturn 0 }\nfunction start(cb: (): none): Promise<int> => async run(cb)").length, 0)
+  Assert.equal(asyncErrors("class Holder { readonly cb: (): none }\nisolated function run(holder: Holder): int => 0\nfunction start(holder: Holder): Promise<int> => async run(holder)").length, 0)
+  Assert.equal(asyncErrors("class Box { keep(cb: (): none): none { } }\nfunction start(box: Actor<Box>, cb: (): none): Promise<none> => async box.keep(cb)").length, 0)
+  // Posted arguments still cross into the owner's domain.
+  payload := asyncErrors("class Bag { let items: int[] = [] }\nisolated function run(cb: (bag: Bag): none): int => 0\nfunction start(cb: (bag: Bag): none): Promise<int> => async run(cb)")
+  Assert.equal(payload.length, 1)
+  Assert.stringContains(payload[0], "callback parameter \"bag\" cannot cross actor boundaries")
+  // Weak references are not owned by any mailbox and still cannot cross.
+  weak_ := asyncErrors("class Node { }\nisolated function run(node: weak Node): int => 0\nfunction start(node: weak Node): Promise<int> => async run(node)")
+  Assert.equal(weak_.length, 1)
+  Assert.stringContains(weak_[0], "Async call argument 1 of type")
+}
+
+
 export function testAsyncThisCaptureReportsAtThis(): none {
   // Async capture is validated by the graph-wide isolation phase, not per-module checking.
   errors := compile([SourceFile { path: "/main.do", source: "class Worker { value: int = 1\nrun(): Promise<int> => async {\nyield this.value } }" }], "/main.do").diagnostics

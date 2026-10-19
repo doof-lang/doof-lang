@@ -60,7 +60,9 @@ p.get()!
 ```
 
 Ordinary functions may be dispatched directly when they are inferred isolated
-and their arguments satisfy actor-call boundary rules:
+and their arguments satisfy actor-call boundary rules. Like async-block
+captures, the receiver and arguments cannot contain weak-reference or stream
+handles:
 
 ```doof check
 isolated function compute(input: int): int => input * 2
@@ -91,9 +93,11 @@ fresh mutable values are allowed inside the block. The yielded graph may be
 mutable because the temporary worker domain ends before the caller receives
 it.
 
-Actor and promise handles may be captured and yielded. Callback,
-weak-reference, and stream handles cannot be captured or occur recursively in
-the yielded graph. Async-block code may invoke only transitively isolated code
+Actor and promise handles may be captured and yielded. Callbacks may be
+captured but not yielded; a captured callback stays affine to its creator, so
+the block may `post`, `tryPost`, or `dispatch` it back but a direct call panics
+at runtime. Weak-reference and stream handles cannot be captured or occur
+recursively in the yielded graph. Async-block code may invoke only transitively isolated code
 and cannot access mutable module/static state.
 
 Nested async blocks and actor calls, including calls through captured actor
@@ -116,8 +120,10 @@ Blocking waits (synchronous actor calls, retirement, mailbox-capacity waits, and
 `Promise.get()`) are tracked between serial domains. A wait that would close a
 cycle panics with `deadlock: blocking wait would never complete (...)` instead
 of hanging; for example an actor synchronously calling itself, two actors
-calling each other synchronously, or an actor sending to its own full mailbox.
-Livelock and `takeFirstCompleted()` waits are not detected.
+calling each other synchronously, an actor retiring itself, or an actor
+sending to its own full mailbox. The cycle is detected before the call or
+retirement is queued, so the panicking request never runs and a self-retiring
+actor keeps running with its state. Livelock and `takeFirstCompleted()` waits are not detected.
 
 Worker waits in `Promise.get()`, synchronous actor calls, and actor retirement
 automatically relinquish their CPU token. This lets nested work progress at a
@@ -230,8 +236,10 @@ Avoid blocking dependency cycles while retiring actors.
 Native command-line entrypoints deliver pending completions after normal
 main/script completion, preserving the exit code. Timers and other event
 sources do not keep the process alive past `main` without an explicit event loop. UI/application hosts pump their own
-mailboxes. Callbacks created in temporary isolated async work cannot be used as
-completion receivers; create them in a persistent actor or root domain.
+mailboxes. Callbacks created in temporary isolated async work belong to that
+work alone: calling one anywhere else panics, and `post`, `tryPost`,
+`tryDispatch`, and `onComplete` registration reject it. Create callbacks that
+must outlive the work in a persistent actor or root domain.
 Doof panics are not Failure values: an unhandled producer or terminal callback
 panic terminates through the runtime's process panic boundary.
 
