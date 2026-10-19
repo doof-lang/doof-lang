@@ -155,3 +155,59 @@ export function testDecodingCountsAsConstruction(): none {
 export function testUncrossedDestructorsMayTouchModuleState(): none {
   Assert.equal(errorCount("let depth = 0\nclass Guard { destructor { depth -= 1 } }\nfunction enter(): Guard {\ndepth += 1\nreturn Guard {} }\nfunction main(): none { guard := enter() }"), 0)
 }
+
+function errorMessages(files: SourceFile[]): string[] {
+  result := compile(files, "/main.do")
+  let messages: string[] = []
+  for diagnostic of result.diagnostics { if diagnostic.severity == "error" { messages.push(diagnostic.message) } }
+  return messages
+}
+
+// Callers are declared before callees so a node-order sweep would resolve only
+// one link per pass.
+function callChain(length: int, mutates: bool): string {
+  let source = "let shared = 0\nisolated function top(): int => f0()\n"
+  for position of 0..<length - 1 { source += "function f" + string(position) + "(): int => f" + string(position + 1) + "()\n" }
+  last := "f" + string(length - 1)
+  source += if mutates then "function " + last + "(): int { shared += 1\nreturn shared }\n" else "function " + last + "(): int => 1\n"
+  return source
+}
+
+export function testLongCallChainsPropagateToTheIsolatedRoot(): none {
+  messages := errorMessages([SourceFile { path: "/main.do", source: callChain(300, true) }])
+  Assert.equal(messages.length, 1)
+  Assert.equal(messages[0], "Isolated function \"top\" cannot call non-isolated function \"f0\"")
+  Assert.equal(errorCount(callChain(300, false)), 0)
+}
+
+export function testRecursiveCyclesReachDirectReasons(): none {
+  cycle := "function a(n: int): int => if n == 0 then b(n) else a(n - 1)\nfunction b(n: int): int => if n > 1 then a(n - 1) else c()\n"
+  Assert.isTrue(hasMessage("let shared = 0\n" + cycle + "function c(): int { shared += 1\nreturn shared }\nisolated function top(): int => a(3)",
+    "Isolated function \"top\" cannot call non-isolated function \"a\""))
+  Assert.equal(errorCount(cycle + "function c(): int => 1\nisolated function top(): int => a(3)"), 0)
+}
+
+export function testCallReasonsNameTheNearestNonIsolatedCallee(): none {
+  // `relay` is non-isolated only through `direct`, so `top` reports `direct`
+  // even though it calls `relay` first.
+  messages := errorMessages([SourceFile { path: "/main.do", source:
+    "let shared = 0\nisolated function top(): int => relay() + direct()\nfunction relay(): int => direct()\nfunction direct(): int { shared += 1\nreturn shared }",
+  }])
+  Assert.equal(messages.length, 1)
+  Assert.equal(messages[0], "Isolated function \"top\" cannot call non-isolated function \"direct\"")
+}
+
+export function testInterfaceCallsReachImplementationsInOtherModules(): none {
+  shape := SourceFile { path: "/shape.do", source: "export interface Shape { area(): int }" }
+  main := SourceFile { path: "/main.do", source:
+    "import { Shape } from \"./shape\"\nimport { Square } from \"./square\"\nisolated function measure(s: Shape): int => s.area()\nfunction main(): none { println(measure(Square {})) }",
+  }
+  noisy := SourceFile { path: "/square.do", source:
+    "import { Shape } from \"./shape\"\nlet calls = 0\nexport class Square implements Shape { area(): int { calls += 1\nreturn calls } }",
+  }
+  quiet := SourceFile { path: "/square.do", source: "import { Shape } from \"./shape\"\nexport class Square implements Shape { area(): int => 4 }" }
+  messages := errorMessages([main, shape, noisy])
+  Assert.equal(messages.length, 1)
+  Assert.equal(messages[0], "Isolated function \"measure\" cannot call non-isolated function \"area\"")
+  Assert.equal(errorMessages([main, shape, quiet]).length, 0)
+}
