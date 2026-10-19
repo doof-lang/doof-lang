@@ -3752,27 +3752,6 @@ public:
         return value;
     }
 
-    // Stop accepting work and drain the already accepted mailbox.
-    void stop() {
-        auto prom = std::make_shared<std::promise<void>>();
-        auto fut = prom->get_future();
-        auto signal = std::make_shared<detail::WaitSignal>();
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            if (!accepting_) {
-                return;
-            }
-            stop_accepting_locked();
-            retirement_ = [prom, signal] {
-                signal->satisfy();
-                prom->set_value();
-            };
-            finish_retirement_locked();
-        }
-        wait_on_actor(fut, signal, "actor stop");
-        fut.get();
-    }
-
     ~Actor() {
         // Queued scheduler closures retain the actor until its mailbox drains.
         // Destruction therefore observes no accepted work requiring a join.
