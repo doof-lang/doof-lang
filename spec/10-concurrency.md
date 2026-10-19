@@ -556,8 +556,9 @@ println(pending.length)  // 1
 `takeFirstCompleted()` blocks until one promise settles, removes that promise
 from `pending`, and returns the same result that its `get()` method would
 produce. Calling it on an empty array returns `Failure<string>`. Completion
-waiting does not poll and relinquishes a runtime-worker CPU token in the same
-way as `get()`.
+waiting does not poll: only the promises in `pending` wake the caller, and it
+relinquishes a runtime-worker CPU token in the same way as `get()`. When
+several promises have already settled, the earliest in array order is taken.
 
 The selected promise is consumed across all aliases. Arrays containing a
 promise already claimed through another alias cause a logic-error panic when

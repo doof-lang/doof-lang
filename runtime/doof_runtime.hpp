@@ -1013,37 +1013,41 @@ void wait_with_cpu_token_released(Future& future) {
 
 namespace detail {
 
-// Promise producers publish one monotonically increasing generation after
-// settling a future. Consumers can then wait for any promise in a collection
-// without polling or occupying one scheduler task per promise.
-class PromiseCompletionNotifier {
+// Times a first-completed wait returned from its condition wait, including
+// spurious wakeups. Only completions of watched promises notify a waiter.
+inline std::atomic<std::size_t> first_completed_wakeups{0};
+
+// One wait for the first of several promises. The waiter registers only with
+// the promises it waits on, so unrelated completions never wake it, and the
+// first watched completion records its source so no promise is re-polled.
+class PromiseCompletionWaiter {
     std::mutex mutex_;
     std::condition_variable ready_;
-    std::uint64_t generation_ = 0;
+    const void* source_ = nullptr;
 
 public:
-    static PromiseCompletionNotifier& shared() {
-        static auto* notifier = new PromiseCompletionNotifier();
-        return *notifier;
-    }
-
-    std::uint64_t generation() {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return generation_;
-    }
-
-    void notify() {
+    void notify(const void* source) {
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            ++generation_;
+            if (source_) return;
+            source_ = source;
         }
-        ready_.notify_all();
+        ready_.notify_one();
     }
 
-    void wait_for_change(std::uint64_t observed) {
+    const void* wait() {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (source_) return source_;
+        }
         CpuTokenRelease release;
         std::unique_lock<std::mutex> lock(mutex_);
-        ready_.wait(lock, [this, observed] { return generation_ != observed; });
+        while (!source_) {
+            ready_.wait(lock);
+            first_completed_wakeups.fetch_add(1, std::memory_order_relaxed);
+        }
+        // The lock is destroyed before the CPU token is reacquired.
+        return source_;
     }
 };
 
@@ -3266,6 +3270,8 @@ class PromiseState {
     std::optional<doof::Success<T>> value_;
     std::exception_ptr error_;
     std::function<void()> continuation_;
+    // First-completed waits currently watching this promise.
+    std::vector<std::shared_ptr<PromiseCompletionWaiter>> watchers_;
     const void* producer_ = nullptr;
     std::shared_ptr<WaitSignal> signal_ = std::make_shared<WaitSignal>();
 
@@ -3298,6 +3304,26 @@ public:
         return settled_;
     }
 
+    // Returns true when already settled; otherwise the waiter is notified
+    // with this state's address when it settles.
+    bool watch(const std::shared_ptr<PromiseCompletionWaiter>& waiter) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        check_unclaimed();
+        if (settled_) return true;
+        watchers_.push_back(waiter);
+        return false;
+    }
+
+    void unwatch(const PromiseCompletionWaiter* waiter) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        for (auto it = watchers_.begin(); it != watchers_.end(); ++it) {
+            if (it->get() == waiter) {
+                watchers_.erase(it);
+                return;
+            }
+        }
+    }
+
     void claim(std::function<void()> continuation = {}) {
         std::function<void()> dispatch;
         {
@@ -3325,6 +3351,7 @@ public:
             error = std::current_exception();
         }
         std::function<void()> dispatch;
+        std::vector<std::shared_ptr<PromiseCompletionWaiter>> watchers;
         {
             std::lock_guard<std::mutex> lock(mutex_);
             if (settled_) doof::panic("promise completed more than once");
@@ -3337,9 +3364,10 @@ public:
             settled_ = true;
             signal_->satisfy();
             dispatch = std::move(continuation_);
+            watchers.swap(watchers_);
         }
         ready_.notify_all();
-        PromiseCompletionNotifier::shared().notify();
+        for (const auto& watcher : watchers) watcher->notify(this);
         if (dispatch) dispatch();
     }
 
@@ -3371,6 +3399,9 @@ public:
 template <typename T>
 class Promise {
     std::shared_ptr<detail::PromiseState<T>> state_;
+    template <typename U>
+    friend doof::Result<U, std::string> promise_take_first_completed(
+        const std::shared_ptr<std::vector<doof::Promise<U>>>& promises);
 public:
     explicit Promise(std::shared_ptr<detail::PromiseState<T>> state) : state_(std::move(state)) {}
 
@@ -3416,18 +3447,36 @@ doof::Result<T, std::string> promise_take_first_completed(
     if (promises->empty()) {
         return doof::Failure<std::string>{std::string("cannot take a completed promise from an empty array")};
     }
-    while (true) {
-        const auto observed = doof::detail::PromiseCompletionNotifier::shared().generation();
-        for (std::size_t index = 0; index < promises->size(); ++index) {
-            if (!(*promises)[index].ready()) {
-                continue;
-            }
-            auto promise = std::move((*promises)[index]);
-            promises->erase(promises->begin() + static_cast<std::ptrdiff_t>(index));
-            return promise.get();
+    // One pass registers with each pending promise and stops at the first one
+    // already settled. The waiter then sleeps until a watched promise settles;
+    // completions elsewhere in the process never wake it.
+    auto waiter = std::make_shared<doof::detail::PromiseCompletionWaiter>();
+    auto& pending = *promises;
+    struct Registrations {
+        const doof::detail::PromiseCompletionWaiter* waiter;
+        std::vector<doof::detail::PromiseState<T>*> states;
+        void release() {
+            for (auto* state : states) state->unwatch(waiter);
+            states.clear();
         }
-        doof::detail::PromiseCompletionNotifier::shared().wait_for_change(observed);
+        ~Registrations() { release(); }
+    } registrations{waiter.get(), {}};
+    registrations.states.reserve(pending.size());
+    std::size_t index = 0;
+    for (; index < pending.size(); ++index) {
+        auto* state = pending[index].state_.get();
+        if (state->watch(waiter)) break;
+        registrations.states.push_back(state);
     }
+    if (index == pending.size()) {
+        const void* source = waiter->wait();
+        index = 0;
+        while (registrations.states[index] != source) ++index;
+    }
+    registrations.release();
+    auto promise = std::move(pending[index]);
+    pending.erase(pending.begin() + static_cast<std::ptrdiff_t>(index));
+    return promise.get();
 }
 
 // Central async-task submission boundary. CPU execution is bounded by the

@@ -109,6 +109,15 @@ void test_nested_waits() {
         return doof::success_value(result) + 1;
     });
     require(success(std::move(outer)) == 42, "nested async wait deadlocked or returned the wrong value");
+
+    // A worker waiting for the first completion lends its token to nested work.
+    auto first = doof::submit_async<int>([] {
+        auto inner = std::make_shared<std::vector<doof::Promise<int>>>();
+        inner->push_back(doof::submit_async<int>([] { return 6; }));
+        auto result = doof::promise_take_first_completed(inner);
+        return doof::is_success(result) ? doof::success_value(result) : -1;
+    });
+    require(success(std::move(first)) == 6, "nested first-completed wait deadlocked or returned the wrong value");
 }
 
 void test_first_completed_promise() {
@@ -135,6 +144,76 @@ void test_first_completed_promise() {
 
     auto empty = doof::promise_take_first_completed(promises);
     require(doof::is_failure(empty), "empty promise array did not return a failure");
+
+    // Completions of promises outside the array never wake the waiter.
+    std::promise<void> release_watched;
+    auto watched_gate = release_watched.get_future().share();
+    promises->push_back(doof::submit_async<int>([watched_gate] {
+        watched_gate.wait();
+        return 3;
+    }));
+    const auto before_unrelated = doof::detail::first_completed_wakeups.load();
+    std::thread unrelated([&release_watched] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        for (int i = 0; i < 200; ++i) {
+            require(success(doof::submit_async<int>([i] { return i; })) == i, "unrelated promise result changed");
+        }
+        release_watched.set_value();
+    });
+    auto watched = doof::promise_take_first_completed(promises);
+    unrelated.join();
+    require(doof::is_success(watched) && doof::success_value(watched) == 3, "watched promise result changed");
+    const auto unrelated_wakeups = doof::detail::first_completed_wakeups.load() - before_unrelated;
+    require(unrelated_wakeups <= 2,
+            "unrelated completions woke the waiter " + std::to_string(unrelated_wakeups) + " times");
+
+    // Draining reports every result once, and each extraction wakes at most
+    // about once instead of once per completion anywhere in the process.
+    constexpr int drained = 64;
+    std::promise<void> release_drain;
+    auto drain_gate = release_drain.get_future().share();
+    for (int i = 0; i < drained; ++i) {
+        promises->push_back(doof::submit_async<int>([drain_gate, i] {
+            drain_gate.wait();
+            return i;
+        }));
+    }
+    const auto before_drain = doof::detail::first_completed_wakeups.load();
+    release_drain.set_value();
+    std::vector<bool> seen(drained, false);
+    for (int i = 0; i < drained; ++i) {
+        auto result = doof::promise_take_first_completed(promises);
+        require(doof::is_success(result), "drained promise unexpectedly failed");
+        const int value = doof::success_value(result);
+        require(value >= 0 && value < drained && !seen[value], "drained promise result repeated or changed");
+        seen[value] = true;
+    }
+    require(promises->empty(), "drained promises were not all removed");
+    const auto drain_wakeups = doof::detail::first_completed_wakeups.load() - before_drain;
+    require(drain_wakeups <= drained + drained / 4,
+            "draining woke waiters " + std::to_string(drain_wakeups) + " times for " + std::to_string(drained) + " promises");
+
+    // A claimed promise panics and leaves no registration on earlier promises.
+    std::promise<void> release_claimed;
+    auto claimed_gate = release_claimed.get_future().share();
+    auto pending = doof::submit_async<int>([claimed_gate] {
+        claimed_gate.wait();
+        return 4;
+    });
+    auto claimed = doof::submit_async<int>([] { return 5; });
+    require(success(claimed) == 5, "claimed promise result changed");
+    promises->push_back(pending);
+    promises->push_back(claimed);
+    try {
+        (void)doof::promise_take_first_completed(promises);
+        fail("a claimed promise in the array did not panic");
+    } catch (const doof::Panic& panic) {
+        require(panic.message() == "promise result already claimed", "claimed promise panic changed");
+    }
+    require(promises->size() == 2, "a panicking extraction removed a promise");
+    release_claimed.set_value();
+    require(success(pending) == 4, "promise registered before the panic was not released");
+    promises->clear();
 }
 
 struct ActorState {

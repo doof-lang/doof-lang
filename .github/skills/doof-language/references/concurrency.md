@@ -261,7 +261,8 @@ while pending.length > 0 {
 `takeFirstCompleted()` blocks until any contained promise settles, removes that
 promise, and returns the same `Result<T, string>` as its `get()` method. An
 empty array returns `Failure<string>`. The wait is notification-driven rather
-than polled and relinquishes a runtime-worker CPU token like `get()`.
+than polled, is woken only by the array's own promises, and relinquishes a
+runtime-worker CPU token like `get()`.
 
 ## Actor Boundary Summary
 
