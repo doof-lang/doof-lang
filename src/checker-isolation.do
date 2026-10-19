@@ -46,8 +46,8 @@ class IsolationIndex {
   nodes: Map<FunctionDeclaration, IsolationNode> = {}
   // Graph nodes grouped by module path, in graph order.
   moduleNodes: Map<string, IsolationNode[]> = {}
-  // Interface method (by `methodKey`) to the implementing class methods' nodes.
-  implementations: Map<string, IsolationNode[]> = {}
+  // Interface instance or static method to the implementing class methods' nodes.
+  implementations: Map<FunctionDeclaration, IsolationNode[]> = {}
   // Keyed by `declarationKey`, holding the first statement with that symbol name.
   declarations: Map<string, Statement> = {}
   classes: Map<string, ClassDeclaration> = {}
@@ -63,10 +63,6 @@ function declarationKey(modulePath: string, name: string): string {
 
 function spanKey(modulePath: string, start: int, end: int): string {
   return modulePath + "\n" + string(start) + ":" + string(end)
-}
-
-function methodKey(method: FunctionDeclaration): string {
-  return method.name + "\n" + string(method.span.start.offset) + ":" + string(method.span.end.offset)
 }
 
 function indexIsolation(result: AnalysisResult, graph: IsolationGraph): IsolationIndex {
@@ -114,29 +110,28 @@ function indexValue(index: IsolationIndex, modulePath: string, span: SourceSpan,
 
 function indexImplementations(index: IsolationIndex, interface_: InterfaceDeclaration): none {
   if interface_.resolvedSymbol == none { return }
-  for method of interface_.methods {
-    let targets: IsolationNode[] = []
-    for implementation of interface_.resolvedSymbol!.implementations {
-      candidate := indexedDeclaration(index, implementation)
-      if candidate == none { continue }
-      case candidate! {
-        class_: ClassDeclaration -> {
-          for classMethod of class_.methods {
-            if classMethod.name != method.name || classMethod.static_ != method.static_ { continue }
-            node := index.nodes.get(classMethod) else { continue }
-            targets.push(node)
-          }
+  for method of interface_.methods { indexImplementation(index, interface_, method) }
+  for method of interface_.staticMethods { indexImplementation(index, interface_, method) }
+}
+
+function indexImplementation(index: IsolationIndex, interface_: InterfaceDeclaration, method: FunctionDeclaration): none {
+  let targets: IsolationNode[] = []
+  for implementation of interface_.resolvedSymbol!.implementations {
+    candidate := indexedDeclaration(index, implementation)
+    if candidate == none { continue }
+    case candidate! {
+      // Class static methods share `methods` with instance methods.
+      class_: ClassDeclaration -> {
+        for classMethod of class_.methods {
+          if classMethod.name != method.name || classMethod.static_ != method.static_ { continue }
+          node := index.nodes.get(classMethod) else { continue }
+          targets.push(node)
         }
-        _ -> { }
       }
+      _ -> { }
     }
-    key := methodKey(method)
-    existing := index.implementations.get(key) else {
-      index.implementations.set(key, targets)
-      continue
-    }
-    for target of targets { existing.push(target) }
   }
+  index.implementations.set(method, targets)
 }
 
 function indexedDeclaration(index: IsolationIndex, symbol: Symbol): Statement | none {
@@ -270,7 +265,7 @@ function nodeForDeclaration(index: IsolationIndex, declaration: FunctionDeclarat
  * class method's node. */
 function nodesForDeclaration(index: IsolationIndex, declaration: FunctionDeclaration): IsolationNode[] {
   direct := index.nodes.get(declaration) else {
-    targets := index.implementations.get(methodKey(declaration)) else { return [] }
+    targets := index.implementations.get(declaration) else { return [] }
     return targets
   }
   return [direct]

@@ -211,3 +211,25 @@ export function testInterfaceCallsReachImplementationsInOtherModules(): none {
   Assert.equal(messages[0], "Isolated function \"measure\" cannot call non-isolated function \"area\"")
   Assert.equal(errorMessages([main, shape, quiet]).length, 0)
 }
+
+export function testStaticInterfaceCallsReachImplementations(): none {
+  prefix := "let calls = 0\ninterface Maker { static make(): int }\n"
+  call := "isolated function build<T: Maker>(): int => T.make()\nfunction main(): none { println(build<Thing>()) }"
+  Assert.isTrue(hasMessage(prefix + "class Thing implements Maker { static make(): int { calls += 1\nreturn calls } }\n" + call,
+    "Isolated function \"build\" cannot call non-isolated function \"make\""))
+  Assert.equal(errorCount(prefix + "class Thing implements Maker { static make(): int => 1 }\n" + call), 0)
+}
+
+export function testInterfaceMethodsAtMatchingSpansStayDistinct(): none {
+  // `A.run` and `B.run` share a name and source offsets in different modules;
+  // only A's implementation mutates module state.
+  a := SourceFile { path: "/a.do", source: "export interface A { run(): bool }" }
+  b := SourceFile { path: "/b.do", source: "export interface B { run(): long }" }
+  impls := SourceFile { path: "/impls.do", source:
+    "import { A } from \"./a\"\nimport { B } from \"./b\"\nlet calls = 0\nexport class Noisy implements A { run(): bool { calls += 1\nreturn true } }\nexport class Quiet implements B { run(): long => 1L }",
+  }
+  main := SourceFile { path: "/main.do", source:
+    "import { A } from \"./a\"\nimport { B } from \"./b\"\nimport { Noisy, Quiet } from \"./impls\"\nisolated function viaB(x: B): long => x.run()\nfunction main(): none { println(viaB(Quiet {})) }",
+  }
+  Assert.equal(errorMessages([main, a, b, impls]).length, 0)
+}
