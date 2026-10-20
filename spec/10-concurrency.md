@@ -683,6 +683,48 @@ The root application domain never retires, so a root-owned callback fails only
 with `"full"`. Use `tryPost` where blocking the sender is unacceptable, such as
 a producer that sheds load or applies its own backpressure.
 
+`dispatch` is `post` without a promise, for callbacks that return `none`:
+
+```doof check
+progress := (done: int): none => println("progress ${done}")
+worker := async {
+    progress.dispatch(50)  // ✅ OK - queued on the root mailbox
+    yield 100
+}
+worker.onComplete((result) => progress(result!))
+```
+
+It queues the invocation on the owning domain and returns `none` at once. Like
+`post`, it never runs the callback on the caller's stack, even when the caller
+is the owner: a root callback dispatched from the root domain runs when the
+application mailbox is next pumped, after the current message. Dispatching a
+callback with any other return type is a compile-time error:
+
+```doof reject
+double := (n: int): int => n * 2
+double.dispatch(1)  // ❌ dispatch requires a none-returning callback
+```
+
+`dispatch` follows `post` for capacity and lifecycle. It blocks while an actor
+owner's mailbox is at capacity, never blocks on the root mailbox, and panics
+with `actor is retiring or retired` when the owning actor is retiring, retired,
+or gone. With no promise to settle, a native exception in the callback is
+discarded, and a Doof panic terminates the process in the owning domain (see
+[Panics in asynchronous work](#panics-in-asynchronous-work)).
+
+A callback created in isolated async work has no mailbox. Dispatching it inside
+that same work runs it in place; dispatching it anywhere else panics, as a
+direct call would.
+
+Root-domain `post` and `dispatch` invocations run only when the application
+mailbox is pumped. A generated command-line entrypoint pumps it after `main`
+only until every registered completion has been delivered (see
+[Completion callbacks](#completion-callbacks)), so work still queued on the root
+mailbox after that never runs. In the example above, the progress report is
+queued before the job settles, so it runs before the completion. Native C++ also
+has `tryDispatch`, which never blocks and reports a full or retired owner
+instead of panicking; Doof code uses `tryPost` for that.
+
 Function-typed parameters in native imports also lower to `doof::callback`; the
 compiler does not assume whether bodiless C++ will call locally, store, or
 schedule the callback.

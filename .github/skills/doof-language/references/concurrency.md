@@ -370,6 +370,30 @@ case callback.tryPost(1) {
 }
 ```
 
+`callback.dispatch(args)` is fire-and-forget `post` for `none`-returning
+callbacks (other return types are a compile-time error). It queues the call on
+the owner and returns `none`; it never runs inline, even when a root callback
+is dispatched from the root domain. It blocks on a full actor mailbox and
+panics for a retired owner, like `post`. With no promise, a native exception in
+the callback is discarded and a panic terminates the process. A callback created
+in isolated async work runs in place when dispatched inside that work and
+panics anywhere else.
+
+Root-domain posts and dispatches run only when the application mailbox is
+pumped. Native command-line entrypoints pump it after `main` only until
+registered completions are delivered, so a root dispatch still queued at that
+point never runs. Register an `onComplete` (or run an event loop) when queued
+root work must run:
+
+```doof check
+progress := (done: int): none => println("progress ${done}")
+worker := async {
+    progress.dispatch(50)  // queued on the root mailbox, ahead of the completion
+    yield 100
+}
+worker.onComplete((result) => progress(result!))
+```
+
 Actor-affine callback values may cross actor method boundaries, but their
 parameter and return payload types must also be boundary-safe. Captures may be
 mutable: they stay in the owning domain, which is the only one that can run the

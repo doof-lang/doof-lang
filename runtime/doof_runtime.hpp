@@ -1190,8 +1190,10 @@ public:
             return;
         }
         if (!owner_ && !doof::current_actor_domain() && !detail::active_isolated_task) {
-            // A root callback dispatched on the root domain runs in place;
-            // from an actor or async work it is queued to the root mailbox.
+            // An unowned callback (created on an untracked native thread)
+            // dispatched from an untracked thread runs in place. Every other
+            // dispatch is queued on its owner, including a root callback
+            // dispatched on the root domain.
             detail::call_callback_unchecked(*this, std::forward<Args>(args)...);
             return;
         }
