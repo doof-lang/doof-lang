@@ -170,3 +170,29 @@ export function testDeadlockedSyncActorCallIsNeverQueued(): none {
   state := retire peer
   Assert.equal(state.seen, "unset")
 }
+
+class CompletionRecorder {
+  let seen: int = 0
+  register(p: Promise<int>): none {
+    p.onComplete((r: Result<int, string>): none => { this.seen = r! })
+  }
+  read(): int => this.seen
+}
+
+export function testRetirementAwaitingRetirersOwnCompletionPanics(): none {
+  // Retirement waits for reserved completions. This one is produced by a
+  // callback posted to the retiring caller's own mailbox, which cannot run
+  // while the caller blocks.
+  report := (n: int): int => n
+  recorder := Actor<CompletionRecorder>()
+  recorder.register(report.post(7))
+  outcome := catchPanic(=> { retire recorder })
+  case outcome {
+    _: Success -> { panic("retirement did not detect the deadlock") }
+    failure: Failure -> {
+      Assert.stringContains(failure.error, "deadlock: blocking wait would never complete (actor retirement awaiting completion)")
+    }
+  }
+  // The detected retirement leaves the actor running.
+  Assert.equal(recorder.read(), 0)
+}

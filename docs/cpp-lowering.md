@@ -14,7 +14,12 @@ job, or the posted callback's owner) for deadlock detection. Blocking waits
 enter a `detail::WaitGraph` edge carrying a `WaitSignal` that the producer
 raises before it can start another wait, so a satisfied waiter that has not yet
 woken never forms a false cycle. Native producers that leave the producer unset
-are untracked.
+are untracked. A wait may carry several edges that must all be satisfied:
+`Actor<T>::retire` records one on the actor and one on the producer of each
+completion reservation still outstanding, each guarded by a per-reservation
+`WaitSignal` raised when the delivery is queued or abandoned. The reservation
+set is captured under the actor lock that stops new registrations, so a cycle
+through any edge panics before retirement begins.
 
 Completion reservations retain the destination domain and application-loop
 keep-alive until invocation finishes. Actor retirement delays its final state

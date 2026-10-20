@@ -240,6 +240,8 @@ enum class TryEnqueueResult {
     Retired,
 };
 
+struct WaitSignal;
+
 class CallbackDomain : public std::enable_shared_from_this<CallbackDomain> {
 public:
     virtual ~CallbackDomain() = default;
@@ -249,7 +251,9 @@ public:
     // panicking.
     virtual TryEnqueueResult try_enqueue_callback(std::function<void()> task) = 0;
     // Accepted completions reserve a future mailbox delivery across retirement.
-    virtual void reserve_completion() {}
+    // The producer settles the awaited promise; `delivered` is raised once the
+    // delivery is queued or abandoned, so retirement can wait on that producer.
+    virtual void reserve_completion(const void* /*producer*/, const std::shared_ptr<WaitSignal>& /*delivered*/) {}
     virtual void cancel_completion() {}
     virtual void enqueue_completion(std::function<void()> task) {
         enqueue_callback(std::move(task));
@@ -538,19 +542,60 @@ inline const void* current_wait_node() {
     return nullptr;
 }
 
-// Each serial domain blocks on at most one target at a time. A wait whose
-// target chain leads back to the waiter can never be satisfied, so it panics
-// with the chain instead of hanging. Waits on several producers at once (such
-// as takeFirstCompleted) are not tracked.
-class WaitGraph {
-    struct Edge {
-        const void* target;
-        std::shared_ptr<WaitSignal> signal;
-        const char* kind;
-    };
+struct WaitEdge {
+    const void* target;
+    std::shared_ptr<WaitSignal> signal;
+    const char* kind;
+};
 
+// Each serial domain is blocked in at most one wait at a time. A wait may need
+// several targets to finish (retirement needs the actor's mailbox and every
+// pending completion delivery), so a cycle through any one of them can never
+// be satisfied: it panics with the chain instead of hanging. Waits that need
+// only one of several producers (such as takeFirstCompleted) are not tracked.
+class WaitGraph {
     std::mutex mutex_;
-    std::unordered_map<const void*, Edge> edges_;
+    std::unordered_map<const void*, std::vector<WaitEdge>> edges_;
+
+    // Returns the kinds along a live path from `edges` back to `waiter`.
+    std::optional<std::string> find_cycle_locked(const void* waiter, const std::vector<WaitEdge>& edges) const {
+        // Each reached node remembers the node and edge kind it was reached by.
+        std::unordered_map<const void*, std::pair<const void*, const char*>> reached;
+        std::vector<const void*> pending;
+        auto describe = [&](const void* from, const char* kind) {
+            std::vector<const char*> kinds{kind};
+            for (const void* node = from; node != waiter;) {
+                const auto& via = reached.at(node);
+                kinds.push_back(via.second);
+                node = via.first;
+            }
+            std::string chain;
+            for (auto it = kinds.rbegin(); it != kinds.rend(); ++it) {
+                if (!chain.empty()) chain += " -> ";
+                chain += *it;
+            }
+            return chain;
+        };
+        auto follow = [&](const void* from, const WaitEdge& edge) -> std::optional<std::string> {
+            if (edge.signal->is_satisfied()) return std::nullopt;
+            if (edge.target == waiter) return describe(from, edge.kind);
+            if (reached.emplace(edge.target, std::make_pair(from, edge.kind)).second) pending.push_back(edge.target);
+            return std::nullopt;
+        };
+        for (const auto& edge : edges) {
+            if (auto cycle = follow(waiter, edge)) return cycle;
+        }
+        while (!pending.empty()) {
+            const void* node = pending.back();
+            pending.pop_back();
+            auto out = edges_.find(node);
+            if (out == edges_.end()) continue;
+            for (const auto& edge : out->second) {
+                if (auto cycle = follow(node, edge)) return cycle;
+            }
+        }
+        return std::nullopt;
+    }
 
 public:
     static WaitGraph& shared() {
@@ -558,25 +603,23 @@ public:
         return *graph;
     }
 
-    // Records waiter -> target unless the wait is already satisfied or untracked.
-    bool enter(const void* waiter, const void* target, std::shared_ptr<WaitSignal> signal, const char* kind) {
-        if (!waiter || !target || !signal) return false;
+    // Records waiter -> each target unless every target is already satisfied
+    // or untracked.
+    bool enter(const void* waiter, std::vector<WaitEdge> edges) {
+        if (!waiter) return false;
         std::string cycle;
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            if (signal->is_satisfied()) return false;
-            cycle = kind;
-            const void* node = target;
-            for (std::size_t hops = 0; node != waiter; ++hops) {
-                auto edge = edges_.find(node);
-                if (edge == edges_.end() || edge->second.signal->is_satisfied() || hops > edges_.size()) {
-                    edges_[waiter] = Edge{target, std::move(signal), kind};
-                    return true;
-                }
-                cycle += " -> ";
-                cycle += edge->second.kind;
-                node = edge->second.target;
+            edges.erase(std::remove_if(edges.begin(), edges.end(), [](const WaitEdge& edge) {
+                return !edge.target || !edge.signal || edge.signal->is_satisfied();
+            }), edges.end());
+            if (edges.empty()) return false;
+            auto found = find_cycle_locked(waiter, edges);
+            if (!found) {
+                edges_[waiter] = std::move(edges);
+                return true;
             }
+            cycle = std::move(*found);
         }
         doof::panic("deadlock: blocking wait would never complete (" + cycle + ")");
     }
@@ -590,9 +633,12 @@ public:
 class WaitScope {
     const void* waiter_ = nullptr;
 public:
-    WaitScope(const void* target, std::shared_ptr<WaitSignal> signal, const char* kind) {
+    WaitScope(const void* target, std::shared_ptr<WaitSignal> signal, const char* kind)
+        : WaitScope(std::vector<WaitEdge>{WaitEdge{target, std::move(signal), kind}}) {}
+
+    explicit WaitScope(std::vector<WaitEdge> edges) {
         const void* waiter = current_wait_node();
-        if (WaitGraph::shared().enter(waiter, target, std::move(signal), kind)) waiter_ = waiter;
+        if (WaitGraph::shared().enter(waiter, std::move(edges))) waiter_ = waiter;
     }
 
     WaitScope(const WaitScope&) = delete;
@@ -3258,19 +3304,26 @@ namespace detail {
 class CompletionReservation {
     CallbackDomain* domain_;
     std::shared_ptr<CallbackDomain> lifetime_;
+    std::shared_ptr<WaitSignal> delivered_ = std::make_shared<WaitSignal>();
     bool posted_ = false;
 
 public:
-    CompletionReservation(CallbackDomain* domain, std::shared_ptr<CallbackDomain> lifetime)
+    CompletionReservation(CallbackDomain* domain, std::shared_ptr<CallbackDomain> lifetime, const void* producer)
         : domain_(domain), lifetime_(std::move(lifetime)) {
-        domain_->reserve_completion();
+        domain_->reserve_completion(producer, delivered_);
         ApplicationDomain::shared().add_pending_completion();
     }
     ~CompletionReservation() {
-        if (!posted_) domain_->cancel_completion();
+        if (!posted_) {
+            delivered_->satisfy();
+            domain_->cancel_completion();
+        }
         ApplicationDomain::shared().remove_pending_completion();
     }
+    // The producer is still inside its completion here, so raising the signal
+    // before the delivery is queued cannot hide a wait it begins afterwards.
     void post(std::function<void()> task) {
+        delivered_->satisfy();
         domain_->enqueue_completion(std::move(task));
         posted_ = true;
     }
@@ -3314,6 +3367,7 @@ public:
     explicit PromiseState(const void* producer = nullptr) : producer_(producer) {}
 
     void set_producer(const void* producer) { producer_ = producer; }
+    const void* producer() const { return producer_; }
 
     bool ready() {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -3440,7 +3494,7 @@ public:
             lifetime = cb.owner_lifetime_.lock();
             if (!lifetime) doof::panic("completion callback requires a live actor domain");
         }
-        auto reservation = std::make_shared<detail::CompletionReservation>(domain, std::move(lifetime));
+        auto reservation = std::make_shared<detail::CompletionReservation>(domain, std::move(lifetime), state_->producer());
         auto state = state_;
         state->claim([state, cb, reservation] {
             reservation->post([state, cb, reservation] {
@@ -3604,6 +3658,9 @@ class Actor : public detail::CallbackDomain {
     bool accepting_ = true;
     bool scheduled_ = false;
     std::size_t pending_completions_ = 0;
+    // Producers of reserved completions. Retirement waits on every one whose
+    // delivery is still outstanding; delivered entries are pruned lazily.
+    std::vector<detail::WaitEdge> completion_producers_;
     std::size_t bounded_messages_ = 0;
     std::vector<std::shared_ptr<detail::WaitSignal>> capacity_waiters_;
     std::function<void()> retirement_;
@@ -3611,6 +3668,11 @@ class Actor : public detail::CallbackDomain {
     // Matches the domain pointer that ActiveActorScope publishes for this actor.
     const void* wait_node() const {
         return static_cast<const detail::CallbackDomain*>(this);
+    }
+
+    void prune_completion_producers_locked() {
+        completion_producers_.erase(std::remove_if(completion_producers_.begin(), completion_producers_.end(),
+            [](const detail::WaitEdge& edge) { return edge.signal->is_satisfied(); }), completion_producers_.end());
     }
 
     void finish_retirement_locked() {
@@ -3801,10 +3863,13 @@ public:
         return true;
     }
 
-    void reserve_completion() override {
+    void reserve_completion(const void* producer, const std::shared_ptr<detail::WaitSignal>& delivered) override {
         std::lock_guard<std::mutex> lock(mutex_);
         if (!accepting_) doof::panic("actor is retiring or retired");
         ++pending_completions_;
+        if (!producer) return;
+        if (completion_producers_.size() >= 2 * pending_completions_ + 16) prune_completion_producers_locked();
+        completion_producers_.push_back(detail::WaitEdge{producer, delivered, "actor retirement awaiting completion"});
     }
 
     void cancel_completion() override {
@@ -3842,11 +3907,20 @@ public:
         auto prom = std::make_shared<std::promise<std::shared_ptr<T>>>();
         auto fut = prom->get_future();
         auto signal = std::make_shared<detail::WaitSignal>();
-        // Self-retirement panics here and leaves the actor running.
-        auto blocked = begin_wait(signal, "actor retirement");
+        std::optional<detail::WaitScope> blocked;
         {
             std::lock_guard<std::mutex> lock(mutex_);
             if (!accepting_) doof::panic("actor is already retiring or retired");
+            // Retirement needs this actor's mailbox to drain and every reserved
+            // completion to arrive. Reservations stop with this lock held, so
+            // the recorded producers are complete. A cycle through any of
+            // them, such as self-retirement, panics here and leaves the actor
+            // running.
+            prune_completion_producers_locked();
+            std::vector<detail::WaitEdge> edges{detail::WaitEdge{wait_node(), signal, "actor retirement"}};
+            edges.insert(edges.end(), completion_producers_.begin(), completion_producers_.end());
+            blocked.emplace(std::move(edges));
+            completion_producers_.clear();
             stop_accepting_locked();
             retirement_ = [this, prom, signal]() {
                 try {

@@ -120,10 +120,12 @@ Blocking waits (synchronous actor calls, retirement, mailbox-capacity waits, and
 `Promise.get()`) are tracked between serial domains. A wait that would close a
 cycle panics with `deadlock: blocking wait would never complete (...)` instead
 of hanging; for example an actor synchronously calling itself, two actors
-calling each other synchronously, an actor retiring itself, or an actor
-sending to its own full mailbox. The cycle is detected before the call or
-retirement is queued, so the panicking request never runs and a self-retiring
-actor keeps running with its state. Livelock and `takeFirstCompleted()` waits are not detected.
+calling each other synchronously, an actor retiring itself, an actor
+sending to its own full mailbox, or retiring an actor whose pending
+`onComplete` delivery is produced by work that waits on the retiring caller
+(`actor retirement awaiting completion -> promise wait`). The cycle is
+detected before the call or retirement is queued, so the panicking request
+never runs and a self-retiring actor keeps running with its state. Livelock and `takeFirstCompleted()` waits are not detected.
 
 Worker waits in `Promise.get()`, synchronous actor calls, and actor retirement
 automatically relinquish their CPU token. This lets nested work progress at a

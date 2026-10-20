@@ -697,6 +697,91 @@ void test_deadlock_detection() {
         "self-retirement stopped the actor");
     require(self_retiring->retire()->value == 7, "self-retirement dropped the actor state");
 
+    // Retirement also waits for reserved completions, so retiring an actor
+    // whose pending completion is produced by a job awaiting the retiring
+    // caller can never finish. The retirement panics and leaves the actor
+    // running with its reservation intact.
+    auto registered = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    doof::callback<int()> root_value([] { return 9; });
+    std::atomic<bool> awaiting_root{false};
+    std::string job_panic;
+    auto job = doof::submit_async<int>([root_value, &awaiting_root, &job_panic] {
+        auto posted = root_value.post();
+        awaiting_root.store(true);
+        try {
+            auto result = posted.get();
+            return doof::is_success(result) ? doof::success_value(result) : -1;
+        } catch (const doof::Panic& panic) {
+            job_panic = panic.message();
+            return -2;
+        }
+    });
+    auto record_completion = [](ActorState& state) {
+        return doof::callback<void(doof::Result<int, std::string>)>(
+            [&state](doof::Result<int, std::string> result) {
+                state.value = doof::is_success(result) ? doof::success_value(result) : -1;
+            });
+    };
+    registered->call_sync<void>([job, record_completion](ActorState& state) {
+        job.onComplete(record_completion(state));
+    });
+    wait_until([&] { return awaiting_root.load(); }, "completion producer did not start");
+    // Let the job reach its promise wait on the application thread. Whichever
+    // side closes the cycle panics.
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    std::string retire_panic;
+    try {
+        require(registered->retire()->value == -2, "retirement finished without a detected deadlock");
+    } catch (const doof::Panic& panic) {
+        retire_panic = panic.message();
+    }
+    if (retire_panic.empty()) {
+        require_deadlock(job_panic, "(promise wait -> actor retirement awaiting completion)");
+        require(doof::detail::ApplicationDomain::shared().drain_ready() == 1, "posted root callback was lost");
+    } else {
+        require_deadlock(retire_panic, "(actor retirement awaiting completion -> promise wait)");
+        require(registered->call_sync<int>([](ActorState& state) { return state.value; }) == 0,
+            "deadlocked retirement stopped the actor");
+        wait_until([] { return doof::detail::ApplicationDomain::shared().drain_ready() == 1; },
+            "posted root callback was lost");
+        require(registered->retire()->value == 9, "retirement did not deliver the pending completion");
+    }
+    require(doof::detail::ApplicationDomain::shared().drain_ready() == 0, "root mailbox kept stale work");
+
+    // A completion produced by the retiring caller's own mailbox is a direct
+    // cycle, detected without depending on any other domain's timing.
+    auto self_produced = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    auto own = root_value.post();
+    self_produced->call_sync<void>([own, record_completion](ActorState& state) {
+        own.onComplete(record_completion(state));
+    });
+    require_deadlock(panic_message([&] { self_produced->retire(); }),
+        "(actor retirement awaiting completion)");
+    require(doof::detail::ApplicationDomain::shared().drain_ready() == 1, "posted root callback was lost");
+    require(self_produced->retire()->value == 9, "retirement did not deliver the root-produced completion");
+
+    // A pending completion whose producer never waits on the retiring caller
+    // is an ordinary retirement wait.
+    std::promise<void> open_gate;
+    auto gate_opened = open_gate.get_future().share();
+    auto awaited = std::make_shared<doof::Actor<ActorState>>(ActorState{});
+    auto gated = doof::submit_async<int>([gate_opened] {
+        gate_opened.wait();
+        return 4;
+    });
+    awaited->call_sync<void>([gated](ActorState& state) {
+        gated.onComplete(doof::callback<void(doof::Result<int, std::string>)>(
+            [&state](doof::Result<int, std::string> result) {
+                state.value = doof::is_success(result) ? doof::success_value(result) : -1;
+            }));
+    });
+    std::thread opener([&] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        open_gate.set_value();
+    });
+    require(awaited->retire()->value == 4, "retirement did not wait for its pending completion");
+    opener.join();
+
     // Waits that are satisfied before the waiter wakes must not form cycles.
     auto ping = std::make_shared<doof::Actor<ActorState>>(ActorState{});
     auto pong = std::make_shared<doof::Actor<ActorState>>(ActorState{});

@@ -227,19 +227,32 @@ Each actor, the application thread, and each running async block is a serial
 domain. While a domain blocks in a synchronous actor call, an actor retirement,
 a wait for actor mailbox capacity, or a `Promise.get()`, the runtime records that
 it waits on the producing domain: the actor, the async block, or the posted
-callback's owning domain. A wait that would close a cycle of waiting domains can
-never complete. The waiter that would close the cycle panics instead of hanging,
-and the message names the chain of waits:
+callback's owning domain. A retirement also waits on the producer of every
+completion delivery the actor reserved through `onComplete` and has not yet
+received, because retirement finishes only after those deliveries run. A wait
+that would close a cycle of waiting domains can never complete. The waiter that
+would close the cycle panics instead of hanging, and the message names the
+chain of waits:
 
 ```text
 deadlock: blocking wait would never complete (synchronous actor call -> synchronous actor call)
 ```
 
 Cycles include an actor calling itself synchronously through its own handle,
-two actors calling each other synchronously, an actor retiring itself, and an
-actor sending to its own full mailbox. The panic is an ordinary Doof panic: it
-unwinds to a blocked synchronous caller, and like any other panic it terminates
-the process if it escapes asynchronous work (see
+two actors calling each other synchronously, an actor retiring itself, an
+actor sending to its own full mailbox, and a retirement whose pending
+`onComplete` delivery is produced by work waiting on the retiring caller, or by
+a callback posted to the retiring caller itself:
+
+```text
+deadlock: blocking wait would never complete (actor retirement awaiting completion -> promise wait)
+```
+
+A retirement that would close such a cycle panics before the actor stops
+accepting work, so the actor keeps running and its reserved deliveries still
+arrive. The panic is an ordinary Doof panic: it unwinds to a blocked
+synchronous caller, and like any other panic it terminates the process if it
+escapes asynchronous work (see
 [Panics in asynchronous work](#panics-in-asynchronous-work)). When it is
 recovered, the other domains in the cycle continue with their queued work.
 
