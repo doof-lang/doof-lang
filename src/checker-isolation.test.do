@@ -138,6 +138,15 @@ export function testValuesCrossingDomainsNeedIsolatedDestructors(): none {
     "function main(): none { worker := Actor<Worker>()\nprintln(worker.hold(Token { id: 1 })) }"), 0)
 }
 
+export function testAsyncCallArgumentsAreEvaluatedInTheCaller(): none {
+  prefix := "let counter: int[] = []\nfunction bump(): int { counter.push(1)\nreturn counter.length }\nfunction compute(n: int): int => n * 2\n"
+  Assert.equal(errorCount(prefix + "function main(): none { pending := async compute(counter.length)\nprintln(pending.get()!) }"), 0)
+  Assert.equal(errorCount(prefix + "function main(): none { pending := async compute(bump())\nprintln(pending.get()!) }"), 0)
+  // The called function itself still runs on the worker.
+  Assert.isTrue(hasMessage(prefix + "function main(): none { pending := async bump()\nprintln(pending.get()!) }",
+    "Async call is not isolated: calls non-isolated function \"bump\""))
+}
+
 export function testCrossingDestructorsReachInterfaceImplementations(): none {
   source := "let counter: int[] = []\ninterface Named { name: string }\nclass Token implements Named {\nname: string\ndestructor { counter.push(1) } }\n" +
     "class Worker { hold(named: Named): string => named.name }\nfunction main(): none { worker := Actor<Worker>()\nnamed: Named := Token { name: \"a\" }\nprintln(worker.hold(named)) }"

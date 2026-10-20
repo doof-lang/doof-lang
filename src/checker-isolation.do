@@ -637,6 +637,16 @@ function probeReason(index: IsolationIndex, expression: Expression): IsolationRe
   return effectsReason(index, effects)
 }
 
+/** Only the called function runs on the worker; the receiver and arguments are
+ * evaluated in the calling domain and are checked there. */
+function asyncCallReason(index: IsolationIndex, call: CallExpression): IsolationReason | none {
+  effects := IsolationEffects {}
+  for declaration of callDeclarations(index, call) { effects.calls.push(IsolationCall { declaration, span: call.span }) }
+  collectConstructionEffects(index, call.resolvedConstruction, suppliedArguments(call.args), call.span, effects)
+  collectDecodeEffects(index, call, call.span, effects)
+  return effectsReason(index, effects)
+}
+
 /** The constructor factory or omitted field defaults run to build actor state;
  * arguments are evaluated in the creating domain and are checked there. */
 function actorConstructionReason(index: IsolationIndex, actor: ActorCreationExpression): IsolationReason | none {
@@ -726,13 +736,14 @@ function validateModuleIsolationEffects(index: IsolationIndex, module: ModuleInf
           }
           inner: Expression -> {
             if !isActorMethodCall(inner) {
+              let reason: IsolationReason | none = none
               case inner {
                 call: CallExpression -> {
                   for argument of call.args { validateCrossingValue(index, module, argument.value, "an async call", diagnostics) }
+                  reason = asyncCallReason(index, call)
                 }
-                _ -> { }
+                _ -> { reason = probeReason(index, inner) }
               }
-              reason := probeReason(index, inner)
               if reason != none {
                 pushDiagnostic(diagnostics, module.path, reason!.span,
                   "Async call is not isolated: " + reasonText(reason!))
