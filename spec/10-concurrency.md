@@ -237,8 +237,11 @@ deadlock: blocking wait would never complete (synchronous actor call -> synchron
 
 Cycles include an actor calling itself synchronously through its own handle,
 two actors calling each other synchronously, an actor retiring itself, and an
-actor sending to its own full mailbox. The panic is an ordinary Doof panic, and
-the other domains in the cycle continue with their queued work.
+actor sending to its own full mailbox. The panic is an ordinary Doof panic: it
+unwinds to a blocked synchronous caller, and like any other panic it terminates
+the process if it escapes asynchronous work (see
+[Panics in asynchronous work](#panics-in-asynchronous-work)). When it is
+recovered, the other domains in the cycle continue with their queued work.
 
 A synchronous call or retirement records its wait before anything is queued, so
 a wait that would close a cycle panics before its request is accepted. The
@@ -480,8 +483,9 @@ class Promise<T> {
 
 `get()` blocks until the queued actor method completes. On a runtime worker the
 wait relinquishes its CPU token; application and other non-worker threads are
-unaffected. Native runtime exceptions are reported as `Failure<string>`; Doof
-panics remain panics.
+unaffected. Native runtime exceptions are reported as `Failure<string>`. A Doof
+panic in the operation terminates the process where it happened and is never
+delivered (see [Panics in asynchronous work](#panics-in-asynchronous-work)).
 
 A promise has exactly one consumer across all copies and aliases, including
 copies held by other domains. Calling
@@ -537,11 +541,53 @@ their mailbox. Callbacks created inside isolated async work belong to a
 temporary domain and cannot be registered for deferred completion; create the
 callback in the receiving actor or root domain instead.
 
-An operation's Doof panic remains a panic rather than being delivered as a
-`Failure`. Because terminal delivery has no successor promise, an unhandled
-producer panic or callback panic is reported through `unhandled_panic` in the
-destination domain and terminates the process. Use explicit Results for
-recoverable failures; a callback can use `catchPanic` locally when appropriate.
+A completion callback's own panic has no successor promise to receive it, so it
+is unhandled in the destination domain and terminates the process.
+
+### Panics in asynchronous work
+
+A promise never carries a panic. A Doof panic that escapes an async block, an
+async actor call, a `post` or `tryPost` invocation, or a `dispatch` invocation
+is unhandled in the domain that ran the work: the runtime reports it there and
+terminates the process immediately. It does not wait for a consumer, and it
+does not depend on whether the promise is consumed, registered, or dropped:
+
+```doof check
+isolated function parse(text: string): int {
+    if text == "" { panic("empty input") }  // terminates the process here
+    return 1
+}
+function main(): none {
+    promise := async { yield parse("") }
+    println(promise.get()!)  // never reached: the panic already ended the process
+}
+```
+
+Only native runtime exceptions become `Failure<string>` results. A `dispatch`
+discards such a failure, as dropping the promise from `post` would.
+
+A synchronous actor call is the exception. Its caller is blocked on the call,
+so a panic in the actor method unwinds to the caller as an ordinary panic,
+which `catchPanic` can recover. The actor keeps serving later messages with
+whatever state the panicking method left.
+
+Use `Result` for failures that a consumer should handle. To recover from a
+panic inside async work, call `catchPanic` within that work and yield the
+resulting `Result`:
+
+```doof check
+isolated function parse(text: string): int {
+    if text == "" { panic("empty input") }
+    return 1
+}
+function main(): none {
+    promise := async { yield catchPanic(=> parse("")) }
+    case promise.get()! {
+        s: Success -> println(s.value),
+        f: Failure -> println("parse panicked: ${f.error}"),
+    }
+}
+```
 
 ### Completion-order waiting
 

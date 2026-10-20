@@ -15,9 +15,9 @@ export function runtimeChecks(root: string): Result<none, string> {
   completionBinary := path(work, "promise-completion")
   try command("c++", ["-std=c++17", "-O0", "-pthread", path(root, "runtime/doof_promise.test.cpp"), "-o", completionBinary])
   try command(completionBinary, [])
-  for mode of ["producer-panic", "callback-panic"] {
+  for mode of ["producer-panic", "callback-panic", "dispatch-panic", "try-dispatch-panic", "async-panic", "actor-async-panic", "dropped-panic"] {
     try result := execute(completionBinary, [mode])
-    try require(result.exitCode != 0 && text(result.stdout).contains("panic: " + mode.replace("-", " ")), "Completion panic was silently discarded: " + mode)
+    try require(result.exitCode != 0 && text(result.stdout).contains("panic: " + mode.replaceAll("-", " ")), "Async panic was not reported where it happened: " + mode)
   }
   observerBinary := path(work, "observer")
   try command("c++", ["-std=c++17", "-O0", "-pthread", "-DDOOF_OBSERVE=1", path(root, "runtime/doof_runtime.test.cpp"), "-o", observerBinary])

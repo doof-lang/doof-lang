@@ -1069,6 +1069,19 @@ namespace detail {
 template <typename R, typename... Args>
 R call_callback_unchecked(const doof::callback<R(Args...)>& cb, Args... args);
 
+// Runs queued work whose submitter kept no handle on its outcome. As with a
+// dropped promise, a native failure is discarded, but a Doof panic has no
+// consumer and is reported in the domain that ran the work.
+template <typename F>
+void run_unconsumed(F&& work) {
+    try {
+        work();
+    } catch (const doof::Panic& panic) {
+        doof::unhandled_panic(panic);
+    } catch (...) {
+    }
+}
+
 // Closure state holds captures of its owning domain, but callback copies may
 // cross into other domains. When the last copy drops elsewhere, the state is
 // released on its owner so captured destructors run where they were created.
@@ -1191,15 +1204,18 @@ public:
         auto self = *this;
         auto packedArgs = std::make_tuple(std::forward<Args>(args)...);
         owner->enqueue_callback([self, packedArgs = std::move(packedArgs)]() mutable {
-            std::apply([&](auto&&... unpacked) {
-                self.call(std::forward<decltype(unpacked)>(unpacked)...);
-            }, std::move(packedArgs));
+            detail::run_unconsumed([&] {
+                std::apply([&](auto&&... unpacked) {
+                    self.call(std::forward<decltype(unpacked)>(unpacked)...);
+                }, std::move(packedArgs));
+            });
         });
     }
 
     // Like tryPost for void callbacks whose caller drops the promise: no
-    // promise state is allocated or completed. A failure while the callback
-    // runs is dropped, as an unobserved tryPost promise would drop it.
+    // promise state is allocated or completed. A native failure while the
+    // callback runs is dropped, and a panic is unhandled, exactly as for an
+    // unobserved tryPost promise.
     detail::TryEnqueueResult tryDispatch(Args... args) const {
         static_assert(std::is_void_v<R>, "callback.tryDispatch is only available for void callbacks");
         if (!static_cast<bool>(*this)) {
@@ -1214,12 +1230,11 @@ public:
         auto self = *this;
         auto packedArgs = std::make_tuple(std::forward<Args>(args)...);
         return owner->try_enqueue_callback([self, packedArgs = std::move(packedArgs)]() mutable {
-            try {
+            detail::run_unconsumed([&] {
                 std::apply([&](auto&&... unpacked) {
                     detail::call_callback_unchecked(self, std::forward<decltype(unpacked)>(unpacked)...);
                 }, std::move(packedArgs));
-            } catch (...) {
-            }
+            });
         });
     }
 
@@ -3347,6 +3362,11 @@ public:
             } else {
                 value.emplace(doof::Success<T>{produce()});
             }
+        } catch (const doof::Panic& panic) {
+            // No caller is blocked on the producing domain's stack, so a panic
+            // is unhandled here rather than carried to a consumer that may
+            // never arrive. Only native failures become promise results.
+            doof::unhandled_panic(panic);
         } catch (...) {
             error = std::current_exception();
         }
@@ -3381,9 +3401,6 @@ public:
             auto value = std::move(*value_);
             value_.reset();
             return value;
-        } catch (const doof::Panic&) {
-            value_.reset();
-            throw;
         } catch (const std::exception& e) {
             value_.reset();
             return doof::Failure<std::string>{e.what()};
@@ -3429,7 +3446,7 @@ public:
                     detail::call_callback_unchecked(cb, state->take());
                 } catch (const doof::Panic& panic) {
                     // Terminal delivery has no successor promise to receive a
-                    // panic. Report it at the process boundary in this domain.
+                    // callback panic. Report it in this domain.
                     doof::unhandled_panic(panic);
                 } catch (const std::exception& error) {
                     doof::unhandled_panic(doof::Panic(error.what()));

@@ -307,6 +307,51 @@ void entrypoint_drain_ignores_other_keep_alive_sources() {
     require(!app.dispatch_pending_completion(), "entrypoint drain waited on unrelated keep-alive");
     app.remove_keep_alive_source(true);
 }
+// Native failures stay promise results, so fire-and-forget work drops them.
+// A panic in a synchronous actor call still reaches the blocked caller.
+void native_failures_and_sync_panics_are_recoverable() {
+    {
+        auto dropped = doof::submit_async<int>([]() -> int { throw std::runtime_error("dropped failure"); });
+    }
+    auto actor = std::make_shared<doof::Actor<ActorState>>();
+    auto failing = actor->call_sync<doof::callback<void()>>([](ActorState&) {
+        return doof::callback<void()>([] { throw std::runtime_error("dispatched failure"); });
+    });
+    failing.dispatch();
+    require(failing.tryDispatch() == doof::detail::TryEnqueueResult::Accepted, "failing dispatch was rejected");
+    expect_panic([&] { actor->call_sync<void>([](ActorState& state) { state.value = 5; doof::panic("sync panic"); }); }, "sync panic");
+    require(actor->call_sync<int>([](ActorState& state) { return state.value; }) == 5, "actor stopped serving after a sync panic");
+    actor->retire();
+}
+
+// Each mode ends the process through unhandled_panic in the domain that
+// panicked; returning means the panic was lost or deferred to a consumer.
+int producer_side_panic(const std::string& mode) {
+    if (mode == "async-panic" || mode == "dropped-panic") {
+        auto promise = doof::submit_async<int>([&mode]() -> int { doof::panic(mode == "async-panic" ? "async panic" : "dropped panic"); });
+        if (mode == "async-panic") {
+            try { (void)promise.get(); } catch (const doof::Panic&) {}
+            return 2;
+        }
+    } else if (mode == "actor-async-panic") {
+        auto actor = std::make_shared<doof::Actor<ActorState>>();
+        auto promise = actor->call_async<int>([](ActorState&) -> int { doof::panic("actor async panic"); });
+        try { (void)promise.get(); } catch (const doof::Panic&) {}
+        return 2;
+    } else {
+        auto actor = std::make_shared<doof::Actor<ActorState>>();
+        auto panicking = actor->call_sync<doof::callback<void()>>([&mode](ActorState&) {
+            const std::string message = mode == "dispatch-panic" ? "dispatch panic" : "try dispatch panic";
+            return doof::callback<void()>([message] { doof::panic(message); });
+        });
+        if (mode == "dispatch-panic") panicking.dispatch();
+        else require(panicking.tryDispatch() == doof::detail::TryEnqueueResult::Accepted, "panicking dispatch was rejected");
+        actor->retire();
+        return 2;
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    return 2;
+}
 } // namespace
 
 int main(int argc, char** argv) {
@@ -317,6 +362,9 @@ int main(int argc, char** argv) {
     doof::configure_runtime_scheduler(options);
     auto& app = doof::detail::ApplicationDomain::shared();
     doof::detail::ActiveActorScope scope(&app);
+    if (argc > 1 && std::string(argv[1]) != "producer-panic" && std::string(argv[1]) != "callback-panic") {
+        return producer_side_panic(argv[1]);
+    }
     if (argc > 1) {
         const bool producer = std::string(argv[1]) == "producer-panic";
         auto promise = doof::submit_async<int>([producer] { if (producer) doof::panic("producer panic"); return 1; });
@@ -329,6 +377,7 @@ int main(int argc, char** argv) {
     actor_delivery_and_retirement();
     registration_races();
     entrypoint_drain_ignores_other_keep_alive_sources();
+    native_failures_and_sync_panics_are_recoverable();
     require(!app.wait_and_dispatch_one(), "completion keep-alive leaked");
     std::cout << "promise completion tests passed\n";
 }

@@ -344,16 +344,6 @@ void test_failures() {
     require(doof::is_failure(failure), "async exception did not become a Promise failure");
     require(doof::failure_error(failure) == "async failure", "async failure message changed");
 
-    auto panicked = doof::submit_async<int>([]() -> int {
-        doof::panic("panic failure");
-    });
-    try {
-        (void)panicked.get();
-        fail("Doof panic was converted into an ordinary Promise failure");
-    } catch (const doof::Panic& panic) {
-        require(panic.message() == "panic failure", "Doof panic message changed");
-    }
-
     auto actor = std::make_shared<doof::Actor<ActorState>>(ActorState{});
     auto actor_failure = actor->call_async<int>([](ActorState&) -> int {
         throw std::runtime_error("actor failure");
@@ -668,15 +658,6 @@ void test_deadlock_detection() {
     // Whichever side closes the cycle panics; the posted callback remains queued.
     require(doof::detail::ApplicationDomain::shared().drain_ready() == 1, "posted root callback was lost");
 
-    // Retiring an actor from its own message waits on its own mailbox.
-    auto retiring = std::make_shared<doof::Actor<ActorState>>(ActorState{});
-    auto retired = retiring->call_async<int>([retiring](ActorState&) {
-        retiring->retire();
-        return 0;
-    });
-    auto retired_result = panic_message([&] { (void)retired.get(); });
-    require_deadlock(retired_result, "(actor retirement)");
-
     // A doomed wait panics before its request is queued, so the request never
     // runs against the caller's unwound frame and the actor keeps its state.
     auto guarded = std::make_shared<doof::Actor<ActorState>>(ActorState{});
@@ -771,13 +752,13 @@ void test_actor_mailbox_capacity() {
 
     // An actor filling its own mailbox can never drain it.
     auto looping = std::make_shared<doof::Actor<ActorState>>(ActorState{});
-    auto filled = looping->call_async<int>([looping](ActorState&) {
-        for (int i = 0; i < 3; ++i) {
-            (void)looping->call_async<int>([](ActorState& state) { return ++state.value; });
-        }
-        return 0;
-    });
-    require_deadlock(panic_message([&] { (void)filled.get(); }), "(actor mailbox capacity)");
+    require_deadlock(panic_message([&] {
+        looping->call_sync<void>([looping](ActorState&) {
+            for (int i = 0; i < 3; ++i) {
+                (void)looping->call_async<int>([](ActorState& state) { return ++state.value; });
+            }
+        });
+    }), "(actor mailbox capacity)");
 
     // Retirement releases blocked senders with a lifecycle panic.
     std::promise<void> hold;

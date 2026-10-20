@@ -240,8 +240,26 @@ mailboxes. Callbacks created in temporary isolated async work belong to that
 work alone: calling one anywhere else panics, and `post`, `tryPost`,
 `tryDispatch`, and `onComplete` registration reject it. Create callbacks that
 must outlive the work in a persistent actor or root domain.
-Doof panics are not Failure values: an unhandled producer or terminal callback
-panic terminates through the runtime's process panic boundary.
+Promises never carry panics. A panic escaping an async block, async actor call,
+`post`, `tryPost`, `dispatch`, or completion callback terminates the process in
+the domain that ran it, whether or not anyone consumes the promise; only native
+exceptions become `Failure<string>`. A synchronous actor call is the exception:
+its panic unwinds to the blocked caller. To recover inside async work, yield a
+`Result` from `catchPanic`:
+
+```doof check
+isolated function parse(text: string): int {
+    if text == "" { panic("empty input") }
+    return 1
+}
+function main(): none {
+    promise := async { yield catchPanic(=> parse("")) }
+    case promise.get()! {
+        s: Success -> println(s.value),
+        f: Failure -> println("parse panicked: ${f.error}"),
+    }
+}
+```
 
 A mutable promise array can drive completion-order work:
 
