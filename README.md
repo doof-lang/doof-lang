@@ -10,8 +10,7 @@ written in Doof itself.
 
 ## Requirements
 
-Install the latest release on macOS arm64 or Linux arm64/x86-64 (once
-published):
+Install the latest release on macOS arm64 or Linux arm64/x86-64:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/doof-lang/doof-lang/main/install.sh | bash
@@ -19,7 +18,7 @@ export PATH="$HOME/.doof/bin:$PATH"
 doof --version
 ```
 
-Use `bash -s -- --version 0.2.0` to select a release. Releases include the
+Use `bash -s -- --version 0.3.1` to select a release. Releases include the
 standard library; the native debugger application is included on macOS. Xcode
 Command Line Tools are required to compile native Doof programs on macOS, and a
 C++17 toolchain is required on Linux. No administrator privileges are required.
@@ -64,7 +63,7 @@ contracts.
 ./dev-install.sh                   # incremental, uniquely versioned development install
 ./build.sh                         # installed-seed generated-source fixed-point verification
 ./scripts/test.sh                  # compiler, orchestration, installer, and debugger tests
-./scripts/release.sh 0.2.0          # verified, signed assets for manual publication
+./scripts/release.sh 0.3.2         # verified, signed assets for manual publication
 ```
 
 Development installs use `~/.doof/versions/dev`, selected by `~/.doof/current`.
@@ -91,7 +90,8 @@ Compiler contributors should start with the [documentation map](docs/README.md),
 then use [source structure](docs/source-structure.md) for vertical file
 ownership or [compiler architecture](docs/compiler-architecture.md) for
 horizontal concepts spanning phases. Current operational and compatibility
-limitations are tracked in [ROADMAP.md](ROADMAP.md).
+limitations are tracked in [known limitations](docs/known-limitations.md) and
+[ROADMAP.md](ROADMAP.md).
 
 ## Source layout
 

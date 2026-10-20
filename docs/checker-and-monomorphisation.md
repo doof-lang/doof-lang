@@ -291,24 +291,20 @@ collector alone. They also visit type annotations, declaration surfaces,
 patterns, defaults, and specialized types, and they perform pass-specific work
 at each node.
 
-## August 2026 audit resolution
+## Shared-path invariants
 
-The audit removed the known divergent and legacy paths:
+Keep checker and emitter consumers on one path for each decision:
 
-- namespace-qualified generic calls now carry and consume the checker-resolved
-  defining module;
 - generic class instances use the same substituted structural-interface check
   as ordinary classes;
 - unresolved inferred fields conservatively fail conformance without aborting
   checking;
 - generic and non-generic interface method returns share covariant matching;
-- checker and worldview consumers share `ast-walk.do`; and
-- the uncalled `ModuleAnalyzer.keepStatementTypes` visibility shim was removed.
+  and
+- checker and worldview consumers share `ast-walk.do` child collection.
 
-The frontend semantic ABI was bumped with these changes so stale cached
-decorations and emission plans cannot cross this boundary. The reviewed
-source-only bootstrap snapshot was regenerated from two consecutive matching
-compiler generations and passed the release gate before and after replacement.
+Bump the frontend semantic ABI when a change alters cached decorations or
+emission plans, so stale cache entries cannot cross the boundary.
 
 ## Change checklist
 
