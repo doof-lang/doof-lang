@@ -202,7 +202,8 @@ loopback transport, bounded event ring, and platform socket dependencies used
 only by observable builds. The maintained browser assets live in `observer-ui/`.
 `runtime/doof_runtime.test.cpp` is the native C++ regression test for the
 runtime and observer headers; `./scripts/test.sh` builds and runs it with and
-without `DOOF_OBSERVE`.
+without `DOOF_OBSERVE`, and repeats both native runtime tests under
+ThreadSanitizer with `halt_on_error=1` to check lock and memory ordering.
 The runtime is not a place to hide a missing checker rule or an emitter decision.
 Its nullable weak-pointer helpers distinguish an empty pointer from an expired
 owner and preserve that owner when unwrapping. Map mutation emission supplies

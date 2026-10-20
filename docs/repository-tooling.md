@@ -28,7 +28,7 @@ or supply file-descriptor redirection; assertions and sequencing are Doof.
 | Generated-source comparison script | Whole-graph source comparison in `build.do`, including rejection of empty graphs. |
 | Debugger build script | `buildDebugger` in `build.do`. |
 | Release verification script | `verify.do`, with mandatory release prerequisites instead of silently skipped Wasm gates. |
-| Runtime scheduler test script | `runtimeChecks` in `verify.do`; native C++ runtime test remains a C++ test of the C++ runtime. |
+| Runtime scheduler test script | `runtimeChecks` in `verify.do` runs the native C++ runtime tests plainly and under ThreadSanitizer; they remain C++ tests of the C++ runtime. |
 | Command-output, interactive-run, frontend-cache and project-build-lock scripts | `process-checks.do` and focused test coverage; PTYs are supplied by the native `script` utility. |
 | Debugger test script | `debuggerChecks` in `verify.do`. |
 | Artifact-install helper and installer shell tests | `installArtifacts` delegates to the public installer's single transaction; `install.test.do` owns offline download and rollback fixtures. |

@@ -6,28 +6,52 @@ import { commandOutputChecks, interactiveCheck, projectLockChecks, cacheChecks }
 import { observedReconnectCheck } from "./observe-checks"
 import { falseNegativeChecks, specExampleChecks } from "./corpus-checks"
 
+export readonly threadSanitizerOptions = "halt_on_error=1"
+// ThreadSanitizer backs the runtime's lock-ordering and memory-ordering
+// reasoning; halt_on_error turns any report into a failing exit status.
 export function runtimeChecks(root: string): Result<none, string> {
   work := path(root, "build/runtime-tests")
+  try runtimeVariant(root, path(work, "plain"), ["-O0"], "")
+  return runtimeVariant(root, path(work, "tsan"), threadSanitizerFlags(), threadSanitizerOptions)
+}
+export function threadSanitizerFlags(): string[] => ["-O1", "-g", "-fsanitize=thread"]
+export function runtimeEnvironment(sanitizer: string): Map<string, string> {
+  environment: Map<string, string> := {}
+  if sanitizer != "" { environment.set("TSAN_OPTIONS", sanitizer) }
+  return environment
+}
+function runtimeVariant(root: string, work: string, flags: string[], sanitizer: string): Result<none, string> {
   try makeDirectory(work)
   binary := path(work, "scheduler")
-  try command("c++", ["-std=c++17", "-O0", "-pthread", path(root, "runtime/doof_runtime.test.cpp"), "-o", binary])
-  for mode of ["limit", "nested", "first-completed", "actor", "actor-waits", "actor-batching", "failures", "application", "callback-release", "release", "priority", "wakeups", "configuration", "collections", "nulls", "serial-integers", "string-builder", "string-padding", "metrics", "deadlock", "mailbox-capacity", "async-capacity", "try-post"] { try command(binary, [mode]) }
+  try command("c++", runtimeCompile(flags, path(root, "runtime/doof_runtime.test.cpp"), binary))
+  for mode of ["limit", "nested", "first-completed", "actor", "actor-waits", "actor-batching", "failures", "application", "callback-release", "release", "priority", "wakeups", "configuration", "collections", "nulls", "serial-integers", "string-builder", "string-padding", "metrics", "deadlock", "mailbox-capacity", "async-capacity", "try-post"] { try command(binary, [mode], runtimeEnvironment(sanitizer)) }
   completionBinary := path(work, "promise-completion")
-  try command("c++", ["-std=c++17", "-O0", "-pthread", path(root, "runtime/doof_promise.test.cpp"), "-o", completionBinary])
-  try command(completionBinary, [])
+  try command("c++", runtimeCompile(flags, path(root, "runtime/doof_promise.test.cpp"), completionBinary))
+  try command(completionBinary, [], runtimeEnvironment(sanitizer))
   for mode of ["producer-panic", "callback-panic", "dispatch-panic", "try-dispatch-panic", "async-panic", "actor-async-panic", "dropped-panic"] {
-    try result := execute(completionBinary, [mode])
-    try require(result.exitCode != 0 && text(result.stdout).contains("panic: " + mode.replaceAll("-", " ")), "Async panic was not reported where it happened: " + mode)
+    try result := execute(completionBinary, [mode], runtimeEnvironment(sanitizer))
+    output := text(result.stdout)
+    try require(result.exitCode != 0 && output.contains("panic: " + mode.replaceAll("-", " ")), "Async panic was not reported where it happened: " + mode)
+    try require(!output.contains("ThreadSanitizer"), "ThreadSanitizer reported a problem in " + mode + ":\n" + output)
   }
   observerBinary := path(work, "observer")
-  try command("c++", ["-std=c++17", "-O0", "-pthread", "-DDOOF_OBSERVE=1", path(root, "runtime/doof_runtime.test.cpp"), "-o", observerBinary])
-  environment: Map<string, string> := { DOOF_OBSERVE_NO_OPEN: "1", DOOF_OBSERVE_RETAIN_EVENTS: "2" }
+  try command("c++", runtimeCompile(flags, path(root, "runtime/doof_runtime.test.cpp"), observerBinary, "-DDOOF_OBSERVE=1"))
+  environment := runtimeEnvironment(sanitizer)
+  environment.set("DOOF_OBSERVE_NO_OPEN", "1")
+  environment.set("DOOF_OBSERVE_RETAIN_EVENTS", "2")
   try command(observerBinary, ["observer"], environment)
   try command(observerBinary, ["observer-resilience"], environment)
   environment.set("DOOF_OBSERVE_UI_ROOT", path(root, "tests/release-fixtures/observe/observability"))
   environment.set("DOOF_OBSERVE_URL_FILE", path(work, "observer.url"))
   try command(observerBinary, ["observer-custom"], environment)
   return Success()
+}
+export function runtimeCompile(flags: string[], source: string, output: string, define: string = ""): string[] {
+  arguments := ["-std=c++17", "-pthread"]
+  for flag of flags { arguments.push(flag) }
+  if define != "" { arguments.push(define) }
+  arguments.push(source); arguments.push("-o"); arguments.push(output)
+  return arguments
 }
 export function debuggerChecks(root: string, compiler: string, stdlib: string): Result<none, string> {
   work := path(root, "build/debugger-integration")
