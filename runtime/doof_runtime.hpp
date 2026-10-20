@@ -554,14 +554,58 @@ struct WaitEdge {
 // be satisfied: it panics with the chain instead of hanging. Waits that need
 // only one of several producers (such as takeFirstCompleted) are not tracked.
 class WaitGraph {
+    // Nearly every wait has one target; only retirement adds more.
+    struct Waits {
+        WaitEdge first;
+        std::vector<WaitEdge> more;
+    };
+
+    enum class Walk { Clear, Cycle, Branches };
+
     std::mutex mutex_;
-    std::unordered_map<const void*, std::vector<WaitEdge>> edges_;
+    std::unordered_map<const void*, Waits> edges_;
+
+    template <typename Visit>
+    static bool each_edge(const Waits& waits, Visit&& visit) {
+        if (visit(waits.first)) return true;
+        for (const auto& edge : waits.more) {
+            if (visit(edge)) return true;
+        }
+        return false;
+    }
+
+    // Follows a chain of single-target waits without allocating, stopping at
+    // the first node that waits on several targets.
+    Walk walk_locked(const void* waiter, const void* target) const {
+        const void* node = target;
+        for (std::size_t hops = 0; node != waiter; ++hops) {
+            auto waits = edges_.find(node);
+            if (waits == edges_.end() || hops > edges_.size()) return Walk::Clear;
+            if (!waits->second.more.empty()) return Walk::Branches;
+            if (waits->second.first.signal->is_satisfied()) return Walk::Clear;
+            node = waits->second.first.target;
+        }
+        return Walk::Cycle;
+    }
+
+    // Describes a cycle that walk_locked found; runs only before a panic.
+    std::string describe_walk_locked(const void* waiter, const WaitEdge& edge) const {
+        std::string chain = edge.kind;
+        for (const void* node = edge.target; node != waiter;) {
+            const auto& next = edges_.at(node).first;
+            chain += " -> ";
+            chain += next.kind;
+            node = next.target;
+        }
+        return chain;
+    }
 
     // Returns the kinds along a live path from `edges` back to `waiter`.
-    std::optional<std::string> find_cycle_locked(const void* waiter, const std::vector<WaitEdge>& edges) const {
+    std::optional<std::string> search_locked(const void* waiter, const std::vector<WaitEdge>& edges) const {
         // Each reached node remembers the node and edge kind it was reached by.
         std::unordered_map<const void*, std::pair<const void*, const char*>> reached;
         std::vector<const void*> pending;
+        std::optional<std::string> cycle;
         auto describe = [&](const void* from, const char* kind) {
             std::vector<const char*> kinds{kind};
             for (const void* node = from; node != waiter;) {
@@ -576,31 +620,88 @@ class WaitGraph {
             }
             return chain;
         };
-        auto follow = [&](const void* from, const WaitEdge& edge) -> std::optional<std::string> {
-            if (edge.signal->is_satisfied()) return std::nullopt;
-            if (edge.target == waiter) return describe(from, edge.kind);
-            if (reached.emplace(edge.target, std::make_pair(from, edge.kind)).second) pending.push_back(edge.target);
-            return std::nullopt;
+        auto follow = [&](const void* from) {
+            return [&, from](const WaitEdge& edge) {
+                if (edge.signal->is_satisfied()) return false;
+                if (edge.target == waiter) {
+                    cycle = describe(from, edge.kind);
+                    return true;
+                }
+                if (reached.emplace(edge.target, std::make_pair(from, edge.kind)).second) pending.push_back(edge.target);
+                return false;
+            };
         };
         for (const auto& edge : edges) {
-            if (auto cycle = follow(waiter, edge)) return cycle;
+            if (follow(waiter)(edge)) return cycle;
         }
         while (!pending.empty()) {
             const void* node = pending.back();
             pending.pop_back();
-            auto out = edges_.find(node);
-            if (out == edges_.end()) continue;
-            for (const auto& edge : out->second) {
-                if (auto cycle = follow(node, edge)) return cycle;
-            }
+            auto waits = edges_.find(node);
+            if (waits != edges_.end() && each_edge(waits->second, follow(node))) return cycle;
         }
         return std::nullopt;
+    }
+
+    std::optional<std::string> find_cycle_locked(const void* waiter, const std::vector<WaitEdge>& edges) const {
+        if (edges.size() == 1) {
+            switch (walk_locked(waiter, edges.front().target)) {
+            case Walk::Clear: return std::nullopt;
+            case Walk::Cycle: return describe_walk_locked(waiter, edges.front());
+            case Walk::Branches: break;
+            }
+        }
+        return search_locked(waiter, edges);
+    }
+
+    void record_locked(const void* waiter, std::vector<WaitEdge> edges) {
+        auto& waits = edges_[waiter];
+        waits.first = std::move(edges.front());
+        edges.erase(edges.begin());
+        waits.more = std::move(edges);
+    }
+
+    [[noreturn]] static void report(const std::string& cycle) {
+        doof::panic("deadlock: blocking wait would never complete (" + cycle + ")");
     }
 
 public:
     static WaitGraph& shared() {
         static auto* graph = new WaitGraph();
         return *graph;
+    }
+
+    // Records waiter -> target unless the wait is already satisfied or
+    // untracked. A chain of single-target waits is checked without allocating.
+    bool enter(const void* waiter, const void* target, std::shared_ptr<WaitSignal> signal, const char* kind) {
+        if (!waiter || !target || !signal) return false;
+        std::string cycle;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (signal->is_satisfied()) return false;
+            WaitEdge edge{target, std::move(signal), kind};
+            switch (walk_locked(waiter, target)) {
+            case Walk::Clear: {
+                auto& waits = edges_[waiter];
+                waits.first = std::move(edge);
+                waits.more.clear();
+                return true;
+            }
+            case Walk::Cycle:
+                cycle = describe_walk_locked(waiter, edge);
+                break;
+            case Walk::Branches: {
+                std::vector<WaitEdge> edges{std::move(edge)};
+                if (auto found = search_locked(waiter, edges)) {
+                    cycle = std::move(*found);
+                    break;
+                }
+                record_locked(waiter, std::move(edges));
+                return true;
+            }
+            }
+        }
+        report(cycle);
     }
 
     // Records waiter -> each target unless every target is already satisfied
@@ -616,12 +717,12 @@ public:
             if (edges.empty()) return false;
             auto found = find_cycle_locked(waiter, edges);
             if (!found) {
-                edges_[waiter] = std::move(edges);
+                record_locked(waiter, std::move(edges));
                 return true;
             }
             cycle = std::move(*found);
         }
-        doof::panic("deadlock: blocking wait would never complete (" + cycle + ")");
+        report(cycle);
     }
 
     void leave(const void* waiter) {
@@ -633,8 +734,10 @@ public:
 class WaitScope {
     const void* waiter_ = nullptr;
 public:
-    WaitScope(const void* target, std::shared_ptr<WaitSignal> signal, const char* kind)
-        : WaitScope(std::vector<WaitEdge>{WaitEdge{target, std::move(signal), kind}}) {}
+    WaitScope(const void* target, std::shared_ptr<WaitSignal> signal, const char* kind) {
+        const void* waiter = current_wait_node();
+        if (WaitGraph::shared().enter(waiter, target, std::move(signal), kind)) waiter_ = waiter;
+    }
 
     explicit WaitScope(std::vector<WaitEdge> edges) {
         const void* waiter = current_wait_node();
