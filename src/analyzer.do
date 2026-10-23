@@ -404,7 +404,9 @@ export class ModuleAnalyzer {
           }
           for specifier of list.specifiers {
             local := findSymbol(info, specifier.name)
-            if local != none {
+            if local != none && isPrivateDeclaration(info, specifier.name) {
+              addError(info, "Cannot export private declaration '" + specifier.name + "'; private declarations are file-local", specifier.span)
+            } else if local != none {
               exportedName := if specifier.alias == none then specifier.name else specifier.alias!
               if findExport(info, exportedName) == none {
                 info.exports.push(exportedSymbol(local!, exportedName))
@@ -417,6 +419,17 @@ export class ModuleAnalyzer {
         _ -> { }
       }
     }
+  }
+
+  private isPrivateDeclaration(info: ModuleInfo, name: string): bool {
+    for statement of info.program.statements {
+      case statement {
+        fn: FunctionDeclaration -> { if fn.name == name { return fn.private_ } }
+        class_: ClassDeclaration -> { if class_.name == name { return class_.private_ } }
+        _ -> { }
+      }
+    }
+    return false
   }
 
   private resolveNamedTypes(info: ModuleInfo): none {

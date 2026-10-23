@@ -295,6 +295,20 @@ export function testRecordsNativeClassMetadata(): none {
   }
 }
 
+export function testRejectsPrivateDeclarationsInLocalExportList(): none {
+  result := createAnalyzer([
+    SourceFile { path: "/main.do", source: "import { helper, Secret } from \"./lib\"\nfunction main(): int => helper()" },
+    SourceFile { path: "/lib.do", source: "private function helper(): int => 1\nprivate class Secret { x: int = 0 }\nfunction shared(): int => helper()\nexport { helper, Secret, shared }" },
+  ]).analyze("/main.do")
+
+  Assert.isTrue(hasDiagnostic(result, "Cannot export private declaration 'helper'; private declarations are file-local"))
+  Assert.isTrue(hasDiagnostic(result, "Cannot export private declaration 'Secret'; private declarations are file-local"))
+  Assert.isTrue(hasDiagnostic(result, "Module './lib' does not export 'helper'"))
+  Assert.isTrue(hasDiagnostic(result, "Module './lib' does not export 'Secret'"))
+  Assert.equal(moduleAt(result, "/lib.do").exports.length, 1)
+  Assert.equal(moduleAt(result, "/lib.do").exports[0].name, "shared")
+}
+
 export function testPreservesNativeClassMetadataThroughLocalExportList(): none {
   result := createAnalyzer([
     SourceFile { path: "/main.do", source: "import { NativeImage } from \"./native\"\nfunction load(image: NativeImage): NativeImage => image" },

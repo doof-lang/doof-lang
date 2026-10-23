@@ -295,10 +295,16 @@ export function checkPassword(candidate: string, stored: string): bool {
 }
 ```
 
-Attempting to export a private function is a compile error:
+Attempting to export a private function is a compile error, whether the
+declaration is marked `export` or named in an export list:
 
 ```doof reject
 export private function helper(): none {}  // ❌ Error: cannot export a private declaration
+```
+
+```doof reject
+private function helper(): none {}
+export { helper }                          // ❌ Error: cannot export a private declaration
 ```
 
 `private` is also valid on class methods — see [Classes and Interfaces](07-classes-and-interfaces.md) for details.
