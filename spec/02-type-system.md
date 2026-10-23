@@ -213,7 +213,14 @@ b := 2
 result := float(a) / float(b)  // 3.5
 ```
 
-Numeric casts accept exactly one numeric argument and return the target type, with one explicit character conversion: `int(char)` returns the character's Unicode code point. Casting to `byte` lowers to `uint8_t` in generated C++. Casting from a wider type to a narrower type (e.g., `double` → `int`) truncates the value.
+Numeric casts accept exactly one numeric argument and return the target type, with one explicit character conversion: `int(char)` returns the character's Unicode code point. The argument keeps its own type rather than adopting the set of accepted inputs, so a conditional argument such as `byte(if on then 255 else 0)` casts an `int`. A union-typed value is not a numeric argument; narrow it with `case`, or use a checked `as` conversion, before casting. Casting to `byte` lowers to `uint8_t` in generated C++. Casting from a wider type to a narrower type (e.g., `double` → `int`) truncates the value.
+
+```doof reject body
+let on = true
+let mask: byte = byte(if on then 255 else 0)   // ✅ casts the int conditional
+let mixed: int | float = 3
+let bad: byte = byte(mixed)                     // ❌ narrow the union first
+```
 
 ### Safe String Conversion
 

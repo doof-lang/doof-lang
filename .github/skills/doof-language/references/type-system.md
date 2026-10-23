@@ -92,7 +92,7 @@ ratio := double(count)
 codePoint := int('A')
 ```
 
-`int(char)` returns the character's Unicode code point. Checked numeric narrowing uses `as` rather than cast syntax.
+`int(char)` returns the character's Unicode code point. A cast argument must have one numeric type: an `if` or `case` argument keeps its own type, so `byte(if on then 255 else 0)` casts an `int`, while a union value such as `int | float` must be narrowed with `case` or checked with `as` first. Checked numeric narrowing uses `as` rather than cast syntax.
 
 ### String Ranges
 

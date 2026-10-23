@@ -286,3 +286,31 @@ export function testGenericArityMismatchesReportExpectedAndReceivedCounts(): non
   Assert.isTrue(construction.diagnostics.length > 0)
   Assert.equal(construction.diagnostics[0].message, "Generic construction requires 2 type arguments; received 1")
 }
+
+export function testNumericCastConditionalArgumentKeepsItsOwnType(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function pick(on: bool): byte => byte(if on then 255 else 0)\n" +
+    "function scale(on: bool): float => float(if on then 1 else 2.5)\n" +
+    "function code(): int => int('A')",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "static_cast<uint8_t>((on ? 255 : 0))")
+  Assert.stringContains(source, "static_cast<float>((on ? 1 : 2.5))")
+  Assert.stringNotContains(source, "std::variant<uint8_t, int32_t, int64_t, float, double>")
+}
+
+export function testNumericCastRejectsUnionAndNonNumericArguments(): none {
+  for argument of ["int | float", "int | none", "string"] {
+    rejected := checked("function narrow(value: " + argument + "): byte => byte(value)")
+    Assert.equal(rejected.diagnostics.length, 1)
+    Assert.equal(rejected.diagnostics[0].message, "Argument 1 has type " + argument + "; expected byte | int | long | float | double")
+  }
+  charToLong := checked("function code(): long => long('A')")
+  Assert.equal(charToLong.diagnostics.length, 1)
+  Assert.equal(charToLong.diagnostics[0].message, "Argument 1 has type char; expected byte | int | long | float | double")
+  arity := checked("function none_(): int => int(1, 2)")
+  Assert.equal(arity.diagnostics.length, 1)
+  Assert.equal(arity.diagnostics[0].message, "Expected 1 argument(s) but got 2")
+}

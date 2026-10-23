@@ -15,7 +15,7 @@ import { checkExpression } from "./checker-expressions"
 import { resolveCalleeTarget } from "./checker-resolution"
 import { resolveTypeArguments, validateTypeArgumentConstraints } from "./checker-annotations"
 import { discardDiagnosticsSince, finish, typeArgumentArityMessage, typeError } from "./checker-common"
-import { functionParameterIndex, lookup, isBuiltinPrintlnCall, declarationFor } from "./checker-symbols"
+import { builtinCallable, functionParameterIndex, lookup, isBuiltinPrintlnCall, declarationFor } from "./checker-symbols"
 import { inferCallTypeArguments } from "./checker-call-inference"
 import { withCallbackArity } from "./checker-array-methods"
 import { classModuleFor, findModule, isAssignableWithInterfaces } from "./checker-interfaces"
@@ -45,6 +45,21 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         identifier.resolvedType = fn
         identifier.resolvedBinding = Binding { name: "string", kind: "builtin", type_: fn, mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
         return finish(state, expression, primitive("string"))
+      }
+      if isNumericCastName(identifier.name) && expression.args.length == 1 && lookup(scope, identifier.name) == none {
+        // The accepted-input union is an overload set, not a variant: the
+        // argument keeps its own type so `byte(if c then 255 else 0)` casts
+        // an int rather than a union the emitter cannot static_cast.
+        target := primitive(identifier.name)
+        accepted := numericCastInputs(identifier.name)
+        actual := checkExpression(state, expression.args[0].value, scope, none)
+        if !isNumericCastInput(actual, accepted) {
+          typeError(state, "Argument 1 has type " + typeName(actual) + "; expected " + typeName(accepted), expression.args[0].span)
+        }
+        fn := functionType([param("value", actual)], target)
+        identifier.resolvedType = fn
+        identifier.resolvedBinding = Binding { name: identifier.name, kind: "builtin", type_: fn, mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
+        return finish(state, expression, target)
       }
       if (identifier.name == "Success" || identifier.name == "Failure") && lookup(scope, identifier.name) == none {
         // A surrounding Result or matching arm types the payload; otherwise the
@@ -167,6 +182,35 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
     _ -> { typeError(state, "Expression of type " + typeName(calleeType) + " is not callable", expression.span); return finish(state, expression, unknownType()) }
   }
   return finish(state, expression, unknownType())
+}
+
+function isNumericCastName(name: string): bool {
+  return name == "byte" || name == "int" || name == "long" || name == "float" || name == "double"
+}
+
+function numericCastInputs(name: string): ResolvedType {
+  case builtinCallable(name) {
+    fn: FunctionType -> { return fn.params[0].type_ }
+    _ -> { return unknownType() }
+  }
+}
+
+// A cast lowers to static_cast, so its argument must be exactly one accepted
+// primitive; a union value would need to be narrowed first.
+function isNumericCastInput(actual: ResolvedType, accepted: ResolvedType): bool {
+  case actual {
+    _: UnknownType -> { return true }
+    primitive_: PrimitiveType -> {
+      case accepted {
+        union_: UnionResolvedType -> {
+          for member of union_.types { if typeName(member) == primitive_.name { return true } }
+        }
+        _ -> { }
+      }
+      return false
+    }
+    _ -> { return actual.kind == "never" }
+  }
 }
 
 // string() accepts a union only when every member is itself convertible, so
