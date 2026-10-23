@@ -214,6 +214,44 @@ export function testAsNarrowsClassInsideNullableInterfaceArm(): none {
   Assert.equal(asNestedShapeArea(7), -1)
 }
 
+function asResultCircleRadius(shapes: Map<string, AsNestedCircle>, key: string): int {
+  circle := shapes.get(key) as AsNestedCircle else { return -1 }
+  return circle.r
+}
+function asResultUnionRadius(value: Result<AsNestedCircle | int, string>): int {
+  circle := value as AsNestedCircle else { return -1 }
+  return circle.r
+}
+function asResultInterfaceSide(value: Result<AsNestedShape, string>): int {
+  square := value as AsNestedSquare else { return -1 }
+  return square.s
+}
+function asResultByte(value: Result<int, string>): int {
+  b := value as byte else { return -1 }
+  return int(b)
+}
+
+export function testAsNarrowsResultPayloads(): none {
+  shapes: Map<string, AsNestedCircle> := {}
+  shapes.set("a", AsNestedCircle { r: 5 })
+  Assert.equal(asResultCircleRadius(shapes, "a"), 5)
+  Assert.equal(asResultCircleRadius(shapes, "b"), -1)
+  Assert.equal(asResultUnionRadius(Success(AsNestedCircle { r: 2 })), 2)
+  Assert.equal(asResultUnionRadius(Success(9)), -1)
+  Assert.equal(asResultUnionRadius(Failure("missing")), -1)
+  Assert.equal(asResultInterfaceSide(Success(AsNestedSquare { s: 4 })), 4)
+  Assert.equal(asResultInterfaceSide(Success(AsNestedCircle { r: 1 })), -1)
+  Assert.equal(asResultByte(Success(200)), 200)
+  Assert.equal(asResultByte(Success(300)), -1)
+  Assert.equal(asResultByte(Failure("missing")), -1)
+}
+
+export function testResultPayloadAsNeverEmitsUnsupportedNarrowing(): none {
+  source := emittedSource("class T { id: int }\nfunction f(m: Map<string, T>): int {\nt := m.get(\"a\") as T else { return -1 }\nreturn t.id\n}")
+  Assert.stringContains(source, "if (doof::is_failure(_as_source))")
+  Assert.stringNotContains(source, "Unsupported narrowing")
+}
+
 export function testInclusiveRangeValuesCarryTheirSourceLocation(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "function make(limit: int): Range {\nreturn 1..limit }\nfunction open(limit: int): Range => 1..<limit",

@@ -25,86 +25,89 @@ export function emitAs(expression: AsExpression, context: EmitContext): string {
   resultType := specializeEmitType(requireExpressionType(expression, "as expression"), context)
   case resultType {
     result: ResultResolvedType -> {
-      target := result.valueType
       resultCpp := emitContextType(result, context)
-      targetCpp := emitContextType(target, context)
-      success := "doof::Success<" + targetCpp + ">"
       failure := "doof::Failure<" + emitContextType(result.errorType, context) + ">"
       source := emitExpression(expression.expression, context)
-      if sameType(sourceType, target) { return resultCpp + "{" + success + "{" + source + "}}" }
       case sourceType {
         sourceResult: ResultResolvedType -> {
-          let narrowed = ""
-          case sourceResult.valueType {
-            _: SerialValueResolvedType -> { narrowed = emitJsonAs("doof::success_value(_as_source)", target, resultCpp, success, failure) }
-            _ -> { }
-          }
+          // A Result source propagates its failure and narrows its success payload.
+          narrowed := emitValueAs("doof::success_value(_as_source)", sourceResult.valueType, result, context)
           if narrowed != "" {
             errorValue := emitAsFailureValue(sourceResult, result, context)
             return "[&]() -> " + resultCpp + " { auto _as_source = " + source + "; if (doof::is_failure(_as_source)) return " + failure + "{" + errorValue + "}; return " + narrowed + "; }()"
           }
-          if isNumeric(sourceResult.valueType) && isNumeric(target) {
-            errorValue := emitAsFailureValue(sourceResult, result, context)
-            return "[&]() -> " + resultCpp + " { auto _as_source = " + source + "; if (doof::is_failure(_as_source)) return " + failure + "{" + errorValue + "}; auto _as_checked = doof::checked_numeric_as<" + targetCpp + ">(doof::success_value(_as_source)); if (_as_checked.has_value()) return " + success + "{_as_checked.value()}; return " + failure + "{\"Numeric narrowing failed\"}; }()"
-          }
         }
-        _ -> { }
-      }
-      if isNumeric(sourceType) && isNumeric(target) {
-        return "[&]() -> " + resultCpp + " { auto _as_checked = doof::checked_numeric_as<" + targetCpp + ">(" + source + "); if (_as_checked.has_value()) return " + success + "{_as_checked.value()}; return " + failure + "{\"Numeric narrowing failed\"}; }()"
-      }
-      case sourceType {
-        _: SerialValueResolvedType -> { return emitJsonAs(source, target, resultCpp, success, failure) }
-        interface_: InterfaceType -> {
-          case target {
-            _: ClassType -> {
-              return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (std::holds_alternative<" + targetCpp + ">(_as_value)) return " + success + "{std::get<" + targetCpp + ">(_as_value)}; return " + failure + "{\"Interface narrowing failed\"}; }()"
-            }
-            _ -> { }
-          }
+        _ -> {
+          narrowed := emitValueAs(source, sourceType, result, context)
+          if narrowed != "" { return narrowed }
         }
-        union_: UnionResolvedType -> {
-          if unionContainsJsonValue(union_) {
-            narrowedJson := "std::get<doof::SerialValue>(_as_nullable)"
-            jsonNarrowing := emitJsonAs(narrowedJson, target, resultCpp, success, failure)
-            return "[&]() -> " + resultCpp + " { auto _as_nullable = " + source + "; if (doof::is_null(_as_nullable)) return " + failure + "{\"SerialValue narrowing failed\"}; return " + jsonNarrowing + "; }()"
-          }
-          member := naturalNullableUnionMember(union_)
-          if member != none {
-            if sameType(member!, target) {
-              case target {
-                class_: ClassType -> {
-                  if class_.symbol.kind == "struct" {
-                    return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value.has_value()) return " + success + "{_as_value.value()}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
-                  }
-                  return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value) return " + success + "{_as_value}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
-                }
-                _: ArrayResolvedType -> {
-                  return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value) return " + success + "{_as_value}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
-                }
-                _: PrimitiveType -> {
-                  return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value.has_value()) return " + success + "{_as_value.value()}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
-                }
-                _: EnumType -> {
-                  return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value.has_value()) return " + success + "{_as_value.value()}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
-                }
-                _ -> { }
-              }
-            }
-            if isNumeric(member!) && isNumeric(target) {
-              return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (!_as_value.has_value()) return " + failure + "{\"Nullable narrowing failed\"}; auto _as_checked = doof::checked_numeric_as<" + targetCpp + ">(_as_value.value()); if (_as_checked.has_value()) return " + success + "{_as_checked.value()}; return " + failure + "{\"Numeric narrowing failed\"}; }()"
-            }
-          }
-          if isNumeric(target) && unionHasNumericMember(union_) {
-            return emitNumericUnionAs(source, union_, targetCpp, resultCpp, success, failure, context)
-          }
-          return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (doof::variant_is<" + targetCpp + ">(_as_value)) return " + success + "{doof::variant_narrow<" + targetCpp + ">(_as_value)}; return " + failure + "{\"Union narrowing failed\"}; }()"
-        }
-        _ -> { }
       }
       return failure + "{\"Unsupported narrowing\"}"
     }
     _ -> { panic("as expression must resolve to Result") }
+  }
+  return ""
+}
+
+/** Narrows an emitted non-Result value to `result`'s payload, or returns "" when no lowering applies. */
+function emitValueAs(source: string, sourceType: ResolvedType, result: ResultResolvedType, context: EmitContext): string {
+  target := result.valueType
+  resultCpp := emitContextType(result, context)
+  targetCpp := emitContextType(target, context)
+  success := "doof::Success<" + targetCpp + ">"
+  failure := "doof::Failure<" + emitContextType(result.errorType, context) + ">"
+  if sameType(sourceType, target) { return resultCpp + "{" + success + "{" + source + "}}" }
+  if isNumeric(sourceType) && isNumeric(target) {
+    return "[&]() -> " + resultCpp + " { auto _as_checked = doof::checked_numeric_as<" + targetCpp + ">(" + source + "); if (_as_checked.has_value()) return " + success + "{_as_checked.value()}; return " + failure + "{\"Numeric narrowing failed\"}; }()"
+  }
+  case sourceType {
+    _: SerialValueResolvedType -> { return emitJsonAs(source, target, resultCpp, success, failure) }
+    interface_: InterfaceType -> {
+      case target {
+        _: ClassType -> {
+          return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (std::holds_alternative<" + targetCpp + ">(_as_value)) return " + success + "{std::get<" + targetCpp + ">(_as_value)}; return " + failure + "{\"Interface narrowing failed\"}; }()"
+        }
+        _ -> { }
+      }
+    }
+    union_: UnionResolvedType -> {
+      if unionContainsJsonValue(union_) {
+        narrowedJson := "std::get<doof::SerialValue>(_as_nullable)"
+        jsonNarrowing := emitJsonAs(narrowedJson, target, resultCpp, success, failure)
+        return "[&]() -> " + resultCpp + " { auto _as_nullable = " + source + "; if (doof::is_null(_as_nullable)) return " + failure + "{\"SerialValue narrowing failed\"}; return " + jsonNarrowing + "; }()"
+      }
+      member := naturalNullableUnionMember(union_)
+      if member != none {
+        if sameType(member!, target) {
+          case target {
+            class_: ClassType -> {
+              if class_.symbol.kind == "struct" {
+                return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value.has_value()) return " + success + "{_as_value.value()}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
+              }
+              return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value) return " + success + "{_as_value}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
+            }
+            _: ArrayResolvedType -> {
+              return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value) return " + success + "{_as_value}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
+            }
+            _: PrimitiveType -> {
+              return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value.has_value()) return " + success + "{_as_value.value()}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
+            }
+            _: EnumType -> {
+              return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value.has_value()) return " + success + "{_as_value.value()}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
+            }
+            _ -> { }
+          }
+        }
+        if isNumeric(member!) && isNumeric(target) {
+          return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (!_as_value.has_value()) return " + failure + "{\"Nullable narrowing failed\"}; auto _as_checked = doof::checked_numeric_as<" + targetCpp + ">(_as_value.value()); if (_as_checked.has_value()) return " + success + "{_as_checked.value()}; return " + failure + "{\"Numeric narrowing failed\"}; }()"
+        }
+      }
+      if isNumeric(target) && unionHasNumericMember(union_) {
+        return emitNumericUnionAs(source, union_, targetCpp, resultCpp, success, failure, context)
+      }
+      return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (doof::variant_is<" + targetCpp + ">(_as_value)) return " + success + "{doof::variant_narrow<" + targetCpp + ">(_as_value)}; return " + failure + "{\"Union narrowing failed\"}; }()"
+    }
+    _ -> { }
   }
   return ""
 }
