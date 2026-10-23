@@ -1,12 +1,15 @@
 # Compiler Roadmap
 
-The Doof implementation is the official compiler. These gaps are tracked work,
-not a dependency on the retired implementation.
+Acceptance-oriented follow-up work for the compiler. Current user-visible gaps
+are summarized in [known limitations](docs/known-limitations.md); proposed
+language features are in
+[proposed language feature designs](docs/proposed-language-feature-designs.md).
 
-## Replacement follow-through
+## Packages and builds
 
-- Complete local and remote Doof dependency selection, cache acquisition, and
-  standard-package fallback without a required `DOOF_STDLIB_ROOT` override.
+- Complete local and remote Doof dependency selection and cache acquisition.
+- Let compiler development use the bundled standard library without a mutable
+  `DOOF_STDLIB_ROOT` or `../doof-stdlib` checkout.
 - Emit stable, versioned `doof-build.json` and provenance handoff documents for
   external build consumers.
 - Grow an invalid-program corpus that locks diagnostic categories, spans,
@@ -16,19 +19,18 @@ not a dependency on the retired implementation.
 
 ## Language and tooling breadth
 
-- Finish named-union JSON dispatch, interface-qualified reflection, and the
-  remaining collection/default-inference cases.
-- Complete recorded mock functions/classes and configurable run/test timeouts.
+- Finish interface-qualified reflection and the remaining
+  collection/default-inference cases.
+- Add configurable run/test timeouts.
 - Add incremental native fingerprints and discovered-header dependencies.
 - Add the remaining CLI convenience and instrumentation options.
 
 ## Platforms
 
-- Published binary toolchains target macOS arm64 and static Linux arm64/x64
-  musl; standalone source-snapshot rebuilds target macOS arm64 only.
 - Add Linux source-snapshot rebuilding and native Linux `doof observe`
   acceptance.
 - Make Windows verification a required release gate, with Windows release
-  fixtures, before claiming Windows support.
+  fixtures, before claiming Windows support. Windows x64 archives are
+  currently published only when the optional remote build is configured.
 - Complete iOS embedded-library packaging and signing-order verification.
-
+- Support a guest filesystem in the Wasm test host.

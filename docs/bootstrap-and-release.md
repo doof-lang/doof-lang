@@ -17,7 +17,7 @@ staged compiler and package manifests. It builds an optimized compiler, its
 bundled stdlib, and the debugger, then installs them under
 `~/.doof/versions/dev`. It skips fixed-point and release acceptance checks.
 An advisory lock prevents overlapping development, verification, and release
-builds. Existing pre-staging native caches are migrated once.
+builds.
 
 `./build.sh` uses `DOOF_SEED_COMPILER` or the same installed/dist fallback and
 builds successive generations from frozen, identically stamped inputs. Fresh
@@ -39,7 +39,7 @@ disable frontend cache reuse. Never reuse a published version for changed code.
 export DOOF_STDLIB_ROOT=/absolute/path/to/doof-stdlib
 export DOOF_SIGN_IDENTITY='Developer ID Application: Your Organization (TEAMID)'
 export DOOF_NOTARY_PROFILE=doof-release
-./scripts/release.sh 0.2.0
+./scripts/release.sh 0.3.2
 ```
 
 Provision the Developer ID Application certificate and its private key in the
@@ -98,7 +98,7 @@ build is driven from those staged inputs rather than a mutable checkout.
 For a non-publishing end-to-end check of the current checkout, use:
 
 ~~~sh
-./tools/run.sh windows-test 0.2.0
+./tools/run.sh windows-test 0.3.2
 ~~~
 
 This uses the same remote workflow and writes the downloaded test archive below
@@ -139,7 +139,7 @@ For a non-publishing end-to-end check of the current checkout, use:
 
 ~~~sh
 container system start
-./tools/run.sh linux-test 0.2.0
+./tools/run.sh linux-test 0.3.2
 ~~~
 
 The verified archive is written below `build/linux-e2e/<version>/pending/`.
@@ -210,5 +210,5 @@ export PATH="$HOME/.doof/bin:$PATH"
 A leftover `.install-lock` after an uncatchable process termination requires
 checking that no installer is active before removing the empty lock directory.
 
-See [repository tooling audit](repository-tooling.md) for removed scripts,
-retained pre-Doof shell boundaries, and the Doof acceptance commands.
+See [repository tooling](repository-tooling.md) for the remaining shell
+boundaries and the Doof acceptance commands.

@@ -2,15 +2,17 @@
 
 Status: design proposal, not part of the Doof language specification.
 
-This document develops seven related language and compiler proposals:
+This document develops six related language and compiler proposals:
 
-1. named-union JSON dispatch;
-2. capability-bearing generic constraints;
-3. owned values, borrowing, and explicit moves;
-4. payload-bearing unions and destructuring patterns;
-5. structured concurrency, cancellation, and deadlines;
-6. structural interface conformance for structs; and
-7. package-scoped visibility.
+1. capability-bearing generic constraints;
+2. owned values, borrowing, and explicit moves;
+3. payload-bearing unions and destructuring patterns;
+4. structured concurrency, cancellation, and deadlines;
+5. structural interface conformance for structs; and
+6. package-scoped visibility.
+
+Named-union JSON dispatch, formerly the first proposal, is implemented; see
+[JSON serialization](../spec/12-json-serialization.md).
 
 The proposals build on Doof's existing closed-world compiler, explicit
 `Result` error handling, actor-owned mutable domains, structural interfaces,
@@ -46,307 +48,21 @@ Every proposal follows these constraints:
 
 | Proposal | Depends on | Relative risk | Suggested delivery |
 | --- | --- | --- | --- |
-| Named-union JSON dispatch | Existing aliases, unions, JSON generation | Medium | First |
 | Capability-bearing constraints | Existing generics and interfaces | Medium | First |
 | Struct interface conformance | Existing structural interface machinery | Medium | After generic constraints |
 | Package-scoped visibility | Existing resolver and package identity | Low | Independently |
-| Payload-bearing unions | Existing unions, cases, JSON, metadata | Medium-high | After named-union JSON |
+| Payload-bearing unions | Existing unions, cases, JSON, metadata, named-union JSON dispatch | Medium-high | After the low-risk additions |
 | Owned values and moves | Flow analysis and actor-boundary checking | High | After semantic hardening |
 | Structured concurrency | Runtime scheduler and must-use checking | High | After task error and ownership decisions |
 
-The first four can be delivered without changing Doof's runtime scheduling or
+The first three can be delivered without changing Doof's runtime scheduling or
 memory model. Payload-bearing unions change representation but remain largely
 compile-time. Ownership and structured concurrency require the strongest
 cross-phase and runtime review.
 
 ---
 
-## 1. Named-union JSON dispatch
-
-### Summary
-
-A named type alias whose underlying type is a union of JSON-serializable classes
-can synthesize `Alias.fromSerialValue(...)`. A shared literal-valued string field
-selects the concrete class to decode.
-
-The language specification already describes this surface. This proposal
-defines the remaining semantic and lowering work needed to make the behavior
-complete and usable recursively.
-
-### Motivation
-
-Doof already represents many domain models as discriminated class unions:
-
-```doof
-class Circle {
-    kind: "circle"
-    radius: double
-}
-
-class Rectangle {
-    kind: "rectangle"
-    width, height: double
-}
-
-type Shape = Circle | Rectangle
-```
-
-Each member can decode itself, but callers should not have to duplicate the
-discriminator switch:
-
-```doof
-function decodeShape(value: SerialValue): Result<Shape, string> {
-    // This should be generated from the alias declaration.
-    return Shape.fromSerialValue(value)
-}
-```
-
-The alias provides a stable source name for the generated operation, JSON
-Schema, diagnostics, and emitted adapter. A bare `Circle | Rectangle` has no
-such owner.
-
-### Source syntax
-
-No new declaration syntax is required:
-
-```doof
-type Shape = Circle | Rectangle
-
-result := Shape.fromSerialValue({
-    kind: "circle",
-    radius: 5.0,
-})
-
-lenient := Shape.fromSerialValue(payload, true)
-```
-
-The synthetic signature is:
-
-```doof
-Shape.fromSerialValue(
-    value: SerialValue,
-    lenient: bool = false,
-): Result<Shape, string>
-```
-
-The method is available only through the alias name. It is not added as a
-shared instance member of the union and cannot be accessed through a bare union
-annotation.
-
-### Eligibility
-
-The checker exposes the synthetic method only when all of the following hold:
-
-1. The receiver symbol is a named type alias.
-2. The fully expanded alias is a union with at least two members.
-3. Every member is a non-native, non-generic class eligible for generated JSON
-   deserialization.
-4. Every member declares a non-static literal-valued string field with the same
-   name.
-5. Every discriminator value is distinct.
-6. The alias is not recursive solely through alias expansion. Recursion through
-   class fields remains valid and uses the normal JSON recursion guard.
-
-The initial version deliberately excludes generic aliases. Generic JSON support
-can be added later by specializing a dispatcher for every reached concrete alias
-instantiation, but it should not be inferred accidentally from monomorphization.
-
-### Discriminator selection
-
-The compiler examines fields in the first member's declaration order. The
-first field satisfying the complete shared-and-unique rule becomes the
-discriminator. This matches interface JSON dispatch and makes selection
-deterministic.
-
-Shape-based guessing is not allowed. The following remains invalid even though
-the fields currently appear distinguishable:
-
-```doof
-class Circle { radius: double }
-class Rectangle { width, height: double }
-type Shape = Circle | Rectangle
-
-// Compile error: no shared literal string discriminator.
-value := Shape.fromSerialValue(payload)
-```
-
-Field-based guessing is unstable when a default is added, a field is renamed,
-or variants acquire overlapping shapes. An explicit discriminator is a durable
-wire contract.
-
-### Runtime behavior
-
-The generated decoder performs these steps in order:
-
-1. Require a JSON object.
-2. Find the discriminator field.
-3. Require a JSON string discriminator value.
-4. Select the member with that literal value.
-5. Invoke that member's generated `fromSerialValue(value, lenient)`.
-6. Promote a successful member into the alias union.
-7. Forward a member decoding failure unchanged.
-
-Example outcomes:
-
-```doof
-Shape.fromSerialValue("circle")
-// Failure("Expected JSON object")
-
-Shape.fromSerialValue({ radius: 5.0 })
-// Failure("Missing or invalid discriminator field \"kind\"")
-
-Shape.fromSerialValue({ kind: "triangle" })
-// Failure("Unknown kind: \"triangle\"")
-
-Shape.fromSerialValue({ kind: "circle", radius: "large" })
-// Failure from Circle.fromSerialValue concerning radius.
-```
-
-### Nested use
-
-Named aliases must remain JSON-aware when used as fields or collection
-elements:
-
-```doof
-class Drawing {
-    primary: Shape
-    layers: Shape[]
-    named: Map<string, Shape>
-}
-
-drawing := Drawing.fromSerialValue({
-    primary: { kind: "circle", radius: 2.0 },
-    layers: [
-        { kind: "rectangle", width: 10.0, height: 4.0 },
-    ],
-    named: {
-        logo: { kind: "circle", radius: 1.0 },
-    },
-})
-```
-
-Deserialization recursively invokes the alias dispatcher. Serialization visits
-the active union member and calls that member's generated encoder. The alias
-does not add a public instance method; the containing generated encoder uses an
-internal alias adapter.
-
-### Type-system representation
-
-Aliases are transparent for assignability but cannot be erased before
-alias-owned behavior has been considered. Introduce a resolved alias wrapper:
-
-```text
-AliasResolvedType {
-    symbol
-    arguments
-    underlying
-}
-```
-
-Core type operations use `underlying`:
-
-- assignability;
-- equality and union normalization;
-- narrowing;
-- C++ representation selection; and
-- ordinary shared-member lookup.
-
-Alias-sensitive operations retain the wrapper:
-
-- `Alias.fromSerialValue` lookup;
-- generated JSON eligibility for annotated fields;
-- schema naming and `$defs` ownership;
-- diagnostics; and
-- on-demand generation keys.
-
-An implementation may instead decorate the source annotation and member access
-with the alias symbol, but it must also retain alias provenance for nested JSON
-fields. A purely syntactic special case at `Shape.fromSerialValue` is
-insufficient.
-
-### Checker and emitter contract
-
-When the checker accepts `Shape.fromSerialValue(...)`, it decorates the call with:
-
-- the alias symbol;
-- the resolved union result type;
-- the selected discriminator field;
-- the ordered discriminator-to-member table;
-- the concrete member decoder symbols; and
-- the lenient argument after default insertion.
-
-The emitter consumes this table. It must not rediscover fields or search for a
-discriminator.
-
-The generated C++ is conceptually:
-
-```cpp
-doof::Result<Shape, std::string> Shape_fromSerialValue(
-    const doof::SerialValue& json,
-    bool lenient
-) {
-    // Validate object and discriminator.
-    // Call Circle::fromSerialValue or Rectangle::fromSerialValue.
-    // Promote the successful shared_ptr into Shape's std::variant.
-}
-```
-
-Demand discovery must mark:
-
-- the alias dispatcher;
-- every reachable member deserializer;
-- nested deserializers required by those members; and
-- the corresponding encoder adapters only when serialization is requested.
-
-### Diagnostics
-
-Recommended diagnostics include:
-
-```text
-Automatic JSON deserialization is available only on named union aliases;
-name this union with `type` before calling `fromSerialValue`
-```
-
-```text
-Cannot deserialize union alias "Shape": member "Circle" is not eligible for
-automatic JSON deserialization because field "callback" has function type
-```
-
-```text
-Cannot deserialize union alias "Shape": members must share a literal string
-field with distinct values; "Circle.kind" and "Rectangle.kind" both use
-"shape"
-```
-
-The error is attached to the `fromSerialValue` member access. Secondary spans may
-point to conflicting discriminator declarations.
-
-### Tests
-
-Focused coverage should include:
-
-- happy-path dispatch for every member;
-- strict and lenient member decoding;
-- non-object, missing, wrong-type, and unknown discriminators;
-- duplicate and missing discriminator compile errors;
-- an ineligible member with an actionable reason;
-- nested aliases in classes, arrays, maps, and tuples;
-- imported and re-exported aliases;
-- aliases with the same underlying union but different source names;
-- demand generation in only the required direction; and
-- emitted C++ compilation and runtime behavior.
-
-### Non-goals
-
-- Guessing a member from object shape.
-- Supporting bare union expressions as static method receivers.
-- Custom field renaming or discriminator annotations in the first version.
-- Automatically serializing `Result`, actors, promises, callbacks, or native
-  classes.
-
----
-
-## 2. Capability-bearing generic constraints
+## 1. Capability-bearing generic constraints
 
 ### Summary
 
@@ -604,7 +320,7 @@ emitted specialization calls.
 
 ---
 
-## 3. Owned values, borrowing, and explicit moves
+## 2. Owned values, borrowing, and explicit moves
 
 ### Summary
 
@@ -966,7 +682,7 @@ borrows, double moves, use-after-move, and reinitialization.
 
 ---
 
-## 4. Payload-bearing unions and destructuring patterns
+## 3. Payload-bearing unions and destructuring patterns
 
 ### Summary
 
@@ -1312,7 +1028,7 @@ readonly behavior, and generated C++ runtime execution.
 
 ---
 
-## 5. Structured concurrency, cancellation, and deadlines
+## 4. Structured concurrency, cancellation, and deadlines
 
 ### Summary
 
@@ -1644,7 +1360,7 @@ Tests using the shared scheduler must remain serial.
 
 ---
 
-## 6. Structural interface conformance for structs
+## 5. Structural interface conformance for structs
 
 ### Summary
 
@@ -1870,7 +1586,7 @@ actor boundaries, imports, and emitted C++ behavior.
 
 ---
 
-## 7. Package-scoped visibility
+## 6. Package-scoped visibility
 
 ### Summary
 
@@ -2179,18 +1895,17 @@ eventual standard task APIs should be settled with the corresponding proposal.
 ### Stage 0: semantic hardening
 
 - Expand the invalid-program diagnostic corpus.
-- Complete current named-union, reflection, and collection/default-inference
-  roadmap items.
+- Complete the current reflection and collection/default-inference roadmap
+  items.
 - Ensure emit-readiness validation covers every decorated semantic decision.
 
 ### Stage 1: low-runtime-risk additions
 
-1. Named-union JSON dispatch.
-2. Capability-bearing generic constraints.
-3. Package-scoped visibility.
-4. Struct structural interface conformance.
+1. Capability-bearing generic constraints.
+2. Package-scoped visibility.
+3. Struct structural interface conformance.
 
-These features primarily extend resolver, checker, monomorphization, JSON, and
+These features primarily extend resolver, checker, monomorphization, and
 emission planning without changing the scheduler.
 
 ### Stage 2: nominal payload unions
@@ -2227,7 +1942,6 @@ source uniqueness proof must land first.
 
 If accepted, the proposals should update these specification areas:
 
-- type aliases and JSON serialization for named-union dispatch;
 - generics and interfaces for capability-bearing constraints;
 - variables, functions, memory management, and concurrency for ownership;
 - declarations and pattern matching for payload unions;

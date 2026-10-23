@@ -335,8 +335,8 @@ Canonical type spelling is memoized by registry-local type ID and rendering
 namespace. Alias-dependent spelling caches belong to each header section and
 alias view; no mutable cache is embedded in a type node or header plan. Future
 parallel rendering must give each worker its own mutable rendering caches.
-The legacy timing label `header.cache-lookup-copy` now measures key construction
-and lookup only; frozen plans are returned directly.
+The timing label `header.cache-lookup-copy` measures key construction and lookup
+only; frozen plans are returned directly.
 
 Completed section rendering is also cached within the graph, keyed by frozen-plan
 identity, namespace and incoming alias index. A hit restores the outgoing alias
@@ -396,11 +396,12 @@ and nominal import/export edges, including cycles. Visitation belongs to the
 per-consumer WorldviewIndex, never the reusable graph index. Source declaration
 ordering and concrete interface-key order remain part of the output contract.
 
-These changes reduce serial planning costs; they do not freeze the graph or add
-parallel emission. The immutable direct-dependency summaries described below now separate
-foreign checked-AST traversal from consumer projection. Worker
-selection sets, alias numbering and rendering caches must remain private. The preparation/rendering split and read-only identity/naming contracts below
-describe how these remaining inputs are now prepared or isolated.
+These choices reduce serial planning costs; they do not freeze the graph or add
+parallel emission. The immutable direct-dependency summaries described below
+separate foreign checked-AST traversal from consumer projection. Worker
+selection sets, alias numbering and rendering caches must remain private. The
+preparation/rendering split and read-only identity/naming contracts below
+describe how the remaining inputs are prepared or isolated.
 
 ### Immutable declaration dependency summaries
 
@@ -447,12 +448,11 @@ an overlay: never exchange those nodes or ID-keyed caches between siblings.
 Snapshotting an overlay includes its inherited nodes without renumbering them.
 
 Source rendering also owns its TypeLoweringGraph/session and JSON eligibility
-cache. Source-local results never flow back into header preparation caches. The
-preparation registry and its lowering cache are no longer the source renderer's
-mutable workspace.
+cache. Source-local results never flow back into header preparation caches, and the
+source renderer never mutates the preparation registry or its lowering cache.
 
 Pending jobs still carry checked AST references (but no retained emitter object).
-Source rendering now consumes lookup-only semantic identity snapshots and explicit
+Source rendering consumes lookup-only semantic identity snapshots and explicit
 immutable naming state as described below. Source rendering remains serial: the
 checked AST contains mutable fields and cannot cross a Doof actor boundary.
 

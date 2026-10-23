@@ -26,10 +26,13 @@ explain how this compiler implements that contract.
 | How does a checked value map to C++? | [C++ lowering](cpp-lowering.md) |
 | How are packages, resources, and native inputs modeled? | [Packages](packages.md) |
 | Where does a CLI command route? | [CLI](cli.md) |
-| How does `doof observe` work, and what remains? | [Runtime observability implementation plan](observability-implementation-plan.md) |
+| How does `doof observe` work, and what remains? | [Runtime observability](observability.md) |
+| How are `none`, optionals, and unions represented in C++? | [Native carriers](native-carriers.md) |
 | Where should a test live and how does the runner work? | [Testing](testing.md) |
 | How is the compiler built, versioned, and released? | [Versioned builds and releases](bootstrap-and-release.md) |
+| Which repository commands exist, and why does any shell remain? | [Repository tooling](repository-tooling.md) |
 | What is knowingly incomplete? | [Known limitations](known-limitations.md) and [roadmap](../ROADMAP.md) |
+| Which language features are proposed but not specified? | [Proposed language feature designs](proposed-language-feature-designs.md) |
 
 ## Change routes
 

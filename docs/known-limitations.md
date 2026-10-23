@@ -1,7 +1,6 @@
 # Known Limitations
 
-The official compiler is intentionally shipping before every former parity
-goal is complete.
+These are the known, intentional gaps in the current compiler.
 
 - Published toolchains support macOS arm64 and static Linux arm64/x64 musl.
   Standalone source-snapshot builds support macOS arm64 only. A Windows x64
@@ -13,7 +12,12 @@ goal is complete.
   compiler; projects must prepare those inputs themselves.
 - Diagnostic behavior has focused tests but no exhaustive invalid-program
   compatibility corpus.
-- Some JSON union/interface cases, interface reflection, recorded mocks,
-  timeouts, and iOS embedded-library packaging remain incomplete.
+- Interface-qualified reflection, configurable run/test timeouts, and iOS
+  embedded-library packaging remain incomplete.
+- `mock import` substitutes whole modules; there are no mock function or class
+  declarations and no recorded calls.
+- The Wasm test host supports arguments, an empty environment, and
+  stdout/stderr, but no guest filesystem.
+- `doof observe` has native acceptance coverage on macOS only.
 
 See [ROADMAP.md](../ROADMAP.md) for acceptance-oriented follow-up work.
