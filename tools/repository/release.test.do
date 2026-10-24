@@ -1,5 +1,5 @@
 import { Assert } from "std/assert"
-import { signingPreflight, validateReleaseStatus, smokeDebuggerApplication } from "./release"
+import { codesignTimestampUnavailable, signingPreflight, validateReleaseStatus, smokeDebuggerApplication } from "./release"
 import { TemporaryDirectory } from "./test-support"
 import { path, write, command } from "./common"
 export function testRepositoryPublishedVersionsAreImmutable(): none {
@@ -35,4 +35,10 @@ export function testRepositoryDebuggerStartupRejectsEarlyExit(): none {
   write(executable, "#!/bin/sh\nexec /bin/sleep 20\n")!
   smokeDebuggerApplication(temp.root)!
   temp.close()
+}
+
+export function testCodesignRetriesOnlyTimestampServiceFailures(): none {
+  Assert.isTrue(codesignTimestampUnavailable("/tmp/doof: replacing existing signature\n/tmp/doof: A timestamp was expected but was not found."))
+  Assert.isTrue(codesignTimestampUnavailable("/tmp/doof: The timestamp service is not available."))
+  Assert.isFalse(codesignTimestampUnavailable("/tmp/doof: no identity found"))
 }

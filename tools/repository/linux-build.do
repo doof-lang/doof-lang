@@ -120,9 +120,13 @@ export function linuxBuildScript(target: LinuxReleaseTarget): string {
     "tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner -czf \"$archive\" -C \"$root/dist\" doof doof_runtime.hpp doof_observer.hpp doof_observer_platform.hpp doof_wasm_test_runner_apple.swift doof-stdlib.tar observer-ui\n"
 }
 
+// Release containers are named so a failed release can stop them with
+// `container stop`; signalling the `container run` client does not.
+export function linuxContainerName(version: string, target: LinuxReleaseTarget): string => "doof-release-" + version + "-linux-" + target.name
+
 export function linuxContainerArguments(work: string, image: string, version: string, target: LinuxReleaseTarget, cpus: string = "8", memory: string = "8G", jobs: string = "4"): string[] {
   archive := "/work/pending/" + linuxReleaseArchiveName(version, target)
-  arguments := ["run", "--rm", "--platform", target.platform]
+  arguments := ["run", "--rm", "--name", linuxContainerName(version, target), "--platform", target.platform]
   if target.rosetta { arguments.push("--rosetta") }
   for argument of ["--cpus", cpus, "--memory", memory, "--env", "DOOF_BUILD_JOBS=" + jobs, "--volume", work + ":/work", image, "sh", "/work/linux-" + target.name + "/build.sh", version, archive] { arguments.push(argument) }
   return arguments

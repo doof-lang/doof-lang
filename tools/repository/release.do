@@ -1,4 +1,5 @@
 import { sha256Hex } from "std/crypto"
+import { join as joinStrings } from "std/string"
 import { exists, File, readBlob, writeBlob } from "std/fs"
 import { formatJsonValue, parseJsonObject } from "std/json"
 import { architecture, platform, Exec, ExecOptions } from "std/os"
@@ -13,7 +14,7 @@ import { createSnapshot, isMachO } from "./snapshot"
 import { debuggerChecks, releaseVerification, testRepository } from "./verify"
 import { stdlibRevisions } from "./provenance"
 import { WindowsBuildConfig, windowsBuildConfig, windowsBuildEnabled, windowsBuildLogName, windowsBuildLogTail, windowsBuildScript, windowsProjectFile, windowsReleaseArchiveName, windowsVisualStudioCommand, windowsVisualStudioScript } from "./windows-build"
-import { LinuxReleaseTarget, linuxBuildScript, linuxContainerArguments, linuxMakefile, linuxProbeSources, linuxReleaseArchiveName, linuxReleaseTargets } from "./linux-build"
+import { LinuxReleaseTarget, linuxBuildScript, linuxContainerArguments, linuxContainerName, linuxMakefile, linuxProbeSources, linuxReleaseArchiveName, linuxReleaseTargets } from "./linux-build"
 
 export function signingPreflight(identity: string, profile: string): Result<none, string> {
   try require(platform() == "darwin" && architecture() == "arm64", "Releases require macOS arm64")
@@ -60,17 +61,43 @@ export function smokeDebuggerApplication(artifacts: string): Result<none, string
   try application.wait()
   return require(running, "Distributed debugger exited during application startup")
 }
+
+readonly CODESIGN_ATTEMPTS = 4
+
+// Apple's timestamp server intermittently fails to answer; codesign then
+// reports a missing timestamp. Only that failure is retried, with backoff.
+export function codesignTimestampUnavailable(output: string): bool {
+  return output.contains("A timestamp was expected but was not found") ||
+    output.contains("The timestamp service is not available")
+}
+
+function timestampedCodesign(arguments: string[]): Result<none, string> {
+  for attempt of 1..CODESIGN_ATTEMPTS {
+    println("+ codesign " + joinStrings(arguments.cloneReadonly(), " "))
+    try result := execute("codesign", arguments)
+    output := BlobReader(result.stdout).readString(long(result.stdout.length)).trim()
+    if output != "" { println(output) }
+    if result.exitCode == 0 { return Success() }
+    if !codesignTimestampUnavailable(output) || attempt == CODESIGN_ATTEMPTS {
+      return Failure("codesign exited with status " + string(result.exitCode) + ": " + output)
+    }
+    println("codesign could not reach the timestamp service (attempt " + string(attempt) + " of " + string(CODESIGN_ATTEMPTS) + "); retrying")
+    Thread.sleep(Duration.ofSeconds(long(attempt * 15)))
+  }
+  return Failure("codesign did not run")
+}
+
 export function signAndNotarize(artifacts: string, work: string, archive: string, identity: string, profile: string): Result<string, string> {
   app := path(artifacts, "Doof Debugger.app")
   try names := files(artifacts)
   for name of names {
     file := path(artifacts, name)
     try native := isMachO(file)
-    if native { try command("codesign", ["--force", "--sign", identity, "--options", "runtime", "--timestamp", file]) }
+    if native { try timestampedCodesign(["--force", "--sign", identity, "--options", "runtime", "--timestamp", file]) }
   }
   entitlements := path(work, "debugger-entitlements.plist")
   try write(entitlements, "<?xml version=\"1.0\"?><plist version=\"1.0\"><dict><key>com.apple.security.cs.debugger</key><true/></dict></plist>\n")
-  try command("codesign", ["--force", "--sign", identity, "--options", "runtime", "--timestamp", "--entitlements", entitlements, app])
+  try timestampedCodesign(["--force", "--sign", identity, "--options", "runtime", "--timestamp", "--entitlements", entitlements, app])
   for file of [path(artifacts, "doof"), app] { try command("codesign", ["--verify", "--deep", "--strict", file]) }
   try zipArtifacts(artifacts, archive)
   try response := capture("xcrun", ["notarytool", "submit", archive, "--keychain-profile", profile, "--wait", "--output-format", "json"])
@@ -118,6 +145,7 @@ function linuxEmittedProbeSources(stdlib: string, emittedFiles: string[]): Resul
 /** A Linux container build running in the background, logging to its own file. */
 class LinuxContainerBuild {
   readonly target: LinuxReleaseTarget
+  readonly name: string
   readonly log: string
   process: Exec
 }
@@ -136,7 +164,7 @@ function startLinuxReleaseBuild(compiler: string, source: string, stdlib: string
   for argument of linuxContainerArguments(work, image, version, target, cpus, memory, jobs) { shellArguments.push(argument) }
   try process := Exec.spawn("sh", shellArguments, ExecOptions { env: { DOOF_CONTAINER_LOG: log }, withStdin: false })
   println("Started Linux " + target.name + " musl container build; log: " + log)
-  return Success(LinuxContainerBuild { target, log, process })
+  return Success(LinuxContainerBuild { target, name: linuxContainerName(version, target), log, process })
 }
 
 function finishLinuxReleaseBuild(build: LinuxContainerBuild, pending: string, version: string): Result<none, string> {
@@ -159,8 +187,10 @@ function finishLinuxReleaseBuild(build: LinuxContainerBuild, pending: string, ve
 function stopLinuxReleaseBuilds(builds: LinuxContainerBuild[]): none {
   for build of builds {
     if build.process.isRunning() {
-      println("Stopping Linux " + build.target.name + " container build")
-      _ := build.process.terminate() else {}
+      println("Stopping Linux " + build.target.name + " container build " + build.name)
+      // The container keeps running if only its client is signalled.
+      _ := execute("container", ["stop", build.name]) else {}
+      if build.process.isRunning() { _ := build.process.terminate() else {} }
       _ := build.process.wait() else {}
     }
   }

@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import { parseJsonObject } from "std/json"
-import { linuxBuildScript, linuxContainerArguments, linuxMakefile, linuxProbeSources, linuxReleaseArchiveName, linuxReleaseTargets } from "./linux-build"
+import { linuxBuildScript, linuxContainerArguments, linuxContainerName, linuxMakefile, linuxProbeSources, linuxReleaseArchiveName, linuxReleaseTargets } from "./linux-build"
 
 export function testLinuxReleaseArchiveNameIsStable(): none {
   targets := linuxReleaseTargets()
@@ -66,16 +66,22 @@ export function testLinuxContainerInvocationMountsOnlyStagedReleaseWork(): none 
   targets := linuxReleaseTargets()
   arm64 := linuxContainerArguments("/release work", "docker.io/library/alpine:3.22.1", "1.2.3", targets[0])
   readonly expectedArm64 = [
-    "run", "--rm", "--platform", "linux/arm64", "--cpus", "8", "--memory", "8G", "--env", "DOOF_BUILD_JOBS=4", "--volume", "/release work:/work",
+    "run", "--rm", "--name", "doof-release-1.2.3-linux-arm64", "--platform", "linux/arm64", "--cpus", "8", "--memory", "8G", "--env", "DOOF_BUILD_JOBS=4", "--volume", "/release work:/work",
     "docker.io/library/alpine:3.22.1", "sh", "/work/linux-arm64/build.sh", "1.2.3",
     "/work/pending/doof-1.2.3-linux-arm64-musl.tar.gz",
   ]
   Assert.arrayEqual(arm64.cloneReadonly(), expectedArm64)
   x64 := linuxContainerArguments("/release work", "docker.io/library/alpine:3.22.1", "1.2.3", targets[1])
   readonly expectedX64 = [
-    "run", "--rm", "--platform", "linux/amd64", "--rosetta", "--cpus", "8", "--memory", "8G", "--env", "DOOF_BUILD_JOBS=4", "--volume", "/release work:/work",
+    "run", "--rm", "--name", "doof-release-1.2.3-linux-x64", "--platform", "linux/amd64", "--rosetta", "--cpus", "8", "--memory", "8G", "--env", "DOOF_BUILD_JOBS=4", "--volume", "/release work:/work",
     "docker.io/library/alpine:3.22.1", "sh", "/work/linux-x64/build.sh", "1.2.3",
     "/work/pending/doof-1.2.3-linux-x64-musl.tar.gz",
   ]
   Assert.arrayEqual(x64.cloneReadonly(), expectedX64)
+}
+
+export function testLinuxContainerNamesAreStablePerVersionAndTarget(): none {
+  targets := linuxReleaseTargets()
+  Assert.equal(linuxContainerName("1.2.3", targets[0]), "doof-release-1.2.3-linux-arm64")
+  Assert.equal(linuxContainerName("1.2.3", targets[1]), "doof-release-1.2.3-linux-x64")
 }
