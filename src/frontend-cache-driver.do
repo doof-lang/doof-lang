@@ -13,7 +13,6 @@ import { parentPath } from "./project"
 import { SourceLoader } from "./resolver"
 import { SourceFile } from "./semantic"
 import { configuredStdlibBundleFingerprint, reachedPackageManifestPaths } from "./source-loader-driver"
-import { StdlibPreparationTarget } from "./stdlib-preparation"
 import { sha256HexString } from "std/crypto"
 import { exists, isDirectory, readText, remove, rename, writeText } from "std/fs"
 
@@ -33,15 +32,14 @@ export function frontendConfigurationFingerprint(
   manifest: PackageManifest,
   stdlibRoot: string,
   nativePlatform: string,
-  preparationTarget: StdlibPreparationTarget,
+  stdlibTarget: string,
 ): string {
   compilerIdentity := compilerCacheIdentity()
   if compilerIdentity == "" { return "" }
   manifestSource := readTextOrEmpty(manifest.manifestPath)
   return sha256HexString(
-    "doof-frontend-cache-3:" + string(FRONTEND_SEMANTIC_ABI) + "\n" + compilerIdentity + "\n" + entry + "\n" + entryMode + "\n" + target + "\n" +
-      stdlibRoot + "\n" + nativePlatform + "\n" + preparationTarget.nativeTarget + "\n" +
-      preparationTarget.sdkPath + "\n" + preparationTarget.targetTriple + "\n" +
+    "doof-frontend-cache-4:" + string(FRONTEND_SEMANTIC_ABI) + "\n" + compilerIdentity + "\n" + entry + "\n" + entryMode + "\n" + target + "\n" +
+      stdlibRoot + "\n" + nativePlatform + "\n" + stdlibTarget + "\n" +
       configuredStdlibBundleFingerprint() + "\n" + manifestSource,
   )
 }

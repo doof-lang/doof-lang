@@ -220,9 +220,7 @@ Each compiler release ships an adjacent `doof-stdlib.tar`; its index is the
 authority for available `std/*` packages and packages are materialized lazily.
 `DOOF_STDLIB_ROOT` overrides the bundle for every command and points to a
 directory whose immediate children are standard-package folders. Standard
-packages alone may use `build.stdlib.prepare` for bounded target-specific
-preparation of already-present sources, and `build.native.vendor` to build a
-`vendor/` tree with its `build.sh` (or `build.ps1` on Windows) into `include/`
+packages alone may use `build.native.vendor` to build a `vendor/` tree with its `build.sh` (or `build.ps1` on Windows) into `include/`
 and `lib/` outputs for the link. Any other package declaring
 `build.native.vendor` is rejected with
 `build.native.vendor is only allowed in standard packages`.

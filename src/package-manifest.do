@@ -55,14 +55,6 @@ export class PackageResource {
   destination: string
 }
 
-/** One target-specific preparation command owned by a standard package. */
-export class StdlibPreparationCommand {
-  program: string
-  args: string[] = []
-  env: Map<string, string> = {}
-  workingDirectory: string = ""
-}
-
 /** One exact local or Git-backed Doof package dependency. */
 export class PackageDependency {
   name: string
@@ -77,7 +69,6 @@ export class PackageManifest {
   rootDirectory: string
   resources: PackageResource[] = []
   dependencies: PackageDependency[] = []
-  stdlibPreparation: StdlibPreparationCommand[] = []
   nativeBuild: NativeBuildPlan
   target: string = ""
   macosApp: MacOSAppConfig | none = none
@@ -121,7 +112,7 @@ export function parsePackageManifest(
   if manifestJsonHas(root, "policy") {
     return Failure("Invalid doof.json at " + manifestPath + ": dependency policy is no longer supported because Doof performs no remote acquisition")
   }
-  try stdlibPreparation := parseStdlibPreparation(root, manifestPath)
+  try rejectStdlibPreparation(root, manifestPath)
   try manifestTarget := parseManifestTarget(root, manifestPath)
   target := if targetOverride == "" then manifestTarget else targetOverride
   try nativeBuild := parseManifestNativeBuild(root, manifestPath, rootDirectory, platform, target)
@@ -131,7 +122,7 @@ export function parsePackageManifest(
   try iosPackageConfig := parseIOSPackage(root, manifestPath, rootDirectory)
   try observeUiRoot := parseObserveUi(root, manifestPath, rootDirectory)
   return Success(PackageManifest {
-    name, version, manifestPath, rootDirectory, resources, dependencies, stdlibPreparation,
+    name, version, manifestPath, rootDirectory, resources, dependencies,
     nativeBuild, target, macosApp, iosApp,
     packageConfig, iosPackageConfig, observeUiRoot,
   })
@@ -171,13 +162,13 @@ function parsePackageDependencies(
   return Success(result)
 }
 
-function parseStdlibPreparation(root: SerialObject, manifestPath: string): Result<StdlibPreparationCommand[], string> {
-  if !manifestJsonHas(root, "build") { return Success([]) }
+function rejectStdlibPreparation(root: SerialObject, manifestPath: string): Result<none, string> {
+  if !manifestJsonHas(root, "build") { return Success() }
   try build := manifestObject(manifestJsonField(root, "build"), manifestPath, "build")
-  if !manifestJsonHas(build, "stdlib") { return Success([]) }
-  try stdlib := manifestObject(manifestJsonField(build, "stdlib"), manifestPath, "build.stdlib")
-  if !manifestJsonHas(stdlib, "prepare") { return Success([]) }
-  return parsePreparationCommands(stdlib, "prepare", manifestPath, "build.stdlib")
+  if manifestJsonHas(build, "stdlib") {
+    return Failure("Invalid doof.json at " + manifestPath + ": build.stdlib.prepare is no longer supported; build vendored native code with build.native.vendor")
+  }
+  return Success()
 }
 
 function requiredManifestString(
@@ -194,46 +185,6 @@ function requiredManifestString(
     return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + "." + name + " must not be empty")
   }
   return Success(value)
-}
-
-function parsePreparationCommands(
-  object: SerialObject,
-  name: string,
-  manifestPath: string,
-  fieldPath: string,
-): Result<StdlibPreparationCommand[], string> {
-  try values := manifestArray(manifestJsonField(object, name), manifestPath, fieldPath + "." + name)
-  let result: StdlibPreparationCommand[] = []
-  for index of 0..<values.length {
-    entryPath := fieldPath + "." + name + "[" + string(index) + "]"
-    try entry := manifestObject(values[index], manifestPath, entryPath)
-    try program := requiredManifestString(entry, "program", manifestPath, entryPath)
-    let args: string[] = []
-    if manifestJsonHas(entry, "args") {
-      try entries := manifestArray(manifestJsonField(entry, "args"), manifestPath, entryPath + ".args")
-      for argumentIndex of 0..<entries.length {
-        try argument := manifestString(entries[argumentIndex], manifestPath, entryPath + ".args[" + string(argumentIndex) + "]")
-        args.push(argument)
-      }
-    }
-    let env: Map<string, string> = {}
-    if manifestJsonHas(entry, "env") {
-      try entries := manifestObject(manifestJsonField(entry, "env"), manifestPath, entryPath + ".env")
-      for key, value of entries {
-        if key == "" { return Failure("Invalid doof.json at " + manifestPath + ": " + entryPath + ".env keys must not be empty") }
-        try text := manifestString(value, manifestPath, entryPath + ".env." + key)
-        env.set(key, text)
-      }
-    }
-    let workingDirectory = ""
-    if manifestJsonHas(entry, "workingDirectory") {
-      try parsed := manifestString(manifestJsonField(entry, "workingDirectory"), manifestPath, entryPath + ".workingDirectory")
-      if parsed == "" { return Failure("Invalid doof.json at " + manifestPath + ": " + entryPath + ".workingDirectory must not be empty") }
-      workingDirectory = parsed
-    }
-    result.push(StdlibPreparationCommand { program, args, env, workingDirectory })
-  }
-  return Success(result)
 }
 
 function parseManifestNativeBuild(

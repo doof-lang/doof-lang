@@ -21,10 +21,9 @@ import {
 import { environmentValue, fileName, joinPath, parentPath, readProjectSpec } from "./project"
 import { acquireProjectBuildLock } from "./project-build-lock"
 import {
-  configuredSourceDiskPath, driverRootLogicalPath, driverRootLogicalPrefix, prepareReachedStdlibPackages,
-  preparationTargetForRequest, projectNativePackages, sourceLoaderForRequest,
+  configuredSourceDiskPath, driverRootLogicalPath, driverRootLogicalPrefix,
+  projectNativePackages, sourceLoaderForRequest,
 } from "./source-loader-driver"
-import { StdlibPreparationTarget } from "./stdlib-preparation"
 import {
   CoverageModuleMetadata, CoverageReport, DiscoveredTest, buildCoverageReport, discoverModuleTests,
   coverageFileRelativePath, selectTestsFromJson, filterDiscoveredTests, formatParseFailure, generateTestHarness, groupTestsForCompilation,
@@ -342,22 +341,15 @@ export function testRequest(request: CliRequest): int {
       packageName: project.name,
       outputRoot: "",
     }]
-    let testPreparationTarget = StdlibPreparationTarget { nativeTarget: hostPlatform() }
-    if wasmTests {
-      resolvedTarget := preparationTargetForRequest("wasm", hostPlatform(), "", "") else error {
-        println("error: " + error)
-        return 1
-      }
-      testPreparationTarget = resolvedTarget
-    }
+    testStdlibTarget := if wasmTests then "wasm" else hostPlatform()
     loader := sourceLoaderForRequest(
-      harnessPath, stdlibRoot, namespaceMappings, project.manifest, buildRoot, hostPlatform(), testPreparationTarget,
+      harnessPath, stdlibRoot, namespaceMappings, project.manifest, buildRoot, hostPlatform(), testStdlibTarget,
     ) else error {
       println("error: " + error)
       return 1
     }
     entry := driverRootLogicalPath(harnessPath, project.rootDirectory, project.name)
-    configuration := frontendConfigurationFingerprint(entry, "executable", project.target, project.manifest, stdlibRoot, hostPlatform(), testPreparationTarget)
+    configuration := frontendConfigurationFingerprint(entry, "executable", project.target, project.manifest, stdlibRoot, hostPlatform(), testStdlibTarget)
     cachePath := frontendCachePath(outputDirectory, "emission")
     previous := readFrontendState(cachePath)
     cacheAllowed := !request.coverage && frontendEmissionCacheSupported(project.target)
@@ -370,10 +362,6 @@ export function testRequest(request: CliRequest): int {
     if hasErrorDiagnostics(result.diagnostics) { return 1 }
     if result.emission == none { panic("test compiler produced no emission") }
     rootManifest := project.manifest
-    _ := prepareReachedStdlibPackages(testPreparationTarget) else error {
-      println("error: " + error)
-      return 1
-    }
     emission := planProjectEmission(result.emission!, projectNativePackages(project.rootDirectory, rootManifest))
     if request.coverage { emission.nativeBuild.defines.push("DOOF_COVERAGE") }
     _ := materializeProject(outputDirectory, emission) else error {

@@ -124,7 +124,7 @@ export function testMaterializesAddressableStdlibBundlePackage(): none {
   bundlePath := createBundleReaderFixture(root)
   provider := openStdlibBundle(bundlePath)!
   assert(provider.index.bundleDigest.length == 64, "expected bundle digest")
-  targetKey := stdlibBundleTargetKey("macos", "", "", "")
+  targetKey := stdlibBundleTargetKey("macos")
   materialized := materializeStdlibBundlePackage(
     provider, "std/json", bundleTestPath(root, "packages"), targetKey, "macos",
   )!
@@ -137,7 +137,7 @@ export function testMaterializesAddressableStdlibBundlePackage(): none {
   }
   otherTarget := materializeStdlibBundlePackage(
     provider, "std/json", bundleTestPath(root, "packages"),
-    stdlibBundleTargetKey("linux", "", "", ""),
+    stdlibBundleTargetKey("linux"),
     "linux",
   )!
   assert(otherTarget.rootDirectory != materialized.rootDirectory, "expected target-separated materialization")
@@ -149,7 +149,7 @@ export function testRejectsUnknownStdlibBundlePackage(): none {
   bundlePath := createBundleReaderFixture(root)
   provider := openStdlibBundle(bundlePath)!
   message := failureText(materializeStdlibBundlePackage(
-    provider, "std/missing", bundleTestPath(root, "packages"), stdlibBundleTargetKey("macos", "", "", ""), "macos",
+    provider, "std/missing", bundleTestPath(root, "packages"), stdlibBundleTargetKey("macos"), "macos",
   ))
   assert(message.contains("Unknown standard package"), "expected unknown-package diagnostic")
   removeBundleTestTree(root)
@@ -161,7 +161,7 @@ export function testRejectsStdlibBundleForUnsupportedTarget(): none {
   provider := openStdlibBundle(bundlePath)!
   message := failureText(materializeStdlibBundlePackage(
     provider, "std/json", bundleTestPath(root, "packages"),
-    stdlibBundleTargetKey("windows", "", "", ""), "windows",
+    stdlibBundleTargetKey("windows"), "windows",
   ))
   assert(message.contains("does not support target windows"), "expected actionable target diagnostic")
   removeBundleTestTree(root)
@@ -185,7 +185,7 @@ export function testRejectsCorruptedStdlibBundleMemberOnMaterialization(): none 
   provider := openStdlibBundle(bundlePath)!
   message := failureText(materializeStdlibBundlePackage(
     provider, "std/json", bundleTestPath(root, "packages"),
-    stdlibBundleTargetKey("macos", "", "", ""),
+    stdlibBundleTargetKey("macos"),
     "macos",
   ))
   assert(message.contains("SHA-256"), "expected member integrity diagnostic")
@@ -211,7 +211,7 @@ export function testRejectsUnsafeAndDuplicateInnerEntries(): none {
     provider := openStdlibBundle(bundlePath)!
     message := failureText(materializeStdlibBundlePackage(
       provider, "std/json", bundleTestPath(root, "packages"),
-      stdlibBundleTargetKey("macos", "", "", ""),
+      stdlibBundleTargetKey("macos"),
       "macos",
     ))
     assert(message.contains("unsafe") || message.contains("duplicates"), "expected unsafe inner-entry diagnostic")

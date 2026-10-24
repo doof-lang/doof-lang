@@ -18,17 +18,22 @@ export function testOptionalNativeManifestSelectsOnlyLinuxFragment(): none {
   Assert.equal(wasm.nativeBuild.optionalPkgConfigPackages.length, 0)
 }
 
-export function testParsesLocalPackageDependenciesAndStdlibPreparation(): none {
+export function testParsesLocalPackageDependencies(): none {
   manifest := parsePackageManifest(
-    "{\"dependencies\":{\"local\":{\"path\":\"../local\"}},\"build\":{\"stdlib\":{\"prepare\":[{\"program\":\"sh\",\"args\":[\"\${packageRoot}/build.sh\",\"\${nativeTarget}\"],\"env\":{\"SDKROOT\":\"\${sdkPath}\"},\"workingDirectory\":\"vendor\"}]}}}",
-    "/app/doof.json",
-    "/app",
-    "macos",
+    "{\"dependencies\":{\"local\":{\"path\":\"../local\"}}}", "/app/doof.json", "/app", "macos",
   )!
-
   Assert.equal(manifest.dependencies[0].path, "/local")
-  Assert.equal(manifest.stdlibPreparation[0].args[1], "\${nativeTarget}")
-  Assert.equal(manifest.stdlibPreparation[0].env.get("SDKROOT")!, "\${sdkPath}")
+}
+
+export function testRejectsRetiredStdlibPreparation(): none {
+  result := parsePackageManifest(
+    "{\"build\":{\"stdlib\":{\"prepare\":[{\"program\":\"sh\"}]}}}", "/std/demo/doof.json", "/std/demo", "linux",
+  )
+  _ := result else error {
+    Assert.stringContains(error, "build.stdlib.prepare is no longer supported; build vendored native code with build.native.vendor")
+    return
+  }
+  panic("expected build.stdlib.prepare to be rejected")
 }
 
 export function testRejectsRemotePackageDependencies(): none {

@@ -251,7 +251,6 @@ completion races, ownership transfer, consumption aliases, and domain lifetime.
 | `package-manifest.do` | `doof.json` validation and normalized package/native models |
 | `stdlib-bundle.do` | Seekable archive validation and reached-package materialization |
 | `module-acquisition.do` | Logical module prefix → acquired disk root mapping |
-| `stdlib-preparation.do` | Bounded preparation commands for reached standard packages |
 | `pkg-config.do` | Pure interpretation of bounded `pkg-config` results |
 | `native-dependency-config.do` | Optional pkg-config manifest entries and package-local probe validation |
 | `native-dependencies.do` | Transactional optional metadata selection and target-toolchain compile/link probes |

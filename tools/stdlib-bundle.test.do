@@ -64,7 +64,6 @@ export function testStdlibBundleCurationIsCoarseAndExplicit(): none {
     "expected Linux bundle to retain curl",
   )
   assert(!includeStdlibBundlePath("std/http", "vendor/curl/tests/data/test1"), "expected curl tests exclusion")
-  assert(!includeStdlibBundlePath("std/http", "vendor/curl/.doof-build/linux/lib/libcurl.a"), "expected target build-state exclusion")
   assert(!includeStdlibBundlePath("std/zstd", "vendor/zstd/.doof-external-native-linux.json"), "expected native receipt exclusion")
   assert(includeStdlibBundlePath("std/zstd", "vendor/build.sh"), "expected vendor build script")
   assert(includeStdlibBundlePath("std/zstd", "vendor/build.ps1"), "expected Windows vendor build script")
@@ -224,7 +223,7 @@ export function testStdlibBundleRejectsDeclaredNativePathItOmits(): none {
   mkdir(path(packageRoot, "tests"))!
   writeText(path(packageRoot, "doof.json"),
     "{\"name\":\"std/json\",\"version\":\"0.2.0\",\"build\":{\"native\":{\"extraCopyPaths\":" +
-      "[\"tests/native_fixture.hpp\"],\"linux\":{\"includePaths\":[\".doof-build/linux/include\"]}}}," +
+      "[\"tests/native_fixture.hpp\"],\"linux\":{\"includePaths\":[\"generated/linux/include\"]}}}," +
       "\"dependencies\":{}}\n")!
   writeText(path(packageRoot, "index.do"), "export function answer(): int => 42\n")!
   writeText(path(packageRoot, "tests/native_fixture.hpp"), "// fixture\n")!

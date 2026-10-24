@@ -400,13 +400,6 @@ export function materializeStdlibBundlePackage(
   })
 }
 
-export function stdlibBundleTargetKey(
-  nativeTarget: string,
-  sdkPath: string,
-  targetTriple: string,
-  configureHost: string,
-): string {
-  return sha256HexString(
-    "schema=1\ntarget=" + nativeTarget + "\nsdk=" + sdkPath + "\ntriple=" + targetTriple + "\nhost=" + configureHost + "\n",
-  )
+export function stdlibBundleTargetKey(nativeTarget: string): string {
+  return sha256HexString("schema=2\ntarget=" + nativeTarget + "\n")
 }

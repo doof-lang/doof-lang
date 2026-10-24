@@ -9,18 +9,14 @@ import { NativePackageInput } from "./emitter-project"
 import { ModuleNamespaceMapping } from "./emitter-names"
 import { ModuleAcquisition, acquiredManifestPath, acquiredModuleDiskPath, acquiredPackageForModule } from "./module-acquisition"
 import { NativeBuildPlan, PackageManifest, parsePackageManifest } from "./package-manifest"
-import { iosTargetTriple } from "./ios-app"
-import { hostPlatform, runNativeCommand } from "./process-driver"
+import { hostPlatform } from "./process-driver"
 import { joinPath } from "./project"
 import { SourceLoader } from "./resolver"
 import { Diagnostic, SemanticLocation, SemanticSpan, SourceFile } from "./semantic"
 import {
   StdlibBundleProvider, materializeStdlibBundlePackage, openStdlibBundle, stdlibBundleTargetKey,
 } from "./stdlib-bundle"
-import { StdlibPreparationTarget, prepareStdlibPackage } from "./stdlib-preparation"
-import { BlobReader } from "std/blob"
 import { exists, readText } from "std/fs"
-import { architecture } from "std/os"
 import { absolute, resourcePath } from "std/path"
 
 readonly vendorOnlyInStandardPackagesMessage = "build.native.vendor is only allowed in standard packages"
@@ -68,7 +64,8 @@ class DriverSourceState {
   reachedPackages: DriverReachedPackage[]
   namespaceMappings: ModuleNamespaceMapping[]
   nativePlatform: string
-  preparationTarget: StdlibPreparationTarget
+  // Target whose files the bundled standard library materializes.
+  stdlibTarget: string
   rootManifest: PackageManifest
   stdlibBundle: StdlibBundleProvider | none
   packageAcquisitionRoot: string
@@ -80,7 +77,7 @@ let configuredDriverSourceState: DriverSourceState = DriverSourceState {
   reachedPackages: [],
   namespaceMappings: [],
   nativePlatform: "",
-  preparationTarget: StdlibPreparationTarget { nativeTarget: "" },
+  stdlibTarget: "",
   rootManifest: PackageManifest { name: "", manifestPath: "", rootDirectory: "", nativeBuild: NativeBuildPlan {} },
   stdlibBundle: none,
   packageAcquisitionRoot: "",
@@ -186,9 +183,6 @@ function registerReachedPackage(acquisition: ModuleAcquisition): Result<none, Di
       "Package " + acquisition.logicalPrefix + " must declare name \"" + expectedName + "\", got \"" + manifest.name + "\"",
     ))
   }
-  if manifest.stdlibPreparation.length > 0 && !acquisition.logicalPrefix.startsWith("/std/") {
-    return Failure(driverDiagnostic(manifestPath, "build.stdlib.prepare is only allowed in standard packages"))
-  }
   if manifest.nativeBuild.vendorBuilds.length > 0 && !acquisition.logicalPrefix.startsWith("/std/") {
     return Failure(driverDiagnostic(manifestPath, vendorOnlyInStandardPackagesMessage))
   }
@@ -217,12 +211,9 @@ function ensureStdPackageAcquisition(logicalPath: string): Result<none, string> 
   if provider == none {
     return Failure("Bundled standard library is unavailable while resolving " + packageName)
   }
-  target := configuredDriverSourceState.preparationTarget
-  targetKey := stdlibBundleTargetKey(
-    target.nativeTarget, target.sdkPath, target.targetTriple, target.configureHost,
-  )
+  target := configuredDriverSourceState.stdlibTarget
   materialized := materializeStdlibBundlePackage(
-    provider!, packageName, configuredDriverSourceState.packageAcquisitionRoot, targetKey, target.nativeTarget,
+    provider!, packageName, configuredDriverSourceState.packageAcquisitionRoot, stdlibBundleTargetKey(target), target,
   ) else error { return Failure("Could not materialize " + packageName + " from the bundled standard library: " + error) }
   acquisition := ModuleAcquisition { logicalPrefix: "/" + packageName, diskRoot: materialized.rootDirectory }
   configuredDriverSourceState.acquisitions.push(acquisition)
@@ -273,7 +264,7 @@ export function sourceLoaderForRequest(
   rootManifest: PackageManifest,
   buildDirectory: string,
   nativePlatform: string = "",
-  preparationTarget: StdlibPreparationTarget | none = none,
+  stdlibTarget: string = "",
 ): Result<SourceLoader, string> {
   let localRoots: DriverSourceRoot[] = []
   rootLogicalPrefix := driverRootLogicalPrefix(rootManifest.name, rootManifest.rootDirectory)
@@ -304,9 +295,6 @@ export function sourceLoaderForRequest(
   }
   packageAcquisitionRoot := stdlibPackageAcquisitionRoot(buildDirectory)
   platformName := if nativePlatform == "" then hostPlatform() else nativePlatform
-  if rootManifest.stdlibPreparation.length > 0 {
-    return Failure("build.stdlib.prepare is only allowed in standard packages")
-  }
   // A standard package checkout may be the root while its own tests run.
   if rootManifest.nativeBuild.vendorBuilds.length > 0 && !rootManifest.name.startsWith("std/") {
     return Failure(vendorOnlyInStandardPackagesMessage)
@@ -318,9 +306,7 @@ export function sourceLoaderForRequest(
     reachedPackages: [],
     namespaceMappings,
     nativePlatform: if nativePlatform == "" then hostPlatform() else nativePlatform,
-    preparationTarget: if preparationTarget == none
-      then StdlibPreparationTarget { nativeTarget: if nativePlatform == "" then hostPlatform() else nativePlatform }
-      else preparationTarget!,
+    stdlibTarget: if stdlibTarget != "" then stdlibTarget else platformName,
     rootManifest,
     stdlibBundle,
     packageAcquisitionRoot,
@@ -361,9 +347,6 @@ function configureDeclaredDependencies(
       rootManifest.target,
     )
     if dependencyManifest.name == "" { return Failure("Dependency package must declare a name: " + dependencyManifestPath) }
-    if dependencyManifest.stdlibPreparation.length > 0 {
-      return Failure("build.stdlib.prepare is only allowed in standard packages: " + dependencyManifestPath)
-    }
     if dependencyManifest.nativeBuild.vendorBuilds.length > 0 {
       return Failure(vendorOnlyInStandardPackagesMessage + ": " + dependencyManifestPath)
     }
@@ -372,46 +355,9 @@ function configureDeclaredDependencies(
   return Success()
 }
 
-export function prepareReachedStdlibPackages(target: StdlibPreparationTarget): Result<none, string> {
-  for reached of configuredDriverSourceState.reachedPackages {
-    if reached.acquisition.logicalPrefix.startsWith("/std/") {
-      try prepareStdlibPackage(reached.manifest, target)
-    }
-  }
-  return Success()
-}
-
-export function preparationTargetForRequest(
-  target: string,
-  nativePlatform: string,
-  iosDestination: string,
-  iosMinimumVersion: string,
-): Result<StdlibPreparationTarget, string> {
-  if target == "wasm" {
-    return Success(StdlibPreparationTarget {
-      nativeTarget: "wasm",
-      targetTriple: "wasm32-unknown-emscripten",
-      configureHost: "wasm32-unknown-emscripten",
-    })
-  }
-  if !nativePlatform.startsWith("ios-") {
-    return Success(StdlibPreparationTarget { nativeTarget: nativePlatform })
-  }
-  sdkName := if iosDestination == "device" then "iphoneos" else "iphonesimulator"
-  sdkResult := runNativeCommand("xcrun", ["--sdk", sdkName, "--show-sdk-path"])
-  if sdkResult.exitCode != 0 { return Failure("Could not resolve the " + sdkName + " SDK for external dependencies") }
-  sdkPath := BlobReader(sdkResult.output).readString(long(sdkResult.output.length)).trim()
-  hostArchitecture := architecture()
-  try targetTriple := iosTargetTriple(iosMinimumVersion, iosDestination, hostArchitecture)
-  configureHost := if iosDestination == "device"
-    then "aarch64-apple-darwin"
-    else if hostArchitecture == "x86_64" || hostArchitecture == "x64" then "x86_64-apple-darwin" else "aarch64-apple-darwin"
-  return Success(StdlibPreparationTarget {
-    nativeTarget: nativePlatform,
-    sdkPath,
-    targetTriple,
-    configureHost,
-  })
+/** Names the target whose files the bundled standard library materializes. */
+export function stdlibTargetForRequest(target: string, nativePlatform: string): string {
+  return if target == "wasm" then "wasm" else nativePlatform
 }
 
 function driverLogicalPrefix(path: string): string {

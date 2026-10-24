@@ -27,32 +27,11 @@ Standard packages are a separate offline provider boundary. A global
 `DOOF_STDLIB_ROOT` checkout takes precedence when present; otherwise the
 compiler lazily materializes each reached package from its adjacent
 `doof-stdlib.tar`. Its index is authoritative for package availability, and its
-content digest participates in frontend cache configuration. Standard packages
-may declare bounded `build.stdlib.prepare` commands for target preparation;
-ordinary packages cannot.
-
-The preparation hook is an array of bounded command objects:
-
-```json
-{
-  "build": {
-    "stdlib": {
-      "prepare": [{
-        "program": "./prepare.sh",
-        "args": ["{packageRoot}/vendor", "{targetTriple}"],
-        "env": { "SDK_PATH": "{sdkPath}" },
-        "workingDirectory": "."
-      }]
-    }
-  }
-}
-```
-
-Preparation supports `{packageRoot}`, `{jobs}`, `{nativeTarget}`, `{sdkPath}`,
-`{targetTriple}`, and `{configureHost}` substitutions. The program and working
-directory must remain inside the standard package. Hooks run only for reached
-standard packages when a command materializes native output; they do not run
-for `check` or test listing. The scripts own their idempotence and freshness.
+content digest participates in frontend cache configuration. Materialized
+packages never change after extraction: target-specific native output comes
+only from vendor builds in the project's output directory. The retired
+`build.stdlib.prepare` hook is rejected with a pointer to
+`build.native.vendor`.
 
 ### Vendored native libraries
 

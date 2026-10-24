@@ -162,8 +162,8 @@ The compiler core accepts `SourceFile` values and returns diagnostics and
 generated text. Pure planners then describe packages, project files, native
 tasks, app bundles, and run invocations. Environment-facing modules are:
 
-- `stdlib-bundle.do` and `stdlib-preparation.do` for offline standard-package
-  materialization and bounded target preparation;
+- `stdlib-bundle.do` for offline standard-package materialization;
+- `vendor-build-driver.do` for standard-package vendor build scripts;
 - `native-build-driver.do` for compiler/linker subprocesses and incremental
   build state;
 - Apple `*-driver.do` and `ios-device.do` modules for platform tools;

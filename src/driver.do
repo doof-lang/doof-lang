@@ -32,8 +32,8 @@ import { acquireProjectBuildLock } from "./project-build-lock"
 import { debugTargetError } from "./debug-command"
 import { observeTargetError } from "./observe-command"
 import {
-  driverRootLogicalPath, driverRootLogicalPrefix, ensureStdPackageReached, prepareReachedStdlibPackages,
-  preparationTargetForRequest, projectNativePackages, sourceLoaderForRequest,
+  driverRootLogicalPath, driverRootLogicalPrefix, ensureStdPackageReached,
+  projectNativePackages, sourceLoaderForRequest, stdlibTargetForRequest,
 } from "./source-loader-driver"
 import { testRequest } from "./test-driver"
 import { exists, isDirectory, remove } from "std/fs"
@@ -112,11 +112,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
   iosDestination := if request.command == "package" then "device" else request.iosDestination
   nativePlatform := if project.iosApp == none then requestedNativePlatform else "ios-" + iosDestination
   if project.iosApp != none { project = readProjectSpec(request.entry, nativePlatform, request.targetOverride) }
-  iosMinimumVersion := if project.iosApp == none then "" else project.iosApp!.minimumDeploymentTarget
-  preparationTarget := preparationTargetForRequest(project.target, nativePlatform, iosDestination, iosMinimumVersion) else error {
-    println("error: " + error)
-    return 1
-  }
+  stdlibTarget := stdlibTargetForRequest(project.target, nativePlatform)
   rootManifest := project.manifest
   buildDirectory := if request.outputDirectory == ""
     then joinPath(project.rootDirectory, project.buildDirectory)
@@ -130,7 +126,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     outputRoot: "",
   }]
   loader := sourceLoaderForRequest(
-    entryPath, stdlibRoot, namespaceMappings, rootManifest, buildDirectory, nativePlatform, preparationTarget,
+    entryPath, stdlibRoot, namespaceMappings, rootManifest, buildDirectory, nativePlatform, stdlibTarget,
   ) else error {
     println("error: " + error)
     return 1
@@ -149,7 +145,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     else if request.command == "observe" then joinPath(buildDirectory, "observe") else buildDirectory
   cacheDirectory := if request.command == "profile" || request.command == "debug" || request.command == "observe" then outputDirectory else buildDirectory
   frontendConfiguration := frontendConfigurationFingerprint(
-    entry, entryMode, project.target, rootManifest, stdlibRoot, nativePlatform, preparationTarget,
+    entry, entryMode, project.target, rootManifest, stdlibRoot, nativePlatform, stdlibTarget,
   )
   timings.finish("command.setup", setupStart)
   cacheStart := timings.start()
@@ -203,13 +199,6 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     return 0
   }
   if result.emission == none { panic("compiler produced no emission") }
-  preparationStart := timings.start()
-  _ := prepareReachedStdlibPackages(preparationTarget) else error {
-    println("error: " + error)
-    return 1
-  }
-
-  timings.finish("command.stdlib-preparation", preparationStart)
   projectStart := timings.start()
   emission := planProjectEmission(
     result.emission!,

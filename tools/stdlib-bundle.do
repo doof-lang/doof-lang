@@ -101,7 +101,7 @@ function vendorPathIncluded(packageName: string, relativePath: string, targets: 
   // build.native.vendor scripts run from the vendor root on every target.
   if relativePath == "vendor/build.sh" || relativePath == "vendor/build.ps1" { return true }
   for segment of relativePath.split("/") {
-    if segment == ".doof-build" || segment == ".doof-build-work" || segment.startsWith(".doof-external") { return false }
+    if segment.startsWith(".doof-external") { return false }
   }
 
   if packageName == "std/gzip" {
@@ -117,7 +117,7 @@ function vendorPathIncluded(packageName: string, relativePath: string, targets: 
     if relativePath == root { return true }
     if !relativePath.startsWith(root + "/") { return false }
     remainder := relativePath.substring(root.length + 1, relativePath.length)
-    if !remainder.contains("/") { return !remainder.startsWith(".doof-external-native-") }
+    if !remainder.contains("/") { return true }
     return within(relativePath, root + "/CMake") || within(relativePath, root + "/include") ||
       within(relativePath, root + "/lib") || within(relativePath, root + "/m4") ||
       within(relativePath, root + "/scripts")
