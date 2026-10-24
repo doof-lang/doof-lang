@@ -8,7 +8,7 @@ import {
   MaterializedResource, ResourceState, findMaterializedResource, materializedResourceIsCurrent,
   parseResourceState, renderResourceState,
 } from "./resource-state"
-import { exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, readTextResource, remove, rename, writeBlob, writeText } from "std/fs"
+import { copyPermissions, exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, readTextResource, remove, rename, writeBlob, writeText } from "std/fs"
 
 export function driverOutputPath(directory: string, name: string): string {
   if directory.endsWith("/") { return directory + name }
@@ -37,6 +37,8 @@ function materializeNativeCopy(sourcePath: string, outputPath: string): Result<n
   ensureOutputDirectory(parentPath(outputPath))
   content := readBlob(sourcePath) else { return Failure("Could not read native package input " + sourcePath) }
   writeBlobIfChanged(outputPath, content)
+  // Vendor build scripts and autoconf helpers run from the emitted graph.
+  _ := copyPermissions(sourcePath, outputPath) else { return Failure("Could not copy permissions for " + sourcePath) }
   return Success()
 }
 

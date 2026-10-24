@@ -74,10 +74,15 @@ the vendored content and the `lib/` outputs the link consumes:
 For each reached package the native driver copies the emitted `vendor/` tree to
 `<output>/.doof-vendor/<package>-<fingerprint>/` and runs `build.sh` there with
 POSIX `sh` (`build.ps1` with PowerShell on Windows). The script receives `CC`,
-`CXX`, `AR`, `CFLAGS`, `CXXFLAGS`, `DOOF_PLATFORM`, `DOOF_MODE`, and
-`DOOF_JOBS`. `CFLAGS` carries the build mode's optimization, LTO, and target
-flags so archives match the final link; it never carries the project's include
-paths or defines. Scripts must append to these flags rather than replace them.
+`CXX`, `AR`, `RANLIB` (except with MSVC), `CFLAGS`, `CXXFLAGS`,
+`DOOF_PLATFORM`, `DOOF_MODE`, and `DOOF_JOBS`. `AR` and `RANLIB` understand the
+compiler's LTO objects (`gcc-ar`/`gcc-ranlib`, `llvm-ar`/`llvm-ranlib`, or
+`emar`/`emranlib`), so autoconf and libtool builds can use them unchanged;
+`DOOF_AR` and `DOOF_RANLIB` override them. `CFLAGS` carries the build mode's
+optimization, LTO, and target flags so archives match the final link; it never
+carries the project's include paths or defines. Scripts must append to these
+flags rather than replace them. Copies of package files keep their permissions,
+so scripts can run bundled helpers such as `configure` directly.
 
 After the script, the build directory's `include/` (when present) joins the
 include path for generated code, `static` archives link after the generated
@@ -92,8 +97,11 @@ it whenever the vendored sources change. The fingerprint also covers the
 target, build mode, toolchain, flags, and script text, so a script edit
 rebuilds without a key change. A finished build is reused until its
 fingerprint changes; older fingerprints for the package are then removed.
-Platform fragments may replace `static` or `bundle` but not `key`. `bundle` is
-rejected for Wasm and not yet supported for iOS.
+Platform fragments may replace `static` or `bundle` but not `key`. A package
+whose vendored library serves one target, such as `std/http`'s Linux-only curl,
+instead declares the whole build, `key` included, in that platform fragment
+(`build.native.linux.vendor`); other targets then neither copy nor build the
+tree. `bundle` is rejected for Wasm and not yet supported for iOS.
 
 `resources` copies explicit package files beside a command-line executable or
 into an application bundle. `build.native` declares include paths, source

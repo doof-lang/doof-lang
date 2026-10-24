@@ -67,7 +67,7 @@ export function vendorBuildEnvironment(
   mode: NativeBuildMode,
   jobs: int,
 ): Map<string, string> {
-  return {
+  let environment: Map<string, string> = {
     CC: toolchain.cc,
     CXX: toolchain.cxx,
     AR: toolchain.ar,
@@ -77,6 +77,10 @@ export function vendorBuildEnvironment(
     DOOF_MODE: nativeBuildModeName(mode),
     DOOF_JOBS: string(if jobs < 1 then 1 else jobs),
   }
+  // libtool indexes archives itself; it needs the LTO-aware ranlib that
+  // matches AR, or LTO objects lose their symbol index.
+  if toolchain.ranlib != "" { environment.set("RANLIB", toolchain.ranlib) }
+  return environment
 }
 
 /**

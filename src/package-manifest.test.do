@@ -321,6 +321,19 @@ export function testParsesVendorBuildWithPlatformLibraryOverride(): none {
   Assert.equal(windows.nativeBuild.vendorBuilds[0].bundleLibraries[0], "libshared.dylib")
 }
 
+export function testParsesPlatformOnlyVendorBuild(): none {
+  source := `{"name":"std/demo","build":{"native":{"linux":{"vendor":{"key":"curl-1","static":["libcurl.a"]}}}}}`
+  linux := parsePackageManifest(source, "/std/demo/doof.json", "/std/demo", "linux")!
+  Assert.equal(linux.nativeBuild.vendorBuilds.length, 1)
+  vendor := linux.nativeBuild.vendorBuilds[0]
+  Assert.equal(vendor.key, "curl-1")
+  Assert.equal(vendor.directory, "/std/demo/vendor")
+  Assert.equal(vendor.staticLibraries[0], "libcurl.a")
+  // Other targets do not build a vendor tree only one platform declares.
+  macos := parsePackageManifest(source, "/std/demo/doof.json", "/std/demo", "macos")!
+  Assert.equal(macos.nativeBuild.vendorBuilds.length, 0)
+}
+
 export function testOmitsVendorBuildWhenNotDeclared(): none {
   manifest := parsePackageManifest(`{"build":{"native":{"defines":["A"]}}}`, "/app/doof.json", "/app", "linux")!
   Assert.equal(manifest.nativeBuild.vendorBuilds.length, 0)
@@ -332,7 +345,8 @@ export function testRejectsInvalidVendorDeclarations(): none {
     [`{"build":{"native":{"vendor":{"key":""}}}}`, "build.native.vendor.key must not be empty"],
     [`{"build":{"native":{"vendor":{"key":"k","static":["../escape.a"]}}}}`, "build.native.vendor.static[0] must be a relative path within the vendor build's lib directory"],
     [`{"build":{"native":{"vendor":{"key":"k","bundle":["/abs/lib.dylib"]}}}}`, "build.native.vendor.bundle[0] must be a relative path"],
-    [`{"build":{"native":{"linux":{"vendor":{"static":["libdemo.a"]}}}}}`, "build.native.linux.vendor requires build.native.vendor"],
+    [`{"build":{"native":{"linux":{"vendor":{"static":["libdemo.a"]}}}}}`, "build.native.linux.vendor.key is required"],
+    [`{"build":{"native":{"linux":{"vendor":{"key":"k","static":["../a.a"]}}}}}`, "build.native.linux.vendor.static[0] must be a relative path"],
     [`{"build":{"native":{"vendor":{"key":"k"},"linux":{"vendor":{"key":"other"}}}}}`, "build.native.linux.vendor.key is not allowed"],
   ]
   for entry of cases {

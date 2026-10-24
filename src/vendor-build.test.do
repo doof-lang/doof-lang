@@ -7,7 +7,14 @@ import {
 } from "./vendor-build"
 
 function toolchain(): NativeVendorToolchain {
-  return NativeVendorToolchain { cc: "cc", cxx: "c++", ar: "ar", cflags: ["-O2", "-flto"], cxxflags: ["-std=c++17", "-O2", "-flto"] }
+  return NativeVendorToolchain {
+    cc: "cc", cxx: "c++", ar: "ar", ranlib: "ranlib", cflags: ["-O2", "-flto"], cxxflags: ["-std=c++17", "-O2", "-flto"],
+  }
+}
+
+export function testVendorEnvironmentOmitsRanlibForMsvc(): none {
+  msvc := NativeVendorToolchain { cc: "cl.exe", cxx: "cl.exe", ar: "lib.exe", cflags: [], cxxflags: [] }
+  Assert.equal(vendorBuildEnvironment(msvc, "windows", .Release, 4).has("RANLIB"), false)
 }
 
 function build(key: string = "demo-1"): NativeVendorBuild {
@@ -19,6 +26,7 @@ export function testVendorEnvironmentCarriesToolchainAndTarget(): none {
   Assert.equal(environment.get("CC")!, "cc")
   Assert.equal(environment.get("CXX")!, "c++")
   Assert.equal(environment.get("AR")!, "ar")
+  Assert.equal(environment.get("RANLIB")!, "ranlib")
   Assert.equal(environment.get("CFLAGS")!, "-O2 -flto")
   Assert.equal(environment.get("CXXFLAGS")!, "-std=c++17 -O2 -flto")
   Assert.equal(environment.get("DOOF_PLATFORM")!, "linux")

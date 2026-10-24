@@ -2,6 +2,7 @@ import { Assert } from "std/assert"
 import { ProjectEmission, ProjectNativeCopy } from "./emitter-project"
 import { driverOutputPath, ensureOutputDirectory, materializeGeneratedText, materializeProject } from "./materialize-driver"
 import { exists, isDirectory, metadata, readText, writeText } from "std/fs"
+import { run } from "std/os"
 import { Instant } from "std/time"
 
 export function testOutputPathsJoinWithSingleSeparator(): none {
@@ -52,4 +53,18 @@ export function testMissingNativeCopyReportsSourcePath(): none {
   }
   Assert.isTrue(message.contains(missing), "expected missing source path, got: " + message)
   Assert.isTrue(message.contains("build.native"), "expected manifest hint, got: " + message)
+}
+
+export function testNativeCopiesKeepExecutePermissions(): none {
+  root := "/tmp/doof-materialize-driver-modes-" + string(Instant.now().toEpochMillis())
+  ensureOutputDirectory(root + "/package/vendor")
+  writeText(root + "/package/vendor/configure", "#!/bin/sh\n")!
+  writeText(root + "/package/vendor/README", "plain\n")!
+  Assert.equal(run("chmod", ["755", root + "/package/vendor/configure"])!.exitCode, 0)
+  project := ProjectEmission {
+    nativeCopies: [ProjectNativeCopy { sourcePath: root + "/package/vendor", relativePath: "pkg/vendor" }],
+  }
+  materializeProject(root + "/out", project)!
+  Assert.equal(run("test", ["-x", root + "/out/pkg/vendor/configure"])!.exitCode, 0)
+  Assert.notEqual(run("test", ["-x", root + "/out/pkg/vendor/README"])!.exitCode, 0)
 }

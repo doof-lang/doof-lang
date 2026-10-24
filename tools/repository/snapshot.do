@@ -100,10 +100,10 @@ export function vendorReplayLines(graph: string, source: string): Result<string[
 }
 export function vendorEnvironmentValue(key: string, value: string, graph: string, source: string): Result<string, string> {
   if key == "DOOF_JOBS" { return Success("\"$jobs\"") }
-  if key == "CC" || key == "CXX" || key == "AR" {
+  if key == "CC" || key == "CXX" || key == "AR" || key == "RANLIB" {
     let name = value
     for segment of value.split("/") { name = segment }
-    if name == "clang" || name == "clang++" || name == "ar" { return Success(quote("xcrun " + name)) }
+    if name == "clang" || name == "clang++" || name == "ar" || name == "ranlib" { return Success(quote("xcrun " + name)) }
     return Failure("Unhandled vendor tool for " + key + ": " + value)
   }
   if value.contains(graph) || value.contains(source) || value.contains("/Users/") || value.contains("/private/") {

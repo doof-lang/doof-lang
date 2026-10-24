@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 
 import { ModuleEmission } from "./emitter-module"
-import { NativeBuildMode, NativeCompileTask, deriveArchiver, isMsvcCompiler, msvcPchHeaderSource, planNativeCompile, planVendorToolchain } from "./native-build"
+import { NativeBuildMode, NativeCompileTask, deriveArchiver, deriveRanlib, isMsvcCompiler, msvcPchHeaderSource, planNativeCompile, planVendorToolchain } from "./native-build"
 import { NativeBuildPlan } from "./package-manifest"
 
 export function testPlansGeneratedAndManifestNativeSources(): none {
@@ -511,6 +511,7 @@ export function testVendorToolchainSharesModeFlagsButNotProjectInputs(): none {
   Assert.equal(toolchain.cc, "clang")
   Assert.equal(toolchain.cxx, "clang++")
   Assert.equal(toolchain.ar, "ar")
+  Assert.equal(toolchain.ranlib, "ranlib")
   Assert.equal(toolchain.cflags.contains("-O2"), true)
   Assert.equal(toolchain.cflags.contains("-flto"), true)
   Assert.equal(toolchain.cflags.contains("-target"), true)
@@ -530,10 +531,14 @@ export function testVendorToolchainForWasmAndMsvc(): none {
   msvc := planVendorToolchain("cl.exe", NativeBuildPlan {}, .Release, "windows", false)
   Assert.equal(msvc.cc, "cl.exe")
   Assert.equal(msvc.ar, "lib.exe")
+  Assert.equal(msvc.ranlib, "")
   Assert.equal(msvc.cflags.contains("/GL"), true)
   Assert.equal(msvc.cxxflags[0], "/std:c++17")
   overridden := planVendorToolchain("c++", NativeBuildPlan {}, .Debug, "linux", false, "/opt/bin/llvm-ar")
   Assert.equal(overridden.ar, "/opt/bin/llvm-ar")
+  Assert.equal(overridden.ranlib, "gcc-ranlib")
+  ranlibOverride := planVendorToolchain("c++", NativeBuildPlan {}, .Debug, "linux", false, "", "/opt/bin/llvm-ranlib")
+  Assert.equal(ranlibOverride.ranlib, "/opt/bin/llvm-ranlib")
   debug := planVendorToolchain("c++", NativeBuildPlan {}, .InteractiveDebug, "linux", false)
   Assert.equal(debug.cflags.contains("-O0"), true)
 }
@@ -546,6 +551,11 @@ export function testDerivesLtoCapableArchivers(): none {
   Assert.equal(deriveArchiver("clang++", "linux"), "llvm-ar")
   Assert.equal(deriveArchiver("c++", "macos"), "ar")
   Assert.equal(deriveArchiver("clang++", "ios-simulator"), "ar")
+  Assert.equal(deriveRanlib("/emsdk/em++", "macos"), "/emsdk/emranlib")
+  Assert.equal(deriveRanlib("/usr/bin/g++", "linux"), "/usr/bin/gcc-ranlib")
+  Assert.equal(deriveRanlib("c++", "linux"), "gcc-ranlib")
+  Assert.equal(deriveRanlib("clang++", "linux"), "llvm-ranlib")
+  Assert.equal(deriveRanlib("clang++", "macos"), "ranlib")
 }
 
 export function testLinksVendorInputsAfterObjectsWithBundleSearchPath(): none {

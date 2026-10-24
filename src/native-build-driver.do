@@ -125,7 +125,9 @@ export function buildNativeProject(
   }
   if outputMode == .Progress { for description of optional { println(description) } }
   if project.nativeBuild.vendorBuilds.length > 0 {
-    toolchain := planVendorToolchain(compiler, project.nativeBuild, mode, platform, wasm, envValue("DOOF_AR"))
+    toolchain := planVendorToolchain(
+      compiler, project.nativeBuild, mode, platform, wasm, envValue("DOOF_AR"), envValue("DOOF_RANLIB"),
+    )
     let identities: NativeCompilerIdentity[] = []
     _ := prepareVendorBuilds(
       outputDirectory, project.nativeBuild, toolchain, compilerIdentity(toolchain.cxx, identities),

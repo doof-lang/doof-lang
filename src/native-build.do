@@ -53,11 +53,13 @@ export function isMsvcCompiler(compiler: string): bool {
   return name == "cl" || name == "cl.exe"
 }
 
-/** Compilers, archiver, and flags handed to a standard package's vendor build script. */
+/** Compilers, archive tools, and flags handed to a standard package's vendor build script. */
 export class NativeVendorToolchain {
   cc: string
   cxx: string
   ar: string
+  // Empty for MSVC, whose lib.exe archives need no separate index step.
+  ranlib: string = ""
   cflags: string[]
   cxxflags: string[]
 }
@@ -76,6 +78,7 @@ export function planVendorToolchain(
   platform: string,
   wasm: bool,
   archiverOverride: string = "",
+  ranlibOverride: string = "",
 ): NativeVendorToolchain {
   if isMsvcCompiler(compiler) && !wasm {
     let flags: string[] = ["/nologo", "/utf-8"]
@@ -98,6 +101,7 @@ export function planVendorToolchain(
     cc: deriveCCompiler(compiler),
     cxx: compiler,
     ar: if archiverOverride == "" then deriveArchiver(compiler, platform) else archiverOverride,
+    ranlib: if ranlibOverride == "" then deriveRanlib(compiler, platform) else ranlibOverride,
     cflags: flags,
     cxxflags,
   }
@@ -158,19 +162,30 @@ function msvcModeFlags(mode: NativeBuildMode): string[] {
 
 /** Selects an archiver that understands the compiler's LTO objects. */
 export function deriveArchiver(compiler: string, platform: string): string {
+  return deriveArchiveTool(compiler, platform, "ar")
+}
+
+/** Selects the ranlib that matches deriveArchiver, for libtool-style builds. */
+export function deriveRanlib(compiler: string, platform: string): string {
+  return deriveArchiveTool(compiler, platform, "ranlib")
+}
+
+// Archive tools come in matching families: emar/emranlib, gcc-ar/gcc-ranlib,
+// llvm-ar/llvm-ranlib, and the plain ar/ranlib pair.
+function deriveArchiveTool(compiler: string, platform: string, tool: string): string {
   if compiler == "em++" || compiler.endsWith("/em++") {
-    return compiler.substring(0, compiler.length - 4) + "emar"
+    return compiler.substring(0, compiler.length - 4) + "em" + tool
   }
   if compiler == "g++" || compiler.endsWith("/g++") {
-    return compiler.substring(0, compiler.length - 3) + "gcc-ar"
+    return compiler.substring(0, compiler.length - 3) + "gcc-" + tool
   }
   name := compiler.toLowerCase()
   // Apple's ar reads LLVM bitcode through libLTO; elsewhere Clang needs
   // llvm-ar and the conventional c++ driver is GCC.
-  if platform == "macos" || platform.startsWith("ios-") { return "ar" }
-  if name.contains("clang") { return "llvm-ar" }
-  if compiler == "c++" || compiler.endsWith("/c++") { return "gcc-ar" }
-  return "ar"
+  if platform == "macos" || platform.startsWith("ios-") { return tool }
+  if name.contains("clang") { return "llvm-" + tool }
+  if compiler == "c++" || compiler.endsWith("/c++") { return "gcc-" + tool }
+  return tool
 }
 
 /**

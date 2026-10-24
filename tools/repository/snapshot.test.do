@@ -68,4 +68,5 @@ export function testRepositorySnapshotRejectsUnrelocatableVendorEnvironment(): n
   }
   Assert.isTrue(rejected)
   Assert.equal(vendorEnvironmentValue("CXX", "/work/native-tools/clang++", "/build", "/source")!, "'xcrun clang++'")
+  Assert.equal(vendorEnvironmentValue("RANLIB", "ranlib", "/build", "/source")!, "'xcrun ranlib'")
 }

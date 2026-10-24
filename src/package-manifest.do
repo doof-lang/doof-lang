@@ -266,6 +266,8 @@ function parseManifestNativeBuild(
 
 // A platform fragment's static or bundle list replaces the base list, because
 // archive names commonly differ by toolchain (libzstd.a versus zstd.lib).
+// Without a base declaration, a platform fragment declares the whole build,
+// key included, for a library that only one target uses.
 function parseNativeVendorBuild(
   native: SerialObject,
   platformKey: string,
@@ -278,17 +280,19 @@ function parseNativeVendorBuild(
     try platformValue := manifestObject(manifestJsonField(native, platformKey), manifestPath, "build.native." + platformKey)
     if manifestJsonHas(platformValue, "vendor") {
       try parsed := manifestObject(manifestJsonField(platformValue, "vendor"), manifestPath, platformField)
-      if manifestJsonHas(parsed, "key") {
-        return Failure("Invalid doof.json at " + manifestPath + ": " + platformField + ".key is not allowed; declare build.native.vendor.key once")
-      }
       platformVendor = parsed
     }
   }
   if !manifestJsonHas(native, "vendor") {
-    if platformVendor != none {
-      return Failure("Invalid doof.json at " + manifestPath + ": " + platformField + " requires build.native.vendor")
-    }
-    return Success(none)
+    if platformVendor == none { return Success(none) }
+    try platformKeyValue := requiredManifestString(platformVendor!, "key", manifestPath, platformField)
+    platformOnly := NativeVendorBuild { key: platformKeyValue, directory: manifestJoinPath(rootDirectory, "vendor") }
+    try appendVendorLibraryNames(platformOnly.staticLibraries, platformVendor!, "static", manifestPath, platformField)
+    try appendVendorLibraryNames(platformOnly.bundleLibraries, platformVendor!, "bundle", manifestPath, platformField)
+    return Success(platformOnly)
+  }
+  if platformVendor != none && manifestJsonHas(platformVendor!, "key") {
+    return Failure("Invalid doof.json at " + manifestPath + ": " + platformField + ".key is not allowed; declare build.native.vendor.key once")
   }
   try base := manifestObject(manifestJsonField(native, "vendor"), manifestPath, "build.native.vendor")
   try key := requiredManifestString(base, "key", manifestPath, "build.native.vendor")
