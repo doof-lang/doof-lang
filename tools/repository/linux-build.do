@@ -83,6 +83,9 @@ export function linuxMakefile(emittedFiles: string[], excludedSources: string[] 
     "clean:\n\trm -f $(OBJECTS) doof\n"
 }
 
+readonly APK_ATTEMPTS = 3
+readonly APK_ATTEMPT_SECONDS = 300
+
 /** Runs inside Alpine after the emitted graph has crossed the VM boundary. */
 export function linuxBuildScript(target: LinuxReleaseTarget): string {
   return "#!/bin/sh\n" +
@@ -92,7 +95,13 @@ export function linuxBuildScript(target: LinuxReleaseTarget): string {
     "archive=$2\n" +
     "root=$(CDPATH= cd -- \"$(dirname -- \"$0\")\" && pwd)\n" +
     "[ \"$(uname -s)/$(uname -m)\" = Linux/" + target.machine + " ] || { echo 'Linux " + target.name + " container is required' >&2; exit 1; }\n" +
-    "apk add --no-cache build-base file linux-headers tar\n" +
+    // A stalled CDN download leaves apk waiting forever; bound each attempt.
+    "attempt=1\n" +
+    "until timeout " + string(APK_ATTEMPT_SECONDS) + " apk add --no-cache build-base file linux-headers tar; do\n" +
+    "  [ \"$attempt\" -lt " + string(APK_ATTEMPTS) + " ] || { echo 'apk add failed after " + string(APK_ATTEMPTS) + " attempts' >&2; exit 1; }\n" +
+    "  echo \"apk add attempt $attempt failed or timed out; retrying\" >&2\n" +
+    "  attempt=$((attempt + 1))\n" +
+    "done\n" +
     "{ printf 'alpine '; cat /etc/alpine-release; c++ --version | head -n 1; ldd --version 2>&1 | head -n 1; } > \"$root/toolchain.txt\"\n" +
     "jobs=\"\${DOOF_BUILD_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}\"\n" +
     "case \"$jobs\" in ''|*[!0-9]*|0) echo 'DOOF_BUILD_JOBS must be positive' >&2; exit 1 ;; esac\n" +

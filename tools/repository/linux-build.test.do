@@ -53,7 +53,8 @@ export function testLinuxContainerBuildChecksArchitectureVersionAndStaticElf(): 
   Assert.stringContains(x64, "Linux/x86_64")
   Assert.stringContains(x64, "ELF 64-bit.*x86-64.*statically linked")
   for script of [arm64, x64] {
-    Assert.stringContains(script, "apk add --no-cache build-base file linux-headers tar")
+    Assert.stringContains(script, "until timeout 300 apk add --no-cache build-base file linux-headers tar; do")
+    Assert.stringContains(script, "apk add failed after 3 attempts")
     Assert.stringContains(script, "toolchain.txt")
     Assert.stringContains(script, "doof $version")
     Assert.stringContains(script, "smoke/main.do")

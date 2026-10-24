@@ -7,7 +7,7 @@ import { Duration, MonotonicInstant, Thread } from "std/time"
 import { BlobBuilder, BlobReader } from "std/blob"
 import { connect, SshClient, SshConnectOptions } from "std/ssh"
 import { wakeOnLan } from "std/wol"
-import { buildToolchain, prepare } from "./build"
+import { BuildInputs, BuildResult, buildToolchain, prepare } from "./build"
 import { capture, cleanRevision, command, copyInputs, copyTree, erase, execute, files, jsonFile, jsonString, makeDirectory, path, read, require, resolveSeed, setting, stableVersion, stamp, stdlibDirectory, write } from "./common"
 import { createSnapshot, isMachO } from "./snapshot"
 import { debuggerChecks, releaseVerification, testRepository } from "./verify"
@@ -115,7 +115,58 @@ function linuxEmittedProbeSources(stdlib: string, emittedFiles: string[]): Resul
   return Success(result)
 }
 
-function buildLinuxReleaseArtifact(compiler: string, source: string, stdlib: string, stdlibBundle: string, work: string, pending: string, version: string, target: LinuxReleaseTarget): Result<none, string> {
+/** A Linux container build running in the background, logging to its own file. */
+class LinuxContainerBuild {
+  readonly target: LinuxReleaseTarget
+  readonly log: string
+  process: Exec
+}
+
+// Stages the target's inputs, then starts its container without waiting; the
+// container needs only files under work, so builds for other targets and the
+// rest of the release can proceed meanwhile.
+function startLinuxReleaseBuild(compiler: string, source: string, stdlib: string, stdlibBundle: string, work: string, version: string, target: LinuxReleaseTarget): Result<LinuxContainerBuild, string> {
+  try stageLinuxReleaseInputs(compiler, source, stdlib, stdlibBundle, work, target)
+  image := setting("DOOF_LINUX_CONTAINER_IMAGE", "docker.io/library/alpine:3.22.1")
+  cpus := setting("DOOF_LINUX_CONTAINER_CPUS", "8")
+  memory := setting("DOOF_LINUX_CONTAINER_MEMORY", "8G")
+  jobs := setting("DOOF_LINUX_BUILD_JOBS", "4")
+  log := path(work, "linux-" + target.name + "/container.log")
+  shellArguments: string[] := ["-c", "exec \"$0\" \"$@\" > \"$DOOF_CONTAINER_LOG\" 2>&1", "container"]
+  for argument of linuxContainerArguments(work, image, version, target, cpus, memory, jobs) { shellArguments.push(argument) }
+  try process := Exec.spawn("sh", shellArguments, ExecOptions { env: { DOOF_CONTAINER_LOG: log }, withStdin: false })
+  println("Started Linux " + target.name + " musl container build; log: " + log)
+  return Success(LinuxContainerBuild { target, log, process })
+}
+
+function finishLinuxReleaseBuild(build: LinuxContainerBuild, pending: string, version: string): Result<none, string> {
+  status := build.process.wait() else error {
+    return Failure("Could not wait for the Linux " + build.target.name + " container build: " + error)
+  }
+  if status != 0 {
+    log := read(build.log) else { return Failure("Linux " + build.target.name + " container build exited with status " + string(status)) }
+    return Failure(
+      "Linux " + build.target.name + " container build exited with status " + string(status) +
+        "; last lines of " + build.log + ":\n" + windowsBuildLogTail(log, 60),
+    )
+  }
+  archive := path(pending, linuxReleaseArchiveName(version, build.target))
+  try require(exists(archive), "Linux container did not produce release archive")
+  println("Verified Linux " + build.target.name + " musl release asset: " + archive)
+  return Success()
+}
+
+function stopLinuxReleaseBuilds(builds: LinuxContainerBuild[]): none {
+  for build of builds {
+    if build.process.isRunning() {
+      println("Stopping Linux " + build.target.name + " container build")
+      _ := build.process.terminate() else {}
+      _ := build.process.wait() else {}
+    }
+  }
+}
+
+function stageLinuxReleaseInputs(compiler: string, source: string, stdlib: string, stdlibBundle: string, work: string, target: LinuxReleaseTarget): Result<none, string> {
   linux := path(work, "linux-" + target.name)
   emitted := path(linux, "emitted")
   resources := path(linux, "resources")
@@ -131,14 +182,6 @@ function buildLinuxReleaseArtifact(compiler: string, source: string, stdlib: str
   }
   try copyTree(path(source, "observer-ui"), path(resources, "observer-ui"))
   try command("cp", [stdlibBundle, path(resources, "doof-stdlib.tar")])
-  image := setting("DOOF_LINUX_CONTAINER_IMAGE", "docker.io/library/alpine:3.22.1")
-  cpus := setting("DOOF_LINUX_CONTAINER_CPUS", "8")
-  memory := setting("DOOF_LINUX_CONTAINER_MEMORY", "8G")
-  jobs := setting("DOOF_LINUX_BUILD_JOBS", "4")
-  try command("container", linuxContainerArguments(work, image, version, target, cpus, memory, jobs))
-  archive := path(pending, linuxReleaseArchiveName(version, target))
-  try require(exists(archive), "Linux container did not produce release archive")
-  println("Verified Linux " + target.name + " musl release asset: " + archive)
   return Success()
 }
 
@@ -290,7 +333,20 @@ export function linuxEndToEnd(root: string, version: string): Result<none, strin
   bundle := path(work, "doof-stdlib.tar")
   environment: Map<string, string> := { DOOF_STDLIB_ROOT: stdlib, DOOF_RUNTIME_HEADER: path(source, "runtime/doof_runtime.hpp") }
   try command(compiler, ["run", path(source, "tools/stdlib-bundle.do"), "-o", path(work, "stdlib-bundle-tool"), "--", stdlib, bundle, "linux"], environment)
-  for target of linuxReleaseTargets() { try buildLinuxReleaseArtifact(compiler, source, stdlib, bundle, work, pending, version, target) }
+  let builds: LinuxContainerBuild[] = []
+  for target of linuxReleaseTargets() {
+    started := startLinuxReleaseBuild(compiler, source, stdlib, bundle, work, version, target) else error {
+      stopLinuxReleaseBuilds(builds)
+      return Failure(error)
+    }
+    builds.push(started)
+  }
+  for build of builds {
+    _ := finishLinuxReleaseBuild(build, pending, version) else error {
+      stopLinuxReleaseBuilds(builds)
+      return Failure(error)
+    }
+  }
   return Success()
 }
 
@@ -321,33 +377,27 @@ export function prepareRelease(root: string, version: string): Result<none, stri
   try releaseVerification(inputs.source, path(built.artifacts, "doof"), inputs.stdlib)
   pending := path(work, "pending")
   try makeDirectory(pending)
-  for target of linuxReleaseTargets() { try buildLinuxReleaseArtifact(path(built.artifacts, "doof"), inputs.source, inputs.stdlib, path(built.artifacts, "doof-stdlib.tar"), work, pending, version, target) }
-  if windowsBuildEnabled() { try buildWindowsReleaseArtifact(path(built.artifacts, "doof"), inputs.source, inputs.stdlib, path(built.artifacts, "doof-stdlib.tar"), work, pending, version) }
-  snapshot := path(work, "doof-" + version + "-source")
-  try createSnapshot(work, inputs.source, built.artifacts, snapshot, version)
-  sourceArchive := path(pending, "doof-" + version + "-source.tar.gz")
-  try command("tar", ["-czf", sourceArchive, "-C", work, basename(snapshot)])
-  // A different path with spaces catches absolute paths and shell quoting errors.
-  extracted := path(work, "source verification")
-  try makeDirectory(extracted)
-  try command("tar", ["-xzf", sourceArchive, "-C", extracted])
-  rebuilt := path(extracted, basename(snapshot))
-  try command("env", ["-u", "DOOF_STDLIB_ROOT", "-u", "DOOF_RUNTIME_HEADER", "-u", "CXX", path(rebuilt, "build.sh")])
-  try smokeToolchain(path(rebuilt, "dist"), path(extracted, "smoke"), version)
-  binaryArchive := path(pending, "doof-" + version + "-macos-arm64.zip")
-  try submission := signAndNotarize(built.artifacts, work, binaryArchive, identity, profile)
-  relocated := path(work, "downloaded toolchain")
-  try command("ditto", ["-x", "-k", binaryArchive, relocated])
-  try command("xattr", ["-r", "-w", "com.apple.quarantine", "0083;00000000;DoofRelease;", relocated])
-  for file of [path(relocated, "doof"), path(relocated, "Doof Debugger.app")] {
-    try command("codesign", ["--verify", "--deep", "--strict", file])
+  // Platform builds only read the finished toolchain and write their own
+  // directories. The Linux containers run in the background while the Mac
+  // drives the Windows host, rebuilds the source snapshot, and notarizes.
+  let linuxBuilds: LinuxContainerBuild[] = []
+  for target of linuxReleaseTargets() {
+    started := startLinuxReleaseBuild(path(built.artifacts, "doof"), inputs.source, inputs.stdlib, path(built.artifacts, "doof-stdlib.tar"), work, version, target) else error {
+      stopLinuxReleaseBuilds(linuxBuilds)
+      return Failure(error)
+    }
+    linuxBuilds.push(started)
   }
-  // spctl's application assessment rejects bare Mach-O tools as non-app-like.
-  try command("codesign", ["-vvvv", "-R=notarized", "--check-notarization", path(relocated, "doof")])
-  try command("spctl", ["--assess", "--type", "execute", "--verbose=2", path(relocated, "Doof Debugger.app")])
-  try smokeToolchain(relocated, path(work, "signed-smoke"), version)
-  try smokeDebuggerApplication(relocated)
-  try debuggerChecks(inputs.source, path(relocated, "doof"), inputs.stdlib)
+  submission := verifyMacRelease(inputs, built, work, pending, version, identity, profile) else error {
+    stopLinuxReleaseBuilds(linuxBuilds)
+    return Failure(error)
+  }
+  for build of linuxBuilds {
+    _ := finishLinuxReleaseBuild(build, pending, version) else error {
+      stopLinuxReleaseBuilds(linuxBuilds)
+      return Failure(error)
+    }
+  }
   try clang := capture("xcrun", ["clang++", "--version"])
   try swift := capture("xcrun", ["swiftc", "--version"])
   try emscripten := capture("em++", ["--version"])
@@ -396,4 +446,37 @@ export function checkSourceSnapshot(root: string): Result<none, string> {
   try smokeToolchain(path(extracted, "doof-source/dist"), path(check, "smoke"), version)
   println("Standalone source snapshot rebuilt and verified: " + archive)
   return Success()
+}
+
+// Everything the Mac verifies while the Linux containers build: the Windows
+// remote build, the relocated source rebuild, signing, notarization, and the
+// signed-toolchain checks. Returns the notarization submission id.
+function verifyMacRelease(inputs: BuildInputs, built: BuildResult, work: string, pending: string, version: string, identity: string, profile: string): Result<string, string> {
+  if windowsBuildEnabled() { try buildWindowsReleaseArtifact(path(built.artifacts, "doof"), inputs.source, inputs.stdlib, path(built.artifacts, "doof-stdlib.tar"), work, pending, version) }
+  snapshot := path(work, "doof-" + version + "-source")
+  try createSnapshot(work, inputs.source, built.artifacts, snapshot, version)
+  sourceArchive := path(pending, "doof-" + version + "-source.tar.gz")
+  try command("tar", ["-czf", sourceArchive, "-C", work, basename(snapshot)])
+  // A different path with spaces catches absolute paths and shell quoting errors.
+  extracted := path(work, "source verification")
+  try makeDirectory(extracted)
+  try command("tar", ["-xzf", sourceArchive, "-C", extracted])
+  rebuilt := path(extracted, basename(snapshot))
+  try command("env", ["-u", "DOOF_STDLIB_ROOT", "-u", "DOOF_RUNTIME_HEADER", "-u", "CXX", path(rebuilt, "build.sh")])
+  try smokeToolchain(path(rebuilt, "dist"), path(extracted, "smoke"), version)
+  binaryArchive := path(pending, "doof-" + version + "-macos-arm64.zip")
+  try submission := signAndNotarize(built.artifacts, work, binaryArchive, identity, profile)
+  relocated := path(work, "downloaded toolchain")
+  try command("ditto", ["-x", "-k", binaryArchive, relocated])
+  try command("xattr", ["-r", "-w", "com.apple.quarantine", "0083;00000000;DoofRelease;", relocated])
+  for file of [path(relocated, "doof"), path(relocated, "Doof Debugger.app")] {
+    try command("codesign", ["--verify", "--deep", "--strict", file])
+  }
+  // spctl's application assessment rejects bare Mach-O tools as non-app-like.
+  try command("codesign", ["-vvvv", "-R=notarized", "--check-notarization", path(relocated, "doof")])
+  try command("spctl", ["--assess", "--type", "execute", "--verbose=2", path(relocated, "Doof Debugger.app")])
+  try smokeToolchain(relocated, path(work, "signed-smoke"), version)
+  try smokeDebuggerApplication(relocated)
+  try debuggerChecks(inputs.source, path(relocated, "doof"), inputs.stdlib)
+  return Success(submission)
 }
