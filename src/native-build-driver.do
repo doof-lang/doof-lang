@@ -3,7 +3,8 @@
 // incremental state, dependency signatures, compiler workers, and linking.
 
 import { ProjectEmission } from "./emitter-project"
-import { NativeBuildMode, NativeCompilePlan, NativeCompileTask, isMsvcCompiler, planNativeCompile } from "./native-build"
+import { NativeBuildMode, NativeCompilePlan, NativeCompileTask, isMsvcCompiler, planNativeCompile, planVendorToolchain } from "./native-build"
+import { prepareVendorBuilds } from "./vendor-build-driver"
 import {
   NativeBuildState, NativeInputSignature, NativeTaskState,
   parseMakeDependencies, parseMsvcDependencies, parseNativeBuildState, renderNativeBuildState,
@@ -13,7 +14,7 @@ import { resolveOptionalNativeDependencies } from "./native-dependencies"
 import { boundedWorkerCount, renderProgressBar } from "./progress"
 import { BlobReader } from "std/blob"
 import { sha256Hex, sha256HexString } from "std/crypto"
-import { exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, remove, rename, writeText } from "std/fs"
+import { copyPermissions, exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, remove, rename, writeBlob, writeText } from "std/fs"
 import { ExecOptions, env, run } from "std/os"
 
 import isolated function printFlushed(value: string): none from "doof_runtime.hpp" as doof::print_flushed
@@ -123,11 +124,72 @@ export function buildNativeProject(
     return 1
   }
   if outputMode == .Progress { for description of optional { println(description) } }
+  if project.nativeBuild.vendorBuilds.length > 0 {
+    toolchain := planVendorToolchain(compiler, project.nativeBuild, mode, platform, wasm, envValue("DOOF_AR"))
+    let identities: NativeCompilerIdentity[] = []
+    _ := prepareVendorBuilds(
+      outputDirectory, project.nativeBuild, toolchain, compilerIdentity(toolchain.cxx, identities),
+      platform, mode, outputMode == .Progress,
+    ) else error {
+      println("error: " + error)
+      return 1
+    }
+    if wasm && project.nativeBuild.bundledLibraries.length > 0 {
+      println("error: build.native.vendor.bundle is not supported for Wasm targets; declare static archives instead")
+      return 1
+    }
+    if platform.startsWith("ios-") && project.nativeBuild.bundledLibraries.length > 0 {
+      println("error: build.native.vendor.bundle is not yet supported for iOS apps; declare static archives instead")
+      return 1
+    }
+  }
   plan := planNativeCompile(
     compiler, outputDirectory, outputPath, project.modules, project.nativeBuild,
     mode, platform, project.wasmExportNames, wasm, wasmCommand,
   )
-  return executeNativePlan(outputDirectory, plan, project, outputMode)
+  exitCode := executeNativePlan(outputDirectory, plan, project, outputMode)
+  if exitCode != 0 { return exitCode }
+  _ := copyBundledLibraries(project.nativeBuild.bundledLibraries, parentDirectory(outputPath)) else error {
+    println("error: " + error)
+    return 1
+  }
+  return 0
+}
+
+// Command-line executables find bundled shared libraries beside themselves
+// through the rpath the link plan adds; app bundles embed them separately.
+function copyBundledLibraries(libraries: string[], directory: string): Result<none, string> {
+  for library of libraries {
+    destination := joinOutput(directory, fileNameOf(library))
+    if isDirectory(library) {
+      return Failure("Bundled vendor library " + library + " is a directory; frameworks are only supported in app bundles")
+    }
+    content := readBlob(library) else { return Failure("Could not read bundled vendor library " + library) }
+    if exists(destination) {
+      previous := readBlob(destination) else { return Failure("Could not read " + destination) }
+      if blobsEqual(previous, content) { continue }
+    }
+    _ := writeBlob(destination, content) else { return Failure("Could not copy bundled vendor library to " + destination) }
+    _ := copyPermissions(library, destination) else { return Failure("Could not copy permissions to " + destination) }
+  }
+  return Success()
+}
+
+function blobsEqual(left: readonly byte[], right: readonly byte[]): bool {
+  if left.length != right.length { return false }
+  for index of 0..<left.length { if left[index] != right[index] { return false } }
+  return true
+}
+
+function fileNameOf(path: string): string {
+  let index = path.length - 1
+  while index >= 0 && path[index] != '/' { index -= 1 }
+  return path.substring(index + 1, path.length)
+}
+
+function envValue(name: string): string {
+  value := env(name) else { return "" }
+  return value
 }
 
 function envCompiler(): string {

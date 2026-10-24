@@ -255,7 +255,9 @@ completion races, ownership transfer, consumption aliases, and domain lifetime.
 | `pkg-config.do` | Pure interpretation of bounded `pkg-config` results |
 | `native-dependency-config.do` | Optional pkg-config manifest entries and package-local probe validation |
 | `native-dependencies.do` | Transactional optional metadata selection and target-toolchain compile/link probes |
-| `native-build.do` | Pure GCC-compatible/MSVC support-file, PCH, compile, and link task planning |
+| `native-build.do` | Pure GCC-compatible/MSVC support-file, PCH, compile, and link task planning, plus vendor-build toolchain flags |
+| `vendor-build.do` | Pure vendor-build environment, fingerprint, directory, and declared-output planning |
+| `vendor-build-driver.do` | Vendor tree copies, `build.sh`/`build.ps1` execution, receipts, and include/link input publication |
 | `native-build-state.do` | Versioned incremental state plus Make/MSVC dependency parsing |
 | `native-build-driver.do` | Native compiler processes, fingerprints, dependency signatures, PCH/object/link execution |
 | `test-runner.do` | Pure test discovery, grouping, harness generation, coverage reports, and relative URL-safe coverage page paths |

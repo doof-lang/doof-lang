@@ -1,7 +1,7 @@
 import { join as joinStrings } from "std/string"
 // Source snapshots replay native commands captured from the final compiler.
 import { sha256HexString } from "std/crypto"
-import { readBlob } from "std/fs"
+import { exists, isDirectory, readBlob, readDir } from "std/fs"
 import { formatJsonValue, parseJsonValue } from "std/json"
 import { dirname } from "std/path"
 import { command, capture, copyTree, erase, execute, files, makeDirectory, path, quote, read, require, setting, sorted, write } from "./common"
@@ -55,6 +55,62 @@ export function canonicalText(value: string, root: string): string {
   for line of value.split("\n") { if !line.startsWith("#line ") { lines.push(line) } }
   return joinStrings(lines.cloneReadonly(), "\n").replaceAll(encoded, "doof_source").replaceAll(root, "doof-source")
 }
+// Mirrors the compiler's .doof-vendor build receipt.
+class VendorReceipt {
+  schemaVersion: int
+  packageName: string
+  key: string
+  fingerprint: string
+  source: string
+  script: string
+  environment: Map<string, string>
+}
+export function vendorScript(name: string): bool => name.endsWith("/vendor/build.sh")
+/**
+ * Replays the compiler's recorded vendor builds into the same graph-relative
+ * directories, before the captured compiles that include their headers.
+ */
+export function vendorReplayLines(graph: string, source: string): Result<string[], string> {
+  lines: string[] := []
+  root := path(graph, ".doof-vendor")
+  if !isDirectory(root) { return Success(lines) }
+  entries := readDir(root) else { return Failure("Could not list " + root) }
+  names: string[] := []
+  for entry of entries { names.push(entry.name) }
+  for name of sorted(names) {
+    receiptPath := path(root, name + "/.doof-vendor-build.json")
+    if !exists(receiptPath) { continue }
+    try content := read(receiptPath)
+    try value := parseJsonValue(content)
+    try receipt := VendorReceipt.fromSerialValue(value, true)
+    target := "\"$root\"/" + quote("sources/.doof-vendor/" + name)
+    lines.push("rm -rf " + target + " && mkdir -p " + target)
+    lines.push("cp -R \"$root\"/" + quote("sources/" + canonicalText(receipt.source, source) + "/.") + " " + target + "/")
+    if receipt.script == "" { continue }
+    keys: string[] := []
+    for key, _ of receipt.environment { keys.push(key) }
+    let assignments = ""
+    for key of sorted(keys) {
+      try assigned := vendorEnvironmentValue(key, receipt.environment.get(key)!, graph, source)
+      assignments += " " + key + "=" + assigned
+    }
+    lines.push("(cd " + target + " && env" + assignments + " sh " + quote(receipt.script) + ")")
+  }
+  return Success(lines)
+}
+export function vendorEnvironmentValue(key: string, value: string, graph: string, source: string): Result<string, string> {
+  if key == "DOOF_JOBS" { return Success("\"$jobs\"") }
+  if key == "CC" || key == "CXX" || key == "AR" {
+    let name = value
+    for segment of value.split("/") { name = segment }
+    if name == "clang" || name == "clang++" || name == "ar" { return Success(quote("xcrun " + name)) }
+    return Failure("Unhandled vendor tool for " + key + ": " + value)
+  }
+  if value.contains(graph) || value.contains(source) || value.contains("/Users/") || value.contains("/private/") {
+    return Failure("Nonrelocatable vendor environment " + key + ": " + value)
+  }
+  return Success(quote(value))
+}
 function outputOf(record: NativeCommand): string {
   for i of 0..<record.arguments.length { if record.arguments[i] == "-o" && i + 1 < record.arguments.length { return record.arguments[i + 1] } }
   return ""
@@ -75,7 +131,7 @@ export function exportGraph(graph: string, target: string, source: string, recor
   try discovered := files(graph)
   for name of discovered {
     if name.startsWith(".") || name.contains("/.") || name.contains(".app/") { continue }
-    if !sourceFile(name) && !name.toUpperCase().contains("LICENSE") && !name.toUpperCase().contains("COPYING") && !name.toUpperCase().contains("NOTICE") { continue }
+    if !sourceFile(name) && !vendorScript(name) && !name.toUpperCase().contains("LICENSE") && !name.toUpperCase().contains("COPYING") && !name.toUpperCase().contains("NOTICE") { continue }
     try original := read(path(graph, name))
     relative := canonicalText(name, source)
     content := canonicalText(original, source)
@@ -112,6 +168,8 @@ export function exportGraph(graph: string, target: string, source: string, recor
   lines.push("pids=''; active=0")
   lines.push("wait_batch() { status=0; for job in $pids; do wait \"$job\" || status=1; done; pids=''; active=0; [ \"$status\" -eq 0 ]; }")
   lines.push("trap 'for job in $pids; do kill \"$job\" 2>/dev/null || :; done; exit 130' HUP INT TERM")
+  try vendorLines := vendorReplayLines(graph, source)
+  for line of vendorLines { lines.push(line) }
   for record of commands {
     arguments: string[] := []
     let i = 0

@@ -54,6 +54,47 @@ directory must remain inside the standard package. Hooks run only for reached
 standard packages when a command materializes native output; they do not run
 for `check` or test listing. The scripts own their idempotence and freshness.
 
+### Vendored native libraries
+
+Standard packages build third-party C and C++ code from a `vendor/` directory
+declared by `build.native.vendor`; ordinary packages cannot. The manifest names
+the vendored content and the `lib/` outputs the link consumes:
+
+```json
+{
+  "build": {
+    "native": {
+      "vendor": { "key": "zstd-1.5.7-r1", "static": ["libzstd.a"] },
+      "windows": { "vendor": { "static": ["zstd.lib"] } }
+    }
+  }
+}
+```
+
+For each reached package the native driver copies the emitted `vendor/` tree to
+`<output>/.doof-vendor/<package>-<fingerprint>/` and runs `build.sh` there with
+POSIX `sh` (`build.ps1` with PowerShell on Windows). The script receives `CC`,
+`CXX`, `AR`, `CFLAGS`, `CXXFLAGS`, `DOOF_PLATFORM`, `DOOF_MODE`, and
+`DOOF_JOBS`. `CFLAGS` carries the build mode's optimization, LTO, and target
+flags so archives match the final link; it never carries the project's include
+paths or defines. Scripts must append to these flags rather than replace them.
+
+After the script, the build directory's `include/` (when present) joins the
+include path for generated code, `static` archives link after the generated
+objects in declaration order, and `bundle` shared libraries link and are copied
+beside command-line executables (found through an `@executable_path` or
+`$ORIGIN` rpath) or embedded in macOS app bundles. A package without a script
+can ship headers directly in `vendor/include/`. Every declared output must
+exist after the script, or the build fails with the script's output.
+
+`key` stands in for the vendored content, so the tree is never hashed: change
+it whenever the vendored sources change. The fingerprint also covers the
+target, build mode, toolchain, flags, and script text, so a script edit
+rebuilds without a key change. A finished build is reused until its
+fingerprint changes; older fingerprints for the package are then removed.
+Platform fragments may replace `static` or `bundle` but not `key`. `bundle` is
+rejected for Wasm and not yet supported for iOS.
+
 `resources` copies explicit package files beside a command-line executable or
 into an application bundle. `build.native` declares include paths, source
 files, libraries, frameworks, pkg-config packages, compiler/linker flags, and

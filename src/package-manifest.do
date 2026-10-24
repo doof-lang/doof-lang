@@ -27,6 +27,26 @@ export class NativeBuildPlan {
   defines: string[] = []
   compilerFlags: string[] = []
   linkerFlags: string[] = []
+  vendorBuilds: NativeVendorBuild[] = []
+  // Absolute vendor lib/ outputs resolved by the native driver after the
+  // vendor builds run; manifests never populate these directly.
+  linkInputs: string[] = []
+  bundledLibraries: string[] = []
+}
+
+/**
+ * A standard package's vendor/ directory, built by its build.sh or build.ps1.
+ *
+ * The key names the vendored content, so an unchanged key reuses a previous
+ * build for the same target. Library names are relative to the build's lib/.
+ */
+export class NativeVendorBuild {
+  packageName: string = ""
+  key: string
+  // The package's vendor directory, or its output-relative copy once planned.
+  directory: string
+  staticLibraries: string[] = []
+  bundleLibraries: string[] = []
 }
 
 /** One root-package resource copied beside a command-line executable. */
@@ -239,7 +259,77 @@ function parseManifestNativeBuild(
     )
     try appendNativeFragment(result, platformValue, manifestPath, rootDirectory, "build.native." + platformKey)
   }
+  try vendor := parseNativeVendorBuild(native, platformKey, manifestPath, rootDirectory)
+  if vendor != none { result.vendorBuilds.push(vendor!) }
   return Success(result)
+}
+
+// A platform fragment's static or bundle list replaces the base list, because
+// archive names commonly differ by toolchain (libzstd.a versus zstd.lib).
+function parseNativeVendorBuild(
+  native: SerialObject,
+  platformKey: string,
+  manifestPath: string,
+  rootDirectory: string,
+): Result<NativeVendorBuild | none, string> {
+  let platformVendor: SerialObject | none = none
+  platformField := "build.native." + platformKey + ".vendor"
+  if platformKey != "" && manifestJsonHas(native, platformKey) {
+    try platformValue := manifestObject(manifestJsonField(native, platformKey), manifestPath, "build.native." + platformKey)
+    if manifestJsonHas(platformValue, "vendor") {
+      try parsed := manifestObject(manifestJsonField(platformValue, "vendor"), manifestPath, platformField)
+      if manifestJsonHas(parsed, "key") {
+        return Failure("Invalid doof.json at " + manifestPath + ": " + platformField + ".key is not allowed; declare build.native.vendor.key once")
+      }
+      platformVendor = parsed
+    }
+  }
+  if !manifestJsonHas(native, "vendor") {
+    if platformVendor != none {
+      return Failure("Invalid doof.json at " + manifestPath + ": " + platformField + " requires build.native.vendor")
+    }
+    return Success(none)
+  }
+  try base := manifestObject(manifestJsonField(native, "vendor"), manifestPath, "build.native.vendor")
+  try key := requiredManifestString(base, "key", manifestPath, "build.native.vendor")
+  vendor := NativeVendorBuild { key, directory: manifestJoinPath(rootDirectory, "vendor") }
+  for field of ["static", "bundle"] {
+    target := if field == "static" then vendor.staticLibraries else vendor.bundleLibraries
+    if platformVendor != none && manifestJsonHas(platformVendor!, field) {
+      try appendVendorLibraryNames(target, platformVendor!, field, manifestPath, platformField)
+    } else {
+      try appendVendorLibraryNames(target, base, field, manifestPath, "build.native.vendor")
+    }
+  }
+  return Success(vendor)
+}
+
+function appendVendorLibraryNames(
+  target: string[],
+  object: SerialObject,
+  name: string,
+  manifestPath: string,
+  fieldPath: string,
+): Result<none, string> {
+  if !manifestJsonHas(object, name) { return Success() }
+  try values := manifestArray(manifestJsonField(object, name), manifestPath, fieldPath + "." + name)
+  for index of 0..<values.length {
+    entryPath := fieldPath + "." + name + "[" + string(index) + "]"
+    try value := manifestString(values[index], manifestPath, entryPath)
+    if !vendorLibraryNameIsValid(value) {
+      return Failure("Invalid doof.json at " + manifestPath + ": " + entryPath + " must be a relative path within the vendor build's lib directory")
+    }
+    appendUnique(target, value)
+  }
+  return Success()
+}
+
+function vendorLibraryNameIsValid(value: string): bool {
+  if value == "" || value.startsWith("/") || value.contains("\\") || value.contains(":") { return false }
+  for segment of value.split("/") {
+    if segment == "" || segment == "." || segment == ".." { return false }
+  }
+  return true
 }
 
 function parseManifestResources(

@@ -1,6 +1,8 @@
 import { Assert } from "std/assert"
+import { NativeBuildPlan, NativeVendorBuild, PackageManifest } from "./package-manifest"
 import {
-  driverRootLogicalPath, driverRootLogicalPrefix, stdlibPackageAcquisitionRoot, stdlibPackageNameForLogicalPath,
+  driverRootLogicalPath, driverRootLogicalPrefix, sourceLoaderForRequest, stdlibPackageAcquisitionRoot,
+  stdlibPackageNameForLogicalPath,
 } from "./source-loader-driver"
 
 export function testStandardPackageCacheFollowsSelectedBuildDirectory(): none {
@@ -23,4 +25,22 @@ export function testStandardPackageRootsUsePackageLogicalPrefix(): none {
 export function testOrdinaryRootsKeepSourceSuffixLogicalPaths(): none {
   Assert.equal(driverRootLogicalPath("/tmp/app/src/main.do", "/tmp/app", "app"), "/src/main.do")
   Assert.equal(driverRootLogicalPath("/tmp/app/src/main", "/tmp/app", "app"), "/src/main.do")
+}
+
+function vendorRoot(name: string): PackageManifest {
+  return PackageManifest {
+    name, manifestPath: "/work/demo/doof.json", rootDirectory: "/work/demo",
+    nativeBuild: NativeBuildPlan { vendorBuilds: [NativeVendorBuild { key: "demo-1", directory: "/work/demo/vendor" }] },
+  }
+}
+
+export function testVendorBuildsAreLimitedToStandardPackages(): none {
+  rejected := sourceLoaderForRequest("/work/demo/main.do", "/work/stdlib", [], vendorRoot("demo"), "/work/demo/build", "linux")
+  _ := rejected else error {
+    Assert.equal(error, "build.native.vendor is only allowed in standard packages")
+    // A standard package checkout is the root while its own tests run.
+    _ := sourceLoaderForRequest("/work/demo/main.do", "/work/stdlib", [], vendorRoot("std/demo"), "/work/demo/build", "linux")!
+    return
+  }
+  panic("expected a non-standard vendor build to be rejected")
 }

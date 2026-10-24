@@ -115,7 +115,20 @@ native, package, resource, Wasm, framework, iOS, and debugger gates. It captures
 actual native compile/link invocations while building the final toolchain.
 Source snapshot scripts replay those commands with relocated paths, without
 relying on the repository, an installed Doof, Python, Node, or a stdlib checkout.
-The snapshot is extracted at a different path, compiled, and smoke-tested.
+Standard-package vendor builds are not captured as commands: each
+`.doof-vendor` receipt instead becomes a step that copies the emitted vendor
+tree and reruns its `build.sh` with `xcrun` compilers before the replayed
+compiles. The snapshot is extracted at a different path, compiled, and smoke-tested.
+
+The compiler itself imports `std/zstd`, which builds through
+`build.native.vendor`. A seed compiler must therefore support `vendor` before it
+can build against a standard library that uses it: land compiler support and
+install it before converting a standard package the compiler imports.
+
+Linux and Windows release builds compile the emitted graph directly with a
+generated Makefile or MSBuild project. Vendor trees are part of that graph, so
+their C sources compile there without running the vendor scripts; those
+builders carry the matching defines (such as `ZSTD_DISABLE_ASM`) themselves.
 
 ### Linux musl release verification
 

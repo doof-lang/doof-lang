@@ -66,6 +66,8 @@ export function testStdlibBundleCurationIsCoarseAndExplicit(): none {
   assert(!includeStdlibBundlePath("std/http", "vendor/curl/tests/data/test1"), "expected curl tests exclusion")
   assert(!includeStdlibBundlePath("std/http", "vendor/curl/.doof-build/linux/lib/libcurl.a"), "expected target build-state exclusion")
   assert(!includeStdlibBundlePath("std/zstd", "vendor/zstd/.doof-external-native-linux.json"), "expected native receipt exclusion")
+  assert(includeStdlibBundlePath("std/zstd", "vendor/build.sh"), "expected vendor build script")
+  assert(includeStdlibBundlePath("std/zstd", "vendor/build.ps1"), "expected Windows vendor build script")
   assert(includeStdlibBundlePath("std/image", "vendor/libwebp/src/enc/webp_enc.c"), "expected full webp source")
   assert(includeStdlibBundlePath("std/image", "vendor/libwebp/src/dec/common_dec.h"), "expected encoder-coupled webp decoder headers")
   assert(includeStdlibBundlePath("std/image", "vendor/libwebp/src/dsp/filters.c"), "expected full webp dsp tree")

@@ -23,6 +23,8 @@ import { exists, readText } from "std/fs"
 import { architecture } from "std/os"
 import { absolute, resourcePath } from "std/path"
 
+readonly vendorOnlyInStandardPackagesMessage = "build.native.vendor is only allowed in standard packages"
+
 function driverWithExtension(path: string): string {
   if path.endsWith(".do") { return path }
   return path + ".do"
@@ -187,6 +189,9 @@ function registerReachedPackage(acquisition: ModuleAcquisition): Result<none, Di
   if manifest.stdlibPreparation.length > 0 && !acquisition.logicalPrefix.startsWith("/std/") {
     return Failure(driverDiagnostic(manifestPath, "build.stdlib.prepare is only allowed in standard packages"))
   }
+  if manifest.nativeBuild.vendorBuilds.length > 0 && !acquisition.logicalPrefix.startsWith("/std/") {
+    return Failure(driverDiagnostic(manifestPath, vendorOnlyInStandardPackagesMessage))
+  }
   configuredDriverSourceState.reachedPackages.push(DriverReachedPackage { acquisition, manifest })
   configuredDriverSourceState.namespaceMappings.push(ModuleNamespaceMapping {
     logicalPrefix: acquisition.logicalPrefix,
@@ -302,6 +307,10 @@ export function sourceLoaderForRequest(
   if rootManifest.stdlibPreparation.length > 0 {
     return Failure("build.stdlib.prepare is only allowed in standard packages")
   }
+  // A standard package checkout may be the root while its own tests run.
+  if rootManifest.nativeBuild.vendorBuilds.length > 0 && !rootManifest.name.startsWith("std/") {
+    return Failure(vendorOnlyInStandardPackagesMessage)
+  }
   try configureDeclaredDependencies(rootManifest, rootManifest, platformName, acquisitions)
   configuredDriverSourceState = DriverSourceState {
     localRoots,
@@ -354,6 +363,9 @@ function configureDeclaredDependencies(
     if dependencyManifest.name == "" { return Failure("Dependency package must declare a name: " + dependencyManifestPath) }
     if dependencyManifest.stdlibPreparation.length > 0 {
       return Failure("build.stdlib.prepare is only allowed in standard packages: " + dependencyManifestPath)
+    }
+    if dependencyManifest.nativeBuild.vendorBuilds.length > 0 {
+      return Failure(vendorOnlyInStandardPackagesMessage + ": " + dependencyManifestPath)
     }
     try configureDeclaredDependencies(dependencyManifest, rootManifest, nativePlatform, acquisitions)
   }

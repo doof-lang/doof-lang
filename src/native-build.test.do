@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 
 import { ModuleEmission } from "./emitter-module"
-import { NativeBuildMode, NativeCompileTask, isMsvcCompiler, msvcPchHeaderSource, planNativeCompile } from "./native-build"
+import { NativeBuildMode, NativeCompileTask, deriveArchiver, isMsvcCompiler, msvcPchHeaderSource, planNativeCompile, planVendorToolchain } from "./native-build"
 import { NativeBuildPlan } from "./package-manifest"
 
 export function testPlansGeneratedAndManifestNativeSources(): none {
@@ -497,4 +497,72 @@ export function testOptionalNativeWindowsAbsoluteSourceAndLibraryPaths(): none {
   Assert.equal(plan.compileTasks[0].sourcePath, "C:/package/probe.cpp")
   Assert.equal(plan.compileTasks[0].arguments.contains("C:/sdk/include"), true)
   Assert.equal(plan.linkArguments.contains("/LIBPATH:C:/sdk/lib"), true)
+}
+
+function mainModule(): ModuleEmission {
+  return ModuleEmission { modulePath: "/main.do", header: "", source: "", headerName: "main.hpp", sourceName: "main.cpp" }
+}
+
+export function testVendorToolchainSharesModeFlagsButNotProjectInputs(): none {
+  native := NativeBuildPlan {
+    includePaths: ["std/demo"], defines: ["PROJECT_ONLY=1"], compilerFlags: ["-target", "arm64-apple-ios16.0"],
+  }
+  toolchain := planVendorToolchain("clang++", native, .Release, "macos", false)
+  Assert.equal(toolchain.cc, "clang")
+  Assert.equal(toolchain.cxx, "clang++")
+  Assert.equal(toolchain.ar, "ar")
+  Assert.equal(toolchain.cflags.contains("-O2"), true)
+  Assert.equal(toolchain.cflags.contains("-flto"), true)
+  Assert.equal(toolchain.cflags.contains("-target"), true)
+  Assert.equal(toolchain.cflags.contains("-DPROJECT_ONLY=1"), false)
+  Assert.equal(toolchain.cflags.contains("-std=c++17"), false)
+  Assert.equal(toolchain.cxxflags[0], "-std=c++17")
+  // The compile plan uses the same release flags, so archives match the link.
+  plan := planNativeCompile("clang++", "/tmp/generated", "/tmp/generated/demo", [mainModule()], native, .Release, "macos")
+  for flag of toolchain.cflags { Assert.equal(plan.compileTasks[0].arguments.contains(flag), true) }
+}
+
+export function testVendorToolchainForWasmAndMsvc(): none {
+  wasm := planVendorToolchain("em++", NativeBuildPlan {}, .Debug, "macos", true)
+  Assert.equal(wasm.cc, "emcc")
+  Assert.equal(wasm.ar, "emar")
+  Assert.equal(wasm.cflags.contains("-fwasm-exceptions"), true)
+  msvc := planVendorToolchain("cl.exe", NativeBuildPlan {}, .Release, "windows", false)
+  Assert.equal(msvc.cc, "cl.exe")
+  Assert.equal(msvc.ar, "lib.exe")
+  Assert.equal(msvc.cflags.contains("/GL"), true)
+  Assert.equal(msvc.cxxflags[0], "/std:c++17")
+  overridden := planVendorToolchain("c++", NativeBuildPlan {}, .Debug, "linux", false, "/opt/bin/llvm-ar")
+  Assert.equal(overridden.ar, "/opt/bin/llvm-ar")
+  debug := planVendorToolchain("c++", NativeBuildPlan {}, .InteractiveDebug, "linux", false)
+  Assert.equal(debug.cflags.contains("-O0"), true)
+}
+
+export function testDerivesLtoCapableArchivers(): none {
+  Assert.equal(deriveArchiver("/emsdk/em++", "macos"), "/emsdk/emar")
+  Assert.equal(deriveArchiver("g++", "linux"), "gcc-ar")
+  Assert.equal(deriveArchiver("/usr/bin/g++", "linux"), "/usr/bin/gcc-ar")
+  Assert.equal(deriveArchiver("c++", "linux"), "gcc-ar")
+  Assert.equal(deriveArchiver("clang++", "linux"), "llvm-ar")
+  Assert.equal(deriveArchiver("c++", "macos"), "ar")
+  Assert.equal(deriveArchiver("clang++", "ios-simulator"), "ar")
+}
+
+export function testLinksVendorInputsAfterObjectsWithBundleSearchPath(): none {
+  native := NativeBuildPlan {
+    linkInputs: ["/out/.doof-vendor/std-demo-1/lib/libdemo.a", "/out/.doof-vendor/std-demo-1/lib/libshared.dylib"],
+    bundledLibraries: ["/out/.doof-vendor/std-demo-1/lib/libshared.dylib"],
+    linkLibraries: ["z"],
+  }
+  macos := planNativeCompile("clang++", "/out", "/out/demo", [mainModule()], native, .Debug, "macos")
+  archiveIndex := macos.linkArguments.indexOf("/out/.doof-vendor/std-demo-1/lib/libdemo.a")
+  Assert.equal(archiveIndex > macos.linkArguments.indexOf("/out/.doof-objects/generated/main.o"), true)
+  Assert.equal(archiveIndex < macos.linkArguments.indexOf("-lz"), true)
+  Assert.equal(macos.linkArguments.contains("-Wl,@executable_path"), true)
+  linux := planNativeCompile("c++", "/out", "/out/demo", [mainModule()], native, .Debug, "linux")
+  Assert.equal(linux.linkArguments.contains("-Wl,$ORIGIN"), true)
+  staticOnly := planNativeCompile("c++", "/out", "/out/demo", [mainModule()], NativeBuildPlan { linkInputs: ["/out/lib.a"] }, .Debug, "linux")
+  Assert.equal(staticOnly.linkArguments.contains("-Wl,-rpath"), false)
+  msvc := planNativeCompile("cl.exe", "C:/out", "C:/out/demo.exe", [mainModule()], NativeBuildPlan { linkInputs: ["C:/out/zstd.lib"] }, .Release, "windows")
+  Assert.equal(msvc.linkArguments.contains("C:/out/zstd.lib"), true)
 }

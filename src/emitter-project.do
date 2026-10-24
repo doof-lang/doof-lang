@@ -5,7 +5,7 @@
 // package-relative output paths before the driver touches the filesystem.
 
 import { ModuleEmission, ModuleGraphEmission } from "./emitter-module"
-import { NativeBuildPlan, PackageManifest } from "./package-manifest"
+import { NativeBuildPlan, NativeVendorBuild, PackageManifest } from "./package-manifest"
 import { OptionalPkgConfigPackage } from "./native-dependency-config"
 import { addAllUnique, addUnique } from "./string-lists"
 
@@ -120,6 +120,18 @@ function planPackageNativeBuild(project: ProjectEmission, package_: NativePackag
   for extraCopyPath of native.extraCopyPaths {
     relativePath := addNativeCopy(project.nativeCopies, package_, extraCopyPath)
     addUnique(project.nativeBuild.includePaths, projectParentPath(relativePath))
+    copiedAny = true
+  }
+  // Copy the pristine vendor tree into the emitted graph; the native driver
+  // builds from a private copy of it so build products never enter the graph.
+  for vendor of native.vendorBuilds {
+    project.nativeBuild.vendorBuilds.push(NativeVendorBuild {
+      packageName: package_.manifest.name,
+      key: vendor.key,
+      directory: addNativeCopy(project.nativeCopies, package_, vendor.directory),
+      staticLibraries: vendor.staticLibraries,
+      bundleLibraries: vendor.bundleLibraries,
+    })
     copiedAny = true
   }
   for dependency of native.optionalPkgConfigPackages {

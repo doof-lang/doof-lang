@@ -149,7 +149,7 @@ function launchMacOSApp(
   projectLock: File,
 ): int {
   outputDirectory := layout.outputDirectory
-  appPath := assembleMacOSApp(outputDirectory, outputPath, project.macosApp!, emission.nativeBuild.libraryPaths) else error {
+  appPath := assembleMacOSApp(outputDirectory, outputPath, project.macosApp!, emission.nativeBuild.libraryPaths, emission.nativeBuild.bundledLibraries) else error {
     println("error: " + error)
     return 1
   }

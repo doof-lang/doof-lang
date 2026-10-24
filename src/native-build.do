@@ -53,6 +53,126 @@ export function isMsvcCompiler(compiler: string): bool {
   return name == "cl" || name == "cl.exe"
 }
 
+/** Compilers, archiver, and flags handed to a standard package's vendor build script. */
+export class NativeVendorToolchain {
+  cc: string
+  cxx: string
+  ar: string
+  cflags: string[]
+  cxxflags: string[]
+}
+
+/**
+ * Plans the toolchain environment for vendor builds.
+ *
+ * Vendor archives join the final link, so they receive the same mode,
+ * target, and ABI flags as generated code, but none of the project's include
+ * paths or defines.
+ */
+export function planVendorToolchain(
+  compiler: string,
+  native: NativeBuildPlan,
+  mode: NativeBuildMode,
+  platform: string,
+  wasm: bool,
+  archiverOverride: string = "",
+): NativeVendorToolchain {
+  if isMsvcCompiler(compiler) && !wasm {
+    let flags: string[] = ["/nologo", "/utf-8"]
+    for flag of msvcModeFlags(mode) { flags.push(flag) }
+    for flag of native.compilerFlags { flags.push(flag) }
+    let cxxflags: string[] = ["/std:c++17", "/EHsc"]
+    for flag of flags { cxxflags.push(flag) }
+    return NativeVendorToolchain {
+      cc: compiler, cxx: compiler, ar: if archiverOverride == "" then "lib.exe" else archiverOverride,
+      cflags: flags, cxxflags,
+    }
+  }
+  let flags: string[] = []
+  for flag of gccModeFlags(mode, wasm, hasSwiftSource(native.sourceFiles)) { flags.push(flag) }
+  for flag of native.compilerFlags { flags.push(flag) }
+  for flag of gccInteractiveDebugFlags(mode) { flags.push(flag) }
+  let cxxflags: string[] = ["-std=c++17"]
+  for flag of flags { cxxflags.push(flag) }
+  return NativeVendorToolchain {
+    cc: deriveCCompiler(compiler),
+    cxx: compiler,
+    ar: if archiverOverride == "" then deriveArchiver(compiler, platform) else archiverOverride,
+    cflags: flags,
+    cxxflags,
+  }
+}
+
+// Release defaults precede manifest flags so packages can intentionally
+// override optimization while still receiving the NDEBUG contract.
+function gccModeFlags(mode: NativeBuildMode, wasm: bool, swiftLink: bool): string[] {
+  release := mode == .Release
+  profile := mode == .Profile
+  let flags: string[] = []
+  if release || profile {
+    flags.push("-O2")
+    flags.push("-DNDEBUG")
+    // Keep generated and native functions independently discardable. Apple
+    // and GNU-compatible linkers use different flags below, but both need
+    // section granularity to reliably remove unreachable code and data.
+    flags.push("-ffunction-sections")
+    flags.push("-fdata-sections")
+    // Full LTO is valuable for release builds, but a later dsymutil invocation
+    // cannot recover line tables from the linker's deleted temporary LTO
+    // object. Profile builds retain ordinary optimized objects instead.
+    if release && !wasm && !swiftLink { flags.push("-flto") }
+  }
+  if profile {
+    flags.push("-g")
+    flags.push("-fno-omit-frame-pointer")
+  }
+  if wasm {
+    flags.push("-Oz")
+    flags.push("-flto")
+    // Doof panic/catch and the generated Wasm export error boundary use C++
+    // exceptions. Enable the native Wasm exception model for every target,
+    // not only command-style test executables.
+    flags.push("-fwasm-exceptions")
+  }
+  return flags
+}
+
+// Interactive debugging follows manifest flags so it wins over package
+// optimization settings.
+function gccInteractiveDebugFlags(mode: NativeBuildMode): string[] {
+  if mode != .InteractiveDebug { return [] }
+  return ["-O0", "-g", "-fno-omit-frame-pointer", "-fno-lto", "-UNDEBUG"]
+}
+
+function msvcModeFlags(mode: NativeBuildMode): string[] {
+  let flags: string[] = []
+  if mode == .Release || mode == .Profile {
+    for flag of ["/O2", "/DNDEBUG", "/Gy", "/Gw", "/GL"] { flags.push(flag) }
+  }
+  if mode == .Profile {
+    flags.push("/Zi")
+    flags.push("/Oy-")
+  }
+  return flags
+}
+
+/** Selects an archiver that understands the compiler's LTO objects. */
+export function deriveArchiver(compiler: string, platform: string): string {
+  if compiler == "em++" || compiler.endsWith("/em++") {
+    return compiler.substring(0, compiler.length - 4) + "emar"
+  }
+  if compiler == "g++" || compiler.endsWith("/g++") {
+    return compiler.substring(0, compiler.length - 3) + "gcc-ar"
+  }
+  name := compiler.toLowerCase()
+  // Apple's ar reads LLVM bitcode through libLTO; elsewhere Clang needs
+  // llvm-ar and the conventional c++ driver is GCC.
+  if platform == "macos" || platform.startsWith("ios-") { return "ar" }
+  if name.contains("clang") { return "llvm-ar" }
+  if compiler == "c++" || compiler.endsWith("/c++") { return "gcc-ar" }
+  return "ar"
+}
+
 /**
  * Plans independent GCC-compatible object compilations followed by one link.
  *
@@ -78,33 +198,7 @@ export function planNativeCompile(
   profile := mode == .Profile
   swiftLink := hasSwiftSource(native.sourceFiles)
   let compileArguments: string[] = ["-std=c++17"]
-  // Release defaults precede manifest flags so packages can intentionally
-  // override optimization while still receiving the NDEBUG contract.
-  if release || profile {
-    compileArguments.push("-O2")
-    compileArguments.push("-DNDEBUG")
-    // Keep generated and native functions independently discardable. Apple
-    // and GNU-compatible linkers use different flags below, but both need
-    // section granularity to reliably remove unreachable code and data.
-    compileArguments.push("-ffunction-sections")
-    compileArguments.push("-fdata-sections")
-    // Full LTO is valuable for release builds, but a later dsymutil invocation
-    // cannot recover line tables from the linker's deleted temporary LTO
-    // object. Profile builds retain ordinary optimized objects instead.
-    if release && !wasm && !swiftLink { compileArguments.push("-flto") }
-  }
-  if profile {
-    compileArguments.push("-g")
-    compileArguments.push("-fno-omit-frame-pointer")
-  }
-  if wasm {
-    compileArguments.push("-Oz")
-    compileArguments.push("-flto")
-    // Doof panic/catch and the generated Wasm export error boundary use C++
-    // exceptions. Enable the native Wasm exception model for every target,
-    // not only command-style test executables.
-    compileArguments.push("-fwasm-exceptions")
-  }
+  for flag of gccModeFlags(mode, wasm, swiftLink) { compileArguments.push(flag) }
   for define of native.defines { compileArguments.push("-D" + define) }
   compileArguments.push("-I")
   compileArguments.push(outputDirectory)
@@ -113,13 +207,7 @@ export function planNativeCompile(
     compileArguments.push(resolveBuildPath(outputDirectory, includePath))
   }
   for flag of native.compilerFlags { compileArguments.push(flag) }
-  if mode == .InteractiveDebug {
-    compileArguments.push("-O0")
-    compileArguments.push("-g")
-    compileArguments.push("-fno-omit-frame-pointer")
-    compileArguments.push("-fno-lto")
-    compileArguments.push("-UNDEBUG")
-  }
+  for flag of gccInteractiveDebugFlags(mode) { compileArguments.push(flag) }
   let precompiledHeaderTask: NativeCompileTask | none = none
   let clangPchPath = ""
   // The runtime dominates repeated parsing in larger generated projects. Build
@@ -205,6 +293,17 @@ export function planNativeCompile(
 
   let linkArguments: string[] = []
   for objectPath of objectPaths { linkArguments.push(objectPath) }
+  for linkInput of native.linkInputs { linkArguments.push(linkInput) }
+  if native.bundledLibraries.length > 0 {
+    // Bundled shared libraries are copied beside the executable.
+    if platform == "macos" || platform.startsWith("ios-") {
+      appendLinkerOption(linkArguments, "-rpath", swiftLink)
+      appendLinkerOption(linkArguments, "@executable_path", swiftLink)
+    } else if platform != "windows" {
+      appendLinkerOption(linkArguments, "-rpath", swiftLink)
+      appendLinkerOption(linkArguments, "$ORIGIN", swiftLink)
+    }
+  }
   for libraryPath of native.libraryPaths {
     linkArguments.push("-L" + resolveBuildPath(outputDirectory, libraryPath))
   }
@@ -263,17 +362,7 @@ function planMsvcNativeCompile(
   let compileArguments: string[] = [
     "/nologo", "/std:c++17", "/EHsc", "/utf-8", "/Zc:__cplusplus", "/Zc:lambda", "/permissive-",
   ]
-  if release || profile {
-    compileArguments.push("/O2")
-    compileArguments.push("/DNDEBUG")
-    compileArguments.push("/Gy")
-    compileArguments.push("/Gw")
-    compileArguments.push("/GL")
-  }
-  if profile {
-    compileArguments.push("/Zi")
-    compileArguments.push("/Oy-")
-  }
+  for flag of msvcModeFlags(mode) { compileArguments.push(flag) }
   for define of native.defines { compileArguments.push("/D" + define) }
   compileArguments.push("/I")
   compileArguments.push(outputDirectory)
@@ -361,6 +450,7 @@ function planMsvcNativeCompile(
 
   let linkArguments: string[] = ["/nologo"]
   for objectPath of objectPaths { linkArguments.push(objectPath) }
+  for linkInput of native.linkInputs { linkArguments.push(linkInput) }
   for libraryPath of native.libraryPaths {
     linkArguments.push("/LIBPATH:" + resolveBuildPath(outputDirectory, libraryPath))
   }

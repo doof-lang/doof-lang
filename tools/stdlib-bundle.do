@@ -98,6 +98,8 @@ function isProjectOnlyFile(relativePath: string): bool {
 
 function vendorPathIncluded(packageName: string, relativePath: string, targets: string[]): bool {
   if relativePath == "vendor" { return true }
+  // build.native.vendor scripts run from the vendor root on every target.
+  if relativePath == "vendor/build.sh" || relativePath == "vendor/build.ps1" { return true }
   for segment of relativePath.split("/") {
     if segment == ".doof-build" || segment == ".doof-build-work" || segment.startsWith(".doof-external") { return false }
   }

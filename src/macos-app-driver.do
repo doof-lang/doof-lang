@@ -4,7 +4,7 @@
 // Apple tool invocation and filesystem materialization; macos-app.do retains
 // the deterministic metadata and command-argument model.
 
-import { MacOSAppConfig, MacOSPackageConfig, macOSCodesignArguments, renderMacOSInfoPlist } from "./macos-app"
+import { MacOSAppConfig, MacOSEmbeddedLibrary, MacOSPackageConfig, macOSCodesignArguments, renderMacOSInfoPlist } from "./macos-app"
 import { BlobReader } from "std/blob"
 import { exists, isDirectory, mkdir, readBlob, readDir, remove, writeBlob, writeText } from "std/fs"
 import { ExecOptions, platform, run } from "std/os"
@@ -359,8 +359,15 @@ export function assembleMacOSApp(
   executablePath: string,
   config: MacOSAppConfig,
   libraryPaths: string[],
+  vendorLibraries: string[] = [],
 ): Result<string, string> {
   if hostPlatform() != "macos" { return Failure("macOS app builds are only supported on macOS") }
+  // Shared libraries from standard-package vendor builds embed like listed paths.
+  for library of vendorLibraries {
+    let listed = false
+    for entry of config.embeddedLibraries { if entry.path == library { listed = true } }
+    if !listed { config.embeddedLibraries.push(MacOSEmbeddedLibrary { path: library }) }
+  }
   appPath := outputPath(buildDirectory, config.executableName + ".app")
   removeTree(appPath)
   contentsDirectory := outputPath(appPath, "Contents")

@@ -2,7 +2,7 @@ import { Assert } from "std/assert"
 
 import { ModuleEmission, ModuleGraphEmission } from "./emitter-module"
 import { NativePackageInput, planProjectEmission } from "./emitter-project"
-import { PackageManifest, NativeBuildPlan } from "./package-manifest"
+import { PackageManifest, NativeBuildPlan, NativeVendorBuild } from "./package-manifest"
 import { OptionalPkgConfigPackage } from "./native-dependency-config"
 
 export function testOptionalNativeProbeCopiesRemainPackageRelative(): none {
@@ -154,4 +154,26 @@ export function testDeduplicatesNativeOptionsAcrossReachedPackages(): none {
   Assert.equal(project.nativeBuild.frameworks.length, 2)
   Assert.equal(project.nativeBuild.frameworks[0], "CoreFoundation")
   Assert.equal(project.nativeBuild.frameworks[1], "Foundation")
+}
+
+export function testPlansVendorTreeCopyAndPackageBuild(): none {
+  input := packageInput("/std/zstd", "/stdlib/zstd")
+  input.manifest.nativeBuild.vendorBuilds.push(NativeVendorBuild {
+    key: "zstd-1", directory: "/stdlib/zstd/vendor", staticLibraries: ["libzstd.a"],
+  })
+  project := planProjectEmission(ModuleGraphEmission {}, [input])
+  Assert.equal(project.nativeBuild.vendorBuilds.length, 1)
+  vendor := project.nativeBuild.vendorBuilds[0]
+  Assert.equal(vendor.packageName, input.manifest.name)
+  Assert.equal(vendor.key, "zstd-1")
+  Assert.equal(vendor.directory, "std/zstd/vendor")
+  Assert.equal(vendor.staticLibraries[0], "libzstd.a")
+  let copied = false
+  for nativeCopy of project.nativeCopies {
+    if nativeCopy.sourcePath == "/stdlib/zstd/vendor" && nativeCopy.relativePath == "std/zstd/vendor" { copied = true }
+  }
+  Assert.isTrue(copied)
+  // The pristine tree is copied but never put on the include path; only the
+  // build's include/ directory is, once the native driver has produced it.
+  Assert.equal(project.nativeBuild.includePaths.contains("std/zstd/vendor"), false)
 }

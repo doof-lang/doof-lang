@@ -301,3 +301,46 @@ export function testEditorPackageSourceInputsShareLocalDependencyRules(): none {
   EditorAssert.equal(result.entry, "src/main.do")
   EditorAssert.equal(result.dependencies[0].name, "lib")
 }
+
+export function testParsesVendorBuildWithPlatformLibraryOverride(): none {
+  source := `{"name":"std/demo","build":{"native":{
+    "vendor":{"key":"demo-1.0-r1","static":["libdemo.a"],"bundle":["libshared.dylib"]},
+    "windows":{"vendor":{"static":["demo.lib"]}}
+  }}}`
+  macos := parsePackageManifest(source, "/std/demo/doof.json", "/std/demo", "macos")!
+  Assert.equal(macos.nativeBuild.vendorBuilds.length, 1)
+  vendor := macos.nativeBuild.vendorBuilds[0]
+  Assert.equal(vendor.key, "demo-1.0-r1")
+  Assert.equal(vendor.directory, "/std/demo/vendor")
+  Assert.equal(vendor.staticLibraries[0], "libdemo.a")
+  Assert.equal(vendor.bundleLibraries[0], "libshared.dylib")
+  windows := parsePackageManifest(source, "/std/demo/doof.json", "/std/demo", "windows")!
+  Assert.equal(windows.nativeBuild.vendorBuilds[0].staticLibraries.length, 1)
+  Assert.equal(windows.nativeBuild.vendorBuilds[0].staticLibraries[0], "demo.lib")
+  // A platform fragment replaces only the lists it names.
+  Assert.equal(windows.nativeBuild.vendorBuilds[0].bundleLibraries[0], "libshared.dylib")
+}
+
+export function testOmitsVendorBuildWhenNotDeclared(): none {
+  manifest := parsePackageManifest(`{"build":{"native":{"defines":["A"]}}}`, "/app/doof.json", "/app", "linux")!
+  Assert.equal(manifest.nativeBuild.vendorBuilds.length, 0)
+}
+
+export function testRejectsInvalidVendorDeclarations(): none {
+  cases := [
+    [`{"build":{"native":{"vendor":{"static":["libdemo.a"]}}}}`, "build.native.vendor.key is required"],
+    [`{"build":{"native":{"vendor":{"key":""}}}}`, "build.native.vendor.key must not be empty"],
+    [`{"build":{"native":{"vendor":{"key":"k","static":["../escape.a"]}}}}`, "build.native.vendor.static[0] must be a relative path within the vendor build's lib directory"],
+    [`{"build":{"native":{"vendor":{"key":"k","bundle":["/abs/lib.dylib"]}}}}`, "build.native.vendor.bundle[0] must be a relative path"],
+    [`{"build":{"native":{"linux":{"vendor":{"static":["libdemo.a"]}}}}}`, "build.native.linux.vendor requires build.native.vendor"],
+    [`{"build":{"native":{"vendor":{"key":"k"},"linux":{"vendor":{"key":"other"}}}}}`, "build.native.linux.vendor.key is not allowed"],
+  ]
+  for entry of cases {
+    result := parsePackageManifest(entry[0], "/std/demo/doof.json", "/std/demo", "linux")
+    _ := result else error {
+      Assert.stringContains(error, entry[1])
+      continue
+    }
+    panic("expected vendor manifest failure for " + entry[0])
+  }
+}
