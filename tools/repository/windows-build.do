@@ -65,32 +65,58 @@ export function windowsProjectFile(emittedFiles: string[]): string {
 export function windowsBuildScript(version: string): string {
   // The Mac emits all Doof and native inputs. The Windows host only supplies
   // MSVC; it must not have a Doof checkout or compiler installed.
+  // Step lines timestamp each phase in build.log, which the Mac reads back
+  // when the remote build fails or hangs.
   return "$ErrorActionPreference = 'Stop'\n" +
+    "function Step($name) { Write-Output ('[{0:HH:mm:ss}] {1}' -f (Get-Date), $name) }\n" +
     "$work = Join-Path $env:USERPROFILE 'doof-release-" + version + "'\n" +
     "$emittedArchive = Join-Path $work 'emitted.zip'\n" +
     "$dist = Join-Path $work 'dist'\n" +
     "$emittedExtract = Join-Path $work 'emitted-extract'\n" +
+    "Step 'Cleaning previous outputs'\n" +
     "Remove-Item $emittedExtract,$dist -Recurse -Force -ErrorAction SilentlyContinue\n" +
     "New-Item -ItemType Directory -Force -Path $emittedExtract,$dist | Out-Null\n" +
+    "Step 'Expanding emitted sources'\n" +
     "Expand-Archive -LiteralPath $emittedArchive -DestinationPath $emittedExtract -Force\n" +
     "$project = Join-Path $work 'doof.vcxproj'\n" +
     "$msbuild = (Get-Command msbuild.exe -ErrorAction SilentlyContinue).Source\n" +
     "if (-not $msbuild) { throw 'MSBuild was not found in the Visual Studio developer environment' }\n" +
-    "& $msbuild $project /m /p:Configuration=Release /p:Platform=x64 /nologo\n" +
+    "Step \"Running $msbuild\"\n" +
+    // Reused MSBuild nodes outlive the build and keep the SSH session open.
+    "& $msbuild $project /m /nodeReuse:false /p:Configuration=Release /p:Platform=x64 /nologo /v:minimal\n" +
     "if ($LASTEXITCODE -ne 0) { throw 'MSBuild failed' }\n" +
     "if (-not (Test-Path (Join-Path $dist 'doof.exe'))) { throw 'MSVC build did not produce dist\\doof.exe' }\n" +
+    "Step 'Checking doof.exe --version'\n" +
     "if ((& (Join-Path $dist 'doof.exe') --version).Trim() -ne 'doof " + version + "') { throw 'Windows compiler version mismatch' }\n" +
+    "Step 'Packaging release archive'\n" +
     "Copy-Item (Join-Path $emittedExtract 'doof_runtime.hpp') (Join-Path $dist 'doof_runtime.hpp') -Force\n" +
     "Copy-Item (Join-Path $emittedExtract 'doof_observer.hpp') (Join-Path $dist 'doof_observer.hpp') -Force\n" +
     "Copy-Item (Join-Path $emittedExtract 'doof_observer_platform.hpp') (Join-Path $dist 'doof_observer_platform.hpp') -Force\n" +
     "Copy-Item (Join-Path $emittedExtract 'doof_wasm_test_runner_apple.swift') (Join-Path $dist 'doof_wasm_test_runner_apple.swift') -Force\n" +
     "Copy-Item (Join-Path $emittedExtract 'observer-ui') (Join-Path $dist 'observer-ui') -Recurse -Force\n" +
     "Copy-Item (Join-Path $work 'doof-stdlib.tar') (Join-Path $dist 'doof-stdlib.tar') -Force\n" +
-    "Compress-Archive -Path (Join-Path $dist '*') -DestinationPath (Join-Path $work '" + windowsReleaseArchiveName(version) + "') -Force\n"
+    "Compress-Archive -Path (Join-Path $dist '*') -DestinationPath (Join-Path $work '" + windowsReleaseArchiveName(version) + "') -Force\n" +
+    "Step 'Done'\n"
 }
 
+/** Remote file, relative to the release work root, that holds the build transcript. */
+export readonly windowsBuildLogName = "build.log"
+
+// Output goes to build.log rather than the SSH channel, so a child process
+// that outlives the build cannot hold the session open, and the transcript
+// survives a timeout for inspection.
 export function windowsVisualStudioCommand(version: string): string {
-  return "cmd.exe /d /c call \"%USERPROFILE%\\doof-release-" + version + "\\build.cmd\""
+  root := "%USERPROFILE%\\doof-release-" + version
+  return "cmd.exe /d /c call \"" + root + "\\build.cmd\" > \"" + root + "\\" + windowsBuildLogName + "\" 2>&1"
+}
+
+/** Keeps the last lines of a remote build transcript for an error message. */
+export function windowsBuildLogTail(log: string, lineCount: int): string {
+  lines := log.replaceAll("\r\n", "\n").trim().split("\n")
+  start := if lines.length > lineCount then lines.length - lineCount else 0
+  let tail = ""
+  for index of start..<lines.length { tail += (if index == start then "" else "\n") + lines[index] }
+  return tail
 }
 
 export function windowsVisualStudioScript(version: string): string {

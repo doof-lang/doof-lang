@@ -3,8 +3,8 @@ import { exists, File, readBlob, writeBlob } from "std/fs"
 import { formatJsonValue, parseJsonObject } from "std/json"
 import { architecture, platform, Exec, ExecOptions } from "std/os"
 import { basename, dirname } from "std/path"
-import { Duration, Thread } from "std/time"
-import { BlobBuilder } from "std/blob"
+import { Duration, MonotonicInstant, Thread } from "std/time"
+import { BlobBuilder, BlobReader } from "std/blob"
 import { connect, SshClient, SshConnectOptions } from "std/ssh"
 import { wakeOnLan } from "std/wol"
 import { buildToolchain, prepare } from "./build"
@@ -12,7 +12,7 @@ import { capture, cleanRevision, command, copyInputs, copyTree, erase, execute, 
 import { createSnapshot, isMachO } from "./snapshot"
 import { debuggerChecks, releaseVerification, testRepository } from "./verify"
 import { stdlibRevisions } from "./provenance"
-import { windowsBuildConfig, windowsBuildEnabled, windowsBuildScript, windowsProjectFile, windowsReleaseArchiveName, windowsVisualStudioCommand, windowsVisualStudioScript } from "./windows-build"
+import { WindowsBuildConfig, windowsBuildConfig, windowsBuildEnabled, windowsBuildLogName, windowsBuildLogTail, windowsBuildScript, windowsProjectFile, windowsReleaseArchiveName, windowsVisualStudioCommand, windowsVisualStudioScript } from "./windows-build"
 import { LinuxReleaseTarget, linuxBuildScript, linuxContainerArguments, linuxMakefile, linuxProbeSources, linuxReleaseArchiveName, linuxReleaseTargets } from "./linux-build"
 
 export function signingPreflight(identity: string, profile: string): Result<none, string> {
@@ -142,6 +142,8 @@ function buildLinuxReleaseArtifact(compiler: string, source: string, stdlib: str
   return Success()
 }
 
+readonly WINDOWS_BUILD_TIMEOUT_MS = 1800000
+
 function buildWindowsReleaseArtifact(compiler: string, source: string, stdlib: string, stdlibBundle: string, work: string, pending: string, version: string): Result<none, string> {
   try config := windowsBuildConfig()
   emitted := path(work, "windows-emitted")
@@ -156,10 +158,57 @@ function buildWindowsReleaseArtifact(compiler: string, source: string, stdlib: s
   try emittedFiles := files(emitted)
   projectPath := path(work, "doof.vcxproj")
   try write(projectPath, windowsProjectFile(emittedFiles))
+  started := MonotonicInstant.now()
   if config.mac != none && config.broadcast != none {
+    windowsProgress(started, "Sending wake-on-LAN to " + config.mac!)
     try wakeOnLan(config.mac!, config.broadcast!)
   }
-  try client := connect(SshConnectOptions {
+  windowsProgress(started, "Connecting to " + config.host)
+  try client := connectWindowsHost(config)
+  remoteRoot := "doof-release-" + version
+  windowsProgress(started, "Resetting %USERPROFILE%\\" + remoteRoot)
+  _ := client.run("powershell.exe -NoProfile -NonInteractive -Command \"$root = Join-Path $env:USERPROFILE 'doof-release-" + version + "'; Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue; New-Item -ItemType Directory -Force -Path $root | Out-Null\"")!
+  try sftp := client.sftp()
+  emittedBytes := readBlob(emittedArchive) else { return Failure("Cannot read emitted Windows archive") }
+  bundleBytes := readBlob(stdlibBundle) else { return Failure("Cannot read Windows stdlib bundle") }
+  projectBytes := readBlob(projectPath) else { return Failure("Cannot read Windows project") }
+  scriptBuilder := BlobBuilder(); scriptBuilder.writeString(windowsBuildScript(version))
+  commandBuilder := BlobBuilder(); commandBuilder.writeString(windowsVisualStudioScript(version))
+  uploads: Map<string, readonly byte[]> := {
+    "emitted.zip": emittedBytes, "doof-stdlib.tar": bundleBytes, "doof.vcxproj": projectBytes,
+    "build.ps1": scriptBuilder.build(), "build.cmd": commandBuilder.build(),
+  }
+  for name, bytes of uploads {
+    windowsProgress(started, "Uploading " + name + " (" + string(bytes.length) + " bytes)")
+    try sftp.writeFile(remoteRoot + "/" + name, bytes)
+  }
+  sftp.close()
+  windowsProgress(started, "Running the MSVC build; inspect it with ./tools/run.sh windows-log " + version)
+  result := client.run(windowsVisualStudioCommand(version), WINDOWS_BUILD_TIMEOUT_MS) else error {
+    client.close()
+    return Failure("Windows build did not finish: " + error + windowsLogSection(config, version))
+  }
+  if result.exitStatus != 0 {
+    client.close()
+    return Failure("Windows build failed with exit status " + string(result.exitStatus) + windowsLogSection(config, version))
+  }
+  windowsProgress(started, "Downloading " + windowsReleaseArchiveName(version))
+  try downloaded := sftpRead(client, remoteRoot + "/" + windowsReleaseArchiveName(version))
+  client.close()
+  archive := path(pending, windowsReleaseArchiveName(version))
+  _ := writeBlob(archive, downloaded) else { return Failure("Cannot write Windows release archive") }
+  try erase(emittedArchive)
+  windowsProgress(started, "Verified Windows release asset: " + archive)
+  return Success()
+}
+
+function windowsProgress(started: MonotonicInstant, message: string): none {
+  seconds := MonotonicInstant.now().durationSince(started).toMillis() \ 1000L
+  println("[windows +" + string(seconds) + "s] " + message)
+}
+
+function connectWindowsHost(config: WindowsBuildConfig): Result<SshClient, string> {
+  return connect(SshConnectOptions {
     host: config.host,
     username: config.username,
     password: config.password,
@@ -167,31 +216,33 @@ function buildWindowsReleaseArtifact(compiler: string, source: string, stdlib: s
     wait: Duration.ofSeconds(60L),
     timeoutMs: 30000,
   })
-  remoteRoot := "doof-release-" + version
-  _ := client.run("powershell.exe -NoProfile -NonInteractive -Command \"$root = Join-Path $env:USERPROFILE 'doof-release-" + version + "'; Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue; New-Item -ItemType Directory -Force -Path $root | Out-Null\"")!
-  try sftp := client.sftp()
-  emittedBytes := readBlob(emittedArchive) else { return Failure("Cannot read emitted Windows archive") }
-  bundleBytes := readBlob(stdlibBundle) else { return Failure("Cannot read Windows stdlib bundle") }
-  projectBytes := readBlob(projectPath) else { return Failure("Cannot read Windows project") }
-  try sftp.writeFile(remoteRoot + "/emitted.zip", emittedBytes)
-  try sftp.writeFile(remoteRoot + "/doof-stdlib.tar", bundleBytes)
-  try sftp.writeFile(remoteRoot + "/doof.vcxproj", projectBytes)
-  scriptBuilder := BlobBuilder(); scriptBuilder.writeString(windowsBuildScript(version))
-  try sftp.writeFile(remoteRoot + "/build.ps1", scriptBuilder.build())
-  commandBuilder := BlobBuilder(); commandBuilder.writeString(windowsVisualStudioScript(version))
-  try sftp.writeFile(remoteRoot + "/build.cmd", commandBuilder.build())
-  sftp.close()
-  try result := client.run(windowsVisualStudioCommand(version), 1800000)
-  if result.exitStatus != 0 {
+}
+
+function readWindowsBuildLog(config: WindowsBuildConfig, version: string): Result<string, string> {
+  try client := connectWindowsHost(config)
+  bytes := sftpRead(client, "doof-release-" + version + "/" + windowsBuildLogName) else error {
     client.close()
-    return Failure("Windows build failed: " + result.stderr + result.stdout)
+    return Failure(error)
   }
-  try downloaded := sftpRead(client, remoteRoot + "/" + windowsReleaseArchiveName(version))
   client.close()
-  archive := path(pending, windowsReleaseArchiveName(version))
-  _ := writeBlob(archive, downloaded) else { return Failure("Cannot write Windows release archive") }
-  try erase(emittedArchive)
-  println("Verified Windows release asset: " + archive)
+  return Success(BlobReader(bytes).readString(long(bytes.length)))
+}
+
+// A fresh connection reads the transcript, since the build's session may be
+// the one that stopped responding.
+function windowsLogSection(config: WindowsBuildConfig, version: string): string {
+  log := readWindowsBuildLog(config, version) else error {
+    return "\n(could not read the remote " + windowsBuildLogName + ": " + error + ")"
+  }
+  return "\nLast lines of the remote " + windowsBuildLogName + ":\n" + windowsBuildLogTail(log, 60)
+}
+
+/** Prints the remote build transcript, including while a build is still running. */
+export function windowsBuildLog(version: string): Result<none, string> {
+  try require(windowsBuildEnabled(), "DOOF_WINDOWS_HOST is not set")
+  try config := windowsBuildConfig()
+  try log := readWindowsBuildLog(config, version)
+  println(log)
   return Success()
 }
 
