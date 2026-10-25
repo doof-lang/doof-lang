@@ -272,12 +272,16 @@ export function emitIdentifier(expression: Identifier, context: EmitContext): st
   if expression.resolvedBinding != none && expression.resolvedBinding!.kind == "field" && !context.currentFunctionStatic {
     return "this->" + cppIdentifier(expression.name)
   }
-  for imported of context.imports {
-    if imported.localName == expression.name && imported.symbol != none {
-      if imported.symbol!.native_ {
-        return "::" + (if imported.symbol!.nativeCppName == "" then imported.symbol!.name else imported.symbol!.nativeCppName)
+  // Only an import binding (or an unresolved synthesized identifier) names an
+  // import; a local, parameter, or field with the same name shadows it.
+  if expression.resolvedBinding == none || expression.resolvedBinding!.kind == "import" {
+    for imported of context.imports {
+      if imported.localName == expression.name && imported.symbol != none {
+        if imported.symbol!.native_ {
+          return "::" + (if imported.symbol!.nativeCppName == "" then imported.symbol!.name else imported.symbol!.nativeCppName)
+        }
+        return "::" + exprModuleNamespaceFor(imported.symbol!.module, context.names) + "::" + cppIdentifier(emittedSymbolName(imported.symbol!))
       }
-      return "::" + exprModuleNamespaceFor(imported.symbol!.module, context.names) + "::" + cppIdentifier(emittedSymbolName(imported.symbol!))
     }
   }
   if expression.resolvedBinding != none && expression.resolvedBinding!.symbol != none {
@@ -287,13 +291,6 @@ export function emitIdentifier(expression: Identifier, context: EmitContext): st
     }
     if context.modulePath != "" && symbol.module != "" && symbol.module != context.modulePath {
       return "::" + exprModuleNamespaceFor(symbol.module, context.names) + "::" + cppIdentifier(emittedSymbolName(symbol))
-    }
-  }
-  if expression.resolvedBinding != none && expression.resolvedBinding!.kind == "import" {
-    for imported of context.imports {
-      if imported.localName == expression.name && imported.symbol != none {
-        return "::" + exprModuleNamespaceFor(imported.symbol!.module, context.names) + "::" + cppIdentifier(emittedSymbolName(imported.symbol!))
-      }
     }
   }
   if expression.resolvedBinding != none && expression.resolvedBinding!.mutable && isCapturedMutable(context, expression.name) {

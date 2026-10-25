@@ -293,3 +293,28 @@ export function testMapIndexConvertsKeysToTheKeyRepresentation(): none {
   Assert.equal(identities.size, 2)
   Assert.equal(identities[first], 1)
 }
+
+export function testLocalBindingsShadowSameNamedImports(): none {
+  result := compile([
+    SourceFile { path: "/util.do", source: "export function quote(s: string): string => \"'\" + s + \"'\"" },
+    SourceFile { path: "/main.do", source:
+      "import { quote } from \"./util\"\n" +
+      "function count(quote: int): int => quote + 1\n" +
+      "function main(): int {\n" +
+      "  let total = 0\n" +
+      "  for c of [\"a\"] { let quote = c.length\nquote = quote + 1\ntotal = total + quote }\n" +
+      "  return total + quote(\"x\").length + count(2)\n" +
+      "}" },
+  ], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  let source = ""
+  for module of result.emission!.modules { if module.modulePath == "/main.do" { source = module.source } }
+  // The parameter and the local keep their own names.
+  Assert.stringContains(source, "return (quote + 1);")
+  Assert.stringContains(source, "(quote = (quote + 1))")
+  Assert.stringNotContains(source, "::app_util_::quote + 1")
+  Assert.stringNotContains(source, "::app_util_::quote = ")
+  // Outside the shadowing scopes the name still reaches the import.
+  Assert.stringContains(source, "::app_util_::quote(std::string(\"x\"))")
+}
