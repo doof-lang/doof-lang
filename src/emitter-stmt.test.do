@@ -288,7 +288,9 @@ export function testForOfOverReadonlyMapAndSetOwnsWithoutCopying(): none {
   Assert.equal(result.diagnostics.length, 0)
   source := result.emission!.modules[0].source
   Assert.equal(source.contains("iteration_snapshot"), false)
-  Assert.stringContains(source, "for (const auto& [key, value] : *_iterable_")
+  Assert.stringContains(source, "for (const auto& _entry_")
+  Assert.stringContains(source, " : *_iterable_")
+  Assert.stringContains(source, "const auto& value = std::get<1>(_entry_")
   Assert.stringContains(source, "for (const auto& n : *_iterable_")
 }
 
@@ -579,4 +581,34 @@ export function testConditionKeepsParenthesizedCallee(): none {
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   Assert.stringContains(result.emission!.modules[0].source, "if ((ready)(1)) {")
+}
+
+// Destructured loop names are ordinary references, so interpolation and
+// escaping closures can capture them under C++17.
+export function testForOfDestructuredBindingsAreCapturable(): none {
+  scores: Map<string, int> := { a: 1, b: 2 }
+  let described: string[] = []
+  let readers: ((): int)[] = []
+  for key, value of scores {
+    described.push("${key}=${value}")
+    readers.push((): int => value * 10)
+  }
+  Assert.equal("${described}", "[a=1, b=2]")
+  Assert.equal(readers[0]() + readers[1](), 30)
+  let letters = ""
+  for number, letter of [(1, "x"), (2, "y")] { letters = letters + "${letter}${number}" }
+  Assert.equal(letters, "x1y2")
+  let seconds = 0
+  for _, second of [(1, 5), (2, 6)] { seconds += second }
+  Assert.equal(seconds, 11)
+}
+
+export function testForOfDestructuringAvoidsStructuredBindings(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function main(): int { scores: Map<string, int> := { \"a\": 1 }\nlet text = \"\"\nfor key, value of scores { text = \"\${key}\${value}\" }\nreturn text.length }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.equal(source.contains("const auto& ["), false)
+  Assert.stringContains(source, "const auto& key = std::get<0>(_entry_")
 }

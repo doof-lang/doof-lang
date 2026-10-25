@@ -49,3 +49,27 @@ export function testInterfaceBoundSubstitutesMethodParameters(): none {
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
 }
+
+export function testConstrainedTypeParameterFlowsThroughOptionalSelf(): none {
+  result := checked(`interface HasScore { score(): int }
+class P { v: int; score(): int => v }
+function best<T: HasScore>(items: T[]): T | none {
+    let found: T | none = none
+    for item of items {
+        current := found else { found = item; continue }
+        if item.score() > current.score() { found = item }
+    }
+    return found
+}
+function only<T: HasScore>(item: T): T | none => item
+function main(): int => (best([P { v: 3 }, P { v: 9 }]) ?? P { v: 0 }).v + (only(P { v: 1 })?.v ?? 0)`)
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testConstrainedTypeParameterStillRejectsUnrelatedTarget(): none {
+  result := checked("interface HasScore { score(): int }\nfunction bad<T: HasScore>(item: T): int | none => item")
+  let found = false
+  for diagnostic of result.diagnostics { if diagnostic.message.contains("Cannot return T") { found = true } }
+  Assert.isTrue(found)
+}

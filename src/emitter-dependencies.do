@@ -9,6 +9,7 @@ import {
 } from "./ast"
 import { interfaceInstantiationKey } from "./emitter-monomorphize"
 import { collectBlockExpressions, collectNestedExpressions } from "./ast-walk"
+import { substituteTypeParams } from "./checker-types"
 import {
   ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, PromiseType,
   ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType, UnionResolvedType, WeakResolvedType,
@@ -103,6 +104,18 @@ export function collectDependencyExpression(
       }
       call: CallExpression -> {
         if call.resolvedConstruction != none { collectCompleteDependencyType(call.resolvedConstruction!.owner, index) }
+        // A generic call converts its arguments to the specialized parameter
+        // types, such as `Source<int>` for `drain<T>(source: Source<T>)`.
+        if call.resolvedGenericTypeArgs.length > 0 && call.callee.resolvedType != none {
+          case call.callee.resolvedType! {
+            generic: FunctionType -> {
+              if generic.typeParams.length == call.resolvedGenericTypeArgs.length {
+                collectDependencyType(substituteTypeParams(generic, generic.typeParams, call.resolvedGenericTypeArgs), index)
+              }
+            }
+            _ -> { }
+          }
+        }
       }
       object: ObjectLiteral -> {
         if object.resolvedConstruction != none { collectCompleteDependencyType(object.resolvedConstruction!.owner, index) }

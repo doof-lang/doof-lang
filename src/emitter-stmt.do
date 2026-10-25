@@ -566,13 +566,17 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
     else ind + "const auto " + iterableName + " = doof::iteration_snapshot(" + iterable + ");\n"
   loopSource := if frozen then "*" + iterableName else iterableName
   if statement.bindings.length > 1 {
-    let names = ""
+    // C++17 lambdas cannot capture structured bindings, and the body may
+    // capture these names (interpolation, closures), so bind ordinary
+    // references to the map pair or tuple elements instead.
+    entryName := context.temporary("_entry_")
+    let bindings = ""
     for i of 0..<statement.bindings.length {
-      if i > 0 { names = names + ", " }
-      names = names + discardableCppName(statement.bindings[i], loopId, i)
+      if statement.bindings[i] == "_" { continue }
+      bindings = bindings + ind + "    const auto& " + cppIdentifier(statement.bindings[i]) + " = std::get<" + string(i) + ">(" + entryName + ");\n"
     }
-    return ownedBinding + ind + "for (const auto& [" + names + "] : " + loopSource + ") {\n" +
-      body + ind + "}\n" + breakTarget
+    return ownedBinding + ind + "for (const auto& " + entryName + " : " + loopSource + ") {\n" +
+      bindings + body + ind + "}\n" + breakTarget
   }
   return ownedBinding + ind + "for (const auto& " + name + " : " + loopSource + ") {\n" +
     body + ind + "}\n" + breakTarget

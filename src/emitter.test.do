@@ -289,7 +289,8 @@ export function testSynthesizesDistinctCppNamesForDiscardTargets(): none {
     "with _ := Guard {}, _ := Guard {} { total += apply((_, _): int => 1) }\n" +
     "return total }",
   )
-  Assert.stringContains(result.source, "const auto& [_discard_")
+  Assert.stringContains(result.source, "for (const auto& _entry_")
+  Assert.equal(result.source.contains("std::get<0>(_entry_"), false)
   Assert.stringContains(result.source, "_with_discard_")
   Assert.stringContains(result.source, "int32_t _discard_parameter_0, std::string _discard_parameter_1")
 }
@@ -1801,7 +1802,8 @@ export function testSnapshotsMapAndSetForOfCollections(): none {
   result := emit("function main(): int { scores: Map<string, int> := { \"a\": 1 }\nunique: Set<int> := [1, 2]\nlet total = 0\nfor key, value of scores { total = total + value }\nfor n of unique { total = total + n }\nreturn total }")
   Assert.stringContains(result.source, "= doof::iteration_snapshot(scores);")
   Assert.stringContains(result.source, "= doof::iteration_snapshot(unique);")
-  Assert.stringContains(result.source, "for (const auto& [key, value] : _iterable_")
+  Assert.stringContains(result.source, "const auto& key = std::get<0>(_entry_")
+  Assert.stringContains(result.source, "const auto& value = std::get<1>(_entry_")
 }
 
 export function testIteratesRangesWithoutSnapshot(): none {

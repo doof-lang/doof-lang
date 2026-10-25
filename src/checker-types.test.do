@@ -339,3 +339,14 @@ export function testContainsTypeParameterSeesEveryNestedPosition(): none {
   Assert.isFalse(containsTypeParameters([]))
   Assert.isTrue(containsTypeParameters([int_, promiseType(t)]))
 }
+
+export function testConstrainedTypeParameterReachesOptionalSelf(): none {
+  constrained := typeParameter("T", "Named", primitive("string"))
+  optional := unionType([constrained, noneType()])
+  Assert.isTrue(isAssignable(constrained, optional))
+  Assert.isTrue(isAssignable(optional, optional))
+  Assert.isTrue(isAssignable(constrained, primitive("string")))
+  Assert.isTrue(isAssignable(constrained, unionType([primitive("string"), noneType()])))
+  Assert.isFalse(isAssignable(constrained, primitive("int")))
+  Assert.isFalse(isAssignable(constrained, typeParameter("U", "Named", primitive("string"))))
+}

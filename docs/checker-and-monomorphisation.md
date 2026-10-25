@@ -248,7 +248,11 @@ The instantiation plan is global, while generated files are per source module:
    uses and computes a declaration closure in defining namespaces.
 3. Concrete interface keys from both checked types and the global plan keep
    required interface aliases and implementors visible in the consumer
-   header.
+   header. Generic calls contribute their substituted callee signature, and
+   every specialization of a generic declaration in the worldview contributes
+   its substituted signature or fields, repeated to a fixpoint, so aliases
+   such as `Source<int>` from `drain<T>(source: Source<T>)` are declared even
+   though no checked annotation names them.
 4. `planHeader` orders the selected declaration surface. Concrete functions,
    classes, methods, and interfaces are then added for the defining section.
 5. Source emission writes only definitions owned by that source module.

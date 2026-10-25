@@ -11,7 +11,8 @@ import {
 } from "./emitter-declarations"
 import { InstantiationPlan } from "./emitter-monomorphize"
 import { collectStatementExpressions } from "./ast-walk"
-import { Symbol, ResolvedType } from "./semantic"
+import { Symbol, ResolvedType, TypeSubstitution } from "./semantic"
+import { substituteTypeParams } from "./checker-types"
 import {
   DependencyBuilder, DependencySummary, SymbolDependency, InterfaceDependency,
   collectDependencySurface, collectDependencyExpression, collectDependencyType, collectCompleteDependencyType,
@@ -125,20 +126,54 @@ export function planWorldview(
       if method.modulePath != rootPath { continue }
       for argument of method.substitution.arguments { collectArgumentDependencies(argument, rootPath, index) }
     }
-    for interface_ of instantiations!.interfaces {
-      if !index.interfaceKeySet.has(interface_.key) { continue }
-      for implementation of interface_.implementations {
-        let name = implementation.typeName
-        for class_ of instantiations!.classes {
-          if class_.modulePath == implementation.modulePath && class_.emittedName == implementation.typeName {
-            name = class_.declaration.name
-            break
-          }
+    // Every specialization of a generic declaration in this translation unit
+    // is declared here, and its substituted signature or fields can name
+    // generic interface instantiations, such as `Source<int>` from
+    // `drain<T>(source: Source<T>)`, that occur in no checked annotation.
+    // Selecting those can project further declarations and implementors, so
+    // repeat until nothing new is selected.
+    let expanded: Set<string> = []
+    let implementorsFor: Set<string> = []
+    let changed = true
+    while changed {
+      changed = false
+      for function_ of instantiations!.functions {
+        if expanded.has(function_.key) || !declarationInWorldview(index, rootPath, function_.modulePath, function_.declaration.name) { continue }
+        expanded.add(function_.key)
+        changed = true
+        collectSubstitutedDependencies(function_.declaration.resolvedType, function_.substitution, rootPath, index)
+      }
+      for class_ of instantiations!.classes {
+        if expanded.has(class_.key) || !declarationInWorldview(index, rootPath, class_.modulePath, class_.declaration.name) { continue }
+        expanded.add(class_.key)
+        changed = true
+        for field of class_.declaration.fields {
+          collectSubstitutedDependencies(field.resolvedType, class_.substitution, rootPath, index)
         }
-        module := findModule(index, implementation.modulePath)
-        if module == none { continue }
-        symbol := findSymbol(index, implementation.modulePath, name)
-        if symbol != none { collectSymbol(symbol!, rootPath, index) }
+      }
+      for method of instantiations!.methods {
+        if expanded.has(method.key) || !declarationInWorldview(index, rootPath, method.modulePath, method.owner.name) { continue }
+        expanded.add(method.key)
+        changed = true
+        collectSubstitutedDependencies(method.declaration.resolvedType, method.substitution, rootPath, index)
+      }
+      for interface_ of instantiations!.interfaces {
+        if implementorsFor.has(interface_.key) || !index.interfaceKeySet.has(interface_.key) { continue }
+        implementorsFor.add(interface_.key)
+        changed = true
+        for implementation of interface_.implementations {
+          let name = implementation.typeName
+          for class_ of instantiations!.classes {
+            if class_.modulePath == implementation.modulePath && class_.emittedName == implementation.typeName {
+              name = class_.declaration.name
+              break
+            }
+          }
+          module := findModule(index, implementation.modulePath)
+          if module == none { continue }
+          symbol := findSymbol(index, implementation.modulePath, name)
+          if symbol != none { collectSymbol(symbol!, rootPath, index) }
+        }
       }
     }
   }
@@ -234,6 +269,22 @@ function collectArgumentDependencies(type_: ResolvedType, rootPath: string, inde
   builder := DependencyBuilder { identities: index.graph.identityPreparation }
   collectDependencyType(type_, builder)
   replayDependencies(builder.finish(), rootPath, index)
+}
+
+function collectSubstitutedDependencies(type_: ResolvedType | none, substitution: TypeSubstitution, rootPath: string, index: WorldviewIndex): none {
+  if type_ == none { return }
+  collectArgumentDependencies(substituteTypeParams(type_!, substitution.names, substitution.arguments), rootPath, index)
+}
+
+// The root owns all of its declarations; a foreign one is present only once
+// selected for projection.
+function declarationInWorldview(index: WorldviewIndex, rootPath: string, modulePath: string, name: string): bool {
+  if modulePath == rootPath { return true }
+  selection := findSelection(index, modulePath) else { return false }
+  for statement of selection.statements {
+    if declarationName(statement) == name { return true }
+  }
+  return false
 }
 
 function collectGeneratedJsonDependencies(program: Program, rootPath: string, instantiations: InstantiationPlan, index: WorldviewIndex): none {

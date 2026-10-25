@@ -9,6 +9,7 @@ import { hasErrorDiagnostics } from "./diagnostics"
 import { buildInstantiationPlan } from "./emitter-monomorphize"
 import { planWorldview } from "./emitter-worldview"
 import { SourceFile } from "./semantic"
+import { compile } from "./compiler"
 
 export function testPlansDenseRepeatedForeignUsesOnceInDeclarationOrder(): none {
   sources := [
@@ -192,5 +193,63 @@ export function testReadonlyEmissionWorldviewPreparesRootTypes(): none {
       }
       _ -> {}
     }
+  }
+}
+
+export function testCollectsGenericInterfaceKeysFromSubstitutedGenericSignatures(): none {
+  source := "interface Source<T> { next(): T }\nclass Ones { next(): int => 1 }\n" +
+    "class Pipe<T> { source: Source<T> }\n" +
+    "function drain<T>(source: Source<T>): T => source.next()\n" +
+    "function main(): int => drain<int>(Ones {}) + Pipe<string> { source: Words {} }.source.next().length\n" +
+    "class Words { next(): string => \"w\" }"
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  checked := createChecker(analysis).check("/main.do")
+  for diagnostic of checked.diagnostics { println(diagnostic.message) }
+  Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
+
+  plan := planWorldview(analysis, "/main.do", buildInstantiationPlan(analysis))
+  Assert.isTrue(plan.interfaceKeys.contains("/main.do::interface::Source::[int]"))
+  Assert.isTrue(plan.interfaceKeys.contains("/main.do::interface::Source::[string]"))
+}
+
+// The specializations below are reached only through substitution, so their
+// interface aliases must come from the instantiated signatures and fields.
+interface Draining<T> { next(): T | none }
+class Countdown { let remaining: int; next(): int | none { if remaining == 0 { return none }; remaining -= 1; return remaining } }
+class Drained<T> { source: Draining<T> }
+function drainAll<T>(source: Draining<T>): T[] {
+  let values: T[] = []
+  while true {
+    value := source.next() else { break }
+    values.push(value)
+  }
+  return values
+}
+
+export function testGenericInterfaceSpecializationsReachedOnlyBySubstitutionCompile(): none {
+  Assert.equal("${drainAll<int>(Countdown { remaining: 3 })}", "[2, 1, 0]")
+  holder := Drained<int> { source: Countdown { remaining: 1 } }
+  Assert.equal("${drainAll<int>(holder.source)}", "[0]")
+}
+
+export function testCallerHeadersDeclareForeignSpecializationInterfaceAliases(): none {
+  result := compile([
+    SourceFile { path: "/iface.do", source: "export interface Source<T> { next(): T | none }" },
+    SourceFile { path: "/algo.do", source:
+      "import { Source } from \"./iface\"\n" +
+      "export function drain<T>(source: Source<T>): T | none => source.next()\n" +
+      "export class Holder<T> { source: Source<T>; pull(): T | none => drain<T>(source) }" },
+    SourceFile { path: "/impl.do", source:
+      "export class Ones { next(): int | none => 1 }\nexport class Words { next(): string | none => \"w\" }" },
+    SourceFile { path: "/main.do", source:
+      "import { drain, Holder } from \"./algo\"\nimport { Ones, Words } from \"./impl\"\n" +
+      "function main(): int => (drain<int>(Ones {}) ?? 0) + (Holder<string> { source: Words {} }.pull() ?? \"\").length" },
+  ], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  for module of result.emission!.modules {
+    if module.modulePath != "/main.do" { continue }
+    Assert.stringContains(module.header, "using Source__int = ")
+    Assert.stringContains(module.header, "using Source__string = ")
   }
 }

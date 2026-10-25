@@ -732,7 +732,9 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
         _: TypeParameterType -> { return sameType(value, target) }
         _ -> { }
       }
-      if parameter.constraint != none { return isAssignable(parameter.constraint!, target) }
+      // The constraint widens what T accepts, but T itself must still reach
+      // union targets such as `T | none` through the member search below.
+      if parameter.constraint != none && isAssignable(parameter.constraint!, target) { return true }
     }
     _: UnknownType -> { return true }
     valueUnion: UnionResolvedType -> {
