@@ -118,7 +118,7 @@ export function testUnitCaseArmReturnsCarrierDirectly(): none {
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   source := result.emission!.modules[0].source
-  Assert.stringContains(source, "return (static_cast<void>(effect()), std::monostate{});")
+  Assert.stringContains(source, "return (static_cast<void>((effect)()), std::monostate{});")
   Assert.stringContains(source, "return std::monostate{};")
 }
 

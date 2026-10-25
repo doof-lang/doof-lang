@@ -60,7 +60,7 @@ export function testEmitsTypedTagsThroughNamedCallAndConstructorPaths(): none {
     "function main(): int { label := <render label=\"item\" id=2/>\ncustom := <Custom value=3 label=\"custom\"/>\nreturn makeWidget().id + custom.value + label.length }",
   )
   Assert.stringContains(result.source, "1, std::string(\"red\")")
-  Assert.stringContains(result.source, "render(2, std::string(\"item\"))")
+  Assert.stringContains(result.source, "(render)(2, std::string(\"item\"))")
   Assert.stringContains(result.source, "Custom::constructor(std::string(\"custom\"), 3)")
   Assert.stringContains(result.source, "std::string(\"hello\")")
 }
@@ -390,7 +390,7 @@ export function testEmitsRangeValuesSignaturesAndMembers(): none {
   Assert.equal(result.header.contains("int32_t first(doof::Range values)"), true)
   Assert.equal(result.source.contains("for (const auto& value : _iterable_"), true)
   Assert.equal(result.source.contains("values.lowerBound + values.upperBound"), true)
-  Assert.equal(result.source.contains("first(doof::range_exclusive(1, 4))"), true)
+  Assert.equal(result.source.contains("(first)(doof::range_exclusive(1, 4))"), true)
 }
 
 export function testEmitsFiniteAndOpenEndedCaseRangePatterns(): none {
@@ -701,10 +701,10 @@ export function testEmitsNoneAsyncBlocksAsVoidTasks(): none {
 
 export function testEmitsIsolatedAsyncFunctionCalls(): none {
   result := emit("function compute(value: int): int => value * 2\nfunction run(value: int): Promise<int> => async compute(value)")
-  Assert.stringContains(result.source, " = value; return doof::submit_async<int32_t>([=]() -> int32_t { return compute(_async_arg_")
+  Assert.stringContains(result.source, " = value; return doof::submit_async<int32_t>([=]() -> int32_t { return (compute)(_async_arg_")
 
   noneResult := emit("function notify(value: int): none { println(value) }\nfunction run(value: int): Promise<none> => async notify(value)")
-  Assert.stringContains(noneResult.source, " = value; return doof::submit_async<void>([=]() { notify(_async_arg_")
+  Assert.stringContains(noneResult.source, " = value; return doof::submit_async<void>([=]() { (notify)(_async_arg_")
 }
 
 export function testPostfixBangPanicIncludesOriginAndStringFailure(): none {
@@ -755,10 +755,10 @@ export function testKeepsDoofDefaultsOutOfHeadersAndMaterializesCalls(): none {
   Assert.stringContains(result.header, "extern int32_t DEFAULT_COUNT;")
   Assert.stringContains(result.header, "Holder(int32_t fromLet, int32_t fromFunction, int32_t fromClass)")
   Assert.stringContains(result.header, "int32_t choose(int32_t value);")
-  Assert.stringNotContains(result.header, "= fallback()")
+  Assert.stringNotContains(result.header, "= (fallback)()")
   Assert.stringNotContains(result.header, "= Later::value()")
-  Assert.stringContains(result.source, "std::make_shared<Holder>(DEFAULT_COUNT, fallback(), Later::value())")
-  Assert.stringContains(result.source, "return choose(fallback());")
+  Assert.stringContains(result.source, "std::make_shared<Holder>(DEFAULT_COUNT, (fallback)(), Later::value())")
+  Assert.stringContains(result.source, "return (choose)((fallback)());")
 }
 
 export function testEmitsGenericMethodsAndDestructorsAfterCallableDeclarations(): none {
@@ -770,7 +770,7 @@ export function testEmitsGenericMethodsAndDestructorsAfterCallableDeclarations()
   )
   Assert.stringContains(result.header, "int32_t call__int(int32_t value);")
   Assert.stringContains(result.header, "~Cleanup();")
-  Assert.stringNotContains(result.header, "return helper()")
+  Assert.stringNotContains(result.header, "return (helper)()")
   Assert.stringContains(result.source, "int32_t GenericCaller::call__int(int32_t value)")
   Assert.stringContains(result.source, "Cleanup::~Cleanup()")
 }
@@ -859,9 +859,9 @@ export function testEmitsStringPaddingMethodsWithUnicodeChars(): none {
 
 export function testEmitsShadowedBuiltinCallsFromResolvedBindings(): none {
   result := emit("class Parser { parse(value: string): int => value.length }\nfunction println(value: int): int => value + 1\nfunction catchPanic(value: int): int => value + 2\nfunction Success(value: int): int => value + 3\nfunction main(): int { byte := Parser {}\nreturn println(1) + catchPanic(2) + Success(3) + byte.parse(\"ok\") }")
-  Assert.stringContains(result.source, "println(1)")
-  Assert.stringContains(result.source, "catchPanic(2)")
-  Assert.stringContains(result.source, "Success(3)")
+  Assert.stringContains(result.source, "(println)(1)")
+  Assert.stringContains(result.source, "(catchPanic)(2)")
+  Assert.stringContains(result.source, "(Success)(3)")
   Assert.stringContains(result.source, "byte->parse")
   Assert.equal(result.source.contains("doof::println(1)"), false)
   Assert.equal(result.source.contains("doof::Success<int32_t>{ 3 }"), false)
@@ -903,8 +903,8 @@ export function testUnwrapsNullableEnumFieldsToTheirEnumValue(): none {
     "function checkLocal(pending: Outcome | none): bool => isVictory(pending!)",
   )
   Assert.stringContains(result.header, "std::optional<Outcome>")
-  Assert.stringContains(result.source, "isVictory([&]() -> Outcome { auto _forced_value = state->pending; if (doof::is_null(_forced_value)) doof::panic_at(")
-  Assert.stringContains(result.source, "isVictory([&]() -> Outcome { auto _forced_value = pending;")
+  Assert.stringContains(result.source, "(isVictory)([&]() -> Outcome { auto _forced_value = state->pending; if (doof::is_null(_forced_value)) doof::panic_at(")
+  Assert.stringContains(result.source, "(isVictory)([&]() -> Outcome { auto _forced_value = pending;")
   Assert.stringNotContains(result.header, "std::variant<std::monostate, Outcome>")
 }
 
@@ -1066,8 +1066,8 @@ export function testInvokesCallbackFieldAfterPostfixNullableStructUnwrap(): none
 export function testEmitsInterpolationInSourceOrder(): none {
   result := emit("function first(): int => 1\nfunction second(): int => 2\nfunction render(): string => \"a=\${first()}, b=\${second()}\"")
   Assert.stringContains(result.source, "std::string _interpolation = \"a=\"")
-  firstPosition := result.source.indexOf("doof::to_string(first())")
-  secondPosition := result.source.indexOf("doof::to_string(second())")
+  firstPosition := result.source.indexOf("doof::to_string((first)())")
+  secondPosition := result.source.indexOf("doof::to_string((second)())")
   Assert.equal(firstPosition >= 0, true)
   Assert.equal(secondPosition > firstPosition, true)
   Assert.stringContains(result.source, "return _interpolation; }())")
@@ -1102,13 +1102,13 @@ export function testEmitsReadonlyArrayAndGenericNamedCall(): none {
   result := emit("function create<T>(value: T, count: int = 1): T => value\nfunction main(): string { values := readonly [1, 2]\nreturn create<string>{ value: \"ok\" } }")
   Assert.equal(result.header.contains("create__string"), true)
   Assert.equal(result.header.contains("T create("), false)
-  Assert.equal(result.source.contains("create__string(std::string(\"ok\"), 1)"), true)
+  Assert.equal(result.source.contains("(create__string)(std::string(\"ok\"), 1)"), true)
   Assert.equal(result.source.contains("std::make_shared<std::vector<int32_t>>"), true)
 }
 
 export function testEmitsGenericTupleDestructuring(): none {
   result := emit("function pair<T>(value: T): Tuple<T, T> => (value, value)\nfunction main(): int { (first, second) := pair<int>(1)\nreturn first + second }")
-  Assert.equal(result.source.contains("pair__int(1)"), true)
+  Assert.equal(result.source.contains("(pair__int)(1)"), true)
   Assert.equal(result.source.contains("std::get<0>(_destructure_"), true)
   Assert.equal(result.source.contains("std::get<1>(_destructure_"), true)
 }
@@ -1191,8 +1191,8 @@ export function testEmitsPostfixBangResultUnwrap(): none {
 
 export function testEmitsResultStatusMethods(): none {
   result := emit("function load(): Result<int, string> => Failure { error: \"no\" }\nfunction main(): bool => load().isFailure() || load().isSuccess()")
-  Assert.equal(result.source.contains("doof::is_failure(load())"), true)
-  Assert.equal(result.source.contains("doof::is_success(load())"), true)
+  Assert.equal(result.source.contains("doof::is_failure((load)())"), true)
+  Assert.equal(result.source.contains("doof::is_success((load)())"), true)
 }
 
 export function testEmitsResultUnwrapOrWithSingleEvaluation(): none {
@@ -1206,10 +1206,10 @@ export function testEmitsResultUnwrapOrWithSingleEvaluation(): none {
 export function testEmitsCoalescingWithSingleEvaluationAndCarrierSpecificChecks(): none {
   result := emit("function nullable(): int | none => 7\nfunction fallible(): Result<int, string> => Success(8)\nfunction fromNullable(): int => nullable() ?? 0\nfunction fromResult(): int => fallible() ?? 0")
   Assert.stringContains(result.source, "auto _coalesce_")
-  Assert.stringContains(result.source, "= nullable(); if (doof::is_null(_coalesce_")
-  Assert.stringContains(result.source, "= fallible(); if (doof::is_failure(_coalesce_")
-  Assert.equal(result.source.contains("doof::is_null(fallible())"), false)
-  Assert.equal(result.source.contains("doof::unwrap_optional(fallible())"), false)
+  Assert.stringContains(result.source, "= (nullable)(); if (doof::is_null(_coalesce_")
+  Assert.stringContains(result.source, "= (fallible)(); if (doof::is_failure(_coalesce_")
+  Assert.equal(result.source.contains("doof::is_null((fallible)())"), false)
+  Assert.equal(result.source.contains("doof::unwrap_optional((fallible)())"), false)
 }
 
 export function testPromotesTryErrorsIntoWiderReturnUnion(): none {
@@ -1221,8 +1221,8 @@ export function testPromotesTryErrorsIntoWiderReturnUnion(): none {
 export function testEvaluatesComputedMapHasReceiverOnce(): none {
   result := emit("function values(): Map<string, int> => { key: 1 }\nfunction found(): bool => values().has(\"key\")")
   Assert.stringContains(result.source, "auto _map_has_")
-  Assert.stringContains(result.source, "= values(); return _map_has_")
-  Assert.equal(result.source.contains("values()->find"), false)
+  Assert.stringContains(result.source, "= (values)(); return _map_has_")
+  Assert.equal(result.source.contains("(values)()->find"), false)
 }
 
 export function testEmitsTryValueDeclarationsWithMutability(): none {
@@ -1271,8 +1271,8 @@ export function testEmitsYieldingCaseExpressionBlocks(): none {
 
 export function testEmitsNoneReturningCaseExpressionArms(): none {
   result := emit("function verify(condition: bool): none {}\nfunction check(condition: bool): none => case condition { true -> verify(true), _ -> verify(false) }\nfunction checkReturned(condition: bool): none { return case condition { true -> verify(true), _ -> verify(false) } }")
-  Assert.stringContains(result.source, "return (static_cast<void>(verify(true)), std::monostate{});")
-  Assert.stringContains(result.source, "return (static_cast<void>(verify(false)), std::monostate{});")
+  Assert.stringContains(result.source, "return (static_cast<void>((verify)(true)), std::monostate{});")
+  Assert.stringContains(result.source, "return (static_cast<void>((verify)(false)), std::monostate{});")
   Assert.equal(result.source.contains("return [&]() -> std::monostate"), false)
 }
 
@@ -1449,7 +1449,7 @@ export function testEmitsNullableEnumDeclarationElseAsPlainEnum(): none {
   )
   Assert.stringContains(result.header, "std::optional<MoreMonstersOutcome> outcomeAfterTurn")
   Assert.stringContains(result.source, "doof::unwrap_optional(_binding_value_")
-  Assert.stringContains(result.source, "showOutcome(outcome)")
+  Assert.stringContains(result.source, "(showOutcome)(outcome)")
   Assert.stringNotContains(result.header, "std::variant<std::monostate, MoreMonstersOutcome>")
 }
 
@@ -1792,9 +1792,9 @@ export function testEmitsLabeledBreakAndContinueTargets(): none {
 
 export function testKeepsComputedForOfCollectionAlive(): none {
   result := emit("function values(): int[] => [1, 2, 3]\nfunction main(): int { let total = 0\nfor item of values() { total = total + item }\nreturn total }")
-  Assert.stringContains(result.source, "= doof::iteration_snapshot(values());")
+  Assert.stringContains(result.source, "= doof::iteration_snapshot((values)());")
   Assert.stringContains(result.source, "for (const auto& item : _iterable_")
-  Assert.equal(result.source.contains("for (const auto& item : *values())"), false)
+  Assert.equal(result.source.contains("for (const auto& item : *(values)())"), false)
 }
 
 export function testSnapshotsMapAndSetForOfCollections(): none {
@@ -1812,7 +1812,7 @@ export function testIteratesRangesWithoutSnapshot(): none {
 export function testOwnsForOfIterableReachedThroughTemporary(): none {
   result := emit("class Board { cells: int[] }\nfunction board(): Board => Board { cells: [1, 2] }\nfunction main(): int { let total = 0\nfor cell of board().cells { total = total + cell }\nreturn total }")
   Assert.stringContains(result.source, "const auto _iterable_")
-  Assert.stringContains(result.source, "= doof::iteration_snapshot(board()->cells);")
+  Assert.stringContains(result.source, "= doof::iteration_snapshot((board)()->cells);")
   Assert.equal(result.source.contains("const auto& _iterable_"), false)
 }
 
@@ -1833,7 +1833,7 @@ export function testEmitsNeverFunctionsAndBottomCoercions(): none {
   result := emit("function fail(message: string): never => panic(message)\nfunction choose(flag: bool): int => if flag then 42 else fail(\"missing\")\nfunction main(): int => choose(true)")
   Assert.stringContains(result.header, "[[noreturn]] doof::Never fail")
   Assert.stringContains(result.source, "doof::panic(message)")
-  Assert.stringContains(result.source, "flag ? 42 : fail(std::string(\"missing\"))")
+  Assert.stringContains(result.source, "flag ? 42 : (fail)(std::string(\"missing\"))")
 }
 
 export function testEmitsNeverFallbackForNullableCoalescing(): none {

@@ -11,7 +11,7 @@ export function testAsyncUnitCallOmitsUnusedCarrier(): none {
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   Assert.stringContains(result.emission!.modules[0].source,
-    "doof::submit_async<void>([=]() { effect(); })")
+    "doof::submit_async<void>([=]() { (effect)(); })")
 }
 
 export function testRestrictedAsyncYieldCarrier(): none {
@@ -99,7 +99,7 @@ export function testIsolatedAsyncCallArgumentsLowerBeforeSubmit(): none {
   Assert.equal(result.diagnostics.length, 0)
   source := result.emission!.modules[0].source
   Assert.stringContains(source, "auto _async_arg_")
-  Assert.stringContains(source, "doof::submit_async<int32_t>([=]() -> int32_t { return twice(_async_arg_")
+  Assert.stringContains(source, "doof::submit_async<int32_t>([=]() -> int32_t { return (twice)(_async_arg_")
 }
 
 export function testSyncActorCallArgumentReadsSameActor(): none {

@@ -67,5 +67,5 @@ export function testScriptDiscardsRunWithoutModuleStorage(): none {
   Assert.equal(result.diagnostics.length, 0)
   module := result.emission!.modules[0]
   Assert.stringNotContains(module.header, " _;")
-  Assert.equal(module.source.split("f();").length, 3)
+  Assert.equal(module.source.split("(f)();").length, 3)
 }

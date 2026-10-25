@@ -12,10 +12,10 @@ export function testDiscardedCallsSkipOnlyUnusedCarrierConversion(): none {
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   source := result.emission!.modules[0].source
-  Assert.stringContains(source, "    effect();")
-  Assert.stringContains(source, "    number();")
-  Assert.stringContains(source, "value = (static_cast<void>(effect()), std::monostate{});")
-  Assert.stringNotContains(source, "    (static_cast<void>(effect()), std::monostate{});")
+  Assert.stringContains(source, "    (effect)();")
+  Assert.stringContains(source, "    (number)();")
+  Assert.stringContains(source, "value = (static_cast<void>((effect)()), std::monostate{});")
+  Assert.stringNotContains(source, "    (static_cast<void>((effect)()), std::monostate{});")
 }
 
 export function testGenericNoneLiteralWithoutContextUsesUnitCarrier(): none {
@@ -55,7 +55,7 @@ export function testNoneCarrierNamedValuesUseContextualAbsence(): none {
     Assert.equal(result.diagnostics.length, 0)
     Assert.isTrue(result.emission != none)
     source := result.emission!.modules[0].source
-    expected := if index == 6 then "take(value)" else "take((static_cast<void>(value), " + carriers[index] + "))"
+    expected := if index == 6 then "(take)(value)" else "(take)((static_cast<void>(value), " + carriers[index] + "))"
     Assert.stringContains(source, expected)
   }
 }
@@ -68,7 +68,7 @@ export function testNoneCarrierReturnPreservesEvaluation(): none {
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   Assert.isTrue(result.emission != none)
-  Assert.stringContains(result.emission!.modules[0].source, "return (static_cast<void>(effect()), std::nullopt);")
+  Assert.stringContains(result.emission!.modules[0].source, "return (static_cast<void>((effect)()), std::nullopt);")
 }
 
 export function testNoneCarrierGenericAndAssignmentBoundaries(): none {
@@ -100,7 +100,7 @@ export function testNoneCarrierCallArgumentMaterializesUnit(): none {
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   Assert.isTrue(result.emission != none)
-  Assert.stringContains(result.emission!.modules[0].source, "take((static_cast<void>(effect()), std::monostate{}))")
+  Assert.stringContains(result.emission!.modules[0].source, "(take)((static_cast<void>((effect)()), std::monostate{}))")
 }
 
 export function testWiderNoneUnitValuesNeedNoExpectedType(): none {
@@ -109,7 +109,7 @@ export function testWiderNoneUnitValuesNeedNoExpectedType(): none {
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   Assert.isTrue(result.emission != none)
-  Assert.stringContains(result.emission!.modules[0].source, "std::tuple<std::monostate, int32_t>((static_cast<void>(effect()), std::monostate{}), 1)")
+  Assert.stringContains(result.emission!.modules[0].source, "std::tuple<std::monostate, int32_t>((static_cast<void>((effect)()), std::monostate{}), 1)")
 }
 
 export function testEmissionCleanupThisRetainsClassAndStructCarriers(): none {

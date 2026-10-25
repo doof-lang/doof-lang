@@ -44,7 +44,7 @@ export function testDiscoversGenericCallsInsideAsExpressions(): none {
     "function main(): Result<int, string> => identity<int>(1) as int",
   )
 
-  Assert.stringContains(result.source, "identity__int(1)")
+  Assert.stringContains(result.source, "(identity__int)(1)")
   Assert.stringContains(result.source, "int32_t identity__int")
 }
 
@@ -54,9 +54,9 @@ export function testDiscoversGenericCallsInsideCasePatterns(): none {
     "function main(): int => case 1 { identity<int>(1) -> 1, identity<int>(0)..identity<int>(2) -> 2, _ -> 0 }",
   )
 
-  Assert.stringContains(result.source, "_case_subject == identity__int(1)")
-  Assert.stringContains(result.source, "_case_subject >= identity__int(0)")
-  Assert.stringContains(result.source, "_case_subject <= identity__int(2)")
+  Assert.stringContains(result.source, "_case_subject == (identity__int)(1)")
+  Assert.stringContains(result.source, "_case_subject >= (identity__int)(0)")
+  Assert.stringContains(result.source, "_case_subject <= (identity__int)(2)")
 }
 
 export function testUsesCheckerConformanceForConcreteInterfaceVariants(): none {

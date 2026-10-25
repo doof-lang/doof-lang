@@ -331,6 +331,17 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
     member: MemberExpression -> { invokesCallback = member.resolvedCallableField && functionType != none }
     _ -> { invokesCallback = functionType != none && functionDeclaration == none }
   }
+  // An unqualified call also finds same-named std:: templates through ADL
+  // (`apply(xs, f)` with a std::shared_ptr argument selects std::apply), so a
+  // bare same-module function name is parenthesized to keep ordinary lookup.
+  case expression.callee {
+    identifier: Identifier -> {
+      if !invokesCallback && identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "function" && !callee.contains("::") && !callee.contains("(") {
+        callee = "(" + callee + ")"
+      }
+    }
+    _ -> { }
+  }
   callPrefix := if invokesCallback then callee + ".call(" else callee + "("
   return callPrefix + emitCallArguments(expression, context, functionType) + ")"
 }

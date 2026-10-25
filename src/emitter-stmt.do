@@ -690,10 +690,34 @@ function indent(level: int): string {
 
 export function emitCondition(expression: Expression, context: EmitContext): string {
   value := emitExpression(expression, context)
-  if value.startsWith("(") && value.endsWith(")") {
+  if enclosedInParentheses(value) {
     return value.substring(1, value.length - 1)
   }
   return value
+}
+
+// Whether the first '(' closes at the final ')': `(a)(b)` and `(a) && (b)` are
+// not enclosed. Parentheses inside string and character literals are skipped.
+export function enclosedInParentheses(value: string): bool {
+  if !value.startsWith("(") || !value.endsWith(")") { return false }
+  let depth = 0
+  let openQuote: char | none = none
+  let escaped = false
+  for i of 0..<value.length {
+    c := value.charAt(i)
+    if openQuote != none {
+      if escaped { escaped = false }
+      else if c == '\\' { escaped = true }
+      else if c == openQuote! { openQuote = none }
+    }
+    else if c == '"' || c == '\'' { openQuote = c }
+    else if c == '(' { depth = depth + 1 }
+    else if c == ')' {
+      depth = depth - 1
+      if depth == 0 { return i == value.length - 1 }
+    }
+  }
+  return false
 }
 
 function emitTryAssignment(assignment: AssignmentExpression | none, temporaryName: string, ind: string, context: EmitContext): string {

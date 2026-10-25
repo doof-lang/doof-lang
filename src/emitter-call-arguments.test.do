@@ -26,7 +26,7 @@ export function testEmissionCleanupGenericDefaultsAndBuiltinArguments(): none {
   Assert.equal(result.diagnostics.length, 0)
   Assert.isTrue(result.emission != none)
   source := result.emission!.modules[0].source
-  Assert.stringContains(source, "read__int(3, std::make_shared<std::vector<int32_t>>")
+  Assert.stringContains(source, "(read__int)(3, std::make_shared<std::vector<int32_t>>")
   Assert.stringContains(source, "doof::println(3)")
 }
 

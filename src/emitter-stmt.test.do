@@ -4,6 +4,7 @@ import { compileWithLoader } from "./compiler"
 import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
+import { enclosedInParentheses } from "./emitter-stmt"
 
 export function testQuarkWeakCaseStatementEmission(): none {
   result := compile([SourceFile { path: "/main.do", source:
@@ -23,11 +24,11 @@ export function testDiscardedExpressionValuesAreExplicit(): none {
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   source := result.emission!.modules[0].source
-  Assert.stringContains(source, "effect();")
+  Assert.stringContains(source, "(effect)();")
   Assert.stringContains(source, "static_cast<void>(std::monostate{});")
   Assert.stringContains(source, "static_cast<void>(42);")
   Assert.stringContains(source, "static_cast<void>((count += 1));")
-  Assert.stringContains(source, "value = (static_cast<void>(effect()), std::monostate{});")
+  Assert.stringContains(source, "value = (static_cast<void>((effect)()), std::monostate{});")
 }
 
 export function testStandaloneDiscardBindingEmitsOnlyItsValue(): none {
@@ -36,7 +37,7 @@ export function testStandaloneDiscardBindingEmitsOnlyItsValue(): none {
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   source := result.emission!.modules[0].source
-  Assert.stringContains(source, "effect();")
+  Assert.stringContains(source, "(effect)();")
   Assert.stringNotContains(source, "const auto _ =")
 }
 
@@ -46,7 +47,7 @@ export function testUnitAsyncYieldExplicitlyDiscardsCarrier(): none {
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   Assert.stringContains(result.emission!.modules[0].source,
-    "effect();\n    return;")
+    "(effect)();\n    return;")
 }
 
 export function testLoopUpdatesExplicitlyDiscardEachValue(): none {
@@ -55,7 +56,7 @@ export function testLoopUpdatesExplicitlyDiscardEachValue(): none {
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   Assert.stringContains(result.emission!.modules[0].source,
-    "effect(), static_cast<void>((i += 1))")
+    "(effect)(), static_cast<void>((i += 1))")
 }
 
 export function testCapturedOptionalGenericLocalUsesConcreteStorageType(): none {
@@ -248,7 +249,7 @@ export function testTryAssignmentStoresTheConvertedSuccessValue(): none {
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
   source := result.emission!.modules[0].source
-  Assert.stringContains(source, "= name();")
+  Assert.stringContains(source, "= (name)();")
   Assert.stringContains(source, "wide = doof::variant_promote<std::variant<int64_t, std::string>>(std::move(doof::success_value(_try_value_")
   Assert.stringContains(source, "box->value = std::move(doof::success_value(_try_value_")
 }
@@ -544,4 +545,38 @@ export function testForOfClassStreamBreakSkipsThenAndCapturesEachValue(): none {
   // The loop advanced the shared instance, so iteration resumes after 3.
   Assert.equal(ticks.next(), true)
   Assert.equal(ticks.value(), 4)
+}
+
+export function testEnclosedInParenthesesRequiresMatchingOuterPair(): none {
+  Assert.isTrue(enclosedInParentheses("(a && b)"))
+  Assert.isTrue(enclosedInParentheses("((a) && (b))"))
+  Assert.isFalse(enclosedInParentheses("(f)(x)"))
+  Assert.isFalse(enclosedInParentheses("(a) && (b)"))
+  Assert.isFalse(enclosedInParentheses("a"))
+}
+
+export function testEnclosedInParenthesesSkipsLiterals(): none {
+  Assert.isTrue(enclosedInParentheses("(s == std::string(\")\"))"))
+  Assert.isTrue(enclosedInParentheses("(s == std::string(\"\\\")(\"))"))
+  Assert.isTrue(enclosedInParentheses("(c == U')')"))
+  Assert.isTrue(enclosedInParentheses("(c == U'\\'')"))
+  Assert.isFalse(enclosedInParentheses("(s == \"(\") && (t)"))
+}
+
+export function testConditionWithLiteralDropsRedundantParentheses(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function main(): int { s := \"a\"\nif s == \")\" { return 1 }\nreturn 0 }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "if (s == ")
+  Assert.stringNotContains(source, "if ((s == ")
+}
+
+export function testConditionKeepsParenthesizedCallee(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function ready(n: int): bool => n > 0\nfunction main(): int { if ready(1) { return 1 }\nreturn 0 }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.stringContains(result.emission!.modules[0].source, "if ((ready)(1)) {")
 }

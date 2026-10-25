@@ -82,8 +82,8 @@ export function testWiderNoneNamedEqualityAndUnitUnwrap(): none {
   source := result.emission!.modules[0].source
   Assert.stringContains(source, "return doof::is_null(_none_left);")
   Assert.stringContains(source, "return !doof::is_null(_none_right);")
-  Assert.stringContains(source, "take([&]() -> std::monostate")
-  Assert.stringNotContains(source, "take([&]() -> void")
+  Assert.stringContains(source, "(take)([&]() -> std::monostate")
+  Assert.stringNotContains(source, "(take)([&]() -> void")
 }
 
 export function testQuarkFixSharedKeywordIdentifierPolicy(): none {
@@ -92,7 +92,7 @@ export function testQuarkFixSharedKeywordIdentifierPolicy(): none {
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   Assert.stringContains(result.emission!.modules[0].source, "explicit_(int32_t namespace_)")
-  Assert.stringContains(result.emission!.modules[0].source, "explicit_(0)")
+  Assert.stringContains(result.emission!.modules[0].source, "(explicit_)(0)")
 }
 
 export function testReadonlyEmissionOperatorsUsesExplicitNames(): none {
@@ -136,7 +136,7 @@ export function testCoalescingAssignmentLowersLazily(): none {
   Assert.stringNotContains(source, "??=")
   Assert.stringContains(source, "if (doof::is_null(_assignment_target)) { _assignment_target = ")
   Assert.stringContains(source, "if (doof::is_failure(_assignment_target)) { _assignment_target = doof::Success<int32_t>{4}; }")
-  Assert.stringContains(source, "if (doof::is_failure(_assignment_target)) { _assignment_target = load(); }")
+  Assert.stringContains(source, "if (doof::is_failure(_assignment_target)) { _assignment_target = (load)(); }")
   // A none success value is absent too.
   Assert.stringContains(source, "if (doof::is_failure(_assignment_target) || doof::is_null(doof::success_value(_assignment_target))) { _assignment_target = ")
 }
@@ -162,14 +162,14 @@ function emittedSource(source: string): string {
 
 export function testForceAccessOnAResultUnwrapsTheReceiverOnce(): none {
   source := emittedSource("class User { email: string }\nfunction load(): Result<User, string> => Success(User { email: \"a\" })\nfunction email(): string => load()!.email")
-  Assert.stringContains(source, "auto _forced_value = load(); if (doof::is_failure(_forced_value)) doof::panic_at(")
+  Assert.stringContains(source, "auto _forced_value = (load)(); if (doof::is_failure(_forced_value)) doof::panic_at(")
   Assert.stringContains(source, "return std::move(doof::success_value(_forced_value)); }()->email")
 }
 
 export function testEqualityConvertsTheNarrowerOperandToTheUnion(): none {
   source := emittedSource("function ok(): Result<int, string> => Success(1)\nfunction f(u: int | string): bool => u == 1 && ok() == Success(1) && Success(1) == Success(2)")
   Assert.stringContains(source, "(u == doof::variant_promote<std::variant<int32_t, std::string>>(1))")
-  Assert.stringContains(source, "(ok() == [&]() -> doof::Result<int32_t, std::string> { const auto& _result_arm = doof::Success<int32_t>{ 1 };")
+  Assert.stringContains(source, "((ok)() == [&]() -> doof::Result<int32_t, std::string> { const auto& _result_arm = doof::Success<int32_t>{ 1 };")
   Assert.stringContains(source, "(doof::Success<int32_t>{ 1 } == doof::Success<int32_t>{ 2 })")
 }
 

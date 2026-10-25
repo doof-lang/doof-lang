@@ -188,6 +188,13 @@ destructuring, JSON serialization, metadata/invoke, and WebAssembly wrappers
 have dedicated lowering modules. Representation changes require focused emitter
 tests and generated-C++ compile/runtime coverage in the release gate.
 
+Direct calls never rely on C++ argument-dependent lookup. Imported functions are
+namespace-qualified, and same-module functions are emitted with a
+parenthesized callee (`(apply)(xs, f)`), so `std::` or `doof::` templates
+sharing a Doof function's name cannot outbid it through a `std::shared_ptr` or
+`doof::callback` argument. Statement conditions strip only parentheses that
+enclose the whole condition.
+
 The call emitter lowers `string.substring(start)` through `string_slice`,
 preserving one evaluation of the receiver and start. Explicit end arguments
 continue through `string_substring`, with named arguments in parameter order.

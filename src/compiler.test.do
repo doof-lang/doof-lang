@@ -409,8 +409,8 @@ export function testMonomorphizesDoofFunctionsAndClasses(): none {
   Assert.equal(module.header.contains("template <typename U>"), false)
   Assert.equal(module.header.contains("using Value"), false)
   Assert.equal(module.source.contains("int32_t identity__int(int32_t value)"), true)
-  Assert.equal(module.source.contains("outer__int(3)"), true)
-  Assert.equal(module.source.contains("identity__int(value)"), true)
+  Assert.equal(module.source.contains("(outer__int)(3)"), true)
+  Assert.equal(module.source.contains("(identity__int)(value)"), true)
   Assert.equal(module.source.contains("Box__int"), true)
   Assert.equal(module.source.contains("map__int(4)"), true)
 }
@@ -427,7 +427,7 @@ export function testMonomorphizesGenericMethodsOnOrdinaryOwnersTransitively(): n
   Assert.stringContains(module.header, "struct Box__int")
   Assert.stringNotContains(module.header, "template <typename T>")
   Assert.stringContains(module.source, "int32_t Mapper::map__int(int32_t value)")
-  Assert.stringContains(module.source, "identity__int(std::make_shared<Box__int>(value)->value)")
+  Assert.stringContains(module.source, "(identity__int)(std::make_shared<Box__int>(value)->value)")
   Assert.stringContains(module.source, "map__int(7)")
   Assert.stringNotContains(module.source, "map<int32_t>")
 }
@@ -819,7 +819,7 @@ export function testEmitsComputedForOfLifetimeOwner(): none {
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
   Assert.equal(result.emission != none, true)
-  Assert.equal(result.emission!.modules[0].source.contains("= doof::iteration_snapshot(values());"), true)
+  Assert.equal(result.emission!.modules[0].source.contains("= doof::iteration_snapshot((values)());"), true)
 }
 
 export function testEmitsImmutableLambdaCaptureByValue(): none {

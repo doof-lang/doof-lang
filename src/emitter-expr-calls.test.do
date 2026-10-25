@@ -157,7 +157,7 @@ export function testEmissionCleanupCallDispatchKeepsNamedDefaults(): none {
   Assert.equal(result.diagnostics.length, 0)
   Assert.isTrue(result.emission != none)
   source := result.emission!.modules[0].source
-  Assert.stringContains(source, "return read(2, 4)")
+  Assert.stringContains(source, "return (read)(2, 4)")
   Assert.stringContains(source, "_obj->read(2, 4)")
   Assert.stringContains(source, "->read(9, 4)")
 }
@@ -375,4 +375,18 @@ export function testHashCollectionMethodsConvertKeysToTheKeyRepresentation(): no
   Assert.equal(named.size, 2)
   Assert.isTrue(named.has(person))
   Assert.isFalse(named.has(HashCallPerson { name: "a" }))
+}
+
+export function testSameModuleFunctionCallsSuppressArgumentDependentLookup(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function apply(items: string[], f: (s: string): string): string[] => items.map(f)\n" +
+    "function inc(s: string): string => s + \"+\"\n" +
+    "function main(): int { let xs: string[] = [\"a\"]\nf := inc\nf(\"b\")\nreturn apply(xs, inc).length }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  // `apply(xs, ...)` with a std::shared_ptr argument would select std::apply.
+  Assert.stringContains(source, "(apply)(xs, doof::callback<std::string(std::string)>(inc))")
+  // Callback values are invoked through the carrier, not parenthesized.
+  Assert.stringContains(source, "f.call(std::string(\"b\"))")
 }

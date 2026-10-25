@@ -187,7 +187,7 @@ export function testNoneCarrierLambdaDiscardsUnitReturn(): none {
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
   Assert.isTrue(result.emission != none)
-  Assert.stringContains(result.emission!.modules[0].source, "return static_cast<void>((static_cast<void>(effect()), std::monostate{}));")
+  Assert.stringContains(result.emission!.modules[0].source, "return static_cast<void>((static_cast<void>((effect)()), std::monostate{}));")
 }
 
 export function testLambdaInYieldStatementBoxesCapturedMutable(): none {
