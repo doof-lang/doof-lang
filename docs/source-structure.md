@@ -267,6 +267,7 @@ completion races, ownership transfer, consumption aliases, and domain lifetime.
 | `progress.do` | Shared fixed-width progress bars and hardware-bounded worker counts |
 | `macos-app.do` / `ios-app.do` | Deterministic bundle metadata, signing arguments, and platform plans |
 | `macos-app-driver.do` / `ios-app-driver.do` | Bundle materialization and Apple tool execution |
+| `app-bundle-files.do` | Shared Apple bundle copying, resource globs, duplicate-destination diagnostics, and nested-code discovery |
 | `ios-device.do` | Physical-device discovery, provisioning selection, signing, install, and launch boundary |
 | `process-driver.do` | Native subprocess execution, host platform naming, and bounded command/diagnostic output |
 | `source-loader-driver.do` | Logical/disk path mapping, declared and reached package state, bundled stdlib acquisition, and the request `SourceLoader` |

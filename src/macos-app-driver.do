@@ -4,13 +4,15 @@
 // Apple tool invocation and filesystem materialization; macos-app.do retains
 // the deterministic metadata and command-argument model.
 
+import { collectNestedCode, copyBundleResource, copyPath, ensureDirectory, removeTree } from "./app-bundle-files"
 import { MacOSAppConfig, MacOSEmbeddedLibrary, MacOSPackageConfig, macOSCodesignArguments, renderMacOSInfoPlist } from "./macos-app"
 import { BlobReader } from "std/blob"
-import { exists, isDirectory, mkdir, readBlob, readDir, remove, writeBlob, writeText } from "std/fs"
+import { exists, isDirectory, remove, writeText } from "std/fs"
 import { ExecOptions, platform, run } from "std/os"
 import { basename, dirname, join } from "std/path"
 
 readonly MAX_MACOS_COMMAND_OUTPUT_BYTES = 262144L
+readonly MACOS_NESTED_BUNDLE_EXTENSIONS = [".framework", ".appex", ".xpc"]
 
 class MacOSCommandResult {
   exitCode: int
@@ -36,97 +38,6 @@ function runMacOSCommand(command: string, arguments: string[]): MacOSCommandResu
     return MacOSCommandResult { exitCode: -1, error }
   }
   return MacOSCommandResult { exitCode: executed.exitCode, output: executed.stdout }
-}
-
-function ensureDirectory(path: string): none {
-  if path == "" || exists(path) { return }
-  parent := parentPath(path)
-  if parent != path { ensureDirectory(parent) }
-  mkdir(path)!
-}
-
-function copyPath(sourcePath: string, destinationPath: string): none {
-  if isDirectory(sourcePath) {
-    ensureDirectory(destinationPath)
-    for entry of readDir(sourcePath)! {
-      copyPath(outputPath(sourcePath, entry.name), outputPath(destinationPath, entry.name))
-    }
-    return
-  }
-  ensureDirectory(parentPath(destinationPath))
-  writeBlob(destinationPath, readBlob(sourcePath)!)!
-}
-
-function removeTree(path: string): none {
-  if !exists(path) { return }
-  if isDirectory(path) {
-    for entry of readDir(path)! { removeTree(outputPath(path, entry.name)) }
-  }
-  remove(path)!
-}
-
-function globBaseDirectory(pattern: string): string {
-  let wildcard = pattern.length
-  for index of 0..<pattern.length {
-    if pattern.substring(index, index + 1) == "*" { wildcard = index; break }
-  }
-  if wildcard == pattern.length { return parentPath(pattern) }
-  let slash = wildcard
-  while slash > 0 && pattern.substring(slash - 1, slash) != "/" { slash = slash - 1 }
-  return if slash <= 1 then "/" else pattern.substring(0, slash - 1)
-}
-
-function globMatches(pattern: string, value: string, patternIndex: int = 0, valueIndex: int = 0): bool {
-  if patternIndex == pattern.length { return valueIndex == value.length }
-  current := pattern.substring(patternIndex, patternIndex + 1)
-  if current != "*" {
-    return valueIndex < value.length && current == value.substring(valueIndex, valueIndex + 1) &&
-      globMatches(pattern, value, patternIndex + 1, valueIndex + 1)
-  }
-  doubleStar := patternIndex + 1 < pattern.length && pattern.substring(patternIndex + 1, patternIndex + 2) == "*"
-  nextPattern := patternIndex + if doubleStar then 2 else 1
-  if globMatches(pattern, value, nextPattern, valueIndex) { return true }
-  if valueIndex >= value.length { return false }
-  if !doubleStar && value.substring(valueIndex, valueIndex + 1) == "/" { return false }
-  return globMatches(pattern, value, patternIndex, valueIndex + 1)
-}
-
-function collectResourceFiles(path: string, baseDirectory: string, pattern: string, results: string[]): none {
-  if isDirectory(path) {
-    for entry of readDir(path)! { collectResourceFiles(outputPath(path, entry.name), baseDirectory, pattern, results) }
-    return
-  }
-  prefix := if baseDirectory.endsWith("/") then baseDirectory else baseDirectory + "/"
-  relative := if path.startsWith(prefix) then path.substring(prefix.length, path.length) else fileName(path)
-  relativePattern := if pattern.startsWith(prefix) then pattern.substring(prefix.length, pattern.length) else fileName(pattern)
-  if globMatches(relativePattern, relative) { results.push(path) }
-}
-
-function materializeMacOSResources(config: MacOSAppConfig, resourcesDirectory: string): none {
-  let destinations: string[] = []
-  for resource of config.resources {
-    let files: string[] = []
-    let baseDirectory = globBaseDirectory(resource.sourcePath)
-    if resource.sourcePath.contains("*") {
-      if exists(baseDirectory) { collectResourceFiles(baseDirectory, baseDirectory, resource.sourcePath, files) }
-    } else if isDirectory(resource.sourcePath) {
-      collectResourceFiles(resource.sourcePath, resource.sourcePath, resource.sourcePath + "/**", files)
-      baseDirectory = resource.sourcePath
-    } else if exists(resource.sourcePath) {
-      files.push(resource.sourcePath)
-      baseDirectory = parentPath(resource.sourcePath)
-    }
-    if files.length == 0 { panic("No files matched resource pattern: " + resource.sourcePath) }
-    prefix := if baseDirectory.endsWith("/") then baseDirectory else baseDirectory + "/"
-    for sourcePath of files {
-      relative := if sourcePath.startsWith(prefix) then sourcePath.substring(prefix.length, sourcePath.length) else fileName(sourcePath)
-      destinationRoot := if resource.destination == "" then resourcesDirectory else outputPath(resourcesDirectory, resource.destination)
-      destinationPath := outputPath(destinationRoot, relative)
-      if destinations.contains(destinationPath) { panic("Duplicate macOS app resource destination: " + destinationPath) }
-      destinations.push(destinationPath)
-      copyPath(sourcePath, destinationPath)
-    }
-  }
 }
 
 function runRequiredCommand(command: string, arguments: string[], description: string): Result<none, string> {
@@ -343,17 +254,6 @@ function embedMacOSLibraries(
   return Success()
 }
 
-function collectNestedMacOSCode(path: string, results: string[]): none {
-  if !exists(path) { return }
-  if isDirectory(path) {
-    for entry of readDir(path)! { collectNestedMacOSCode(outputPath(path, entry.name), results) }
-    if path.endsWith(".framework") || path.endsWith(".appex") || path.endsWith(".xpc") { results.push(path) }
-    return
-  }
-  if path.endsWith(".dylib") || path.endsWith(".so") { results.push(path) }
-}
-
-/** Assembles and ad-hoc signs one runnable development app bundle. */
 export function assembleMacOSApp(
   buildDirectory: string,
   executablePath: string,
@@ -383,10 +283,13 @@ export function assembleMacOSApp(
   if config.iconPath != "" {
     try generateMacOSIcon(config.iconPath, outputPath(resourcesDirectory, config.executableName + ".icns"), buildDirectory)
   }
-  materializeMacOSResources(config, resourcesDirectory)
+  let destinations: string[] = []
+  for resource of config.resources {
+    try copyBundleResource(resource.sourcePath, resource.destination, resourcesDirectory, destinations, "macOS")
+  }
   try embedMacOSLibraries(bundleExecutable, config, libraryPaths, buildDirectory, contentsDirectory)
   let nested: string[] = []
-  collectNestedMacOSCode(outputPath(contentsDirectory, "Frameworks"), nested)
+  collectNestedCode(outputPath(contentsDirectory, "Frameworks"), MACOS_NESTED_BUNDLE_EXTENSIONS, nested)
   for path of nested {
     try runRequiredCommand("codesign", macOSCodesignArguments(path, "-", "ad-hoc"), "ad-hoc signing nested macOS code")
   }
@@ -452,9 +355,9 @@ export function signAndArchiveMacOSApp(
   }
   try entitlementsPath := effectiveEntitlements(config, buildDirectory)
   let nested: string[] = []
-  collectNestedMacOSCode(outputPath(appPath, "Contents/Frameworks"), nested)
-  collectNestedMacOSCode(outputPath(appPath, "Contents/PlugIns"), nested)
-  collectNestedMacOSCode(outputPath(appPath, "Contents/XPCServices"), nested)
+  collectNestedCode(outputPath(appPath, "Contents/Frameworks"), MACOS_NESTED_BUNDLE_EXTENSIONS, nested)
+  collectNestedCode(outputPath(appPath, "Contents/PlugIns"), MACOS_NESTED_BUNDLE_EXTENSIONS, nested)
+  collectNestedCode(outputPath(appPath, "Contents/XPCServices"), MACOS_NESTED_BUNDLE_EXTENSIONS, nested)
   for path of nested { try runRequiredCommand("codesign", macOSCodesignArguments(path, identity, config.signing), "signing nested macOS code") }
   try runRequiredCommand("codesign", macOSCodesignArguments(appPath, identity, config.signing, entitlementsPath), "signing macOS app")
   try runRequiredCommand("codesign", ["--verify", "--deep", "--strict", "--verbose=2", appPath], "verifying macOS app signature")
