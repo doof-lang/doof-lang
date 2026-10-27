@@ -93,14 +93,21 @@ export function materializeProject(outputDirectory: string, project: ProjectEmis
   return Success()
 }
 
-export function materializeExecutableResources(resources: PackageResource[], outputDirectory: string): none {
+function checkResourceSource(resource: PackageResource): Result<none, string> {
+  if exists(resource.sourcePath) { return Success() }
+  return Failure("Resource " + resource.sourcePath + " does not exist; check resources in doof.json")
+}
+
+export function materializeExecutableResources(resources: PackageResource[], outputDirectory: string): Result<none, string> {
   for resource of resources {
+    try checkResourceSource(resource)
     destinationRoot := driverOutputPath(outputDirectory, resource.destination)
     outputPath := if isDirectory(resource.sourcePath)
       then destinationRoot
       else driverOutputPath(destinationRoot, fileName(resource.sourcePath))
-    materializeNativeCopy(resource.sourcePath, outputPath)!
+    try materializeNativeCopy(resource.sourcePath, outputPath)
   }
+  return Success()
 }
 
 function readResourceState(path: string): ResourceState {
@@ -159,10 +166,11 @@ export function synchronizeExecutableResources(
   resources: PackageResource[],
   outputDirectory: string,
   statePath: string,
-): none {
+): Result<none, string> {
   previous := readResourceState(statePath)
   next := ResourceState {}
   for resource of resources {
+    try checkResourceSource(resource)
     destinationRoot := driverOutputPath(outputDirectory, resource.destination)
     outputPath := if isDirectory(resource.sourcePath)
       then destinationRoot
@@ -179,6 +187,7 @@ export function synchronizeExecutableResources(
   temporaryPath := statePath + ".tmp"
   writeText(temporaryPath, renderResourceState(next))!
   rename(temporaryPath, statePath)!
+  return Success()
 }
 
 export function materializeRuntimeHeader(outputDirectory: string): none {

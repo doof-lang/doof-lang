@@ -66,7 +66,10 @@ export function buildAndLaunchProject(
   }
   outputPath := driverOutputPath(layout.outputDirectory, layout.executableName)
   if project.macosApp == none && project.iosApp == none {
-    synchronizeExecutableResources(project.resources, layout.outputDirectory, frontendCachePath(layout.cacheDirectory, "resources"))
+    _ := synchronizeExecutableResources(project.resources, layout.outputDirectory, frontendCachePath(layout.cacheDirectory, "resources")) else error {
+      println("error: " + error)
+      return 1
+    }
   }
   exitCode := buildNativeProject(
     request.compiler, layout.outputDirectory, outputPath, emission,

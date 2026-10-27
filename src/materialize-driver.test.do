@@ -1,6 +1,10 @@
 import { Assert } from "std/assert"
 import { ProjectEmission, ProjectNativeCopy } from "./emitter-project"
-import { driverOutputPath, ensureOutputDirectory, materializeGeneratedText, materializeProject } from "./materialize-driver"
+import {
+  driverOutputPath, ensureOutputDirectory, materializeExecutableResources, materializeGeneratedText, materializeProject,
+  synchronizeExecutableResources,
+} from "./materialize-driver"
+import { PackageResource } from "./package-manifest"
 import { exists, isDirectory, metadata, readText, writeText } from "std/fs"
 import { run } from "std/os"
 import { Instant } from "std/time"
@@ -67,4 +71,37 @@ export function testNativeCopiesKeepExecutePermissions(): none {
   materializeProject(root + "/out", project)!
   Assert.equal(run("test", ["-x", root + "/out/pkg/vendor/configure"])!.exitCode, 0)
   Assert.notEqual(run("test", ["-x", root + "/out/pkg/vendor/README"])!.exitCode, 0)
+}
+
+export function testMissingResourceDirectoryReportsSourcePath(): none {
+  root := "/tmp/doof-materialize-driver-missing-resource-" + string(Instant.now().toEpochMillis())
+  missing := root + "/package/assets"
+  resources := [PackageResource { sourcePath: missing, destination: "assets" }]
+  message := case synchronizeExecutableResources(resources, root + "/out", root + "/cache/resources") {
+    _: Success -> "",
+    failure: Failure -> failure.error,
+  }
+  Assert.isTrue(message.contains(missing), "expected missing resource path, got: " + message)
+  Assert.isTrue(message.contains("resources in doof.json"), "expected manifest hint, got: " + message)
+  Assert.isFalse(exists(root + "/cache/resources"), "resource state must not be written after a failure")
+}
+
+export function testMissingPackagedResourceReportsSourcePath(): none {
+  root := "/tmp/doof-materialize-driver-missing-dist-resource-" + string(Instant.now().toEpochMillis())
+  missing := root + "/package/config.json"
+  resources := [PackageResource { sourcePath: missing, destination: "" }]
+  message := case materializeExecutableResources(resources, root + "/dist") {
+    _: Success -> "",
+    failure: Failure -> failure.error,
+  }
+  Assert.isTrue(message.contains(missing), "expected missing resource path, got: " + message)
+}
+
+export function testExistingResourceDirectorySynchronizes(): none {
+  root := "/tmp/doof-materialize-driver-resource-" + string(Instant.now().toEpochMillis())
+  ensureOutputDirectory(root + "/package/assets")
+  writeText(root + "/package/assets/data.txt", "data\n")!
+  resources := [PackageResource { sourcePath: root + "/package/assets", destination: "assets" }]
+  synchronizeExecutableResources(resources, root + "/out", root + "/cache/resources")!
+  Assert.equal(readText(root + "/out/assets/data.txt")!, "data\n")
 }

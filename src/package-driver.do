@@ -33,7 +33,10 @@ export function packageProject(
   )
   if exitCode != 0 { return exitCode }
   if project.macosApp == none && project.iosApp == none {
-    materializeExecutableResources(project.resources, distDirectory)
+    _ := materializeExecutableResources(project.resources, distDirectory) else error {
+      println("error: " + error)
+      return 1
+    }
     return 0
   }
   if project.iosApp != none {
