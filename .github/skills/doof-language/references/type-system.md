@@ -529,7 +529,8 @@ class Counter implements Stream<int> {
 - Interfaces are structural.
 - Interface types resolve against the closed world of matching classes at compile time.
 - `as` and case type patterns may narrow one interface to another when some
-  class implements both.
+  class implements both. A class narrows to an interface it implements,
+  and an interface only to classes that implement it.
 
 ```doof check
 class Canvas {}

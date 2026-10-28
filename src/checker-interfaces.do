@@ -181,6 +181,45 @@ export function interfacesShareImplementation(result: AnalysisResult, left: Inte
   return false
 }
 
+// The classes a concrete instantiation of a generic interface, such as
+// `Reader<int>`, lowers to: every non-generic class that satisfies it. Generic
+// class instantiations join the carrier only after checking, so a generic class
+// declaring every interface member leaves the set open (none).
+export function concreteInterfaceImplementations(result: AnalysisResult, interface_: InterfaceType): ClassType[] | none {
+  interfaceDeclaration := declarationFor(result, interface_.symbol)
+  if interfaceDeclaration == none { return none }
+  let classes: ClassType[] = []
+  for module of result.modules {
+    for symbol of module.symbols {
+      if symbol.kind != "class" { continue }
+      if symbol.typeParams.length == 0 {
+        candidate := classType(symbol.name, symbol)
+        if isAssignableWithInterfaces(result, candidate, interface_) { classes.push(candidate) }
+        continue
+      }
+      // Only declared Doof classes are instantiated into interface carriers.
+      declaration := declarationFor(result, symbol)
+      if declaration == none { continue }
+      case declaration! {
+        class_: ClassDeclaration -> {
+          case interfaceDeclaration! {
+            required: InterfaceDeclaration -> { if declaresInterfaceMembers(class_, required) { return none } }
+            _ -> { return none }
+          }
+        }
+        _ -> { }
+      }
+    }
+  }
+  return classes
+}
+
+function declaresInterfaceMembers(class_: ClassDeclaration, interface_: InterfaceDeclaration): bool {
+  for field of interface_.fields { if findClassField(class_.fields, field.name) == none { return false } }
+  for method of interface_.methods { if findClassMethod(class_.methods, method.name, method.static_) == none { return false } }
+  return true
+}
+
 export function isAssignableWithInterfaces(result: AnalysisResult, value: ResolvedType, target: ResolvedType): bool {
   return isAssignableWithInterfacesSeen(result, value, target, [])
 }

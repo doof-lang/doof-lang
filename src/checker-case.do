@@ -7,6 +7,7 @@ import { pathType } from "./checker-inference"
 import { isIntegerOperand } from "./checker-numeric"
 import { typesOverlap } from "./checker-operators"
 import { resolveType } from "./checker-annotations"
+import { concreteInterfaceImplementations } from "./checker-interfaces"
 import { CheckerState } from "./checker-state"
 import { checkBlock } from "./checker-statements"
 import { casePatternName, declarationFor, declare } from "./checker-symbols"
@@ -109,11 +110,10 @@ function memberCovered(state: CheckerState, member: ResolvedType, arms: CasePatt
   return false
 }
 
-// The classes a non-generic interface lowers to. Generic interfaces and
-// generic implementing classes depend on emitted instantiations, so their
-// cases need a wildcard.
+// The classes an interface lowers to. Generic implementing classes depend on
+// emitted instantiations, so their cases need a wildcard.
 function closedInterfaceImplementations(state: CheckerState, interface_: InterfaceType): ClassType[] | none {
-  if interface_.typeArgs.length > 0 { return none }
+  if interface_.typeArgs.length > 0 { return concreteInterfaceImplementations(state.result, interface_) }
   let classes: ClassType[] = []
   for implementation of interface_.symbol.implementations {
     if implementation.typeParams.length > 0 { return none }

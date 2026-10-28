@@ -139,3 +139,29 @@ export function testInterfacesNarrowToOverlappingInterfaces(): none {
   Assert.equal(pattern.diagnostics.length, 1)
   Assert.equal(pattern.diagnostics[0].message, "Case type pattern \"Sized\" cannot match subject type \"Named\"")
 }
+
+export function testClassesNarrowToImplementedInterfaces(): none {
+  prelude := "interface Shape { area(): double }\nclass Square { side: double; area(): double => side }\nclass Text { body: string }\n"
+  valid := checked(prelude +
+    "function a(s: Square): Result<Shape, string> => s as Shape\n" +
+    "function b(v: Square | Text): Result<Shape, string> => v as Shape\n" +
+    "function c(s: Shape): Result<Square, string> => s as Square")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+  unrelated := checked(prelude + "function f(t: Text): Result<Shape, string> => t as Shape")
+  Assert.equal(unrelated.diagnostics.length, 1)
+  Assert.equal(unrelated.diagnostics[0].message, "Cannot narrow \"Text\" to \"Shape\" with \"as\"")
+}
+
+export function testInterfacesNarrowOnlyToImplementingClasses(): none {
+  prelude := "interface Shape { area(): double }\ninterface Reader<T> { read(): T }\nclass Square { side: double; area(): double => side }\nclass Text { body: string }\nclass IntReader { read(): int => 1 }\n"
+  Assert.equal(checked(prelude + "function f(r: Reader<int>): Result<IntReader, string> => r as IntReader").diagnostics.length, 0)
+  for source of [
+    "function f(s: Shape): Result<Text, string> => s as Text",
+    "function f(r: Reader<string>): Result<IntReader, string> => r as IntReader",
+  ] {
+    result := checked(prelude + source)
+    Assert.equal(result.diagnostics.length, 1)
+    Assert.stringContains(result.diagnostics[0].message, "Cannot narrow")
+  }
+}

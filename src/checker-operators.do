@@ -217,9 +217,16 @@ export function isValidAsNarrow(state: CheckerState, source: ResolvedType, targe
     union_: UnionResolvedType -> {
       for member of union_.types { if isValidAsNarrow(state, member, target) { return true } }
     }
+    // A class widens to an interface it implements; the narrowing always succeeds.
+    _: ClassType -> {
+      case target {
+        _: InterfaceType -> { return isAssignableWithInterfaces(state.result, source, target) }
+        _ -> { }
+      }
+    }
     interface_: InterfaceType -> {
       case target {
-        _: ClassType -> { return true }
+        _: ClassType -> { return isAssignableWithInterfaces(state.result, target, interface_) }
         targetInterface: InterfaceType -> { return interfacesShareImplementation(state.result, interface_, targetInterface) }
         _ -> { }
       }

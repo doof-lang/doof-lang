@@ -552,7 +552,8 @@ wide := numeric as long  // Result<long, string>
 | `U1 \| U2`      | `Ui`           | `std::holds_alternative<Ui>` variant check |
 | Numeric primitive or numeric union member | Numeric primitive | Checked numeric conversion; succeeds only when the runtime value is exactly representable in the target type |
 | `SerialValue`      | Exact JSON member (`string`, `int`, `long`, `float`, `double`, `bool`, `none`, `readonly SerialValue[]`, `readonly byte[]`, `readonly Map<string, SerialValue>`) | JSON carrier tag check |
-| Interface       | Class          | `std::holds_alternative<Class>` variant check |
+| Interface       | Class          | `std::holds_alternative<Class>` variant check; rejected when the class does not implement the interface |
+| Class, or union with a class member | Interface | Always succeeds for a class that implements the interface; a union checks that its held arm does. Rejected when no member implements it |
 | Interface       | Interface      | Variant check that the held class also implements the target; rejected when no class implements both |
 | `Result<V, F>`  | `T`            | If failure: pass through `F`; if success: narrow `V` to `T` |
 | `T`             | `T`            | Identity — always succeeds            |

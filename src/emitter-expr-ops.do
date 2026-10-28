@@ -62,6 +62,12 @@ function emitValueAs(source: string, sourceType: ResolvedType, result: ResultRes
   }
   case sourceType {
     _: SerialValueResolvedType -> { return emitJsonAs(source, target, resultCpp, success, failure) }
+    _: ClassType -> {
+      case target {
+        _: InterfaceType -> { return resultCpp + "{" + success + "{doof::variant_promote<" + targetCpp + ">(" + source + ")}}" }
+        _ -> { }
+      }
+    }
     interface_: InterfaceType -> {
       case target {
         _: ClassType -> {

@@ -143,11 +143,21 @@ export function testUnionMembersAreExhaustiveWhenTheirPartsAreCovered(): none {
   }
 }
 
-export function testGenericInterfaceCasesNeedAWildcard(): none {
-  prelude := "interface Reader<T> { read(): T }\nclass IntReader { read(): int => 1 }\n"
+export function testGenericInterfaceCasesCoverTheirNonGenericImplementations(): none {
+  prelude := "interface Reader<T> { read(): T }\nclass IntReader { read(): int => 1 }\nclass CountReader { read(): int => 2 }\nclass TextReader { read(): string => \"\" }\n"
+  covered := checked(prelude + "function f(r: Reader<int>): int => case r { _: IntReader -> 1, _: CountReader -> 2 }")
+  for diagnostic of covered.diagnostics { println(diagnostic.message) }
+  Assert.equal(covered.diagnostics.length, 0)
   partial := checked(prelude + "function f(r: Reader<int>): int => case r { _: IntReader -> 1 }")
   Assert.equal(partial.diagnostics.length, 1)
   Assert.equal(partial.diagnostics[0].message, "Case expression must be exhaustive")
+}
+
+export function testGenericImplementationsKeepGenericInterfaceCasesOpen(): none {
+  prelude := "interface Reader<T> { read(): T }\nclass IntReader { read(): int => 1 }\nclass Wrap<T> { value: T; read(): T => value }\n"
+  open := checked(prelude + "function f(r: Reader<int>): int => case r { _: IntReader -> 1 }")
+  Assert.equal(open.diagnostics.length, 1)
+  Assert.equal(open.diagnostics[0].message, "Case expression must be exhaustive")
   Assert.equal(checked(prelude + "function f(r: Reader<int>): int => case r { _: IntReader -> 1, _ -> 0 }").diagnostics.length, 0)
 }
 

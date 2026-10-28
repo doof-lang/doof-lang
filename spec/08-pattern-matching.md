@@ -155,8 +155,10 @@ let partial = case direction {  // ❌
 
 A union member is covered by covering its parts: every variant of an enum
 member, both values of a `bool` member, both arms of a `Result` member, or
-every implementing class of a non-generic interface. Inside a union, enum value
-patterns count toward the enum they name. Generic interfaces need a wildcard.
+every implementing class of an interface. Inside a union, enum value patterns
+count toward the enum they name. A generic interface instantiation such as
+`Reader<int>` is covered by its non-generic implementing classes, but needs a
+wildcard when a generic class might implement it.
 
 ```doof check
 enum Color { Red, Green }

@@ -183,6 +183,12 @@ use `isAssignableWithInterfaces`, which directly checks a concrete
 depend on eagerly registering a generic declaration: `Box<int>` is checked
 with `Box`'s `T := int` substitution at the use site.
 
+Case exhaustiveness over a concrete generic interface uses
+`concreteInterfaceImplementations`: every non-generic class assignable to
+`Reader<int>`. Generic class instantiations join the carrier only during
+instantiation planning, so a generic class that declares every interface member
+leaves the set open and the case needs a wildcard.
+
 `classSatisfiesInterface` and concrete generic conformance both delegate to
 `classSatisfiesConcreteInterface`. The operation substitutes owner and
 interface parameters before comparing members. Required method parameter

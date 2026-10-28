@@ -15,6 +15,9 @@ interface Holder { readonly shape: Shape; readonly label: string }
 class SquareHolder { readonly shape: Square; readonly label: string = "square" }
 class CircleHolder { readonly shape: Circle; readonly label: string = "circle" }
 class Copy { shape: Shape; label: string }
+interface Reader<T> { read(): T }
+class IntReader { read(): int => 1 }
+class CountReader { let count: int = 2; read(): int => count }
 struct Wide { let x: int; y: int; total(): int => x + y }
 struct Narrow { let x: int; total(): int => x }
 
@@ -30,6 +33,7 @@ function colorName(color: Color | none): string => case color { .Red -> "red", .
 function flag(value: bool | none): string => case value { true -> "yes", false -> "no", none -> "unset" }
 function outcome(result: Result<int, string> | none): string => case result { s: Success -> "${s.value}", f: Failure -> f.error, none -> "none" }
 function boxed(box: Box<int> | Box<string>): string => case box { b: Box<int> -> "${b.value}", b: Box<string> -> b.value }
+function readerName(reader: Reader<int>): string => case reader { _: IntReader -> "int", c: CountReader -> "count ${c.read()}" }
 function tagged(value: Color | string): string => case value { .Green -> "green", s: string -> s, _ -> "other" }
 
 function main(): int {
@@ -64,6 +68,17 @@ function main(): int {
   check(case counted { s: Success -> s.value.count == 3, _: Failure -> false }, "as narrows to an overlapping interface")
   check(case names[1] as Counter { _: Success -> false, _: Failure -> true }, "as fails for a non-implementing arm")
   check(case names[0] { c: Counter -> c.count == 3, _ -> false }, "a case pattern names an overlapping interface")
+
+  // Classes narrow to the interfaces they implement, and interfaces only to
+  // implementing classes.
+  check(case Square { side: 2.0 } as Shape { s: Success -> s.value.area() == 4.0, _: Failure -> false }, "a class narrows to its interface")
+  numOrSquare: Num | Square := Square { side: 3.0 }
+  check(case numOrSquare as Shape { s: Success -> s.value.area() == 9.0, _: Failure -> false }, "a union arm narrows to its interface")
+  numOnly: Num | Square := Num { value: 1 }
+  check(case numOnly as Shape { _: Success -> false, _: Failure -> true }, "a non-implementing union arm fails to narrow")
+  circleShape: Shape := Circle { radius: 1.0 }
+  check(case circleShape as Square { _: Success -> false, _: Failure -> true }, "an interface narrows only to the held class")
+  check(readerName(IntReader {}) == "int" && readerName(CountReader {}) == "count 2", "generic interface implementations are exhaustive")
 
   check(shapeName(Circle { radius: 1.0 }) == "circle" && shapeName(none) == "none", "interface members are exhaustive")
   check(colorName(.Blue) == "blue" && colorName(none) == "none", "enum members are exhaustive")
