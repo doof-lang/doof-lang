@@ -367,6 +367,9 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
       }
     }
   }
+  // Static methods see the class's static fields by bare name, as they do its
+  // static methods; instance members need an instance.
+  if owner != none && fn.static_ { addClassFields(state, scope, owner!, true) }
   if owner != none && !fn.static_ { addClassFields(state, scope, owner!); addClassMethods(state, scope, owner!) }
   returnType := if fn.returnType == none then noneType() else resolveType(state, fn.returnType!, state.info!, scope)
   scope.returnType = returnType
@@ -952,12 +955,13 @@ export function inferredReturn(state: CheckerState, block: Block): ResolvedType 
   return noneType()
 }
 
-export function addClassFields(state: CheckerState, scope: Scope, owner: ClassType): none {
+export function addClassFields(state: CheckerState, scope: Scope, owner: ClassType, staticOnly: bool = false): none {
   declaration := declarationFor(state.result, owner.symbol)
   if declaration == none { return }
   case declaration! {
     class_: ClassDeclaration -> {
       for field of class_.fields {
+        if staticOnly && !field.static_ { continue }
         for name of field.names { declare(scope, classFieldBinding(field, name, class_, field.resolvedType ?? unknownType(), state.info!.path)) }
       }
     }

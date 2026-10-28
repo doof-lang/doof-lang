@@ -2399,6 +2399,30 @@ SerialValue serial_union_value(const std::variant<Arms...>& value) {
     panic("Cannot format an uninhabited never value");
 }
 
+// Container overloads format their elements through unqualified to_string
+// calls, which only see overloads declared before the template definition
+// (std types bring no doof-namespace ADL). Declare every overload up front so
+// arrays, maps, sets, tuples, and Results of optionals and unions format.
+template <typename T>
+inline std::string to_string(const T& val);
+template <typename T>
+inline std::string to_string(const std::shared_ptr<std::vector<T>>& val);
+template <typename K, typename V>
+inline std::string to_string(const std::shared_ptr<ordered_map<K, V>>& val);
+template <typename T>
+inline std::string to_string(const std::shared_ptr<ordered_set<T>>& val);
+template <typename... Ts>
+inline std::string to_string(const std::tuple<Ts...>& val);
+template <typename T, typename E>
+inline std::string to_string(const Result<T, E>& val);
+template <typename E>
+inline std::string to_string(const Result<void, E>& val);
+template <typename T>
+inline std::string to_string(const std::optional<T>& val);
+inline std::string to_string(std::monostate);
+template <typename... Ts>
+inline std::string to_string(const std::variant<Ts...>& val);
+
 // Convert any streamable value to string
 template <typename T>
 inline std::string to_string(const T& val) {

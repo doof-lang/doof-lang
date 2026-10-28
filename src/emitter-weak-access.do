@@ -8,7 +8,7 @@ import { ResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { weakTargetAllowsNone } from "./emitter-carriers"
 import { emitOptionalAbsent, emitOptionalPresent } from "./emitter-optional-chain"
-import { emitContextType, emitType } from "./emitter-types"
+import { emitContextType } from "./emitter-types"
 
 /** The generated locals of one weak access. `value` names the locked strong reference. */
 export class WeakAccessNames {
@@ -50,7 +50,7 @@ export function emitWeakAccess(
   locked := "auto " + names.value + " = std::move(_weak_locked.value()); "
   if force {
     noneCheck := if nullable then "if (!" + storage + ".has_value()) doof::panic(\"Weak reference is none\"); " else ""
-    returnType := if returnsVoid then "void" else emitType(resultType, context.modulePath, context.names)
+    returnType := if returnsVoid then "void" else emitContextType(resultType, context)
     body := if returnsVoid then access + "; " else "return " + access + "; "
     return "[&]() -> " + returnType + " { " + stored + noneCheck + lock + "if (!_weak_locked.has_value()) doof::panic(\"Weak reference has expired\"); " + locked + body + "}()"
   }

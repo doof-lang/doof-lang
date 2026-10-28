@@ -1,6 +1,7 @@
 import { Assert } from "std/assert"
 import { ClassType, FunctionParamType, InterfaceType, ResolvedType, Symbol } from "./semantic"
-import { actorType, classMetadataType, containsTypeParameter, containsTypeParameters, methodReflectionType, setType, tupleType, applyDeepReadonly, interfaceBoundReceiver, isWeakReferenceTarget, arrayType, classType, displayTypeName, failureType, functionType, isAssignable, mapType, noneType, primitive, promiseType, resultArmExpectation, resultType, sameType, streamType, substituteTypeParams, successType, typeName, typeParameter, mixedWeakUnionMessage, unionMutabilityConflict, unionType, weakType } from "./checker-types"
+import { actorType, classMetadataType, containsTypeParameter, containsTypeParameters, methodReflectionType, setType, tupleType, applyDeepReadonly, interfaceBoundReceiver, isWeakReferenceTarget, arrayType, classType, displayTypeName, failureType, functionType, isAssignable, mapType, noneType, primitive, promiseType, resultArmExpectation, resultType, sameType, streamType, substituteTypeParams, successType, typeName, memberReceiverType, typeParameter, mixedWeakUnionMessage, unionMutabilityConflict, unionType, weakType } from "./checker-types"
+import { AstLocation, Identifier, MemberExpression, SourceSpan } from "./ast"
 
 export function testResultArmAssignabilityUsesOnlyItsPayloadChannel(): none {
   success := successType(primitive("int"))
@@ -349,4 +350,16 @@ export function testConstrainedTypeParameterReachesOptionalSelf(): none {
   Assert.isTrue(isAssignable(constrained, unionType([primitive("string"), noneType()])))
   Assert.isFalse(isAssignable(constrained, primitive("int")))
   Assert.isFalse(isAssignable(constrained, typeParameter("U", "Named", primitive("string"))))
+}
+
+export function testMemberReceiverTypePrefersTheStaticReceiverInstantiation(): none {
+  location := AstLocation { line: 1, column: 1, offset: 0 }
+  span := SourceSpan { start: location, end: location }
+  symbol := Symbol { name: "Stack", kind: "class", module: "/main.do", exported: false }
+  member := MemberExpression { kind: "member", object: Identifier { kind: "identifier", name: "Stack", span }, property: "wrap", optional: false, force: false, span }
+  Assert.isTrue(memberReceiverType(member) == none)
+  member.object.resolvedType = classType("Stack", symbol)
+  Assert.isTrue(sameType(memberReceiverType(member)!, classType("Stack", symbol)))
+  member.resolvedStaticReceiver = ClassType { name: "Stack", symbol, typeArgs: [primitive("int")] }
+  Assert.isTrue(sameType(memberReceiverType(member)!, classType("Stack", symbol, [primitive("int")])))
 }

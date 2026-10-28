@@ -279,7 +279,7 @@ export function emitIdentifier(expression: Identifier, context: EmitContext): st
   if expression.resolvedBinding != none && expression.resolvedBinding!.kind == "script-global" {
     return "__doof_script_get_" + cppIdentifier(expression.name) + "()"
   }
-  if expression.resolvedBinding != none && expression.resolvedBinding!.kind == "field" && !context.currentFunctionStatic {
+  if expression.resolvedBinding != none && expression.resolvedBinding!.kind == "field" && !expression.resolvedBinding!.staticField && !context.currentFunctionStatic {
     return "this->" + cppIdentifier(expression.name)
   }
   // Only an import binding (or an unresolved synthesized identifier) names an
@@ -351,6 +351,9 @@ export function emitBinary(expression: BinaryExpression, context: EmitContext): 
     rightType := requireExpressionType(expression.right, "coalescing fallback")
     right := emitExpression(expression.right, context, resultType)
     fallback := if rightType.kind == "never" then "{ " + right + "; }" else "return " + right + ";"
+    // A source that is always `none` (such as a catch with no try) still
+    // evaluates once, and the fallback is the whole result.
+    if leftType.kind == "none" { return "[&]() -> " + emitContextType(resultType, context) + " { " + left + "; " + fallback + " }()" }
     temporary := context.temporary("_coalesce_")
     // `??` removes only the outer absent layer. The fallback may still be
     // absent, so the present value converts to the joined result carrier
@@ -361,11 +364,11 @@ export function emitBinary(expression: BinaryExpression, context: EmitContext): 
     case leftType {
       _: ResultResolvedType -> {
         value := emitCarrierConversion("std::move(doof::success_value(" + temporary + "))", present, resultType, context)
-        return "[&]() -> " + emitType(resultType, context.modulePath, context.names) + " { auto " + temporary + " = " + left + "; if (doof::is_failure(" + temporary + ")) " + fallback + " return " + value + "; }()"
+        return "[&]() -> " + emitContextType(resultType, context) + " { auto " + temporary + " = " + left + "; if (doof::is_failure(" + temporary + ")) " + fallback + " return " + value + "; }()"
       }
       _ -> {
         value := emitCarrierConversion("doof::unwrap_optional(" + temporary + ")", present, resultType, context)
-        return "[&]() -> " + emitType(resultType, context.modulePath, context.names) + " { auto " + temporary + " = " + left + "; if (doof::is_null(" + temporary + ")) " + fallback + " return " + value + "; }()"
+        return "[&]() -> " + emitContextType(resultType, context) + " { auto " + temporary + " = " + left + "; if (doof::is_null(" + temporary + ")) " + fallback + " return " + value + "; }()"
       }
     }
   }

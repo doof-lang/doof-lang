@@ -215,6 +215,16 @@ export function implicitMethod(state: CheckerState, scope: Scope, name: string, 
       if declaration == none { return none }
       case declaration! {
         class_: ClassDeclaration -> {
+          // Static methods declare only static fields, so an instance field
+          // reaches here by name.
+          if inStaticContext(scope) {
+            for field of class_.fields {
+              if !field.static_ && field.names.contains(name) {
+                typeError(state, "Cannot access instance field '" + name + "' from a static method", span)
+                return Binding { name, kind: "field", type_: unknownType(), mutable: true, span: checkerSemanticSpan(span), module: state.info!.path }
+              }
+            }
+          }
           for method of class_.methods {
             if method.name == name {
               if !method.static_ && inStaticContext(scope) {

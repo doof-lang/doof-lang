@@ -47,6 +47,7 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
     if left.kind == "none" { return finish(state, expression, pathType(state, unknownType(), right, expected, expression.span)) }
     layers := absenceLayers(left)
     if layers.length == 0 {
+      if left.kind == "unknown" { return finish(state, expression, unknownType()) }
       typeError(state, "Operator '??' requires a nullable or Result left operand, got " + typeName(left), expression.left.span)
       return finish(state, expression, pathType(state, unknownType(), right, expected, expression.span))
     }

@@ -165,3 +165,9 @@ export function testInterfacesNarrowOnlyToImplementingClasses(): none {
     Assert.stringContains(result.diagnostics[0].message, "Cannot narrow")
   }
 }
+
+export function testCoalescingAnUnknownOperandAddsNoDiagnostic(): none {
+  result := checked("function main(): none { value := missing ?? 1 }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "Unknown identifier 'missing'")
+}

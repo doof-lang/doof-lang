@@ -7,7 +7,7 @@ import {
   UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType, SuccessResolvedType, FailureResolvedType,
 } from "./semantic"
 import type {
-  ArrayType as AstArrayType, AstFunctionType,
+  ArrayType as AstArrayType, AstFunctionType, MemberExpression,
   NamedType as AstNamedType, TypeAnnotation, UnionType as AstUnionType, WeakType,
 } from "./ast"
 
@@ -1039,4 +1039,13 @@ export function typeFromAnnotation(annotation: TypeAnnotation): ResolvedType {
     weak_: WeakType -> { return weakType(typeFromAnnotation(weak_.type_)) }
   }
   return unknownType()
+}
+
+/**
+ * The type a member access is resolved against. `Stack<int>.wrap` names a bare
+ * class, so its statics belong to the instantiation decorated on the receiver.
+ */
+export function memberReceiverType(member: MemberExpression): ResolvedType | none {
+  if member.resolvedStaticReceiver != none { return member.resolvedStaticReceiver! }
+  return member.object.resolvedType
 }

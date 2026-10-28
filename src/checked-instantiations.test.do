@@ -3,7 +3,7 @@ import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
 import { SourceFile } from "./semantic"
 import { discoverInstantiations } from "./checked-instantiations"
-import { containsTypeParameter } from "./checker-types"
+import { containsTypeParameter, containsTypeParameters } from "./checker-types"
 
 export function testCallbackGenericSignaturesStayDistinct(): none {
   analysis := createAnalyzer([SourceFile { path: "/main.do", source:
@@ -136,4 +136,17 @@ export function testConcreteInstantiationsValidateTypeParameterHashKeys(): none 
     "9: Set element type \"T\" is not supported when T = float\n" +
     "7: Set element type \"(T, int)\" is not supported when T = double (contains \"double\")\n" +
     "8: Set element type \"Box<T>\" is not supported when T = float (field \"value\" of \"Box<float>\" has type \"float\")")
+}
+
+export function testGenericStaticMethodsSpecializeOnTheirReceiverInstantiation(): none {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source:
+    "class Stack<T> { static wrap<U>(value: U): U[] => [value] }\n" +
+    "function main(): none { items := Stack<string>.wrap<int>(3) }" }]).analyze("/main.do")
+  Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
+  catalog := discoverInstantiations(analysis)
+  Assert.equal(catalog.methods.length, 1)
+  Assert.stringContains(catalog.methods[0].key, "::class::Stack::")
+  Assert.stringContains(catalog.methods[0].key, "string")
+  Assert.stringContains(catalog.methods[0].key, "::method::wrap::")
+  Assert.isFalse(containsTypeParameters(catalog.methods[0].substitution.arguments))
 }

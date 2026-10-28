@@ -8,11 +8,11 @@ import { CallExpression, Expression, FunctionDeclaration, Identifier, MemberExpr
 import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitWeakAccess, weakAccessNames } from "./emitter-weak-access"
-import { substituteTypeParams } from "./checker-types"
+import { memberReceiverType, substituteTypeParams } from "./checker-types"
 import { emitExpression } from "./emitter-expr"
 import { cppIdentifier } from "./emitter-names"
 import { decoratedExpressionType, exprModuleNamespaceFor, variantMember, variantVisitValue } from "./emitter-expr-utils"
-import { emitContextReturnType, emitContextType, emitResultPayloadType, emitType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
+import { emitContextReturnType, emitContextType, emitResultPayloadType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { classInstantiationKey, functionInstantiationKey, methodInstantiationKey } from "./emitter-monomorphize"
 import { emitSyncActorCall } from "./emitter-expr-actor"
 import { emitOptionalCall } from "./emitter-optional-chain"
@@ -103,7 +103,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
               temporaryName := context.temporary("_result_unwrap_")
               object := emitExpression(member.object, context)
               fallback := emitExpression(expression.args[0].value, context, resultType.valueType)
-              return "[&]() -> " + emitType(resultType.valueType, context.modulePath, context.names) + " { auto " + temporaryName + " = " + object + "; if (doof::is_failure(" + temporaryName + ")) return " + fallback + "; return std::move(doof::success_value(" + temporaryName + ")); }()"
+              return "[&]() -> " + emitContextType(resultType.valueType, context) + " { auto " + temporaryName + " = " + object + "; if (doof::is_failure(" + temporaryName + ")) return " + fallback + "; return std::move(doof::success_value(" + temporaryName + ")); }()"
             }
           }
           _ -> { }
@@ -470,8 +470,9 @@ export function concreteGenericTarget(reference: Expression, declaration: Functi
       }
     }
     member: MemberExpression -> {
-      if member.object.resolvedType != none {
-        case specializeEmitType(member.object.resolvedType!, context) {
+      receiverType := memberReceiverType(member)
+      if receiverType != none {
+        case specializeEmitType(receiverType!, context) {
           class_: ClassType -> {
             targetModule = class_.symbol.module
             ownerKey := classInstantiationKey(class_.symbol.module, class_.name, class_.typeArgs)

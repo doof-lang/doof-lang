@@ -171,3 +171,7 @@ export function testPositionalClassLiteralsNative(): none {
 export function testGenericClassMetadataNative(): none {
   runNativeFixture("generic-class-metadata", "metadata Point,Line")
 }
+
+export function testGenericStaticsAndFallbacksNative(): none {
+  runNativeFixture("generic-statics-and-fallbacks", "generic statics and fallbacks ok")
+}

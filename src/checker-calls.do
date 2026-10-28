@@ -6,7 +6,7 @@ import { cannotInferConstruction, inferConstructionTypeArguments, insideConstruc
 import { ActorType, Binding, ClassType, EnumType, FunctionType, PrimitiveType, ResolvedType, Scope, UnionResolvedType, UnknownType, WeakResolvedType } from "./semantic"
 
 import { CallExpression, ClassDeclaration, DotShorthand, Expression, FunctionDeclaration, Identifier, LambdaExpression, MemberExpression, SourceSpan, TypeParameterConstraint } from "./ast"
-import { classType, functionType, param, resultArmExpectation, resultArmType, isStringInterpolatable, neverType, noneType, primitive, typeName, substituteTypeParams, unknownType } from "./checker-types"
+import { classType, functionType, param, resultArmExpectation, resultArmType, isStringInterpolatable, memberReceiverType, neverType, noneType, primitive, typeName, substituteTypeParams, unknownType } from "./checker-types"
 
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 
@@ -103,9 +103,30 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
       let effectiveFunction: FunctionType = resolvedFunction
       let genericInferenceFailed = false
       staticOwner := genericStaticOwner(expression.callee)
-      if staticOwner != none && expression.typeArgs.length == 0 {
-        instantiated := instantiateGenericStaticCall(state, expression, staticOwner!, resolvedFunction, scope, expected)
-        if instantiated == none { genericInferenceFailed = true } else { effectiveFunction = instantiated! }
+      if staticOwner != none {
+        // `Stack.empty<int>()` fixes the method's own parameters; the class's
+        // are still inferred from the arguments.
+        let signature = resolvedFunction
+        let methodArgs: ResolvedType[] = []
+        if expression.typeArgs.length > 0 {
+          explicit := explicitCallTypeArguments(state, expression, resolvedFunction, scope)
+          if explicit == none { genericInferenceFailed = true } else {
+            methodArgs = explicit!
+            substituted := substituteSignature(resolvedFunction, resolvedFunction.typeParams, methodArgs)
+            signature = FunctionType { params: substituted.params, returnType: substituted.returnType }
+          }
+        }
+        if !genericInferenceFailed {
+          instantiated := instantiateGenericStaticCall(state, expression, staticOwner!, signature, scope, expected)
+          if instantiated == none {
+            // The reported inference failure leaves the class open; its
+            // parameters must not leak into the arguments or the result.
+            for argument of expression.args { checkExpression(state, argument.value, scope, none) }
+            return finish(state, expression, unknownType())
+          }
+          effectiveFunction = instantiated!
+          if methodArgs.length > 0 { applyCallTypeArguments(state, expression, methodArgs, scope) }
+        }
       } else if expression.typeArgs.length > 0 || resolvedFunction.typeParams.length > 0 {
         let typeArgs: ResolvedType[] | none = none
         if expression.typeArgs.length == 0 {
@@ -114,10 +135,8 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
             genericInferenceFailed = true
             typeError(state, "Cannot infer consistent type arguments for generic call; provide explicit type arguments", expression.span)
           }
-        } else if expression.typeArgs.length != resolvedFunction.typeParams.length {
-          typeError(state, typeArgumentArityMessage("Generic call", resolvedFunction.typeParams.length, expression.typeArgs.length), expression.span)
         } else {
-          typeArgs = resolveTypeArguments(state, expression.typeArgs, scope)
+          typeArgs = explicitCallTypeArguments(state, expression, resolvedFunction, scope)
         }
         if typeArgs != none {
           applyCallTypeArguments(state, expression, typeArgs!, scope)
@@ -282,6 +301,15 @@ function checkedMemberCallReturnType(expression: CallExpression, returnType: Res
   return returnType
 }
 
+// Explicit `f<A, B>(...)` arguments, or none after reporting an arity mismatch.
+function explicitCallTypeArguments(state: CheckerState, expression: CallExpression, signature: FunctionType, scope: Scope): ResolvedType[] | none {
+  if expression.typeArgs.length != signature.typeParams.length {
+    typeError(state, typeArgumentArityMessage("Generic call", signature.typeParams.length, expression.typeArgs.length), expression.span)
+    return none
+  }
+  return resolveTypeArguments(state, expression.typeArgs, scope)
+}
+
 function applyCallTypeArguments(state: CheckerState, expression: CallExpression, typeArgs: ResolvedType[], scope: Scope): none {
   expression.resolvedGenericTypeArgs = typeArgs
   applyTypeArgumentConstraints(state, expression.resolvedFunction, typeArgs, expression.span, scope, expression.resolvedFunctionModule, expression.callee)
@@ -363,7 +391,7 @@ export function applyTypeArgumentConstraints(state: CheckerState, declaration: F
   let ownerArguments: ResolvedType[] = []
   let receiver: ResolvedType | none = none
   case callee {
-    member: MemberExpression -> { receiver = member.object.resolvedType }
+    member: MemberExpression -> { receiver = memberReceiverType(member) }
     identifier: Identifier -> {
       if identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "method" {
         let current: Scope | none = scope

@@ -230,7 +230,7 @@ function collectIdentifierCapture(identifier: Identifier, bodyStart: int, bodyEn
 
 function collectBindingCapture(name: string, binding: Binding, bodyStart: int, bodyEnd: int, result: string[], mutableOnly: bool): none {
   if binding.kind == "field" {
-    if !mutableOnly { addUnique(result, "this") }
+    if !mutableOnly && !binding.staticField { addUnique(result, "this") }
     return
   }
   if binding.kind == "method" {

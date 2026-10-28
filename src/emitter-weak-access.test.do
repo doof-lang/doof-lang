@@ -48,3 +48,14 @@ export function testUnitWeakCallsEmitStatementBodies(): none {
   Assert.stringContains(source, "if (!_weak_locked.has_value()) return; auto _weak_value_")
   Assert.stringNotContains(source, "return _weak_value_")
 }
+
+export function testForcedWeakAccessInGenericBodiesUsesConcreteTypes(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Holder<T> { value: T }\nclass Ref<T> { weak target: Holder<T> }\nclass Ops<T> { deref(ref: Ref<T>): T => ref.target!.value }\n" +
+    "function main(): none { holder := Holder<int> { value: 1 }\nvalue := Ops<int> {}.deref(Ref<int> { target: holder }) }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "[&]() -> int32_t {")
+  Assert.stringNotContains(source, "-> T {")
+}

@@ -2598,7 +2598,7 @@ export function testRejectsConcreteReturnsForUnconstrainedTypeParameters(): none
 export function testRejectsInstanceMemberAccessFromStaticMethods(): none {
   result := checked("class Counter { value: int\nstatic read(): int => value }")
   Assert.isTrue(result.diagnostics.length > 0)
-  Assert.stringContains(result.diagnostics[0].message, "Unknown identifier 'value'")
+  Assert.stringContains(result.diagnostics[0].message, "Cannot access instance field 'value' from a static method")
 }
 
 export function testRejectsPrivateConstructorsAcrossModules(): none {

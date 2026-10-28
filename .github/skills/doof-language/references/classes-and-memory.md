@@ -187,14 +187,16 @@ Rectangle.describe()
 
 Rules:
 
-- Static methods cannot access instance state.
+- Static methods cannot access instance state. Inside the class, static
+  methods may name its static fields and methods bare (`count += 1`).
 - Access statics only through the class name: `Rectangle.kind`.
 - Instances never reach statics; `rect.kind` is an error that names `Rectangle.kind`.
 - Statics of a generic class belong to one instantiation, with separate static
   fields per instantiation. Write it explicitly as `Channel<string>.tag()` or
   `Channel<int>.count`, or let a static call infer it from its arguments:
   `Channel.constructor(onString)` calls it on `Channel<string>`. Static fields
-  and statics whose arguments don't determine `T` need the explicit form.
+  and statics whose arguments don't determine `T` need the explicit form;
+  explicit method type arguments alone (`Channel.make<int>()`) don't supply `T`.
 - Interfaces may declare `static name: T`, `static readonly name: T`, and bodyless
   `static method(...)` members as a contract for generic bounds. With `T: Iface`,
   `T.name` / `T.method()` reach the concrete argument's statics (classes and structs

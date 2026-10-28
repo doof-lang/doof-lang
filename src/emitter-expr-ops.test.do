@@ -318,3 +318,20 @@ export function testLocalBindingsShadowSameNamedImports(): none {
   // Outside the shadowing scopes the name still reaches the import.
   Assert.stringContains(source, "::app_util_::quote(std::string(\"x\"))")
 }
+
+export function testCoalescingInGenericBodiesUsesTheConcreteResultType(): none {
+  source := emittedSource("class Cache<K, V> {\nlet store: Map<K, V> = {}\nlookup(key: K): V | none => store.get(key) ?? none\n}\nfunction main(): none { value := Cache<string, int> {}.lookup(\"a\") }")
+  Assert.stringContains(source, "[&]() -> std::optional<int32_t> { auto _coalesce_")
+  Assert.stringNotContains(source, "std::monostate, V>")
+}
+
+export function testCoalescingAnAlwaysNoneSourceEvaluatesItThenFallsBack(): none {
+  source := emittedSource("function idle(): none {}\nfunction main(): none { value := idle() ?? \"ok\" }")
+  Assert.stringContains(source, "[&]() -> std::string { (static_cast<void>((idle)()), std::monostate{}); return std::string(\"ok\"); }()")
+}
+
+export function testStaticFieldsEmitWithoutThis(): none {
+  source := emittedSource("class Reg {\nstatic let count: int = 0\nstatic bump(): int { count += 1\nreturn count }\npeek(): int => count\n}")
+  Assert.stringContains(source, "(count += 1)")
+  Assert.stringNotContains(source, "this->count")
+}

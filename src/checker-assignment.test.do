@@ -53,3 +53,9 @@ export function testActorFieldAccessWritesRejectedOnce(): none {
   }
 }
 
+
+export function testUnknownAssignmentTargetIsReportedOnce(): none {
+  result := checked("function main(): none { missing = 1 }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "Unknown identifier 'missing'")
+}

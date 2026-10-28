@@ -16,7 +16,7 @@ import {
 } from "./ast"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, interfaceJsonSerializationBlocker } from "./json-semantics"
 import { AnalysisResult } from "./analyzer"
-import { containsTypeParameters, sameType, substituteTypeParams, typeName } from "./checker-types"
+import { containsTypeParameters, memberReceiverType, sameType, substituteTypeParams, typeName } from "./checker-types"
 import { hashKeyDiagnostic } from "./checker-hash-keys"
 import { classSatisfiesConcreteInterface } from "./checker-interfaces"
 import { findClassDeclaration, findInterfaceDeclaration } from "./checker-symbols"
@@ -320,8 +320,9 @@ function collectGenericTarget(callee: Expression, function_: FunctionDeclaration
         }
       }
       member: MemberExpression -> {
-        if member.object.resolvedType != none {
-          case specialize(member.object.resolvedType!, names, arguments) {
+        receiverType := memberReceiverType(member)
+        if receiverType != none {
+          case specialize(receiverType!, names, arguments) {
             ownerType: ClassType -> {
               owner := findClassDeclaration(analysis, ownerType.symbol.module, ownerType.symbol.name)
               if owner != none && function_.typeParams.length > 0 {

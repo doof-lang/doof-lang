@@ -259,6 +259,8 @@ export class Binding {
   casePattern: string = ""
   fieldMode: string = ""
   fieldOwner: string = ""
+  // A static class field: shared class storage, never reached through `this`.
+  staticField: bool = false
 }
 
 export class Scope {

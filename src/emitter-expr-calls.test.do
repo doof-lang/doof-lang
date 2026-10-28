@@ -390,3 +390,17 @@ export function testSameModuleFunctionCallsSuppressArgumentDependentLookup(): no
   // Callback values are invoked through the carrier, not parenthesized.
   Assert.stringContains(source, "f.call(std::string(\"b\"))")
 }
+
+export function testGenericStaticMethodsCallTheirReceiverInstantiation(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Stack<T> { static wrap<U>(value: U): U[] => [value] }\n" +
+    "class Ops<T> { item: T\nfallback(result: Result<T, string>): T => result.unwrapOr(item) }\n" +
+    "function main(): none { items := Stack<string>.wrap<int>(3)\nvalue := Ops<int> { item: 1 }.fallback(Success(2)) }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "Stack__string::wrap__int(3)")
+  Assert.stringContains(source, "[&]() -> int32_t { auto _result_unwrap_")
+  Assert.stringNotContains(source, "-> T {")
+}

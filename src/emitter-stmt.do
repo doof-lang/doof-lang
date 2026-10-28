@@ -26,7 +26,7 @@ import { cppIdentifier } from "./emitter-names"
 import { quote } from "./emitter-expr-literals"
 import { emitAbsentError, emitAbsentTest, emitPresentValue, emitterAbsenceLayers } from "./emitter-absence"
 import { absenceErrorType } from "./absence-types"
-import { emitContextType, emitType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
+import { emitContextType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 
 export function emitBlock(block: Block, level: int, context: EmitContext): string {
   let result = ""
@@ -110,9 +110,9 @@ function emitWith(statement: WithStatement, level: int, context: EmitContext): s
     value := emitExpression(binding.value, context, resolvedType)
     let declarationType = "auto"
     case resolvedType {
-      _: ClassType -> { declarationType = emitType(resolvedType, context.modulePath, context.names) }
+      _: ClassType -> { declarationType = emitContextType(resolvedType, context) }
       union_: UnionResolvedType -> {
-        if usesVariantRepresentation(union_) { declarationType = emitType(resolvedType, context.modulePath, context.names) }
+        if usesVariantRepresentation(union_) { declarationType = emitContextType(resolvedType, context) }
       }
       _ -> { }
     }
@@ -308,7 +308,7 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
       if hasErrorValue {
         let promoted = "doof::failure_error(" + temporaryName + ")"
         if context.catchResultType != none {
-          promoted = "doof::variant_promote<" + emitType(context.catchResultType!, context.modulePath, context.names) + ">(" + promoted + ")"
+          promoted = "doof::variant_promote<" + emitContextType(context.catchResultType!, context) + ">(" + promoted + ")"
         }
         output = output + context.catchVarName + " = " + promoted + "; "
       }

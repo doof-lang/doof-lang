@@ -119,9 +119,12 @@ For `Box<int>`:
    (`Channel<string>.tag`, parsed into `receiverTypeArgs` and resolved in
    `checker-members.do`) or, for a call through a bare generic class name
    (`Channel.constructor(onString)`), inferred together with the method's type
-   arguments in `checker-calls.do`. Either way it is recorded as the member's
-   `resolvedStaticReceiver`; collection and emission use that instantiation's
-   monomorphized name.
+   arguments in `checker-calls.do`; explicit method arguments
+   (`Stack.empty<int>()`) are substituted first and the class's are still
+   inferred. Either way it is recorded as the member's
+   `resolvedStaticReceiver`, and `memberReceiverType` makes collection and
+   emission key generic static methods and every other static on that
+   instantiation's monomorphized name.
 3. Any checked occurrence of the concrete nominal type reaches `collectType`
    in `checked-instantiations.do`, which creates a `DiscoveredClass` for a
    Doof-owned generic declaration. Native-owned generic types stay native.

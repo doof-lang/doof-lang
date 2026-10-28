@@ -232,3 +232,10 @@ export function testLambdaCasePatternBoundsCaptureMutable(): none {
   Assert.stringContains(source, "auto limit = std::make_shared<int32_t>(3);")
   Assert.stringContains(source, "[low, limit](int32_t x) -> bool")
 }
+
+export function testStaticFieldLambdasCaptureNoThis(): none {
+  result := compile([SourceFile { path: "/main.do", source: "class Reg {\nstatic let count: int = 0\nstatic read(): int { next := () => count\nreturn next() }\n}" }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "([]() -> int32_t { return count; })")
+}

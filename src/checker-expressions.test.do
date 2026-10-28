@@ -139,3 +139,11 @@ export function testCallerIsAcceptedOnlyInDefaultValues(): none {
   Assert.equal(invalid.diagnostics[0].message, "@caller is only valid as a parameter or class-field default value")
   Assert.equal(invalid.diagnostics[0].span.start.line, 2)
 }
+
+export function testStaticMethodsReachStaticFieldsByBareName(): none {
+  Assert.equal(checked("class Reg<T> {\nstatic let count: int = 0\nstatic bump(): int { count += 1\nread := () => count\nreturn read() }\npeek(): int => count\n}").diagnostics.length, 0)
+  result := checked("class Counter {\nlet count = 0\nstatic bump(): none { count += 1 }\n}")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "Cannot access instance field 'count' from a static method")
+  Assert.equal(result.diagnostics[0].span.start.line, 3)
+}

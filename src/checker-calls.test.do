@@ -314,3 +314,15 @@ export function testNumericCastRejectsUnionAndNonNumericArguments(): none {
   Assert.equal(arity.diagnostics.length, 1)
   Assert.equal(arity.diagnostics[0].message, "Expected 1 argument(s) but got 2")
 }
+
+export function testGenericStaticMethodArgumentsLeaveClassArgumentsInferred(): none {
+  stack := "class Stack<T> {\nstatic empty<U>(): U[] => []\nstatic pair<U>(value: U, item: T): U[] => [value]\n}\n"
+  open := checked(stack + "function main(): none { items := Stack.empty<int>()\nfirst := items[0] ?? 0 }")
+  Assert.equal(open.diagnostics.length, 1)
+  Assert.stringContains(open.diagnostics[0].message, "Cannot infer type arguments for generic class 'Stack' from this call to static method 'empty'")
+  Assert.equal(checked(stack + "function main(): none { items: string[] := Stack.pair<string>(\"a\", 1) }").diagnostics.length, 0)
+  Assert.equal(checked(stack + "function main(): none { items: int[] := Stack<string>.empty<int>() }").diagnostics.length, 0)
+  arity := checked(stack + "function main(): none { items := Stack<string>.empty<int, int>() }")
+  Assert.equal(arity.diagnostics.length, 1)
+  Assert.stringContains(arity.diagnostics[0].message, "Generic call")
+}

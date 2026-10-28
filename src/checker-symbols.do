@@ -133,7 +133,7 @@ export function classFieldMode(field: ClassField): string {
 export function classFieldBinding(field: ClassField, name: string, owner: ClassDeclaration, type_: ResolvedType, module: string, symbol: Symbol | none = none): Binding {
   return Binding {
     name, kind: "field", type_, mutable: field.let_, span: checkerSemanticSpan(field.span), module, symbol,
-    fieldMode: classFieldMode(field), fieldOwner: owner.name,
+    fieldMode: classFieldMode(field), fieldOwner: owner.name, staticField: field.static_,
   }
 }
 

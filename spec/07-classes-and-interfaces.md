@@ -200,6 +200,22 @@ let v = MathUtils.version
 println(n)
 ```
 
+Inside the class, static methods may name the class's static fields and static
+methods without the class name. Instance methods may read them the same way:
+
+```doof check
+class Registry {
+    static let created = 0
+    static next(): int {
+        created += 1
+        return created
+    }
+    peek(): int => created
+}
+
+println(Registry.next())
+```
+
 In a context whose expected type is a class, `.member` is shorthand for a
 static member on that class. For example, `transform: Transform = .zero` lowers
 as `Transform.zero`, and `transform: Transform = .identity()` lowers as
@@ -218,7 +234,7 @@ class Counter {
     }
     
     static badMethod(): none {
-        count += 1  // ❌ Error: static method cannot access instance field
+        count += 1  // ❌ Error: cannot access instance field 'count' from a static method
         increment() // ❌ Error: static method cannot call instance method
     }
 }
@@ -326,7 +342,9 @@ Channel.tag()                          // ❌ Error: arguments cannot determine 
 ```
 
 Static fields and static methods whose arguments do not determine the class
-type parameters need the explicit form.
+type parameters need the explicit form. Explicit type arguments for the method
+itself, as in `Channel.make<int>()`, do not determine the class's parameters.
+`Channel<string>.make<int>()` names both.
 
 Classes and structs may also use typed tag-call syntax. Attributes are named
 constructor arguments, so dedicated `constructor` methods, defaults, generic

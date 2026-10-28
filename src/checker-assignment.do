@@ -56,7 +56,8 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
   case expression.target {
     identifier: Identifier -> {
       target := lookup(scope, identifier.name)
-      if target == none { typeError(state, "Unknown assignment target '" + identifier.name + "'", identifier.span) }
+      // An unknown target type was already reported when the target was checked.
+      if target == none { if targetType.kind != "unknown" { typeError(state, "Unknown assignment target '" + identifier.name + "'", identifier.span) } }
       else {
         validateAssignmentBinding(state, target!, identifier.span)
         if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, target!.type_) { typeError(state, "Cannot assign " + displayTypeName(value) + " to " + displayTypeName(target!.type_), expression.span) }

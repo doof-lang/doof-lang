@@ -612,3 +612,14 @@ export function testForOfDestructuringAvoidsStructuredBindings(): none {
   Assert.equal(source.contains("const auto& ["), false)
   Assert.stringContains(source, "const auto& key = std::get<0>(_entry_")
 }
+
+export function testWithBindingsInGenericBodiesUseConcreteTypes(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Holder<T> { value: T }\nclass Ops<T> { item: T\nscoped(): T {\nwith holder := Holder<T> { value: item } { return holder.value }\n} }\n" +
+    "function main(): none { value := Ops<int> { item: 1 }.scoped() }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "std::shared_ptr<Holder__int> holder")
+  Assert.stringNotContains(source, "Holder<T>")
+}
