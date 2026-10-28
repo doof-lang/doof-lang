@@ -80,6 +80,8 @@ export function testParsesAndNormalizesExecutableResources(): none {
   Assert.equal(manifest.resources[0].destination, "")
   Assert.equal(manifest.resources[1].sourcePath, "/compiler/assets")
   Assert.equal(manifest.resources[1].destination, "assets")
+  Assert.isFalse(manifest.resources[0].preserveSourcePath, "from/to entries name a destination directory")
+  Assert.isTrue(manifest.resources[1].preserveSourcePath, "string entries keep their package-relative path")
 }
 
 export function testParsesCustomObserveUiWithinPackageRoot(): none {
@@ -218,6 +220,7 @@ export function testParsesCompactMacOSAppAndReleaseSettings(): none {
   Assert.equal(manifest.macosApp!.version, "1.2")
   Assert.equal(manifest.macosApp!.iconPath, "/app/icon.png")
   Assert.equal(manifest.macosApp!.resources[0].sourcePath, "/app/assets")
+  Assert.isTrue(manifest.macosApp!.resources[0].preserveSourcePath, "string app resources keep their package-relative path")
   Assert.equal(manifest.macosApp!.embeddedLibraries[0].library, "SDL3")
   Assert.equal(manifest.macosApp!.embeddedLibraries[1].path, "/app/vendor/Foo.framework")
   Assert.equal(manifest.packageConfig!.distDirectory, "/app/artifacts")
@@ -254,6 +257,7 @@ export function testParsesIOSAppAndPackageSettings(): none {
   Assert.equal(manifest.iosApp!.minimumDeploymentTarget, "17.0")
   Assert.equal(manifest.iosApp!.iconPath, "/app/icon.png")
   Assert.equal(manifest.iosApp!.resources[0].destination, "Data")
+  Assert.isFalse(manifest.iosApp!.resources[0].preserveSourcePath)
   Assert.equal(manifest.nativeBuild.frameworks.contains("UIKit"), true)
   Assert.equal(manifest.iosPackageConfig!.identity, "Apple Distribution: Example")
   Assert.equal(manifest.iosPackageConfig!.provisioningProfilePath, "/app/profiles/app.mobileprovision")

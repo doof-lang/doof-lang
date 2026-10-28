@@ -105,3 +105,24 @@ export function testExistingResourceDirectorySynchronizes(): none {
   synchronizeExecutableResources(resources, root + "/out", root + "/cache/resources")!
   Assert.equal(readText(root + "/out/assets/data.txt")!, "data\n")
 }
+
+export function testStringFileResourceKeepsItsPackageRelativePath(): none {
+  root := "/tmp/doof-materialize-driver-string-file-" + string(Instant.now().toEpochMillis())
+  ensureOutputDirectory(root + "/package/config")
+  writeText(root + "/package/config/defaults.json", "{}")!
+  writeText(root + "/package/top.txt", "top")!
+  resources := [
+    PackageResource { sourcePath: root + "/package/config/defaults.json", destination: "config/defaults.json", preserveSourcePath: true },
+    PackageResource { sourcePath: root + "/package/top.txt", destination: "top.txt", preserveSourcePath: true },
+    PackageResource { sourcePath: root + "/package/top.txt", destination: "assets" },
+  ]
+  materializeExecutableResources(resources, root + "/dist")!
+  Assert.equal(readText(root + "/dist/config/defaults.json")!, "{}")
+  Assert.isFalse(isDirectory(root + "/dist/config/defaults.json"), "a string file entry must not become a directory")
+  Assert.equal(readText(root + "/dist/top.txt")!, "top")
+  Assert.equal(readText(root + "/dist/assets/top.txt")!, "top", "from/to file entries land inside their destination")
+
+  synchronizeExecutableResources(resources, root + "/out", root + "/cache/resources")!
+  Assert.equal(readText(root + "/out/config/defaults.json")!, "{}")
+  Assert.equal(readText(root + "/out/top.txt")!, "top")
+}

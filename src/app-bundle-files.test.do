@@ -97,3 +97,25 @@ export function testCollectNestedCodeListsInnermostFirst(): none {
   Assert.equal(missing.length, 0)
   removeTree(root)
 }
+
+export function testStringResourcesKeepTheirPackageRelativePaths(): none {
+  root := scratchRoot("string-form")
+  ensureDirectory(root + "/pkg/config")
+  ensureDirectory(root + "/pkg/web/css")
+  writeText(root + "/pkg/config/defaults.json", "{}")!
+  writeText(root + "/pkg/top.txt", "top")!
+  writeText(root + "/pkg/web/index.html", "index")!
+  writeText(root + "/pkg/web/css/site.css", "css")!
+  let destinations: string[] = []
+  bundle := root + "/App.app"
+  copyBundleResource(root + "/pkg/config/defaults.json", "config/defaults.json", bundle, destinations, "macOS", true)!
+  copyBundleResource(root + "/pkg/top.txt", "top.txt", bundle, destinations, "macOS", true)!
+  copyBundleResource(root + "/pkg/web", "web", bundle, destinations, "macOS", true)!
+  copyBundleResource(root + "/pkg/web/*.html", "web/*.html", root + "/Glob.app", [], "macOS", true)!
+  Assert.equal(readText(bundle + "/config/defaults.json")!, "{}")
+  Assert.equal(readText(bundle + "/top.txt")!, "top")
+  Assert.equal(readText(bundle + "/web/css/site.css")!, "css")
+  Assert.equal(readText(root + "/Glob.app/web/index.html")!, "index")
+  Assert.isFalse(exists(root + "/Glob.app/web/css/site.css"), "single-star glob must not copy nested files")
+  removeTree(root)
+}

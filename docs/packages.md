@@ -83,7 +83,10 @@ instead declares the whole build, `key` included, in that platform fragment
 tree. `bundle` is rejected for Wasm and not yet supported for iOS.
 
 `resources` copies explicit package files beside a command-line executable or
-into an application bundle. `build.native` declares include paths, source
+into an application bundle. A string entry keeps its package-relative path
+(`"config/defaults.json"` lands at `config/defaults.json`; a string glob keeps
+its base directory). An object entry `{ "from", "to" }` copies a file into the
+`to` directory, or a directory's contents beneath it. `build.native` declares include paths, source
 files, libraries, frameworks, pkg-config packages, compiler/linker flags, and
 platform-specific fragments. Paths remain package-root relative.
 

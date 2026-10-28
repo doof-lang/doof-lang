@@ -134,6 +134,10 @@ do not build a resource path relative to the current working directory.
 }
 ```
 
+String entries keep their package-relative path. Use `{ "from", "to" }` to
+place a file or directory's contents in a different destination directory; see
+[building-applications.md](./building-applications.md#resources).
+
 ```doof check
 import { readTextResource } from "std/fs"
 import { parseJsonObject } from "std/json"

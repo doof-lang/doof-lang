@@ -8,6 +8,8 @@
 export class MacOSAppResource {
   sourcePath: string
   destination: string
+  // String-form entry: destination is the source's package-relative path.
+  preserveSourcePath: bool = false
 }
 
 /** One explicitly allowlisted dynamic library or framework. */

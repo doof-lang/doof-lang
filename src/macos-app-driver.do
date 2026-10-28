@@ -285,7 +285,7 @@ export function assembleMacOSApp(
   }
   let destinations: string[] = []
   for resource of config.resources {
-    try copyBundleResource(resource.sourcePath, resource.destination, resourcesDirectory, destinations, "macOS")
+    try copyBundleResource(resource.sourcePath, resource.destination, resourcesDirectory, destinations, "macOS", resource.preserveSourcePath)
   }
   try embedMacOSLibraries(bundleExecutable, config, libraryPaths, buildDirectory, contentsDirectory)
   let nested: string[] = []

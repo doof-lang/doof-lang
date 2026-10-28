@@ -1,8 +1,8 @@
 ---
 name: doof-language
-description: Write, read, and reason about Doof programming language code. Doof is a statically-typed language with familiar curly-brace syntax that transpiles to C++. Use when writing .do files, using Doof standard-library packages imported from std/, designing APIs, implementing classes/functions, writing .test.do files, using assert or the doof test runner, handling Result types, or working with modules, pattern matching, concurrency, or JSON serialization.
+description: Write, read, and reason about Doof programming language code. Doof is a statically-typed language with familiar curly-brace syntax that transpiles to C++. Use when writing .do files, using Doof standard-library packages imported from std/, designing APIs, implementing classes/functions, writing .test.do files, using assert or the doof test runner, handling Result types, working with modules, pattern matching, concurrency, or JSON serialization, or writing doof.json manifests to build, run, and package command-line executables, macOS/iOS apps, or WebAssembly libraries.
 metadata:
-    version: "2.1"
+    version: "2.2"
     languageVersion: "0.1"
 ---
 
@@ -29,6 +29,12 @@ Use this base file as the entry point. Load only the reference file that matches
 - Standard packages need no `doof.json` dependency entry. Use the release's
   bundled standard library unless intentionally developing the stdlib with
   `DOOF_STDLIB_ROOT`.
+- A runnable project is a directory with `doof.json` naming the package and
+  `build.entry` (default `main.do`); `doof run .` builds and launches it.
+  Unknown manifest keys are silently ignored, so check spelling and nesting
+  against [references/building-applications.md](./references/building-applications.md).
+  A string resource keeps its package-relative path; in `{ "from", "to" }`
+  form, `to` is a destination directory.
 - Treat streams as lazy, single-pass values. Keep their backing resource (for
   example a file, statement, or database connection) alive until consumption
   finishes.
@@ -93,6 +99,7 @@ Load the narrowest matching file for the task.
 | Classes, structs, interfaces, construction, statics, destructors, `weak` references | [references/classes-and-memory.md](./references/classes-and-memory.md) |
 | `Result`, `try`, postfix `!` and `?`, `??`, declaration-`else`, `catch`, `as`, `panic` | [references/error-handling.md](./references/error-handling.md) |
 | Imports, exports, package dependencies, `import class`, `import function` | [references/modules-and-interop.md](./references/modules-and-interop.md) |
+| `doof.json`, `build`/`run`/`package`, resources, native inputs, macOS/iOS app bundles, signing, Wasm targets | [references/building-applications.md](./references/building-applications.md) |
 | JSON serialization, generated metadata, schema/invoke behavior | [references/json-and-metadata.md](./references/json-and-metadata.md) |
 | `isolated`, `async`, `Promise<T>`, `Actor<T>` | [references/concurrency.md](./references/concurrency.md) |
 | Stdlib package index and package selection | [references/stdlib-overview.md](./references/stdlib-overview.md) |
@@ -118,6 +125,9 @@ Load the narrowest matching file for the task.
 - Designing APIs with classes, interfaces, or metadata: load [references/classes-and-memory.md](./references/classes-and-memory.md) and [references/json-and-metadata.md](./references/json-and-metadata.md).
 - Fixing type errors around unions, nullability, collections, or `SerialValue`: load [references/type-system.md](./references/type-system.md) and [references/error-handling.md](./references/error-handling.md).
 - Working on imports, packages, or C++ bridge code: load [references/modules-and-interop.md](./references/modules-and-interop.md).
+- Creating a runnable program, app bundle, or Wasm library, or editing
+  `doof.json`: load
+  [references/building-applications.md](./references/building-applications.md).
 - Writing tests or mocks: load [references/stdlib-assert-and-testing.md](./references/stdlib-assert-and-testing.md).
 - Building a CLI, data pipeline, web service, database task, or other workflow
   that combines packages: start with

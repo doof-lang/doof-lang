@@ -152,7 +152,7 @@ export function assembleIOSApp(
   }
   let destinations: string[] = []
   for resource of config.resources {
-    try copyBundleResource(resource.sourcePath, resource.destination, appPath, destinations, "iOS")
+    try copyBundleResource(resource.sourcePath, resource.destination, appPath, destinations, "iOS", resource.preserveSourcePath)
   }
   try compileIOSIcon(config, appPath, destination, buildDirectory)
   return Success(appPath)

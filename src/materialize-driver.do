@@ -93,6 +93,14 @@ export function materializeProject(outputDirectory: string, project: ProjectEmis
   return Success()
 }
 
+// A directory, or a file named by a string-form entry, lands at its destination;
+// a file mapped with from/to lands inside its destination directory.
+function resourceOutputPath(resource: PackageResource, outputDirectory: string): string {
+  destination := driverOutputPath(outputDirectory, resource.destination)
+  if resource.preserveSourcePath || isDirectory(resource.sourcePath) { return destination }
+  return driverOutputPath(destination, fileName(resource.sourcePath))
+}
+
 function checkResourceSource(resource: PackageResource): Result<none, string> {
   if exists(resource.sourcePath) { return Success() }
   return Failure("Resource " + resource.sourcePath + " does not exist; check resources in doof.json")
@@ -101,10 +109,7 @@ function checkResourceSource(resource: PackageResource): Result<none, string> {
 export function materializeExecutableResources(resources: PackageResource[], outputDirectory: string): Result<none, string> {
   for resource of resources {
     try checkResourceSource(resource)
-    destinationRoot := driverOutputPath(outputDirectory, resource.destination)
-    outputPath := if isDirectory(resource.sourcePath)
-      then destinationRoot
-      else driverOutputPath(destinationRoot, fileName(resource.sourcePath))
+    outputPath := resourceOutputPath(resource, outputDirectory)
     try materializeNativeCopy(resource.sourcePath, outputPath)
   }
   return Success()
@@ -171,10 +176,7 @@ export function synchronizeExecutableResources(
   next := ResourceState {}
   for resource of resources {
     try checkResourceSource(resource)
-    destinationRoot := driverOutputPath(outputDirectory, resource.destination)
-    outputPath := if isDirectory(resource.sourcePath)
-      then destinationRoot
-      else driverOutputPath(destinationRoot, fileName(resource.sourcePath))
+    outputPath := resourceOutputPath(resource, outputDirectory)
     materializeTrackedResource(resource.sourcePath, outputPath, previous, next)
   }
   prefix := if outputDirectory.endsWith("/") then outputDirectory else outputDirectory + "/"

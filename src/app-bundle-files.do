@@ -75,9 +75,25 @@ function collectResourceFiles(path: string, baseDirectory: string, pattern: stri
   if globMatches(relativePattern, relative) { results.push(path) }
 }
 
+// The leading segments of a package-relative path before its last segment, or
+// before the first wildcard segment of a glob.
+function relativeParent(path: string): string {
+  let slash = path.length
+  while slash > 0 && path.substring(slash - 1, slash) != "/" { slash -= 1 }
+  return if slash == 0 then "" else path.substring(0, slash - 1)
+}
+
+function relativeGlobBase(pattern: string): string {
+  let wildcard = 0
+  while wildcard < pattern.length && pattern.substring(wildcard, wildcard + 1) != "*" { wildcard += 1 }
+  return relativeParent(pattern.substring(0, wildcard))
+}
+
 /**
  * Copies one resource (a file, directory, or glob) under bundleRoot. Every
  * copied path is recorded in destinations so later resources cannot overwrite it.
+ * destination is a directory, or with preserveSourcePath (a string-form entry)
+ * the source's own package-relative path or glob.
  */
 export function copyBundleResource(
   sourcePath: string,
@@ -85,10 +101,13 @@ export function copyBundleResource(
   bundleRoot: string,
   destinations: string[],
   platformName: string,
+  preserveSourcePath: bool = false,
 ): Result<none, string> {
   let files: string[] = []
   let baseDirectory = globBaseDirectory(sourcePath)
+  let destinationDirectory = destination
   if sourcePath.contains("*") {
+    if preserveSourcePath { destinationDirectory = relativeGlobBase(destination) }
     if exists(baseDirectory) { collectResourceFiles(baseDirectory, baseDirectory, sourcePath, files) }
   } else if isDirectory(sourcePath) {
     collectResourceFiles(sourcePath, sourcePath, sourcePath + "/**", files)
@@ -96,10 +115,11 @@ export function copyBundleResource(
   } else if exists(sourcePath) {
     files.push(sourcePath)
     baseDirectory = dirname(sourcePath)
+    if preserveSourcePath { destinationDirectory = relativeParent(destination) }
   }
   if files.length == 0 { return Failure("No files matched resource pattern: " + sourcePath) }
   prefix := if baseDirectory.endsWith("/") then baseDirectory else baseDirectory + "/"
-  destinationRoot := if destination == "" then bundleRoot else outputPath(bundleRoot, destination)
+  destinationRoot := if destinationDirectory == "" then bundleRoot else outputPath(bundleRoot, destinationDirectory)
   for file of files {
     relative := if file.startsWith(prefix) then file.substring(prefix.length, file.length) else basename(file)
     destinationPath := outputPath(destinationRoot, relative)

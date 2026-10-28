@@ -51,12 +51,16 @@ Re-exports require explicit names. `export * from "mod"` and
 ```doof
 import { Helper } from "./helper"         // relative
 import { Config } from "../config"        // parent dir
-import { HttpClient } from "http"         // package
+import { HttpClient } from "std/http"     // standard package
+import { say } from "hello-doof/hello"    // declared local dependency
 ```
 
 File extensions optional (`.do` inferred).
 
-Package dependencies use local `{ path }` entries. Doof does not acquire remote
+Package dependencies use local `{ path }` entries; the dependency key becomes
+the import prefix. See
+[building-applications.md](./building-applications.md) for the full
+`doof.json` reference. Doof does not acquire remote
 packages or vendored sources. Standard packages come from the installed bundle,
 with `DOOF_STDLIB_ROOT` as the global development override.
 

@@ -49,10 +49,16 @@ export class NativeVendorBuild {
   bundleLibraries: string[] = []
 }
 
-/** One root-package resource copied beside a command-line executable. */
+/**
+ * One root-package resource copied beside a command-line executable.
+ * destination names a directory, except for a string-form entry
+ * (preserveSourcePath), whose destination is the source's own package-relative
+ * path: a file lands exactly there and a directory's contents land beneath it.
+ */
 export class PackageResource {
   sourcePath: string
   destination: string
+  preserveSourcePath: bool = false
 }
 
 /** One exact local or Git-backed Doof package dependency. */
@@ -404,7 +410,9 @@ function parseMacOSApp(
   if resourceValue != none {
     try parsedResources := parseResourceArray(resourceValue!, manifestPath, rootDirectory, resourceField)
     for resource of parsedResources {
-      resources.push(MacOSAppResource { sourcePath: resource.sourcePath, destination: resource.destination })
+      resources.push(MacOSAppResource {
+        sourcePath: resource.sourcePath, destination: resource.destination, preserveSourcePath: resource.preserveSourcePath,
+      })
     }
   }
 
@@ -525,7 +533,9 @@ function parseIOSApp(
   if resourceValue != none {
     try parsedResources := parseResourceArray(resourceValue!, manifestPath, rootDirectory, resourceField)
     for resource of parsedResources {
-      resources.push(IOSAppResource { sourcePath: resource.sourcePath, destination: resource.destination })
+      resources.push(IOSAppResource {
+        sourcePath: resource.sourcePath, destination: resource.destination, preserveSourcePath: resource.preserveSourcePath,
+      })
     }
   }
 
@@ -706,6 +716,7 @@ function parseResourceArray(
   for index of 0..<entries.length {
     let source = ""
     let destination = ""
+    let preserveSourcePath = false
     case entries[index] {
       text: string -> {
         if text == "" {
@@ -713,6 +724,7 @@ function parseResourceArray(
         }
         source = text
         destination = text
+        preserveSourcePath = true
       }
       object: SerialObject -> {
         if !manifestJsonHas(object, "from") || !manifestJsonHas(object, "to") {
@@ -744,7 +756,7 @@ function parseResourceArray(
       manifestPath,
       fieldPath + "[" + string(index) + "].to",
     )
-    resources.push(PackageResource { sourcePath, destination: normalizedDestination })
+    resources.push(PackageResource { sourcePath, destination: normalizedDestination, preserveSourcePath })
   }
   return Success(resources)
 }
