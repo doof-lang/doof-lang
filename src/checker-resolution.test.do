@@ -380,3 +380,13 @@ export function testEnumMembersFollowTheBackingKind(): none {
   result := checked("enum Code { Ok = \"ok\", Bad = \"bad\" }\nfunction use(): string { found := Code.fromValue(\"ok\")\nreturn Code.Bad.value + Code.Ok.name + string(Code.values().length) }")
   Assert.equal(result.diagnostics.length, 0)
 }
+
+export function testUnionMethodsJoinReturnTypesWhenParametersAgree(): none {
+  prelude := "class Box<T> { value: T; get(): T => value; put(value: T): none { } }\n"
+  valid := checked(prelude + "function f(b: Box<int> | Box<string>): int | string => b.get()")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+  differing := checked(prelude + "function f(b: Box<int> | Box<string>): none { b.put(1) }")
+  Assert.equal(differing.diagnostics.length, 1)
+  Assert.stringContains(differing.diagnostics[0].message, "is not callable")
+}

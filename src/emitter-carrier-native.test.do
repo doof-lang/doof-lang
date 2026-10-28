@@ -160,6 +160,10 @@ export function testNullableInterfaceNative(): none {
   runNativeFixture("nullable-interface")
 }
 
+export function testUnionMemberAccessNative(): none {
+  runNativeFixture("union-member-access", "union member access ok")
+}
+
 export function testPositionalClassLiteralsNative(): none {
   runNativeFixture("positional-class-literals")
 }

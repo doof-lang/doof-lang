@@ -7,7 +7,7 @@ import { finish, requireBool, typeError } from "./checker-common"
 import { constantInt } from "./checker-constants"
 import { checkExpression } from "./checker-expressions"
 import { pathType } from "./checker-inference"
-import { isAssignableWithInterfaces } from "./checker-interfaces"
+import { interfacesShareImplementation, isAssignableWithInterfaces } from "./checker-interfaces"
 import { isIntegerOperand, isNumericOperand, numericOperationType, numericOperatorAllowed } from "./checker-numeric"
 import { resolveType } from "./checker-annotations"
 import { CheckerState } from "./checker-state"
@@ -217,9 +217,10 @@ export function isValidAsNarrow(state: CheckerState, source: ResolvedType, targe
     union_: UnionResolvedType -> {
       for member of union_.types { if isValidAsNarrow(state, member, target) { return true } }
     }
-    _: InterfaceType -> {
+    interface_: InterfaceType -> {
       case target {
         _: ClassType -> { return true }
+        targetInterface: InterfaceType -> { return interfacesShareImplementation(state.result, interface_, targetInterface) }
         _ -> { }
       }
     }
@@ -339,6 +340,10 @@ export function typesOverlap(state: CheckerState, left: ResolvedType, right: Res
     result: ResultResolvedType -> { case right { success: SuccessResolvedType -> { return typesOverlap(state, result.valueType, success.valueType) } failure: FailureResolvedType -> { return typesOverlap(state, result.errorType, failure.errorType) } _ -> { } } }
     success: SuccessResolvedType -> { case right { result: ResultResolvedType -> { return typesOverlap(state, success.valueType, result.valueType) } _ -> { } } }
     failure: FailureResolvedType -> { case right { result: ResultResolvedType -> { return typesOverlap(state, failure.errorType, result.errorType) } _ -> { } } }
+    _ -> { }
+  }
+  case left {
+    leftInterface: InterfaceType -> { case right { rightInterface: InterfaceType -> { return interfacesShareImplementation(state.result, leftInterface, rightInterface) } _ -> { } } }
     _ -> { }
   }
   return isAssignableWithInterfaces(state.result, left, right) || isAssignableWithInterfaces(state.result, right, left) || (isNumericOperand(left) && isNumericOperand(right))

@@ -11,7 +11,7 @@ import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { emitWeakAccess, weakAccessNames } from "./emitter-weak-access"
 import { emitExpression } from "./emitter-expr"
 import { emitStringConstant, quote } from "./emitter-expr-literals"
-import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
+import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, requireExpressionType, emitVariantFieldRead, variantMember, variantVisitValue } from "./emitter-expr-utils"
 import { emitContextClassInnerType, emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { cppIdentifier, moduleDiagnosticPath } from "./emitter-names"
 import { isNumeric, isSerialBytesType, sameType } from "./checker-types"
@@ -66,6 +66,10 @@ function emitValueAs(source: string, sourceType: ResolvedType, result: ResultRes
       case target {
         _: ClassType -> {
           return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (std::holds_alternative<" + targetCpp + ">(_as_value)) return " + success + "{std::get<" + targetCpp + ">(_as_value)}; return " + failure + "{\"Interface narrowing failed\"}; }()"
+        }
+        // Another interface keeps each shared implementation as its own arm.
+        _: InterfaceType -> {
+          return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (doof::variant_is<" + targetCpp + ">(_as_value)) return " + success + "{doof::variant_narrow<" + targetCpp + ">(_as_value)}; return " + failure + "{\"Interface narrowing failed\"}; }()"
         }
         _ -> { }
       }
@@ -244,7 +248,7 @@ function emitAssignmentTarget(target: Expression, context: EmitContext): string 
           // An assignment target needs an lvalue of the field's type.
           return "(static_cast<void>(" + object + "), doof::no_implementations<" + emitContextType(member.resolvedType!, context) + "&>(" + quote(empty!.name) + "))"
         }
-        return "std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->" + cppIdentifier(member.property) + "); }, " + variantVisitValue(object, objectType!) + ")"
+        return "std::visit([](auto&& _obj) -> decltype(auto) { return (" + variantMember("_obj", objectType) + cppIdentifier(member.property) + "); }, " + variantVisitValue(object, objectType!) + ")"
       }
     }
     _ -> { }
@@ -505,7 +509,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
   empty := implementationlessInterface(staticObjectType, context)
   if empty != none { return emitNoImplementationsAccess(object, empty!, expression.resolvedType, context) }
   if !callableMember && staticObjectType != none && usesVariantRepresentation(staticObjectType!) {
-    return "std::visit([](auto&& _obj) { return _obj->" + cppIdentifier(expression.property) + "; }, " + variantVisitValue(object, staticObjectType!) + ")"
+    return emitVariantFieldRead(variantVisitValue(object, staticObjectType!), staticObjectType, expression.property, expression.resolvedType, context)
   }
   if expression.property == "push" { return object + "->push_back" }
   objectType = staticObjectType
@@ -513,8 +517,8 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
     case objectType! {
       function_: FunctionType -> { return object + "." + cppIdentifier(expression.property) }
       _: PromiseType -> { return object + "." + cppIdentifier(expression.property) }
-      _: InterfaceType -> { return "std::visit([](auto&& _obj) { return _obj->" + cppIdentifier(expression.property) + "; }, " + object + ")" }
-      _: StreamResolvedType -> { return "std::visit([](auto&& _obj) { return _obj->" + cppIdentifier(expression.property) + "; }, " + object + ")" }
+      interface_: InterfaceType -> { return emitVariantFieldRead(object, interface_, expression.property, none, context) }
+      stream: StreamResolvedType -> { return emitVariantFieldRead(object, stream, expression.property, none, context) }
       _: ArrayResolvedType -> { if expression.property == "length" { return "static_cast<int32_t>((" + object + ")->size())" } }
       _: MapResolvedType -> { if expression.property == "size" { return object + "->size()" } }
       _: SetResolvedType -> { if expression.property == "size" { return object + "->size()" } }

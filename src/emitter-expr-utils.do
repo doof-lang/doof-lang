@@ -6,11 +6,11 @@ import { ModuleNames } from "./emitter-names"
 
 import { carrierOf } from "./emitter-carriers"
 import { Expression, Identifier, ObjectProperty } from "./ast"
-import { ResolvedType, Symbol } from "./semantic"
+import { ClassType, ResolvedType, Symbol, UnionResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
-import { moduleNamespace } from "./emitter-names"
-import { specializeEmitType } from "./emitter-types"
+import { cppIdentifier, moduleNamespace } from "./emitter-names"
+import { emitContextReturnType, specializeEmitType } from "./emitter-types"
 
 /** Shorthand and expanded fields share binding-aware contextual emission. */
 export function emitPropertyValue(property: ObjectProperty, context: EmitContext, expected: ResolvedType | none = none): string {
@@ -64,6 +64,36 @@ export function hasNoneMember(type_: ResolvedType | none): bool {
 export function variantVisitValue(value: string, resolvedType: ResolvedType): string {
   if hasNoneMember(resolvedType) { return "doof::unwrap_optional(" + value + ")" }
   return value
+}
+
+// Class arms of a union carrier are shared_ptr alternatives, while struct arms
+// are held by value. A visitor over a union with any struct arm reaches the
+// member through doof::variant_member so every alternative compiles. Calls use
+// doof::variant_receiver, which copies an immutable struct arm.
+export function variantMember(visited: string, resolvedType: ResolvedType | none, call: bool = false): string {
+  if resolvedType != none {
+    case resolvedType! {
+      union_: UnionResolvedType -> {
+        for member of union_.types {
+          case member {
+            class_: ClassType -> { if class_.symbol.kind == "struct" { return (if call then "doof::variant_receiver(" else "doof::variant_member(") + visited + ")." } }
+            _ -> { }
+          }
+        }
+      }
+      _ -> { }
+    }
+  }
+  return visited + "->"
+}
+
+// Reads one field from whichever arm a variant carrier holds. Union arms and
+// interface implementations may declare the field with different types (the
+// checker joins them, and a read-only interface field is covariant), so the
+// visitor returns the checked field type when it is known.
+export function emitVariantFieldRead(source: string, carrierType: ResolvedType | none, field: string, fieldType: ResolvedType | none, context: EmitContext): string {
+  returnType := if fieldType == none then "" else " -> " + emitContextReturnType(fieldType!, context)
+  return "std::visit([](auto&& _obj)" + returnType + " { return " + variantMember("_obj", carrierType) + cppIdentifier(field) + "; }, " + source + ")"
 }
 
 export function requireExpressionType(expression: Expression, description: string): ResolvedType {

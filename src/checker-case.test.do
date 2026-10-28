@@ -117,3 +117,49 @@ export function testRangePatternsRequireIntegerSubjectsAndBounds(): none {
   }
 }
 
+
+export function testUnionMembersAreExhaustiveWhenTheirPartsAreCovered(): none {
+  prelude := "enum Color { Red, Green }\nenum Tone { Red, Dark }\ninterface Shape { area(): double }\nclass Square { side: double; area(): double => side }\nclass Circle { radius: double; area(): double => radius }\n"
+  valid := checked(prelude +
+    "function a(c: Color | none): int => case c { .Red -> 1, .Green -> 2, none -> 3 }\n" +
+    "function b(v: bool | none): int => case v { true -> 1, false -> 2, none -> 3 }\n" +
+    "function c(r: Result<int, string> | none): int => case r { s: Success -> s.value, f: Failure -> f.error.length, none -> 0 }\n" +
+    "function d(s: Shape): int => case s { _: Square -> 1, _: Circle -> 2 }\n" +
+    "function e(s: Shape | int): int => case s { _: Square -> 1, _: Circle -> 2, i: int -> i }\n" +
+    "function f(t: Color | Tone): int => case t { Color.Red -> 1, Color.Green -> 2, Tone.Red -> 3, Tone.Dark -> 4 }")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+  incomplete := [
+    "function f(c: Color | none): int => case c { .Red -> 1, none -> 3 }",
+    "function f(v: bool | none): int => case v { true -> 1, none -> 3 }",
+    "function f(r: Result<int, string> | none): int => case r { _: Success -> 1, none -> 0 }",
+    "function f(s: Shape): int => case s { _: Square -> 1 }",
+    "function f(t: Color | Tone): int => case t { Color.Red -> 1, Color.Green -> 2, Tone.Red -> 3 }",
+  ]
+  for source of incomplete {
+    result := checked(prelude + source)
+    Assert.equal(result.diagnostics.length, 1)
+    Assert.equal(result.diagnostics[0].message, "Case expression must be exhaustive")
+  }
+}
+
+export function testGenericInterfaceCasesNeedAWildcard(): none {
+  prelude := "interface Reader<T> { read(): T }\nclass IntReader { read(): int => 1 }\n"
+  partial := checked(prelude + "function f(r: Reader<int>): int => case r { _: IntReader -> 1 }")
+  Assert.equal(partial.diagnostics.length, 1)
+  Assert.equal(partial.diagnostics[0].message, "Case expression must be exhaustive")
+  Assert.equal(checked(prelude + "function f(r: Reader<int>): int => case r { _: IntReader -> 1, _ -> 0 }").diagnostics.length, 0)
+}
+
+export function testExplicitGenericPatternSelectsItsOwnSubjectMember(): none {
+  result := checked("class Box<T> { value: T }\nfunction f(x: Box<int> | Box<string>): string => case x { b: Box<int> -> string(b.value), b: Box<string> -> b.value }")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  mismatch := checked("class Box<T> { value: T }\nfunction f(x: Box<int> | Box<string>): int => case x { _: Box<long> -> 1, _ -> 0 }")
+  Assert.equal(mismatch.diagnostics.length, 1)
+  Assert.equal(mismatch.diagnostics[0].message, "Case type pattern \"Box<long>\" must be \"Box<int>\" to match subject type \"Box<int> | Box<string>\"")
+}
+
+export function testCatchAllTypePatternCoversAnIntegerSubject(): none {
+  Assert.equal(caseDiagnostics("int", "200 -> 1, s: int -> s").diagnostics.length, 0)
+}

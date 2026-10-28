@@ -434,7 +434,10 @@ Rules:
 - No destructuring or guard clauses in `case` arms.
 - Case expressions must be exhaustive: use `_`, or cover every enum variant,
   `bool` value, union member, `Result` arm, or the full `byte`/`int`/`long`
-  range with values and ranges.
+  range with values and ranges. A union member that is itself an enum, `bool`,
+  `Result`, or non-generic interface is covered by covering its parts (enum
+  values must name that enum, as in `Color.Red`); an interface is covered by
+  type patterns for every implementing class.
 - `return` and statement-level `try` are forbidden inside `case` expression arms.
 
 ## Operators

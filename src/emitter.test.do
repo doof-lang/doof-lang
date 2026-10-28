@@ -1023,10 +1023,10 @@ export function testDoesNotHoistSingleOrValueBearingHeaderVariants(): none {
 
 export function testEmitsArbitrarySharedUnionMembersFromResolvedTypes(): none {
   result := emit("class Left { value: int\nread(): int => value }\nclass Right { value: int\nread(): int => value }\ntype Either = Left | Right\ntype MaybeEither = Left | Right | none\nfunction total(item: Either): int => item.value + item.read()\nfunction maybeTotal(item: MaybeEither): int => item!.value + item!.read()")
-  Assert.stringContains(result.source, "std::visit([](auto&& _obj) { return _obj->value; }, item)")
+  Assert.stringContains(result.source, "std::visit([](auto&& _obj) -> int32_t { return _obj->value; }, item)")
   Assert.stringContains(result.source, "std::visit([&](auto&& _obj) -> int32_t { return _obj->read(); }, item)")
   // 'item!' is checked before the variant is visited.
-  Assert.stringContains(result.source, "std::visit([](auto&& _obj) { return _obj->value; }, [&]() -> std::variant<std::shared_ptr<Left>, std::shared_ptr<Right>> { auto _forced_value = item; if (doof::is_null(_forced_value)) doof::panic_at(")
+  Assert.stringContains(result.source, "std::visit([](auto&& _obj) -> int32_t { return _obj->value; }, [&]() -> std::variant<std::shared_ptr<Left>, std::shared_ptr<Right>> { auto _forced_value = item; if (doof::is_null(_forced_value)) doof::panic_at(")
   Assert.stringContains(result.source, "std::visit([&](auto&& _obj) -> int32_t { return _obj->read(); }, [&]() -> std::variant<std::shared_ptr<Left>, std::shared_ptr<Right>> { auto _forced_value = item;")
 }
 
@@ -2030,7 +2030,7 @@ export function testEmitsInterfaceVariantsAndDispatch(): none {
   Assert.equal(result.header.contains("using Drawable = std::variant<std::shared_ptr<Point>>;"), true)
   Assert.equal(result.source.contains("const Drawable shape = doof::variant_promote<Drawable>(point);"), true)
   Assert.equal(result.source.contains("std::visit([&](auto&& _obj) -> int32_t { return _obj->render(); }, shape)"), true)
-  Assert.equal(result.source.contains("std::visit([](auto&& _obj) { return _obj->value; }, shape)"), true)
+  Assert.equal(result.source.contains("std::visit([](auto&& _obj) -> int32_t { return _obj->value; }, shape)"), true)
 }
 
 export function testForwardDeclaresNativeStructuralInterfaceImplementations(): none {

@@ -7,7 +7,7 @@ import { ClassType, FailureResolvedType, InterfaceType, ResolvedType, ResultReso
 import { EmitContext } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { cppIdentifier } from "./emitter-names"
-import { emitPropertyValue, emittedSymbolName, exprModuleNamespaceFor, findProperty } from "./emitter-expr-utils"
+import { emitPropertyValue, emitVariantFieldRead, emittedSymbolName, exprModuleNamespaceFor, findProperty } from "./emitter-expr-utils"
 import { emitContextReturnType, specializeEmitType } from "./emitter-types"
 import { classInstantiationKey } from "./emitter-monomorphize"
 
@@ -143,7 +143,7 @@ function emitConstructionSpreadField(expression: ConstructExpression, temporary:
     interface_: InterfaceType -> {
       empty := implementationlessInterface(interface_, context)
       if empty != none { return emitNoImplementationsAccess(temporary, empty!, interfaceFieldType(empty!, name, context), context) }
-      return "std::visit([](auto&& _obj) { return _obj->" + cppIdentifier(name) + "; }, " + temporary + ")"
+      return emitVariantFieldRead(temporary, interface_, name, interfaceFieldType(interface_, name, context), context)
     }
     _ -> { panic("Construction spread has unsupported resolved type") }
   }

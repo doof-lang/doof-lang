@@ -700,7 +700,8 @@ element types remain valid.
 
 Members may be accessed directly on a multi-member union only when every present
 member type exposes that member. The resulting type is the union of the member
-result types. A single class nullable such as `Box | none` uses ordinary pointer
+result types. A method shared this way is callable when every arm declares
+the same parameters; the call produces the union of the arms' return types. A single class nullable such as `Box | none` uses ordinary pointer
 member access, while a single struct nullable such as `Point | none` uses an
 optional value representation. Both may still require explicit none handling for safety.
 
@@ -878,6 +879,8 @@ Shorthand works anywhere the compiler can infer the enum type from context:
 - Return statements in functions with explicit return types
 - Parameter defaults and field defaults
 - Case arms matching on an enum value
+- A union such as `Color | string` or `Color | none` with exactly one enum arm
+  declaring the variant and no class arms
 
 ```doof check
 enum Direction { North, South, East, West }

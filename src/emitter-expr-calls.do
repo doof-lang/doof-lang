@@ -11,7 +11,7 @@ import { emitWeakAccess, weakAccessNames } from "./emitter-weak-access"
 import { substituteTypeParams } from "./checker-types"
 import { emitExpression } from "./emitter-expr"
 import { cppIdentifier } from "./emitter-names"
-import { decoratedExpressionType, exprModuleNamespaceFor, variantVisitValue } from "./emitter-expr-utils"
+import { decoratedExpressionType, exprModuleNamespaceFor, variantMember, variantVisitValue } from "./emitter-expr-utils"
 import { emitContextReturnType, emitContextType, emitResultPayloadType, emitType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { classInstantiationKey, functionInstantiationKey, methodInstantiationKey } from "./emitter-monomorphize"
 import { emitSyncActorCall } from "./emitter-expr-actor"
@@ -401,7 +401,7 @@ function emitVariantMemberCall(member: MemberExpression, call: CallExpression, c
   if empty != none { return emitNoImplementationsAccess(object, empty!, call.resolvedType, context) }
   args := emitDispatchCallArguments(call, context)
   invocation := if member.resolvedCallableField then ".call(" else "("
-  return "std::visit([&](auto&& _obj) -> " + emitContextReturnType(call.resolvedType!, context) + " { return _obj->" + cppIdentifier(member.property) + invocation + args + "); }, " + variantVisitValue(object, objectType!) + ")"
+  return "std::visit([&](auto&& _obj) -> " + emitContextReturnType(call.resolvedType!, context) + " { return " + variantMember("_obj", objectType, true) + cppIdentifier(member.property) + invocation + args + "); }, " + variantVisitValue(object, objectType!) + ")"
 }
 
 function emitInterfaceJsonCall(member: MemberExpression, call: CallExpression, context: EmitContext): string {

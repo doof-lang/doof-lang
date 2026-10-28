@@ -19,7 +19,7 @@ import { indexedClass } from "./emitter-declarations"
 import type { TypeAnnotation } from "./ast"
 import { ArrayResolvedType, ClassType, InterfaceType, MapResolvedType, PrimitiveType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable, recordCoverageLine, sourceLineDirective } from "./emitter-context"
-import { emitExpressionReturn } from "./emitter-expr-utils"
+import { emitExpressionReturn, emitVariantFieldRead } from "./emitter-expr-utils"
 import { emitCasePattern, emitCaseSubjectValue } from "./emitter-case-pattern"
 import { emitExpression, emitDiscardedExpression } from "./emitter-expr"
 import { cppIdentifier } from "./emitter-names"
@@ -199,7 +199,7 @@ function emitDestructuredField(source: string, field: string, sourceType: Resolv
     interface_: InterfaceType -> {
       empty := implementationlessInterface(interface_, context)
       if empty != none { return emitNoImplementationsAccess(source, empty!, interfaceFieldType(empty!, field, context), context) }
-      return "std::visit([](auto&& _obj) { return _obj->" + cppIdentifier(field) + "; }, " + source + ")"
+      return emitVariantFieldRead(source, interface_, field, interfaceFieldType(interface_, field, context), context)
     }
     _ -> { }
   } }

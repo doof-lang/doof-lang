@@ -10,10 +10,10 @@ import { resolveType } from "./checker-annotations"
 import { CheckerState } from "./checker-state"
 import { checkBlock } from "./checker-statements"
 import { casePatternName, declarationFor, declare } from "./checker-symbols"
-import { failureType, neverType, resultType, sameType, successType, typeName, unknownType, weakReferenceErrorType } from "./checker-types"
+import { classType, failureType, neverType, resultType, sameType, successType, typeName, unknownType, weakReferenceErrorType } from "./checker-types"
 import { checkerSemanticSpan } from "./checker-validation"
 import type { Symbol } from "./semantic"
-import { Binding, ClassType, EnumType, FailureResolvedType, PrimitiveType, ResolvedType, ResultResolvedType, Scope, SuccessResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { Binding, ClassType, EnumType, FailureResolvedType, InterfaceType, PrimitiveType, ResolvedType, ResultResolvedType, Scope, SuccessResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
 
 export function checkCaseExpression(state: CheckerState, expression: CaseExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   subjectType := checkedCaseSubjectType(checkExpression(state, expression.subject, scope, none))
@@ -69,30 +69,76 @@ export function casePatternsExhaustive(state: CheckerState, subjectType: Resolve
       if primitive_.name == "byte" { return integerPatternsExhaustive(arms, 0L, 255L) }
       if primitive_.name == "int" { return integerPatternsExhaustive(arms, -2147483648L, 2147483647L) }
       if primitive_.name == "long" { return integerPatternsExhaustive(arms, -9223372036854775807L - 1L, 9223372036854775807L) }
-      if primitive_.name != "bool" { return false }
-      let hasTrue = false
-      let hasFalse = false
-      for patterns of arms {
-        for pattern of patterns {
-          case pattern {
-            value: ValuePattern -> {
-              case value.value {
-                boolean: BoolLiteral -> { if boolean.value { hasTrue = true } else { hasFalse = true } }
-                _ -> { }
-              }
-            }
-            _ -> { }
-          }
-        }
-      }
-      return hasTrue && hasFalse
     }
-    result: ResultResolvedType -> { return unionPatternsExhaustive(UnionResolvedType { types: patternSubjectMembers(result) }, arms) }
-    enum_: EnumType -> { return enumPatternsExhaustive(state, enum_, arms) }
-    union_: UnionResolvedType -> { return unionPatternsExhaustive(union_, arms) }
+    _ -> { }
+  }
+  return memberCovered(state, subjectType, arms, false)
+}
+
+// A subject, or one member of a union subject, is covered by a type pattern
+// naming it or by covering each of its parts: both arms of a Result, every
+// variant of an enum, both bool values, every member of a union, or every
+// implementation of a closed-world interface. Enum value patterns inside a
+// union must name that enum.
+function memberCovered(state: CheckerState, member: ResolvedType, arms: CasePattern[][], inUnion: bool): bool {
+  for patterns of arms {
+    for pattern of patterns {
+      case pattern {
+        type_: TypePattern -> { if type_.resolvedType != none && sameType(member, type_.resolvedType!) { return true } }
+        value: ValuePattern -> { case value.value { _: NoneLiteral -> { if member.kind == "none" { return true } } _ -> { } } }
+        _ -> { }
+      }
+    }
+  }
+  case member {
+    primitive_: PrimitiveType -> { return primitive_.name == "bool" && boolPatternsExhaustive(arms) }
+    result: ResultResolvedType -> { return memberCovered(state, successType(result.valueType), arms, true) && memberCovered(state, failureType(result.errorType), arms, true) }
+    enum_: EnumType -> { return enumPatternsExhaustive(state, enum_, arms, inUnion) }
+    union_: UnionResolvedType -> {
+      for type_ of union_.types { if !memberCovered(state, type_, arms, true) { return false } }
+      return true
+    }
+    interface_: InterfaceType -> {
+      implementations := closedInterfaceImplementations(state, interface_)
+      if implementations == none { return false }
+      for implementation of implementations! { if !memberCovered(state, implementation, arms, true) { return false } }
+      return true
+    }
     _ -> { }
   }
   return false
+}
+
+// The classes a non-generic interface lowers to. Generic interfaces and
+// generic implementing classes depend on emitted instantiations, so their
+// cases need a wildcard.
+function closedInterfaceImplementations(state: CheckerState, interface_: InterfaceType): ClassType[] | none {
+  if interface_.typeArgs.length > 0 { return none }
+  let classes: ClassType[] = []
+  for implementation of interface_.symbol.implementations {
+    if implementation.typeParams.length > 0 { return none }
+    classes.push(classType(implementation.name, implementation))
+  }
+  return classes
+}
+
+function boolPatternsExhaustive(arms: CasePattern[][]): bool {
+  let hasTrue = false
+  let hasFalse = false
+  for patterns of arms {
+    for pattern of patterns {
+      case pattern {
+        value: ValuePattern -> {
+          case value.value {
+            boolean: BoolLiteral -> { if boolean.value { hasTrue = true } else { hasFalse = true } }
+            _ -> { }
+          }
+        }
+        _ -> { }
+      }
+    }
+  }
+  return hasTrue && hasFalse
 }
 
 // Integer subjects are exhaustive when their value and range patterns cover
@@ -160,7 +206,7 @@ function integerPatternValue(expression: Expression): long | none {
   return none
 }
 
-function enumPatternsExhaustive(state: CheckerState, enum_: EnumType, arms: CasePattern[][]): bool {
+function enumPatternsExhaustive(state: CheckerState, enum_: EnumType, arms: CasePattern[][], inUnion: bool): bool {
   declaration := declarationFor(state.result, enum_.symbol)
   if declaration == none { return false }
   case declaration! {
@@ -171,6 +217,7 @@ function enumPatternsExhaustive(state: CheckerState, enum_: EnumType, arms: Case
           for pattern of patterns {
             case pattern {
               value: ValuePattern -> {
+                if inUnion && (value.value.resolvedType == none || !sameType(value.value.resolvedType!, enum_)) { continue }
                 case value.value {
                   dot: DotShorthand -> { if dot.name == variant.name { found = true } }
                   member: MemberExpression -> { if member.property == variant.name { found = true } }
@@ -190,28 +237,15 @@ function enumPatternsExhaustive(state: CheckerState, enum_: EnumType, arms: Case
   return false
 }
 
-function unionPatternsExhaustive(union_: UnionResolvedType, arms: CasePattern[][]): bool {
-  for member of union_.types {
-    let found = false
-    for patterns of arms {
-      for pattern of patterns {
-        case pattern {
-          type_: TypePattern -> { if type_.resolvedType != none && sameType(member, type_.resolvedType!) { found = true } }
-          value: ValuePattern -> { case value.value { _: NoneLiteral -> { if member.kind == "none" { found = true } } _ -> { } } }
-          _ -> { }
-        }
-      }
-    }
-    if !found { return false }
-  }
-  return true
-}
-
 // The subject members a type pattern selects among. A Result is the union of
-// its two arms.
+// its two arms, including a Result member of a wider union.
 function patternSubjectMembers(subjectType: ResolvedType): ResolvedType[] {
   case subjectType {
-    union_: UnionResolvedType -> { return union_.types }
+    union_: UnionResolvedType -> {
+      let members: ResolvedType[] = []
+      for member of union_.types { for flattened of patternSubjectMembers(member) { members.push(flattened) } }
+      return members
+    }
     result: ResultResolvedType -> { return [successType(result.valueType), failureType(result.errorType)] }
     _ -> { return [subjectType] }
   }
@@ -252,8 +286,13 @@ function genericPatternMember(pattern: ResolvedType, subjectType: ResolvedType):
     class_: ClassType -> { if class_.typeArgs.length == 0 { return none } name = class_.symbol.name; symbol = class_.symbol }
     _ -> { return none }
   }
-  for member of patternSubjectMembers(subjectType) { if sameGenericHead(member, name, symbol) { return member } }
-  return none
+  let found: ResolvedType | none = none
+  for member of patternSubjectMembers(subjectType) {
+    if !sameGenericHead(member, name, symbol) { continue }
+    if sameType(member, pattern) { return member }
+    if found == none { found = member }
+  }
+  return found
 }
 
 function hasNoTypeArguments(annotation: TypeAnnotation): bool {
@@ -269,6 +308,7 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
       type_: TypePattern -> {
         let resolved: ResolvedType = unknownType()
         let inferred: ResolvedType | none = none
+        let mismatched = false
         case type_.type_ {
           named: NamedType -> { inferred = inferredGenericPattern(named, subjectType) }
           _ -> { }
@@ -283,6 +323,7 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
           // a different instantiation is never stored in the subject.
           member := genericPatternMember(resolved, subjectType)
           if member != none && !sameType(member!, resolved) {
+            mismatched = true
             typeError(state, "Case type pattern \"" + typeName(resolved) + "\" must be \"" + typeName(member!) + "\" to match subject type \"" + typeName(subjectType) + "\"", type_.span)
           }
         }
@@ -291,7 +332,7 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
           _ -> { }
         }
         type_.resolvedType = resolved
-        if !typesOverlap(state, subjectType, resolved) {
+        if !mismatched && !typesOverlap(state, subjectType, resolved) {
           typeError(state, "Case type pattern \"" + typeName(resolved) + "\" cannot match subject type \"" + typeName(subjectType) + "\"", type_.span)
         }
         if type_.name != "_" {

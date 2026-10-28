@@ -122,3 +122,20 @@ export function testRangeAcceptsBoundsBelowOrExcludingMaximumInt(): none {
   }
   Assert.equal(checked("function size(value: int): int => case value { 0..2147483647 -> 1, _ -> 0 }").diagnostics.length, 0)
 }
+
+export function testInterfacesNarrowToOverlappingInterfaces(): none {
+  prelude := "interface Named { readonly name: string }\ninterface Counter { let count: int }\ninterface Sized { size(): int }\n" +
+    "class Tally { readonly name: string = \"t\"; let count: int = 0 }\nclass Plain { readonly name: string = \"p\" }\nclass Bag { size(): int => 0 }\n"
+  valid := checked(prelude +
+    "function a(n: Named): Result<Counter, string> => n as Counter\n" +
+    "function b(n: Named | int): Result<Counter, string> => n as Counter\n" +
+    "function c(n: Named): int => case n { counter: Counter -> counter.count, _ -> 0 }")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+  disjoint := checked(prelude + "function f(n: Named): Result<Sized, string> => n as Sized")
+  Assert.equal(disjoint.diagnostics.length, 1)
+  Assert.equal(disjoint.diagnostics[0].message, "Cannot narrow \"Named\" to \"Sized\" with \"as\"")
+  pattern := checked(prelude + "function f(n: Named): int => case n { _: Sized -> 1, _ -> 0 }")
+  Assert.equal(pattern.diagnostics.length, 1)
+  Assert.equal(pattern.diagnostics[0].message, "Case type pattern \"Sized\" cannot match subject type \"Named\"")
+}

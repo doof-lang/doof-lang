@@ -288,17 +288,7 @@ export function checkDotShorthand(state: CheckerState, expression: DotShorthand,
   }
   case expected! {
     enum_: EnumType -> {
-      declaration := declarationFor(state.result, enum_.symbol)
-      let found = false
-      if declaration != none {
-        case declaration! {
-          enumDeclaration: EnumDeclaration -> {
-            for variant of enumDeclaration.variants { if variant.name == expression.name { found = true } }
-          }
-          _ -> { }
-        }
-      }
-      if !found {
+      if !enumDeclaresVariant(state, enum_, expression.name) {
         typeError(state, "Enum \"" + enum_.name + "\" has no variant \"" + expression.name + "\"", expression.span)
         return finish(state, expression, unknownType())
       }
@@ -354,11 +344,35 @@ export function checkDotShorthand(state: CheckerState, expression: DotShorthand,
         else if member.kind != "none" { owners += 2 }
       }
       if owners == 1 { return checkDotShorthand(state, expression, owner, true) }
+      // Otherwise the shorthand names a variant of the one enum arm that
+      // declares it, provided no class arm could supply a static member.
+      let variantOwner: ResolvedType | none = none
+      let variantOwners = 0
+      for member of union_.types {
+        if member.kind == "class" { variantOwners = 2; break }
+        case member {
+          enum_: EnumType -> { if enumDeclaresVariant(state, enum_, expression.name) { variantOwner = member; variantOwners += 1 } }
+          _ -> { }
+        }
+      }
+      if variantOwners == 1 { return checkDotShorthand(state, expression, variantOwner, true) }
     }
     _ -> { }
   }
   typeError(state, "Cannot resolve shorthand ." + expression.name + " for expected type \"" + typeName(expected!) + "\"", expression.span)
   return finish(state, expression, unknownType())
+}
+
+function enumDeclaresVariant(state: CheckerState, enum_: EnumType, name: string): bool {
+  declaration := declarationFor(state.result, enum_.symbol)
+  if declaration == none { return false }
+  case declaration! {
+    enumDeclaration: EnumDeclaration -> {
+      for variant of enumDeclaration.variants { if variant.name == name { return true } }
+    }
+    _ -> { }
+  }
+  return false
 }
 
 function producesShorthandOwner(returnType: ResolvedType, owner: ClassType, allowsNone: bool): bool {

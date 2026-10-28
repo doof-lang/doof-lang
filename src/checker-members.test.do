@@ -221,3 +221,19 @@ export function testMapIndexChecksKeysAgainstTheKeyType(): none {
   Assert.equal(wrong.diagnostics.length, 1)
   Assert.equal(wrong.diagnostics[0].message, "Invalid map key type")
 }
+
+export function testDotShorthandNamesTheUnionsOneEnumArmDeclaringIt(): none {
+  prelude := "enum Color { Red, Green }\nenum Size { Small, Large }\n"
+  valid := checked(prelude +
+    "function a(c: Color | string): int => case c { .Red -> 1, _ -> 0 }\n" +
+    "function b(v: Color | Size): int => case v { .Large -> 1, .Green -> 2, _ -> 0 }\n" +
+    "function c(): Color | string => .Green")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+  missing := checked(prelude + "function c(): Color | string => .Blue")
+  Assert.equal(missing.diagnostics.length, 1)
+  Assert.equal(missing.diagnostics[0].message, "Cannot resolve shorthand .Blue for expected type \"Color | string\"")
+  ambiguous := checked("enum Color { Red }\nenum Tone { Red }\nfunction c(): Color | Tone => .Red")
+  Assert.equal(ambiguous.diagnostics.length, 1)
+  Assert.equal(ambiguous.diagnostics[0].message, "Cannot resolve shorthand .Red for expected type \"Color | Tone\"")
+}

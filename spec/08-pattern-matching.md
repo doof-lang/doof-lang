@@ -153,6 +153,29 @@ let partial = case direction {  // ❌
 }
 ```
 
+A union member is covered by covering its parts: every variant of an enum
+member, both values of a `bool` member, both arms of a `Result` member, or
+every implementing class of a non-generic interface. Inside a union, enum value
+patterns count toward the enum they name. Generic interfaces need a wildcard.
+
+```doof check
+enum Color { Red, Green }
+interface Shape { area(): double }
+class Square { side: double; area(): double => side * side }
+class Circle { radius: double; area(): double => radius * 2.0 }
+
+function colorName(color: Color | none): string => case color {
+    .Red -> "red",
+    .Green -> "green",
+    none -> "none"
+}
+
+function shapeName(shape: Shape): string => case shape {
+    _: Square -> "square",
+    _: Circle -> "circle"
+}
+```
+
 ---
 
 ## Range Matching

@@ -130,7 +130,12 @@ union values and construction-time union promotion are driven by decorated
 source and target types; compiler source declaration names have no special
 lowering behavior. Before visiting a nullable multi-arm union, lowering removes
 the `monostate` absence arm through the standard forced-nullable boundary so the
-generated visitor is valid for every remaining C++ alternative. Runtime-backed
+generated visitor is valid for every remaining C++ alternative. Shared field reads
+return the checked member type, since arms and read-only interface
+implementations may store different field types. Class arms are reached
+through their `shared_ptr`; struct arms are held by value and reached through
+`doof::variant_member`, or `doof::variant_receiver` for calls, which copies an
+immutable struct arm because struct methods are not const-qualified. Runtime-backed
 builtin types use the same native-symbol metadata as declared native types.
 Each generated header is a consumer-projected, self-contained C++ worldview:
 it renders the canonical declarations required by its matching source directly

@@ -238,9 +238,36 @@ function unionMemberType(state: CheckerState, union: UnionResolvedType, property
       if selection.staticOwner != arm.staticOwner { selection.staticOwner = none }
     }
     if memberValue.kind == "unknown" { return unknownType() }
-    resolved = if resolved == none then memberValue else joinTypes(resolved!, memberValue)
+    resolved = if resolved == none then memberValue else joinMemberTypes(resolved!, memberValue)
   }
   return resolved ?? unknownType()
+}
+
+// Methods shared by every union arm stay callable when their parameters agree;
+// the call produces the union of the arms' return types.
+function joinMemberTypes(left: ResolvedType, right: ResolvedType): ResolvedType {
+  case left {
+    leftFunction: FunctionType -> {
+      case right {
+        rightFunction: FunctionType -> {
+          if sameMethodParameters(leftFunction, rightFunction) {
+            return functionType(leftFunction.params, joinTypes(leftFunction.returnType, rightFunction.returnType))
+          }
+        }
+        _ -> { }
+      }
+    }
+    _ -> { }
+  }
+  return joinTypes(left, right)
+}
+
+function sameMethodParameters(left: FunctionType, right: FunctionType): bool {
+  if left.typeParams.length > 0 || right.typeParams.length > 0 || left.params.length != right.params.length { return false }
+  for i of 0..<left.params.length {
+    if left.params[i].hasDefault != right.params[i].hasDefault || !sameType(left.params[i].type_, right.params[i].type_) { return false }
+  }
+  return true
 }
 
 // Readonly collections reject mutators and the conversions that consume or

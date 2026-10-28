@@ -142,6 +142,8 @@ x <- {
 For statement-level completion analysis, an `if` with a final `else` is
 exhaustive. A `case` is exhaustive when it has a wildcard, covers both Result
 arms, covers every enum variant, or covers every member of a nominal union.
+A union member that is an enum, `bool`, `Result`, or non-generic interface is
+covered by covering its variants, values, arms, or implementing classes.
 When every exhaustive branch returns, yields, loops forever, or evaluates a
 `never` expression, control cannot continue after the statement.
 

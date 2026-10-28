@@ -12,7 +12,7 @@ import { EmitContext } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { emitIdentifier, emitMember } from "./emitter-expr-ops"
 import { cppIdentifier } from "./emitter-names"
-import { variantVisitValue } from "./emitter-expr-utils"
+import { variantMember, variantVisitValue } from "./emitter-expr-utils"
 import { emitContextReturnType, emitContextType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { implementationlessInterface } from "./emitter-no-implementations"
 import { concreteGenericTarget } from "./emitter-expr-calls"
@@ -114,7 +114,7 @@ function canBindMethod(receiverType: ResolvedType, context: EmitContext): bool {
 function boundMethod(callbackType: string, signature: FunctionType, receiver: string, receiverType: ResolvedType, method: string, context: EmitContext): string {
   returnType := emitContextReturnType(signature.returnType, context)
   if usesVariantRepresentation(receiverType) {
-    return boundCallback(callbackType, receiver, returnType, "std::visit([&](auto&& _obj) -> " + returnType + " { return _obj->" + method + "(" + forwardedArguments + "); }, " + variantVisitValue("_self", receiverType) + ")", false)
+    return boundCallback(callbackType, receiver, returnType, "std::visit([&](auto&& _obj) -> " + returnType + " { return " + variantMember("_obj", receiverType, true) + method + "(" + forwardedArguments + "); }, " + variantVisitValue("_self", receiverType) + ")", false)
   }
   let structReceiver = false
   case receiverType {

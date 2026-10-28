@@ -357,7 +357,9 @@ support ordering.
 
 `Enum | none` has a natural optional carrier. Declaration-`else`, postfix `!`,
 `as`, and `??` narrow it to a plain enum suitable for arguments, assignments,
-fields, and returns. Dot-shorthand works when the target type is known.
+fields, and returns. Dot-shorthand works when the target type is known,
+including a union such as `Color | string` with exactly one enum arm that
+declares the variant and no class arms.
 
 ## Collections
 
@@ -526,6 +528,8 @@ class Counter implements Stream<int> {
 - Classes are reference types; structs are value types.
 - Interfaces are structural.
 - Interface types resolve against the closed world of matching classes at compile time.
+- `as` and case type patterns may narrow one interface to another when some
+  class implements both.
 
 ```doof check
 class Canvas {}

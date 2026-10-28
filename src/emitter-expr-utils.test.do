@@ -59,3 +59,17 @@ export function testReadonlyEmissionExpressionNamespacesAreExplicit(): none {
   Assert.equal(exprModuleNamespaceFor("/vendor/item.do", names), "first::item")
   Assert.equal(exprModuleNamespaceFor("/vendor/item.do"), "app_vendor_item_")
 }
+
+export function testUnionVisitorsReachStructArmsByValue(): none {
+  result := compile([SourceFile {
+    path: "/main.do",
+    source: "struct Wide { x: int; y: int; total(): int => x + y }\nstruct Narrow { x: int; total(): int => x }\nclass Num { value: int }\nclass Text { value: string }\n" +
+      "function main(): none { s: Wide | Narrow := Narrow { x: 1 }; println(s.x); println(s.total()); c: Num | Text := Num { value: 1 }; println(c.value) }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "std::visit([](auto&& _obj) -> int32_t { return doof::variant_member(_obj).x; }, s)")
+  Assert.stringContains(source, "{ return doof::variant_receiver(_obj).total(); }, s)")
+  Assert.stringContains(source, "std::visit([](auto&& _obj) -> std::variant<int32_t, std::string> { return _obj->value; }, c)")
+}

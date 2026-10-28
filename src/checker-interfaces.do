@@ -167,6 +167,20 @@ export function classSatisfiesInterface(result: AnalysisResult, classSymbol: Sym
   return false
 }
 
+// Two interfaces describe overlapping values when one non-generic class
+// implements both, so a value of one may be checked against the other.
+export function interfacesShareImplementation(result: AnalysisResult, left: InterfaceType, right: InterfaceType): bool {
+  if sameType(left, right) { return true }
+  for module of result.modules {
+    for symbol of module.symbols {
+      if symbol.kind != "class" || symbol.typeParams.length > 0 { continue }
+      candidate := classType(symbol.name, symbol)
+      if isAssignableWithInterfaces(result, candidate, left) && isAssignableWithInterfaces(result, candidate, right) { return true }
+    }
+  }
+  return false
+}
+
 export function isAssignableWithInterfaces(result: AnalysisResult, value: ResolvedType, target: ResolvedType): bool {
   return isAssignableWithInterfacesSeen(result, value, target, [])
 }

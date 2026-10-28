@@ -2752,6 +2752,33 @@ struct is_std_variant : std::false_type {};
 template <typename... T>
 struct is_std_variant<std::variant<T...>> : std::true_type {};
 
+// Union visitors reach class arms through shared_ptr and struct arms by value.
+template <typename T>
+struct is_shared_ptr : std::false_type {};
+
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
+
+template <typename T>
+decltype(auto) variant_member(T&& item) {
+    if constexpr (is_shared_ptr<std::decay_t<T>>::value) {
+        return (*item);
+    } else {
+        return std::forward<T>(item);
+    }
+}
+
+// Struct methods are not const-qualified, so a call through an immutable union
+// binding runs on a copy of the struct arm.
+template <typename T>
+decltype(auto) variant_receiver(T&& item) {
+    if constexpr (!is_shared_ptr<std::decay_t<T>>::value && std::is_const_v<std::remove_reference_t<T>>) {
+        return std::decay_t<T>(item);
+    } else {
+        return variant_member(std::forward<T>(item));
+    }
+}
+
 // Marks an interface carrier whose alternatives a union splices in place.
 template <typename Interface>
 struct arms {};
