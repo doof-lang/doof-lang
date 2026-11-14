@@ -2,14 +2,15 @@
 
 Status: design proposal, not part of the Doof language specification.
 
-This document develops six related language and compiler proposals:
+This document develops seven related language and compiler proposals:
 
 1. capability-bearing generic constraints;
 2. owned values, borrowing, and explicit moves;
 3. payload-bearing unions and destructuring patterns;
 4. structured concurrency, cancellation, and deadlines;
-5. structural interface conformance for structs; and
-6. package-scoped visibility.
+5. structural interface conformance for structs;
+6. package-scoped visibility; and
+7. binding conditions for `if` and `while`.
 
 Named-union JSON dispatch, formerly the first proposal, is implemented; see
 [JSON serialization](../spec/12-json-serialization.md).
@@ -51,12 +52,13 @@ Every proposal follows these constraints:
 | Capability-bearing constraints | Existing generics and interfaces | Medium | First |
 | Struct interface conformance | Existing structural interface machinery | Medium | After generic constraints |
 | Package-scoped visibility | Existing resolver and package identity | Low | Independently |
+| Binding conditions | Existing declaration-`else` absence analysis | Low | Independently |
 | Payload-bearing unions | Existing unions, cases, JSON, metadata, named-union JSON dispatch | Medium-high | After the low-risk additions |
 | Owned values and moves | Flow analysis and actor-boundary checking | High | After semantic hardening |
 | Structured concurrency | Runtime scheduler and must-use checking | High | After task error and ownership decisions |
 
-The first three can be delivered without changing Doof's runtime scheduling or
-memory model. Payload-bearing unions change representation but remain largely
+The first three and binding conditions can be delivered without changing Doof's
+runtime scheduling or memory model. Payload-bearing unions change representation but remain largely
 compile-time. Ownership and structured concurrency require the strongest
 cross-phase and runtime review.
 
@@ -1830,6 +1832,229 @@ reflection, JSON, Wasm, native imports, mocks, and test modules.
 
 ---
 
+## 7. Binding conditions
+
+### Summary
+
+Allow `if` and `while` conditions to declare an immutable binding that holds
+the present value of a nullable or `Result` expression. The body runs only when
+the value is present, with the binding in scope at its present type.
+
+```doof
+if existing := lookup(name) && existing.owner == owner {
+    return existing.id
+}
+
+if call := expression as CallExpression {
+    checkCall(call)
+}
+
+while token := lexer.next() {
+    tokens.push(token)
+}
+```
+
+This is the positive counterpart of declaration-`else`. It introduces a new
+name, so the rule that `if` conditions never narrow an existing variable is
+unchanged.
+
+### Motivation
+
+Doof's explicit narrowing forms cover the bail-out path (declaration-`else`),
+exhaustive discrimination (`case`), and assertion (`!`). They do not cover
+"do this when the value is present, otherwise carry on". Current code writes
+that as a comparison followed by assertions:
+
+```doof
+if existing != none && existing!.owner == owner { return existing!.id }
+```
+
+Each `!` is a runtime panic the checker cannot relate to the guard. Editing or
+removing the comparison leaves the body compiling. The compiler's own non-test
+source (about 38,000 lines) contains roughly 740 `if ... != none` conditions and
+1,900 postfix `!` uses, so the stated goal of "no absent-value dereferences" is
+upheld mostly by convention.
+
+Two further patterns come from the same gap:
+
+- a `case` with one type-pattern arm and an empty `_ -> { }` arm, used as a
+  conditional narrowing (about 440 occurrences); and
+- comparing a literal discriminator such as `value.kind == "call"` and then
+  re-deriving the member with `as ...!` or a nested `case`.
+
+A binding condition expresses all three directly and moves the presence proof
+into the checker.
+
+### Syntax
+
+```text
+condition      := clause ( "&&" clause )*
+clause         := binding-clause | expression
+binding-clause := name [ ":" Type ] ":=" expression
+```
+
+- A binding clause may appear only as a top-level `&&` operand of an `if`,
+  `else if`, or `while` condition. It cannot appear under `||`, unary `!`,
+  parentheses, or in any other expression position.
+- The initializer of a binding clause is parsed above `&&` in precedence, so
+  `a := f() && a.ok` is two clauses. An initializer using `||` or `??` must be
+  parenthesized.
+- Ordinary boolean clauses and binding clauses may be mixed in any order.
+- The name may be `_` to test presence without binding.
+- The optional annotation is checked against the present type, as in annotated
+  declaration-`else`.
+- The initializer follows the existing rule for `{` in condition expressions.
+
+The expression form uses `then` as today:
+
+```doof
+label := if user := session.user then user.name else "guest"
+```
+
+### Applicable types and present value
+
+A binding clause accepts exactly the subjects that declaration-`else` accepts,
+and binds the same present type:
+
+| Subject type | Binding type |
+| --- | --- |
+| `T | none` | `T` |
+| `Result<T, E>` | `T` |
+| `Result<T | none, E>` | `T` |
+| `Result<T, E> | none` | `T` |
+
+Any other subject, including a plain union or `bool`, is an error. Because
+`as` already returns a `Result`, checked narrowing needs no additional rule:
+
+```doof
+if circle := shape as Circle { println(circle.radius) }
+if count := value as int && count > 0 { reserve(count) }
+```
+
+`Result<none, E>` has no present value and is rejected; use statement-`else` or
+`case`.
+
+### Scope and evaluation
+
+- Clauses evaluate left to right and stop at the first boolean clause that is
+  false or binding clause whose subject is absent.
+- Each subject is evaluated exactly once per evaluation of the condition.
+- A binding is in scope in later clauses of the same condition and in the body.
+  It is not in scope in the `else` branch, in later `else if` conditions, or
+  after the statement.
+- The binding is immutable, as with `:=`. It holds the value read when the
+  clause ran; later assignment to the source variable or field does not affect
+  it. A struct subject is copied and a class subject shares the reference,
+  following ordinary assignment.
+- The condition is a nested scope, so a clause may shadow an outer name. The
+  initializer still sees the outer binding:
+
+```doof
+if constraint := parameter.constraint { prepare(constraint) }
+if user := user { greet(user) }
+```
+
+- In `while`, the condition is re-evaluated before every iteration and each
+  iteration receives a fresh binding. The loop ends when any clause fails. A
+  loop `then` clause runs under its existing rules.
+
+### Failure capture
+
+When the whole condition is a single binding clause whose subject is a
+`Result`, the `else` branch may capture the failure with the declaration-`else`
+spelling and typing:
+
+```doof
+if config := loadConfig(path) {
+    apply(config)
+} else error {
+    report(error)
+}
+```
+
+The captured type is `E`, or `E | none` when the subject can also be absent as
+`none`. Capture is rejected for nullable-only subjects and for conditions with
+more than one clause, where the branch would not know which clause failed.
+
+Without capture, a `Failure` takes the `else` path and its payload is
+discarded. This matches declaration-`else` without a capture and satisfies the
+must-use rule.
+
+### Relationship to existing forms
+
+- Declaration-`else` remains the form for "absent means leave this scope".
+- `case` remains the form for exhaustive discrimination and for subjects with
+  several interesting members.
+- Postfix `!` remains the assertion form. Once binding conditions exist, the
+  checker may warn when `x!` is applied to a simple name or field path that the
+  enclosing condition compared with `none`, and suggest the binding form.
+- Plain `if x != none` still does not narrow `x`.
+
+### Lowering
+
+The checker records, for each binding clause, the subject type, the present
+type, which absence layers must be tested, the binding symbol, and any failure
+capture. The emitter evaluates the subject once into a temporary, tests
+presence, and initializes the binding from the unwrapped temporary before
+evaluating later clauses.
+
+Multi-clause conditions lower as sequential short-circuit tests that share one
+`else` target. The `else` branch runs at most once, and the lowering must not
+duplicate its body. The expression form must produce the same result as the
+statement form; it may not introduce the `return` and `try` restrictions that
+apply to lambda-lowered `case` expressions.
+
+The emitter does not decide which layers are absent or what the binding's type
+is.
+
+### Diagnostics
+
+Examples:
+
+```text
+Binding condition requires a nullable or Result value; "count" has type "int"
+```
+
+```text
+A binding clause cannot appear under "||"; bind the value before the condition
+or use a case expression
+```
+
+```text
+"user" is not in scope in the else branch; it is bound only when the condition
+holds
+```
+
+```text
+Failure capture requires a condition that is a single Result binding clause
+```
+
+```text
+"existing!" follows a none check on "existing"; bind the present value with
+"if existing := existing"
+```
+
+### Tests
+
+Coverage should include every subject shape in the table, `as` subjects for
+unions, interfaces, numerics and `SerialValue`, mixed boolean and binding
+clauses in each order, later clauses using earlier bindings, shadowing,
+`else if` chains, failure capture, `_`, annotated bindings, struct copy and
+class sharing, `while` with `break`, `continue` and `then`, the expression form,
+single evaluation of subjects with side effects, each rejected position, and
+`tests/analyzer-false-negatives/` entries for the diagnostics above.
+
+### Non-goals
+
+- Implicit narrowing of existing variables in `if` conditions.
+- Binding clauses under `||` or negation.
+- Destructuring patterns in a binding clause; these belong with payload-union
+  patterns.
+- A shorthand that rebinds a variable without naming it twice.
+- Changing the result type of `as`.
+
+---
+
 ## Cross-feature example
 
 The proposals are designed to compose. This example uses a payload union,
@@ -1904,6 +2129,7 @@ eventual standard task APIs should be settled with the corresponding proposal.
 1. Capability-bearing generic constraints.
 2. Package-scoped visibility.
 3. Struct structural interface conformance.
+4. Binding conditions.
 
 These features primarily extend resolver, checker, monomorphization, and
 emission planning without changing the scheduler.
@@ -1946,8 +2172,9 @@ If accepted, the proposals should update these specification areas:
 - variables, functions, memory management, and concurrency for ownership;
 - declarations and pattern matching for payload unions;
 - concurrency and error handling for task groups;
-- classes/interfaces for struct conformance; and
-- modules, imports, exports, and access control for package visibility.
+- classes/interfaces for struct conformance;
+- modules, imports, exports, and access control for package visibility; and
+- control flow, type narrowing, and pattern matching for binding conditions.
 
 The Doof language skill should receive matching concise guidance only after the
 normative specification is settled. Architecture and source-structure docs
@@ -1972,6 +2199,12 @@ during emitter work:
 7. Whether normal TaskGroup scope exit statically requires every task to be
    observed or permits an explicit group-level discard operation.
 8. How manifestless multi-entry builds establish implicit package identity.
+9. Whether binding clauses are joined by `&&`, which requires parenthesizing
+   `||` and `??` initializers, or by a separate separator such as `,`.
+10. Whether a binding condition may silently discard a `Failure` payload, or
+    must capture it or spell the conversion with postfix `?`.
+11. Whether the `x!`-after-`none`-check warning ships with binding conditions
+    or after the compiler's own source has migrated.
 
 These are language-contract decisions. Each should be answered in the
 specification before generated C++ shape or runtime convenience determines the
