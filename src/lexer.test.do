@@ -1,6 +1,6 @@
 import { Assert as EditorAssert } from "std/assert"
 import { Assert } from "std/assert"
-import { Lexer, TokenType, charTokenValue, isNumericLiteral, tokenValue } from "./lexer"
+import { Lexer, TokenType, charTokenValue, isContextualKeyword, isNumericLiteral, tokenValue } from "./lexer"
 import isolated function codePointToUtf8(value: int): string from "doof_runtime.hpp" as doof::char_to_utf8
 
 function types(source: string): TokenType[] {
@@ -34,18 +34,28 @@ export function testKeywordsAndOperators(): none {
 }
 
 export function testAllKeywords(): none {
-  actual := types("const readonly let function return yield if else then while for of break continue case class struct interface implements enum type import export from as true false none null void try catch static this weak destructor async retire isolated private with mock")
+  actual := types("const readonly let function return yield if else then while for of break continue case class struct interface implements enum type import export as true false none null void try catch static this weak destructor async retire isolated private mock")
   expected := [TokenType.Const, TokenType.Readonly, TokenType.Let, TokenType.Function,
     TokenType.Return, TokenType.Yield, TokenType.If, TokenType.Else, TokenType.Then,
     TokenType.While, TokenType.For, TokenType.Of, TokenType.Break, TokenType.Continue,
     TokenType.Case, TokenType.Class, TokenType.Struct, TokenType.Interface,
     TokenType.Implements, TokenType.Enum, TokenType.Type, TokenType.Import,
-    TokenType.Export, TokenType.From, TokenType.As, TokenType.True, TokenType.False,
+    TokenType.Export, TokenType.As, TokenType.True, TokenType.False,
     TokenType.None, TokenType.Null, TokenType.Void, TokenType.Try, TokenType.Catch, TokenType.Static,
     TokenType.This, TokenType.Weak, TokenType.Destructor, TokenType.Async,
-    TokenType.Retire, TokenType.Isolated, TokenType.Private, TokenType.With,
+    TokenType.Retire, TokenType.Isolated, TokenType.Private,
     TokenType.Mock, TokenType.EndOfFile]
   assertTypes(actual, expected)
+}
+
+export function testFromAndWithAreContextualIdentifiers(): none {
+  source := "from fromage \"from\" with"
+  tokens := Lexer { source }.tokenize()
+  assertTypes(tokens.map(=> it.kind), [TokenType.Identifier, TokenType.Identifier, TokenType.StringLiteral, TokenType.Identifier, TokenType.EndOfFile])
+  Assert.isTrue(isContextualKeyword(tokens[3], source, "with"))
+  Assert.isTrue(isContextualKeyword(tokens[0], source, "from"))
+  Assert.isFalse(isContextualKeyword(tokens[1], source, "from"))
+  Assert.isFalse(isContextualKeyword(tokens[2], source, "from"))
 }
 
 export function testNumericFormsAndSeparators(): none {

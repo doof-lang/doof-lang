@@ -8,7 +8,7 @@ import { ClassDeclaration, InterfaceDeclaration, EnumDeclaration, Statement, Mem
 import { declarationFor, lookup } from "./checker-symbols"
 import { CheckerState } from "./checker-state"
 import { resolveMember } from "./checker-resolution"
-import { Lexer, TokenType, tokenValue } from "./lexer"
+import { Lexer, TokenType, isContextualKeyword, tokenValue } from "./lexer"
 
 function uniquePush(items: EditorItem[], item: EditorItem): none {
   for existing of items { if existing.label == item.label { return } }
@@ -106,7 +106,7 @@ export function contextualCompletion(index: EditorIndex, module: string, offset:
   tokens := Lexer { source: prefix }.tokenize()
   if tokens.length < 2 { return false }
   last := tokens.length - 2
-  if tokens[last].kind == TokenType.StringLiteral && last > 0 && tokens[last - 1].kind == TokenType.From {
+  if tokens[last].kind == TokenType.StringLiteral && last > 0 && isContextualKeyword(tokens[last - 1], prefix, "from") {
     for source of index.frontend.sourceFiles {
       if source.path == module { continue }
       specifier := importSpecifier(module, source.path)

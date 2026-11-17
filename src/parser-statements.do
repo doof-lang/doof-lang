@@ -1,7 +1,7 @@
 // Statement, control-flow, and case-pattern parsing for the Doof parser.
 
 import type { Parser } from "./parser"
-import { Token, TokenType } from "./lexer"
+import { Token, TokenType, isContextualKeyword } from "./lexer"
 import {
   Block, IfBranch, WithBinding, CaseArm, CaseExpression, CaseExpressionArm, CaseStatement,
   CasePattern, RangePattern, TypePattern, ValuePattern, WildcardPattern,
@@ -51,7 +51,7 @@ export isolated function parseStatement(parser: Parser): Statement {
   }
   if parser.check(TokenType.While) { return parseWhile(parser, none, parser.location()) }
   if parser.check(TokenType.For) { return parseFor(parser, none, parser.location()) }
-  if parser.check(TokenType.With) { return parseWith(parser) }
+  if startsWithStatement(parser) { return parseWith(parser) }
   if parser.check(TokenType.Break) { return parseBreak(parser) }
   if parser.check(TokenType.Continue) { return parseContinue(parser) }
 
@@ -313,7 +313,7 @@ function parseExpressionStatementNoSemicolon(parser: Parser): Statement {
 
 function parseWith(parser: Parser): Statement {
   start := parser.location()
-  parser.expect(TokenType.With)
+  parser.expectContextual("with")
   let bindings: WithBinding[] = []
   while !parser.check(TokenType.LeftBrace) && !parser.atEnd() {
     bindingStart := parser.location()
@@ -326,6 +326,12 @@ function parseWith(parser: Parser): Statement {
   }
   body := parseBlock(parser)
   return WithStatement { kind: "with-statement", bindings, body, span: parser.span(start) }
+}
+
+// `with` is contextual: it opens a scoped binding only before a binding name
+// or `_`, leaving `with := ...`, `with(...)`, and `.with` as ordinary names.
+function startsWithStatement(parser: Parser): bool {
+  return isContextualKeyword(parser.current(), parser.source, "with") && discardableBindingToken(parser.peek(1).kind)
 }
 
 function discardableBindingToken(kind: TokenType): bool {

@@ -81,6 +81,16 @@ let sum = add(1, 2)
 println(sum)
 ```
 
+`from` is a contextual keyword. It introduces a module or header path only
+before a string literal, so it remains available as an ordinary name:
+
+```doof check
+class Range { from, to: int }
+function span(from: int, to: int): int => to - from
+from := Range { from: 1, to: 4 }
+println(span(from.from, from.to))
+```
+
 ### Import Renaming
 
 Given a second module that also exports a `Vector`:

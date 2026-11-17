@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import { Parser, parse } from "./parser"
-import { Block, ClassDeclaration, ConstDeclaration, ExportList, ForStatement, FunctionDeclaration, ImportDeclaration, LetDeclaration, YieldBlockExpression } from "./ast"
+import { Block, ClassDeclaration, ConstDeclaration, ExportList, ForStatement, FunctionDeclaration, ImmutableBinding, ImportDeclaration, LetDeclaration, YieldBlockExpression } from "./ast"
 
 function parseFailure(source: string): Parser {
   parser := Parser { source }
@@ -105,6 +105,24 @@ export function testImportAndExportSpecifiersShareAliasParsing(): none {
   export_ := parse("export { d as e, f }").statements[0] as ExportList else { panic("expected export list") }
   Assert.equal(export_.specifiers[0].alias!, "e")
   Assert.isTrue(export_.specifiers[1].alias == none)
+}
+
+export function testFromIsContextualOutsideSourceClauses(): none {
+  program := parse("import { from as origin, from } from \"./m\"\nexport { from } from \"./n\"\nimport function tick(): int\nfrom := origin.from(1)\nclass Range { from: int; to: int }\nfunction span(from: int, to: int): int => to - from\nfunction from(): int => 0")
+  import_ := program.statements[0] as ImportDeclaration else { panic("expected import") }
+  Assert.equal(import_.specifiers[0].name, "from")
+  Assert.equal(import_.specifiers[0].alias!, "origin")
+  Assert.equal(import_.source, "./m")
+  export_ := program.statements[1] as ExportList else { panic("expected export list") }
+  Assert.equal(export_.source!, "./n")
+  tick := program.statements[2] as FunctionDeclaration else { panic("expected native function") }
+  Assert.equal(tick.nativeHeader, "")
+  local := program.statements[3] as ImmutableBinding else { panic("expected from declaration") }
+  Assert.equal(local.name, "from")
+  Assert.equal(program.statements.length, 7)
+
+  Assert.equal(parseFailure("import { a } \"./m\"").errorMessage, "Expected 'from' before './m'")
+  Assert.equal(parseFailure("import { a } fromm \"./m\"").errorMessage, "Expected 'from' before 'fromm'")
 }
 
 export function testNativeClassMethodModifiersAndOptionalBodies(): none {

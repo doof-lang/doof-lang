@@ -72,6 +72,7 @@ with _ := acquireGuard() {
 
 A `with _ :=` scoped discard retains an ordinary value for the block lifetime,
 but cannot discard a `Result`.
+`with` is contextual: it opens a scoped binding only before a name or `_`, so `with` is also a valid ordinary identifier (for example `builder.with(x)`).
 
 ### Destructuring
 

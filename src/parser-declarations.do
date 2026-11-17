@@ -49,8 +49,7 @@ export function parseExport(parser: Parser): Statement {
       if !parser.match(TokenType.Comma) { break }
     }
     parser.expect(TokenType.RightBrace)
-    let sourceValue: string | none = none
-    if parser.match(TokenType.From) { sourceValue = parser.text(parser.expect(TokenType.StringLiteral)) }
+    sourceValue := parseOptionalFromClause(parser)
     parser.consumeSemicolon()
     return ExportList { kind: "export-list", specifiers, source: sourceValue, span: parser.span(start) }
   }
@@ -478,7 +477,7 @@ export function parseImport(parser: Parser): Statement {
     if !parser.match(TokenType.Comma) { break }
   }
   parser.expect(TokenType.RightBrace)
-  parser.expect(TokenType.From)
+  parser.expectContextual("from")
   sourceValue := parser.text(parser.expect(TokenType.StringLiteral))
   parser.consumeSemicolon()
   return ImportDeclaration { kind: "import-declaration", specifiers, source: sourceValue, typeOnly, span: parser.span(start) }
@@ -588,10 +587,16 @@ class NativeBinding {
   cppName: string
 }
 
+// `from` is contextual: it opens a source clause only when a string follows, so
+// a statement after a bodyless declaration may still begin with a `from` name.
+function parseOptionalFromClause(parser: Parser): string | none {
+  if parser.peek(1).kind != TokenType.StringLiteral || !parser.matchContextual("from") { return none }
+  return parser.text(parser.expect(TokenType.StringLiteral))
+}
+
 // The optional `from "header.hpp"` and `as ns::Name` clauses of a native import.
 function parseNativeBinding(parser: Parser): NativeBinding {
-  let header = ""
-  if parser.match(TokenType.From) { header = parser.text(parser.expect(TokenType.StringLiteral)) }
+  header := parseOptionalFromClause(parser) ?? ""
   let cppName = ""
   if parser.match(TokenType.As) { cppName = parseCppQualifiedName(parser) }
   return NativeBinding { header, cppName }

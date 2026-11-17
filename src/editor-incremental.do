@@ -4,7 +4,7 @@
 import { FrontendResult, analyzeWithLoader } from "./frontend"
 import { ModuleInfo } from "./analyzer"
 import { SourceFile } from "./semantic"
-import { Lexer, TokenType } from "./lexer"
+import { Lexer, TokenType, isContextualKeyword } from "./lexer"
 import { noSourceLoader } from "./resolver"
 import { PhaseTimings } from "./phase-timings"
 
@@ -72,7 +72,7 @@ function importsFingerprint(source: string): string {
   tokens := Lexer { source }.tokenize()
   let result = ""
   for index of 0..<tokens.length - 1 {
-    if tokens[index].kind == TokenType.From {
+    if isContextualKeyword(tokens[index], source, "from") && tokens[index + 1].kind == TokenType.StringLiteral {
       next := tokens[index + 1]
       result += source.substring(next.offset, next.offset + next.length) + "\n"
     }

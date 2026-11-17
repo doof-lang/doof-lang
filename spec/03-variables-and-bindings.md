@@ -409,6 +409,10 @@ with <name> [:Type] := <expression> [, ...] {
 // name is NOT in scope here
 ```
 
+`with` is a contextual keyword. A statement opens a scoped binding only when
+`with` is followed by a binding name or `_`; elsewhere `with` is an ordinary
+name, as in `with := 1`, `builder.with(value)`, or a parameter named `with`.
+
 After all bindings are evaluated, the body determines whether the `with`
 statement completes normally. An unconditional return or panic in its body
 terminates the enclosing path for return-completeness checking.

@@ -3,7 +3,7 @@ import { Parser as EditorParser, parse } from "./parser"
 import {
   BinaryExpression, Block, BreakStatement, CaseExpression, CaseStatement, ContinueStatement, ForOfStatement, ForStatement, FunctionDeclaration, ImmutableBinding,
   ExpressionStatement, LambdaExpression, LetDeclaration, MemberExpression, NamedType, TryStatement, UnaryExpression, ValuePattern, RangePattern, DotShorthand, WhileStatement,
-  YieldBlockAssignmentStatement,
+  YieldBlockAssignmentStatement, WithStatement, CallExpression,
 } from "./ast"
 
 export function testEditorStatementRecoveryKeepsLaterDeclarations(): none {
@@ -300,4 +300,16 @@ export function testYieldBlocksShareOneParser(): none {
   for source of ["let a <- 1", "b <- 2"] {
     EditorAssert.equal(parseFailure(source).errorMessage, "Expected block after '<-'")
   }
+}
+
+export function testWithIsContextualOutsideScopedBindings(): none {
+  program := parse("with := builder.with(1)\nwith(2)\nwith with := open(), _ := guard() { }\nfunction pick(with: int): int => with")
+  binding := program.statements[0] as ImmutableBinding else { panic("expected with binding") }
+  EditorAssert.equal(binding.name, "with")
+  call := program.statements[1] as ExpressionStatement else { panic("expected with call") }
+  case call.expression { _: CallExpression -> { } _ -> { panic("expected call expression") } }
+  scoped := program.statements[2] as WithStatement else { panic("expected with statement") }
+  EditorAssert.equal(scoped.bindings[0].name, "with")
+  EditorAssert.equal(scoped.bindings[1].name, "_")
+  EditorAssert.equal(program.statements.length, 4)
 }

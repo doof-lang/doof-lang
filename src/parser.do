@@ -5,7 +5,7 @@
 // token state here preserves the existing Parser { source }.parse() API while
 // allowing each grammar area to stay independently focused.
 
-import { Lexer, LexerDiagnostic, Token, TokenType, isNumericLiteral, tokenValue } from "./lexer"
+import { Lexer, LexerDiagnostic, Token, TokenType, isContextualKeyword, isNumericLiteral, tokenValue } from "./lexer"
 import {
   parseExport as parseExportImpl, parseConst as parseConstImpl,
   parseReadonly as parseReadonlyImpl, parseLet as parseLetImpl,
@@ -182,6 +182,17 @@ export class Parser {
   }
 
   check(kind: TokenType): bool { return current().kind == kind }
+
+  // Matches a contextual keyword, which the lexer reports as an identifier.
+  matchContextual(word: string): bool {
+    if !isContextualKeyword(current(), source, word) { return false }
+    advance()
+    return true
+  }
+
+  expectContextual(word: string): none {
+    if !matchContextual(word) { fail("Expected '" + word + "' before '" + currentText() + "'") }
+  }
 
   match(kind: TokenType): bool {
     if !check(kind) { return false }

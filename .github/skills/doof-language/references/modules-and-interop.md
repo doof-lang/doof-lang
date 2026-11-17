@@ -3,6 +3,7 @@
 ## Module System
 
 ESM-style. Each `.do` file is a module. All imports/exports resolved at compile time.
+`from` is contextual: it is special only before a path string, so `from` is a valid variable, parameter, field, or method name.
 
 ### Exports
 

@@ -42,7 +42,6 @@ export enum TokenType {
   Type,
   Import,
   Export,
-  From,
   As,
   True,
   False,
@@ -59,7 +58,6 @@ export enum TokenType {
   Retire,
   Isolated,
   Private,
-  With,
   Mock,
   Plus,
   Minus,
@@ -163,6 +161,12 @@ export function isNumericLiteral(kind: TokenType): bool {
   return kind == TokenType.IntLiteral || kind == TokenType.LongLiteral || kind == TokenType.FloatLiteral || kind == TokenType.DoubleLiteral
 }
 
+// Contextual keywords such as `from` lex as identifiers so programs may use
+// them as names; grammar positions that need them compare the identifier text.
+export function isContextualKeyword(token: Token, source: string, word: string): bool {
+  return token.kind == TokenType.Identifier && token.valueLength == word.length && tokenValue(token, source) == word
+}
+
 export function tokenValue(token: Token, source: string): string {
   raw := source.substring(token.valueOffset, token.valueOffset + token.valueLength)
   if isNumericLiteral(token.kind) {
@@ -219,14 +223,12 @@ function keywordType(word: string): TokenType {
     if word == "case" { return TokenType.Case }
     if word == "type" { return TokenType.Type }
     if word == "enum" { return TokenType.Enum }
-    if word == "from" { return TokenType.From }
     if word == "true" { return TokenType.True }
     if word == "none" { return TokenType.None }
     if word == "null" { return TokenType.Null }
     if word == "void" { return TokenType.Void }
     if word == "this" { return TokenType.This }
     if word == "weak" { return TokenType.Weak }
-    if word == "with" { return TokenType.With }
     if word == "mock" { return TokenType.Mock }
   } else if word.length == 5 {
     if word == "const" { return TokenType.Const }
