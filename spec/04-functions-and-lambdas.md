@@ -462,9 +462,9 @@ Enums are first-class types and can be used in function parameters and return ty
 enum Direction { North, South, East, West }
 
 function opposite(dir: Direction): Direction => case dir {
-    .North -> .South,
-    .South -> .North,
-    .East  -> .West,
+    .North -> .South
+    .South -> .North
+    .East  -> .West
     .West  -> .East
 }
 

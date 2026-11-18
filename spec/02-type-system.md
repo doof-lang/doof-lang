@@ -351,8 +351,8 @@ nums := [1, 2, 3, 4]
 nums.push(5)                         // nums is now [1, 2, 3, 4, 5]
 popped := nums.pop()                 // Result<int, string>
 last := case popped {
-    s: Success -> s.value,
-    _: Failure -> -1,
+    s: Success -> s.value
+    _: Failure -> -1
 }
 // nums is now [1, 2, 3, 4]
 tail := nums.slice(1, 3)             // [2, 3]  (int[])
@@ -2095,9 +2095,9 @@ enum Direction { North, South, East, West }
 
 function describe(dir: Direction): string {
     return case dir {
-        .North -> "north",
-        .South -> "south",
-        .East -> "east",
+        .North -> "north"
+        .South -> "south"
+        .East -> "east"
         .West -> "west"
     }
 }

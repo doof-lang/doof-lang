@@ -257,8 +257,8 @@ isolated function parse(text: string): int {
 function main(): none {
     promise := async { yield catchPanic(=> parse("")) }
     case promise.get()! {
-        s: Success -> println(s.value),
-        f: Failure -> println("parse panicked: ${f.error}"),
+        s: Success -> println(s.value)
+        f: Failure -> println("parse panicked: ${f.error}")
     }
 }
 ```
@@ -367,8 +367,8 @@ function stop(): none {}
 
 callback := (n: int): int => n + 1
 case callback.tryPost(1) {
-    s: Success -> track(s.value),
-    f: Failure -> { if f.error == "full" { reject() } else { stop() } },
+    s: Success -> track(s.value)
+    f: Failure -> { if f.error == "full" { reject() } else { stop() } }
 }
 ```
 

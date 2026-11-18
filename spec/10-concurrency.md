@@ -596,8 +596,8 @@ isolated function parse(text: string): int {
 function main(): none {
     promise := async { yield catchPanic(=> parse("")) }
     case promise.get()! {
-        s: Success -> println(s.value),
-        f: Failure -> println("parse panicked: ${f.error}"),
+        s: Success -> println(s.value)
+        f: Failure -> println("parse panicked: ${f.error}")
     }
 }
 ```
@@ -674,8 +674,8 @@ and never waits for mailbox capacity:
 ```doof check
 callback := (n: int): int => n + 1
 case callback.tryPost(1) {
-    s: Success -> s.value.onComplete((result) => println(result!)),
-    f: Failure -> println("not accepted: ${f.error}"),
+    s: Success -> s.value.onComplete((result) => println(result!))
+    f: Failure -> println("not accepted: ${f.error}")
 }
 ```
 

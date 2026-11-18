@@ -826,7 +826,7 @@ function main(): int {
         s: Success -> {
             println("Success: ${s.value}")
             return 0
-        },
+        }
         f: Failure -> {
             println("Error: ${f.error}")
             return 1
@@ -1111,7 +1111,7 @@ class Database {
 
 function openDb(path: string): Result<Database, string> {
     return case NativeSqliteDatabase.open(path) {
-        s: Success -> Success { value: Database { native: s.value } },
+        s: Success -> Success { value: Database { native: s.value } }
         f: Failure -> Failure { error: f.error }
     }
 }

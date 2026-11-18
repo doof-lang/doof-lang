@@ -51,7 +51,7 @@ function parseBit(s: string): Result<int, string> {
 ```doof check body
 result: Result<int, string> := Success(42)
 case result {
-    s: Success -> println(s.value),
+    s: Success -> println(s.value)
     f: Failure -> println(f.error)
 }
 ```

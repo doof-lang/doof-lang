@@ -590,7 +590,7 @@ s := (value as string)!
 
 // Pattern match:
 case value as string {
-    ok: Success -> println(ok.value),
+    ok: Success -> println(ok.value)
     err: Failure -> println(err.error)
 }
 ```

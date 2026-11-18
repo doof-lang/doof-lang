@@ -4,7 +4,7 @@
 
 Doof's `case` forms provide pattern matching with value matching, range matching, and type patterns with capture.
 
-`case` arms are separated by either commas or line endings. Commas may appear before a line ending, and the final arm may have a trailing comma. Multiple patterns in a single arm use `|`. When an expression-form arm uses a block body, the block must produce its value with `yield`.
+`case` arms are separated by line endings or commas. The idiomatic style puts one arm per line with no commas and uses commas only to place several arms on one line. A comma before a line ending and a trailing comma after the final arm are still accepted. Multiple patterns in a single arm use `|`. When an expression-form arm uses a block body, the block must produce its value with `yield`.
 
 ---
 
@@ -13,9 +13,9 @@ Doof's `case` forms provide pattern matching with value matching, range matching
 ```doof check body
 value := 2
 let description = case value {
-    0 -> "zero",
-    1 -> "one",
-    2 -> "two",
+    0 -> "zero"
+    1 -> "one"
+    2 -> "two"
     _ -> "many"
 }
 ```
@@ -41,9 +41,9 @@ function restartServer(): none { println("restarting") }
 
 command := "start"
 case command {
-    "start" -> startServer(),
-    "stop" -> stopServer(),
-    "restart" -> restartServer(),
+    "start" -> startServer()
+    "stop" -> stopServer()
+    "restart" -> restartServer()
     _ -> println("Unknown command")
 }
 ```
@@ -64,9 +64,9 @@ function moveLeft(): none { println("left") }
 
 direction := Direction.East
 case direction {
-    .North -> moveUp(),
-    .South -> moveDown(),
-    .East  -> moveRight(),
+    .North -> moveUp()
+    .South -> moveDown()
+    .East  -> moveRight()
     .West  -> moveLeft()
 }
 ```
@@ -83,9 +83,9 @@ function moveLeft(): none { println("left") }
 
 direction := Direction.East
 case direction {
-    Direction.North -> moveUp(),
-    Direction.South -> moveDown(),
-    Direction.East  -> moveRight(),
+    Direction.North -> moveUp()
+    Direction.South -> moveDown()
+    Direction.East  -> moveRight()
     Direction.West  -> moveLeft()
 }
 ```
@@ -106,8 +106,8 @@ enum HttpStatus {
 status := HttpStatus.Created
 label := case status {
     .OK | .Created | .NoContent -> "success"
-    .NotFound -> "not found",
-    .ServerError -> "server error",
+    .NotFound -> "not found"
+    .ServerError -> "server error"
     _ -> "other"
 }
 println(label)  // success
@@ -120,8 +120,8 @@ enum Color { Red, Green, Blue }
 
 color := Color.Green
 let label = case color {
-    .Red   -> "danger",
-    .Green -> "safe",
+    .Red   -> "danger"
+    .Green -> "safe"
     .Blue  -> "info"
 }
 println(label)  // safe
@@ -138,17 +138,17 @@ direction := Direction.North
 
 // ✅ All variants covered — no wildcard needed
 let message = case direction {
-    .North -> "up",
-    .South -> "down",
-    .East  -> "right",
+    .North -> "up"
+    .South -> "down"
+    .East  -> "right"
     .West  -> "left"
 }
 println(message)
 
 // Error: non-exhaustive — missing Direction.West
 let partial = case direction {  // ❌
-    .North -> "up",
-    .South -> "down",
+    .North -> "up"
+    .South -> "down"
     .East  -> "right"
 }
 ```
@@ -167,13 +167,13 @@ class Square { side: double; area(): double => side * side }
 class Circle { radius: double; area(): double => radius * 2.0 }
 
 function colorName(color: Color | none): string => case color {
-    .Red -> "red",
-    .Green -> "green",
+    .Red -> "red"
+    .Green -> "green"
     none -> "none"
 }
 
 function shapeName(shape: Shape): string => case shape {
-    _: Square -> "square",
+    _: Square -> "square"
     _: Circle -> "circle"
 }
 ```
@@ -188,22 +188,22 @@ score := 85
 day := 6
 
 let category = case age {
-    ..<18 -> "Minor",
-    ..<65 -> "Adult",
+    ..<18 -> "Minor"
+    ..<65 -> "Adult"
     _ -> "Senior"
 }
 
 grade := case score {
-    90.. -> "A",
-    80..<90 -> "B",
-    70..<80 -> "C",
-    60..<70 -> "D",
+    90.. -> "A"
+    80..<90 -> "B"
+    70..<80 -> "C"
+    60..<70 -> "D"
     ..<60 -> "F"
 }
 
 kind := case day {
-    1..5 -> "weekday",
-    6..7 -> "weekend",
+    1..5 -> "weekday"
+    6..7 -> "weekend"
     _ -> "invalid"
 }
 ```
@@ -249,13 +249,13 @@ Type patterns create immutable bindings with narrowed types:
 let result: Result<int, string> = Success { value: 42 }
 
 case result {
-    s: Success -> println("Got: ${s.value}"),
+    s: Success -> println("Got: ${s.value}")
     f: Failure -> println("Error: ${f.error}")
 }
 
 // Discard binding with _
 case result {
-    _: Success -> println("success"),
+    _: Success -> println("success")
     _: Failure -> println("failed")
 }
 ```
@@ -274,12 +274,12 @@ of that type. This applies wherever the arm appears, and to generic classes:
 class Box<T> { value: T }
 
 function value(x: Success<int> | none): int => case x {
-    s: Success -> s.value,      // Success<int>
+    s: Success -> s.value       // Success<int>
     _ -> 0
 }
 
 function size(x: Box<int> | string): int => case x {
-    b: Box -> b.value,          // Box<int>
+    b: Box -> b.value           // Box<int>
     s: string -> s.length
 }
 ```
@@ -302,7 +302,7 @@ class Container<T, E> {
 readonly container = Container<int, string> { result: Success { value: 42 } }
 
 case container.result {
-    s: Success -> println(s.value),    // 's' is immutable Success<T>
+    s: Success -> println(s.value)     // 's' is immutable Success<T>
     f: Failure -> println(f.error)     // 'f' is immutable Failure<E>
 }
 ```
@@ -314,8 +314,8 @@ class Response { status: int }
 
 response := Response { status: 503 }
 label := case response.status {
-    200 -> "OK",
-    404 -> "Not Found",
+    200 -> "OK"
+    404 -> "Not Found"
     s: int -> "Status: ${s}"  // Captures other status codes
 }
 println(label)  // Status: 503
@@ -334,7 +334,7 @@ let value = case response {
         readonly doubled = s.value * 2
         println("Success: ${doubled}")
         yield doubled
-    },
+    }
     f: Failure -> {
         logError(f.error)
         yield 0
@@ -354,15 +354,15 @@ status := 200
 
 // Variable assignment
 let result = case value {
-    0 -> "zero",
-    1 -> "one",
+    0 -> "zero"
+    1 -> "one"
     _ -> "other"
 }
 
 // Function return
 function classify(n: int): string => case n {
-    ..<0 -> "negative",
-    0 -> "zero",
+    ..<0 -> "negative"
+    0 -> "zero"
     1.. -> "positive"
 }
 
@@ -384,7 +384,7 @@ function tryOp(): Result<int, string> => Success(1)
 // Error: 'return' cannot be used inside a case-expression arm
 function main(): int {
     x := case tryOp() {
-        s: Success -> s.value,
+        s: Success -> s.value
         f: Failure -> { return 1 }   // ❌ compile error
     }
     return x
@@ -408,7 +408,7 @@ function main(): int {
         s: Success -> {
             println(s.value)
             return 0
-        },
+        }
         f: Failure -> {
             println("error!")
             return 1    // returns from main()
@@ -464,14 +464,14 @@ value := 42
 
 // ✅ Use ranges
 range := case value {
-    11..99 -> "in range",
+    11..99 -> "in range"
     _ -> "out of range"
 }
 
 // ✅ Extract complex conditions
 readonly isValid = value > 10 && value < 100 && value % 2 == 0
 validity := case isValid {
-    true -> "valid",
+    true -> "valid"
     false -> "invalid"
 }
 ```
@@ -654,28 +654,28 @@ class Response { status: int; body: string }
 type Shape = Point | Line
 
 function describe(shape: Shape): string => case shape {
-    p: Point -> "Point at (${p.x}, ${p.y})",
+    p: Point -> "Point at (${p.x}, ${p.y})"
     l: Line -> "Line from (${l.start.x}, ${l.start.y}) to (${l.end.x}, ${l.end.y})"
 }
 
 function categorize(age: int): string => case age {
-    ..<0 -> "invalid",
-    ..<18 -> "minor",
-    18..64 -> "adult",
+    ..<0 -> "invalid"
+    ..<18 -> "minor"
+    18..64 -> "adult"
     65.. -> "senior"
 }
 
 function handleResponse(r: Response): none => case r.status {
-    200 | 201 | 204 -> println("Success: ${r.body}"),
-    404 -> println("Not found"),
-    500..599 -> println("Server error"),
+    200 | 201 | 204 -> println("Success: ${r.body}")
+    404 -> println("Not found")
+    500..599 -> println("Server error")
     _ -> println("Unexpected status: ${r.status}")
 }
 
 enum Suit { Hearts, Diamonds, Clubs, Spades }
 
 function suitColor(suit: Suit): string => case suit {
-    .Hearts | .Diamonds -> "red",
+    .Hearts | .Diamonds -> "red"
     .Clubs | .Spades -> "black"
 }
 ```

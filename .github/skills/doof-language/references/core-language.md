@@ -404,21 +404,21 @@ shape: Circle | Rect := Circle { radius: 1.0 }
 direction := Direction.North
 
 result := case status {
-    200 | 201 -> "success",
-    404 -> "not found",
-    500..599 -> "server error",
+    200 | 201 -> "success"
+    404 -> "not found"
+    500..599 -> "server error"
     _ -> "unknown"
 }
 
 case shape {
-    c: Circle -> println("radius: ${c.radius}"),
+    c: Circle -> println("radius: ${c.radius}")
     r: Rect -> println("area: ${r.width * r.height}")
 }
 
 case direction {
-    .North -> move(0, -1),
-    .South -> move(0, 1),
-    .East -> move(1, 0),
+    .North -> move(0, -1)
+    .South -> move(0, 1)
+    .East -> move(1, 0)
     .West -> move(-1, 0)
 }
 ```
@@ -429,8 +429,8 @@ Rules:
 - Open-ended ranges such as `90..` and `..<18` are valid only as `case` patterns.
 - Range patterns need a `byte`, `int`, or `long` subject and integer bounds;
   `double`, `char`, and nullable subjects are errors (use `if` instead).
-- Arms are separated by commas or line endings.
-- Commas may appear before line endings, and the final arm may have a trailing comma.
+- Arms are separated by line endings or commas. Prefer one arm per line with no commas; use commas only to place several arms on one line.
+- A comma before a line ending and a trailing comma after the final arm are still accepted.
 - Multiple patterns for one arm use `|`.
 - No destructuring or guard clauses in `case` arms.
 - Case expressions must be exhaustive: use `_`, or cover every enum variant,
