@@ -225,6 +225,34 @@ export function testDependencyOptimizationPreservesFingerprintBytesAndClosure():
   Assert.isTrue(dependencyFingerprint(emitModuleGraph(analysis, "/main.do", plan, "none", false, [], "test-config"), "/main.do") != fingerprint)
 }
 
+function compileShapeGraph(kinds: string): Compilation {
+  result := compileWithLoader([
+    SourceFile { path: "/util.do", source: "export function count<T>(items: T[]): int => items.length" },
+    SourceFile { path: "/shape.do", source: "export interface Shape { area(): int }" },
+    SourceFile { path: "/kinds.do", source: "import { Shape } from \"./shape\"\n" + kinds },
+    SourceFile { path: "/main.do", source: "import { count } from \"./util\"\nimport { Shape } from \"./shape\"\nimport { A } from \"./kinds\"\nfunction main(): int { xs: Shape[] := [A {}]\nreturn count(xs) }" },
+  ], "/main.do", noSourceLoader)
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  return result
+}
+
+export function testNewInterfaceImplementationOutsideClosureInvalidatesSpellingModules(): none {
+  // shape.do and util.do never import kinds.do, but both embed the Shape
+  // variant: util.do through its count<Shape> specialization.
+  one := "export class A implements Shape { area(): int => 1 }"
+  before := compileShapeGraph(one).emission!
+  same := compileShapeGraph(one).emission!
+  after := compileShapeGraph(one + "\nexport class B implements Shape { area(): int => 2 }").emission!
+  for path of ["/util.do", "/shape.do"] {
+    Assert.equal(dependencyFingerprint(same, path), dependencyFingerprint(before, path))
+    Assert.isTrue(dependencyFingerprint(after, path) != dependencyFingerprint(before, path))
+  }
+  for module of after.modules {
+    if module.modulePath == "/util.do" { Assert.stringContains(module.header, "B>") }
+  }
+}
+
 function dependencyFingerprint(graph: ModuleGraphEmission, path: string): string {
   for module of graph.modules { if module.modulePath == path { return module.fingerprint } }
   panic("Expected emitted module " + path)

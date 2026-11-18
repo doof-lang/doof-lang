@@ -468,7 +468,8 @@ export function emitModuleGraph(
   initializationOrder := planModuleInitializationOrder(result, entry, entryMode, declarations)
   graphSurfaces := emitModuleSurfaces(result)
   reusableFingerprints := indexReusableModuleFingerprints(reusableModules)
-  instantiationFingerprintInput := moduleInstantiationFingerprintInput(concretePlan)
+  instantiationFingerprintInput := moduleInstantiationFingerprintInput(concretePlan) +
+    interfaceImplementationFingerprintInput(result)
   jsonEligibility := JsonEligibilityCache {}
   headerPlans := HeaderPlanCache {}
   headerRenders := HeaderRenderCache {}
@@ -619,6 +620,26 @@ function moduleInstantiationFingerprintInput(instantiations: InstantiationPlan):
   for key of instantiations.jsonSerializationKeys { value = value + "\njson-serialize:" + key }
   for key of instantiations.jsonDeserializationKeys { value = value + "\njson-deserialize:" + key }
   return value
+}
+
+// An interface lowers to a variant of its closed-world implementations. Any
+// module that spells the interface (including a generic specialized for it)
+// embeds that variant, yet implementers import the interface rather than the
+// reverse, so a new implementer is usually outside the spelling module's
+// dependency closure. Include every implementation set conservatively.
+function interfaceImplementationFingerprintInput(result: AnalysisResult): string {
+  value := StringBuilder()
+  for info of result.modules {
+    for symbol of info.symbols {
+      if symbol.kind != "interface" { continue }
+      value.append("\ninterface-implementations:" + symbol.module + "::" + symbol.name)
+      for implementation of symbol.implementations {
+        value.append(":" + implementation.module + "::" + implementation.name + "/" + implementation.originalName +
+          "/" + implementation.nativeCppName + "/" + string(implementation.native_))
+      }
+    }
+  }
+  return value.drainToString()
 }
 
 function moduleEmissionFingerprint(
