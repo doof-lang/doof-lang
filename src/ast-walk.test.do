@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 import { parse } from "./parser"
-import { Block, CallExpression, Expression, FunctionDeclaration, MemberExpression, TypeAliasDeclaration } from "./ast"
-import { collectBlockExpressions, collectNestedExpressions, releaseCheckedReferences } from "./ast-walk"
+import { Block, CallExpression, Expression, FunctionDeclaration, IfStatement, MemberExpression, TypeAliasDeclaration } from "./ast"
+import { collectBlockExpressions, collectNestedExpressions, conditionClauses, hasBindingClause, releaseCheckedReferences } from "./ast-walk"
 
 export function testWalksNestedStatementAndExpressionTrees(): none {
   program := parse("function main(): none { if ready() { println(format(\"ok\")) } }")
@@ -88,4 +88,25 @@ export function testStatementSinkRecordsNestedStatements(): none {
   let loops = 0
   for statement of statements { case statement { _: ForOfStatement -> { loops += 1 } _ -> { } } }
   Assert.equal(loops, 2)
+}
+
+export function testConditionClausesSplitOnlyBindingAndChains(): none {
+  program := parse("if ready && user := find() && user.ok { }\nif user := find() && (a && b) { }\nif a && b { }")
+  first := program.statements[0] as IfStatement else { panic("expected if statement") }
+  Assert.equal(conditionClauses(first.condition).length, 3)
+  // A parenthesized `&&` without bindings stays one clause.
+  second := program.statements[1] as IfStatement else { panic("expected if statement") }
+  Assert.isTrue(hasBindingClause(second.condition))
+  clauses := conditionClauses(second.condition)
+  Assert.equal(clauses.length, 2)
+  Assert.equal(clauses[0].kind, "binding-condition")
+  Assert.equal(clauses[1].kind, "binary-expression")
+  third := program.statements[2] as IfStatement else { panic("expected if statement") }
+  Assert.isTrue(!hasBindingClause(third.condition))
+  Assert.equal(conditionClauses(third.condition).length, 1)
+  // A binding clause's initializer is a direct child for every walker.
+  let children: Expression[] = []
+  collectNestedExpressions(clauses[0], children)
+  Assert.equal(children.length, 1)
+  Assert.equal(children[0].kind, "call-expression")
 }

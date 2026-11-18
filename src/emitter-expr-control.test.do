@@ -209,3 +209,14 @@ export function testValueYieldBlockRestoresOuterYieldTarget(): none {
   Assert.isTrue(nested.valueYieldType == none)
 }
 
+
+export function testIfExpressionsWithBindingsLowerThroughTheCheckedResultType(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function find(): string | none => \"x\"\nfunction label(): string => if name := find() && name.length > 0 then name else \"guest\"",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "[&]() -> std::string {")
+  Assert.stringContains(source, "_condition_value_")
+  Assert.equal(source.split("\"guest\"").length, 2)
+}

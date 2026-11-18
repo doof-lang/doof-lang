@@ -150,3 +150,14 @@ export function testGenericStaticMethodsSpecializeOnTheirReceiverInstantiation()
   Assert.stringContains(catalog.methods[0].key, "::method::wrap::")
   Assert.isFalse(containsTypeParameters(catalog.methods[0].substitution.arguments))
 }
+
+export function testBindingConditionAnnotationsInstantiateTheirTypes(): none {
+  // Box<string> appears only in the binding clause's annotation.
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source:
+    "class Box<T> { value: T }\n" +
+    "function load(): Result<int, string> => Success(1)\n" +
+    "function main(): none { if typed: int | Box<string> := load() { println(\"ok\") } }" }]).analyze("/main.do")
+  Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
+  catalog := discoverInstantiations(analysis)
+  Assert.equal(catalog.classes.length, 1)
+}

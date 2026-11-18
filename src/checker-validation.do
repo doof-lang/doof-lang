@@ -2,7 +2,7 @@
 
 import { ActorType, ArrayResolvedType, ClassType, Diagnostic, FunctionType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SemanticLocation, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType } from "./semantic"
 import { AnalysisResult } from "./analyzer"
-import { CheckedConstruction, ArrayLiteral, ArrayType, AsExpression, AssignmentExpression, BinaryExpression, Block, CallExpression, ClassDeclaration, ConstructExpression, ConstDeclaration, DestructuringStatement, EnumDeclaration, Expression, ExpressionStatement, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType, IfExpression, IfStatement, ImmutableBinding, Identifier, IndexExpression, InterfaceDeclaration, LetDeclaration, LambdaExpression, MemberExpression, NamedType, ObjectLiteral, ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral, TupleLiteral, TypeAliasDeclaration, TypeAnnotation, UnaryExpression, UnionType, WhileStatement, WithStatement, YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression, CaseExpression, CasePattern, CaseStatement, RangePattern, TypePattern, ValuePattern, WildcardPattern, TryStatement, AsyncExpression, RetireExpression, ActorCreationExpression, WeakType, TypeParameterConstraint } from "./ast"
+import { CheckedConstruction, ArrayLiteral, ArrayType, AsExpression, AssignmentExpression, BinaryExpression, Block, CallExpression, ClassDeclaration, ConstructExpression, ConstDeclaration, DestructuringStatement, EnumDeclaration, Expression, ExpressionStatement, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType, IfExpression, IfStatement, ImmutableBinding, Identifier, IndexExpression, InterfaceDeclaration, LetDeclaration, LambdaExpression, MemberExpression, NamedType, ObjectLiteral, ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral, TupleLiteral, TypeAliasDeclaration, TypeAnnotation, UnaryExpression, UnionType, WhileStatement, WithStatement, YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression, BindingCondition, CaseExpression, CasePattern, CaseStatement, RangePattern, TypePattern, ValuePattern, WildcardPattern, TryStatement, AsyncExpression, RetireExpression, ActorCreationExpression, WeakType, TypeParameterConstraint } from "./ast"
 
 import { unionMutabilityConflict } from "./checker-types"
 
@@ -245,6 +245,11 @@ export function validateExpression(expression: Expression, module: string, diagn
     }
     yieldBlock: YieldBlockExpression -> { validateBlock(yieldBlock.body, module, diagnostics) }
     catch_: CatchExpression -> { validateBlock(catch_.body, module, diagnostics) }
+    binding: BindingCondition -> {
+      if binding.type_ != none { validateTypeAnnotation(binding.type_!, module, diagnostics) }
+      validateResolved(binding.resolvedBindingType, binding.span, module, "binding condition " + binding.name, diagnostics)
+      validateExpression(binding.value, module, diagnostics)
+    }
     construct: ConstructExpression -> {
       if construct.spread != none {
         validateExpression(construct.spread!, module, diagnostics)

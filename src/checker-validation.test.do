@@ -4,7 +4,7 @@ import { Assert } from "std/assert"
 import { AnalysisResult, createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
 import { checkerSemanticSpan, pushDiagnostic, validateCheckedTypes, validateResolved } from "./checker-validation"
-import { CallExpression, FunctionDeclaration, MemberExpression } from "./ast"
+import { BindingCondition, Block, CallExpression, FunctionDeclaration, IfStatement, MemberExpression } from "./ast"
 import { Diagnostic, SourceFile, Symbol } from "./semantic"
 
 // Fails on parse or analysis diagnostics so a malformed fixture cannot pass
@@ -132,4 +132,27 @@ export function testPushDiagnosticRecordsErrorAtConvertedSpan(): none {
   Assert.equal(diagnostics[0].module, "/main.do")
   Assert.equal(diagnostics[0].span.start.offset, span.start.offset)
   Assert.equal(diagnostics[0].span.end.line, span.end.line)
+}
+
+export function testValidationRequiresCheckedBindingConditionTypes(): none {
+  analysis := analyzed("function find(): int | none => 1\nfunction run(): none { if value := find() { println(value) } }")
+  Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
+  Assert.equal(validateCheckedTypes(analysis).length, 0)
+  let removed = false
+  for module of analysis.modules {
+    for statement of module.program.statements {
+      fn := statement as FunctionDeclaration else { continue }
+      body := fn.body as Block else { continue }
+      for inner of body.statements {
+        if_ := inner as IfStatement else { continue }
+        binding := if_.condition as BindingCondition else { continue }
+        binding.resolvedBindingType = none
+        removed = true
+      }
+    }
+  }
+  Assert.isTrue(removed)
+  diagnostics := validateCheckedTypes(analysis)
+  Assert.equal(diagnostics.length, 1)
+  Assert.stringContains(diagnostics[0].message, "binding condition value")
 }

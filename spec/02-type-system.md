@@ -2028,7 +2028,7 @@ Doof uses explicit narrowing forms. It does not perform implicit flow-sensitive 
 
 ### No Implicit Narrowing in `if`
 
-`if` conditions do not narrow types implicitly. A none check can still guard control flow, but the checked value keeps its original type unless you use an explicit form such as `!`, declaration-`else`, `case`, or `as`:
+`if` conditions do not narrow types implicitly. A none check can still guard control flow, but the checked value keeps its original type unless you use an explicit form such as `!`, declaration-`else`, a binding condition, `case`, or `as`:
 
 ```doof check
 function process(value: int | none): none {
@@ -2049,6 +2049,8 @@ function getLength(s: string | none): int {
 Use explicit narrowing forms instead:
 
 - `name := expr else { ... }` to unwrap nullable and `Result` values
+- `if name := expr { ... }` to bind a present value only where the condition
+  holds (see [Binding Conditions](06-control-flow.md#binding-conditions))
 - `expr!` to assert presence
 - `case` to discriminate unions and enums
 - `expr as T` for checked runtime narrowing

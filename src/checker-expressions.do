@@ -1,6 +1,6 @@
 // Expression dispatch, literals, identifiers, and implicit method bindings.
 
-import { ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpression, AsyncExpression, BinaryExpression, BoolLiteral, CallExpression, CallerExpression, CaseExpression, CatchExpression, CharLiteral, ClassDeclaration, ConstructExpression, DotShorthand, DoubleLiteral, Expression, FloatLiteral, Identifier, IfExpression, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NoneLiteral, ObjectLiteral, RetireExpression, SourceSpan, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression } from "./ast"
+import { ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpression, AsyncExpression, BinaryExpression, BindingCondition, BoolLiteral, CallExpression, CallerExpression, CaseExpression, CatchExpression, CharLiteral, ClassDeclaration, ConstructExpression, DotShorthand, DoubleLiteral, Expression, FloatLiteral, Identifier, IfExpression, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NoneLiteral, ObjectLiteral, RetireExpression, SourceSpan, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression } from "./ast"
 import { checkAssignment } from "./checker-assignment"
 import { checkAsync } from "./checker-async"
 import { checkCall, checkLambda } from "./checker-calls"
@@ -14,6 +14,7 @@ import { checkDotShorthand, checkIndex, checkMember } from "./checker-members"
 import { checkAs, checkBinary, checkUnary } from "./checker-operators"
 import { CheckerState } from "./checker-state"
 import { checkBlock, checkFunction } from "./checker-statements"
+import { checkCondition, conditionElseScope, unboundConditionBindingMessage } from "./checker-conditions"
 import { builtinCallable, builtinSourceLocationType, currentThisType, declarationFor, declare, hasTypeParam, isBuiltinCallable, lookup, methodSignature, typeParamConstraint, typeParamConstraintName, valueUseDiagnostic } from "./checker-symbols"
 import { isStringInterpolatable, neverType, noneType, primitive, tupleType, typeName, typeParameter, unknownType } from "./checker-types"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
@@ -57,6 +58,13 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       let caught: ResolvedType = noneType()
       for errorType of errorTypes { caught = pathType(state, caught, errorType, expected, catch_.span) }
       return finish(state, catch_, caught)
+    }
+    binding: BindingCondition -> {
+      // The parser builds binding clauses only as top-level `&&` operands of a
+      // condition, which checkCondition handles before reaching here.
+      typeError(state, "A binding clause can appear only as a top-level '&&' operand of an if or while condition", binding.span)
+      checkExpression(state, binding.value, scope, none)
+      return finish(state, binding, unknownType())
     }
     literal: IntLiteral -> {
       if (literal.value < 0 || literal.value > 255) && expected != none && typeName(expected!) == "byte" {
@@ -126,11 +134,10 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
     }
     lambda: LambdaExpression -> { return checkLambda(state, lambda, scope, expected) }
     if_: IfExpression -> {
-      conditionType := checkExpression(state, if_.condition, scope, primitive("bool"))
-      requireBool(state, conditionType, if_.condition.span)
-      thenType := checkExpression(state, if_.then_, scope, expected)
-      elseType := checkExpression(state, if_.else_, scope, expected)
-      if conditionType.kind == "never" { return finish(state, expression, neverType()) }
+      condition := checkCondition(state, if_.condition, scope, primitive("bool"))
+      thenType := checkExpression(state, if_.then_, condition.scope, expected)
+      elseType := checkExpression(state, if_.else_, conditionElseScope(scope, condition.boundNames), expected)
+      if condition.type_.kind == "never" { return finish(state, expression, neverType()) }
       return finish(state, expression, pathType(state, thenType, elseType, expected, if_.span))
     }
     case_: CaseExpression -> { return finish(state, expression, checkCaseExpression(state, case_, scope, expected)) }
@@ -189,7 +196,8 @@ export function checkIdentifier(state: CheckerState, identifier: Identifier, sco
     binding = Binding { name: identifier.name, kind: "builtin", type_: builtinCallable(identifier.name), mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
   }
   if binding == none {
-    message := valueUseDiagnostic(state.info!, identifier.name)
+    let message = unboundConditionBindingMessage(scope, identifier.name)
+    if message == "" { message = valueUseDiagnostic(state.info!, identifier.name) }
     typeError(state, if message == "" then "Unknown identifier '" + identifier.name + "'" else message, identifier.span)
     return finish(state, identifier, unknownType())
   }

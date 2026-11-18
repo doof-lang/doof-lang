@@ -70,6 +70,7 @@ modules own the following decisions:
 | `checker-operators.do` | Binary, unary, and `as` operators, `??`, range bounds, comparison carriers, and the operand-overlap rule shared with case patterns |
 | `checker-assignment.do` | Assignment targets, compound and `??=` operators, and `try target = expr` success-type checking |
 | `checker-case.do` | Case expressions, case-pattern binding, bare generic pattern inference, and exhaustiveness |
+| `checker-conditions.do` | `if`, `else if`, `while`, and `if ... then` conditions: binding-clause subjects and present types, the condition scope bindings live in, unbound-name diagnostics on else paths, and `else error` capture |
 | `checker-calls.do` | Calls, generic application, named-function callback arity, and actor-call boundaries |
 | `checker-call-inference.do` | Ranked type-argument inference for generic calls: argument values, declared lambda returns, contextual result type, then lambda bodies; speculative diagnostics are discarded |
 | `checker-lambdas.do` | Lambda signatures, by-name or positional parameter binding, declared/contextual return types, block-return inference, return-site decoration, and completion diagnostics |
@@ -176,6 +177,7 @@ emitter or individual expression branch.
 | `emitter-expr-actor.do` | Actors, promises, async calls, and retirement |
 | `emitter-expr-utils.do` | Decorated-type requirements, shared shorthand property emission, specialized expression-return boundaries, and model-backed nullable queries |
 | `emitter-case-pattern.do` | Per-pattern condition and binding lowering (type, value, range, wildcard) shared by statement and expression cases; type-pattern lowering from checked pattern types (a Result subject is the variant of its arms) and checker-decorated weak subject materialization shared by statement and expression cases; natural nullable absence patterns test for null, and absence bindings use the unit carrier |
+| `emitter-conditions.do` | Binding-condition lowering: one temporary per subject, layered presence tests, bindings from the unwrapped value, nested guards with one copy of each branch body, in-loop `while` heads, and lambda-lowered `if ... then` expressions |
 | `emitter-carriers.do` | Pure specialized-type classification for value, return, payload, nullable storage, and explicit absence, including weak variant targets (interfaces) and the present type a locked weak reference holds |
 | `emitter-carrier-values.do` | Shared absence construction and native carrier conversion, with exactly-once evaluation |
 | `emitter-carrier-native.test.do` | Compiles current-source emitter output and executes the durable native carrier matrix in the normal suite |

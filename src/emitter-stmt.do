@@ -27,6 +27,8 @@ import { quote } from "./emitter-expr-literals"
 import { emitAbsentError, emitAbsentTest, emitPresentValue, emitterAbsenceLayers } from "./emitter-absence"
 import { absenceErrorType } from "./absence-types"
 import { emitContextType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
+import { emitIfWithBindings, emitWhileBindingHead, ifHasBindingClauses } from "./emitter-conditions"
+import { hasBindingClause } from "./ast-walk"
 
 export function emitBlock(block: Block, level: int, context: EmitContext): string {
   let result = ""
@@ -412,7 +414,7 @@ function emitLocalDeclaration(ind: string, name: string, annotation: TypeAnnotat
 }
 
 /** Emits an already-lowered value with the same mutability rules as an ordinary local declaration. */
-function emitExtractedLocal(ind: string, name: string, resolvedType: ResolvedType, value: string, readonly_: bool, shallowImmutable: bool = false): string {
+export function emitExtractedLocal(ind: string, name: string, resolvedType: ResolvedType, value: string, readonly_: bool, shallowImmutable: bool = false): string {
   return ind + localConstPrefix(resolvedType, readonly_, shallowImmutable) + "auto " + cppIdentifier(name) + " = " + value + ";\n"
 }
 
@@ -476,6 +478,7 @@ function emitReturn(statement: ReturnStatement, context: EmitContext): string {
 }
 
 function emitIf(statement: IfStatement, level: int, context: EmitContext): string {
+  if ifHasBindingClauses(statement) { return emitIfWithBindings(statement, level, context) }
   ind := indent(level)
   let result = ind + "if (" + emitCondition(statement.condition, context) + ") {\n"
   result = result + emitBlock(statement.body, level + 1, context) + ind + "}"
@@ -494,6 +497,13 @@ function emitWhile(statement: WhileStatement, level: int, context: EmitContext):
   loopId := beginLabeledLoop(statement.label, statement.then_ != none, context)
   body := emitLabeledLoopBody(statement.body, level + 1, loopId, context)
   endLabeledLoop(loopId, context)
+  if hasBindingClause(statement.condition) {
+    // The head must be emitted inside the loop so each iteration re-evaluates
+    // the subjects and receives fresh bindings; the body gets its own block.
+    head := emitWhileBindingHead(statement, level + 1, context)
+    return ind + "while (true) {\n" + head + indent(level + 1) + "{\n" + body + indent(level + 1) + "}\n" +
+      ind + "}\n" + loopCompletion(statement.then_, loopId, level, context)
+  }
   return ind + "while (" + emitCondition(statement.condition, context) + ") {\n" +
     body + ind + "}\n" + loopCompletion(statement.then_, loopId, level, context)
 }

@@ -239,3 +239,21 @@ Interactive debugger builds also use physical Doof source paths. Unit-valued
 `Success`/`Failure` construction evaluates an explicit payload for its effects,
 then constructs the empty native `void` carrier; it never places a
 `std::monostate` field in that empty carrier.
+
+Binding conditions (`if user := maybeUser && user.active { ... }`) lower in
+`emitter-conditions.do` from the checker's decorations: each `BindingCondition`
+records its subject type and `resolvedBindingType`, and the emitter tests the
+subject's absence layers (`emitter-absence.do`) without re-deciding them. Each
+subject is evaluated once into a `_condition_value_N` temporary, its layers are
+tested, and the binding is declared from the unwrapped temporary inside the
+test, so later clauses and the body see it and the else path does not. A single
+binding clause owns its C++ `else`, which is where an `else error` capture reads
+the Failure. A condition with several clauses nests one test per clause and
+sets a `_condition_held_N` flag before the body; the rest of the chain runs
+under `if (!flag)`, so no branch body is emitted twice. Guarded bodies get their
+own block so body locals may reuse a binding's name. A `while` condition with
+bindings becomes `while (true)` with an in-loop head that `break`s when a clause
+fails; that is normal completion, so a loop `then` clause still runs, while
+user `break` keeps jumping past it. An `if ... then` expression with bindings is
+an immediately invoked `[&]` lambda typed with the checked result type; its
+branches are expressions, so the lambda adds no `return` or `try` restrictions.

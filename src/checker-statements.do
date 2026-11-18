@@ -51,6 +51,7 @@ import { decorateAnnotationWithResolved, blockContainsLoopExit, classFieldBindin
 import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterface, isAssignableWithInterfaces } from "./checker-interfaces"
 import { absenceErrorType, canBeAbsent, presentType } from "./absence-types"
 import { checkerSemanticSpan } from "./checker-validation"
+import { checkCondition, conditionElseScope, declareElseFailure } from "./checker-conditions"
 
 export function checkStatement(state: CheckerState, statement: Statement, scope: Scope, inLoop: bool = false): bool {
   retainEditorScope(state, scope, statement.span)
@@ -73,27 +74,35 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
     }
     _: MockImportDirective -> { return true }
     if_: IfStatement -> {
-      conditionType := checkExpression(state, if_.condition, scope, none)
-      requireBool(state, conditionType, if_.condition.span)
-      thenCompletes := checkBlock(state, if_.body, scope, inLoop)
+      // Condition bindings are visible in their own body only; every later
+      // condition and the else branch run when they are unbound.
+      condition := checkCondition(state, if_.condition, scope)
+      thenCompletes := checkBlock(state, if_.body, condition.scope, inLoop)
       let allComplete = thenCompletes
+      let unbound: string[] = []
+      for name of condition.boundNames { unbound.push(name) }
+      let lastCondition = if_.condition
       for branch of if_.elseIfs {
-        branchConditionType := checkExpression(state, branch.condition, scope, none)
-        requireBool(state, branchConditionType, branch.condition.span)
-        let branchCompletes = checkBlock(state, branch.body, scope, inLoop)
-        if branchConditionType.kind == "never" { branchCompletes = false }
+        branchCondition := checkCondition(state, branch.condition, conditionElseScope(scope, unbound))
+        let branchCompletes = checkBlock(state, branch.body, branchCondition.scope, inLoop)
+        if branchCondition.type_.kind == "never" { branchCompletes = false }
         allComplete = allComplete || branchCompletes
+        for name of branchCondition.boundNames { unbound.push(name) }
+        lastCondition = branch.condition
       }
-      if conditionType.kind == "never" { return false }
+      if condition.type_.kind == "never" { return false }
       if if_.else_ == none { return true }
-      elseCompletes := checkBlock(state, if_.else_!, scope, inLoop)
+      elseScope := Scope { parent: conditionElseScope(scope, unbound) }
+      declareElseFailure(state, if_, lastCondition, elseScope)
+      elseCompletes := checkBlock(state, if_.else_!, elseScope, inLoop)
       return allComplete || elseCompletes
     }
     case_: CaseStatement -> { return checkCase(state, case_, scope, inLoop) }
     while_: WhileStatement -> {
-      conditionType := checkExpression(state, while_.condition, scope, none)
-      requireBool(state, conditionType, while_.condition.span)
-      loopScope := createLoopScope(state, scope, while_.label, while_.span)
+      // Each iteration re-evaluates the condition and receives fresh bindings.
+      condition := checkCondition(state, while_.condition, scope)
+      conditionType := condition.type_
+      loopScope := createLoopScope(state, condition.scope, while_.label, while_.span)
       checkBlock(state, while_.body, loopScope, true)
       if while_.then_ != none { checkBlock(state, while_.then_!, scope) }
       if conditionType.kind == "never" { return false }

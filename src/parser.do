@@ -25,7 +25,7 @@ import {
   parseOptionalType as parseOptionalTypeImpl, parseTypeAnnotation as parseTypeAnnotationImpl,
   parseTypeArguments as parseTypeArgumentsImpl, parseNamedType as parseNamedTypeImpl,
 } from "./parser-types"
-import { parseExpression as parseExpressionImpl, parseAdditive as parseAdditiveImpl, parseUnary as parseUnaryImpl } from "./parser-expressions"
+import { parseExpression as parseExpressionImpl, parseCondition as parseConditionImpl, parseAdditive as parseAdditiveImpl, parseUnary as parseUnaryImpl } from "./parser-expressions"
 import {
   Program, Block, FunctionDeclaration, LetDeclaration, NamedType,
   Statement, Expression, TypeAnnotation, AstLocation, SourceSpan, YieldBlockExpression,
@@ -323,6 +323,7 @@ export class Parser {
   parseNamedType(): NamedType { return parseNamedTypeImpl(this) }
 
   parseExpression(): Expression { return parseExpressionImpl(this) }
+  parseCondition(): Expression { return parseConditionImpl(this) }
   parseAdditive(): Expression { return parseAdditiveImpl(this) }
   parseUnary(): Expression { return parseUnaryImpl(this) }
 }

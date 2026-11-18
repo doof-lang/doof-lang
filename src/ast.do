@@ -433,6 +433,22 @@ export class CatchExpression {
   span: SourceSpan
 }
 
+// `name := value` or `name: Type := value` as a top-level `&&` operand of an
+// `if`, `else if`, `while`, or `if ... then` condition. The clause is true
+// when every absent layer of the value is present; `name` then holds the
+// present value in later clauses and the guarded body.
+export class BindingCondition {
+  kind: string = "binding-condition"
+  name: string
+  type_: TypeAnnotation | none
+  value: Expression
+  // The clause itself is a bool.
+  let resolvedType: ResolvedType | none = none
+  // The binding's type: the present type, or the checked annotation.
+  let resolvedBindingType: ResolvedType | none = none
+  span: SourceSpan
+}
+
 export type Expression =
   IntLiteral | LongLiteral | FloatLiteral | DoubleLiteral | StringLiteral |
   CharLiteral | BoolLiteral | NoneLiteral | Identifier | BinaryExpression |
@@ -440,7 +456,7 @@ export type Expression =
   CallExpression | ArrayLiteral | ObjectLiteral | TupleLiteral |
   LambdaExpression | IfExpression | CaseExpression | ConstructExpression | DotShorthand |
   ThisExpression | CallerExpression | AsyncExpression | RetireExpression | AsExpression | ActorCreationExpression |
-  YieldBlockExpression | CatchExpression
+  YieldBlockExpression | CatchExpression | BindingCondition
 
 export class Parameter {
   name: string
@@ -559,6 +575,9 @@ export class IfStatement {
   body: Block
   elseIfs: IfBranch[]
   else_: Block | none
+  // `else error { ... }`: the Failure of the last condition, which must be a
+  // single Result binding clause.
+  elseFailureName: string | none = none
   span: SourceSpan
 }
 

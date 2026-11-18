@@ -20,7 +20,7 @@ Use this base file as the entry point. Load only the reference file that matches
 - Prefer backtick multiline literals for static multiline text. Do not construct
   multiline text by concatenating quoted lines with `\n`.
 - Use intrinsic `Success<T>` / `Failure<E>` arms and their `Result<T, E>` union alias with `case`, `try`, declaration-`else`, `as`, or `!` for fallible flows. Use `panic(...)` only for programmer errors.
-- Plain `if value != none` checks do **not** narrow static types. Use explicit narrowing forms.
+- Plain `if value != none` checks do **not** narrow static types. Bind the present value in the condition instead (`if user := maybeUser { ... }`), or use another explicit narrowing form.
 - Block-bodied non-`none` functions must return a value on every reachable path; `never` functions must terminate on every path.
 - Classes and structs are nominal. Interfaces are structural.
 - Fields are shallow immutable by default; use `let` for reassignable fields and `readonly` for deep immutability.

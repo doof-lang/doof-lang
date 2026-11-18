@@ -267,6 +267,8 @@ export class Scope {
   let editorIndexed: bool = false
   parent: Scope | none
   bindings: Binding[] = []
+  // Condition bindings that are unbound on this path (an else branch).
+  unboundConditionNames: string[] = []
   typeParams: string[] = []
   typeParamConstraintNames: string[] = []
   typeParamConstraints: ResolvedTypeConstraint[] = []

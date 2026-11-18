@@ -12,7 +12,7 @@ import {
   ExpressionStatement, ForOfStatement, ForStatement, FunctionDeclaration, Identifier, IfExpression, IfStatement,
   ImmutableBinding, IndexExpression, InterfaceDeclaration, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral,
   RangePattern, ReadonlyDeclaration, RetireExpression, ReturnStatement, SourceSpan, Statement, StringLiteral, TryStatement, TupleLiteral, TypePattern, UnaryExpression, ValuePattern,
-  WhileStatement, WithStatement, YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression, Program,
+  WhileStatement, WithStatement, YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression, BindingCondition, Program,
 } from "./ast"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, interfaceJsonSerializationBlocker } from "./json-semantics"
 import { AnalysisResult } from "./analyzer"
@@ -291,6 +291,10 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
     actor: ActorCreationExpression -> { for argument of actor.args { collectExpression(argument, modulePath, analysis, plan, names, arguments) } }
     yieldBlock: YieldBlockExpression -> { collectBlock(yieldBlock.body, modulePath, analysis, plan, names, arguments) }
     catch_: CatchExpression -> { collectBlock(catch_.body, modulePath, analysis, plan, names, arguments) }
+    binding: BindingCondition -> {
+      collectOptionalType(binding.resolvedBindingType, names, arguments, analysis, plan)
+      collectExpression(binding.value, modulePath, analysis, plan, names, arguments)
+    }
     as_: AsExpression -> { collectExpression(as_.expression, modulePath, analysis, plan, names, arguments) }
     _ -> { }
   }

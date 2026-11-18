@@ -84,7 +84,128 @@ println(value!)
 
 `none` checks are still useful for control flow, but they do not change the
 static type of the checked value. For explicit guard-style narrowing, prefer
-declaration-`else`, `case`, `as`, or `!`.
+declaration-`else`, `case`, `as`, or `!`. To run code only when a value is
+present, bind it in the condition (see [Binding Conditions](#binding-conditions)).
+
+### Binding Conditions
+
+An `if`, `else if`, or `while` condition may declare an immutable binding that
+holds the present value of a nullable or `Result` expression. The body runs
+only when the value is present, with the binding at its present type:
+
+```doof check
+class User { name: string; owner: int }
+
+function lookup(name: string): User | none => none
+function loadPort(): Result<int, string> => Success(8080)
+
+function ownerName(name: string, owner: int): string {
+    if existing := lookup(name) && existing.owner == owner {
+        return existing.name
+    }
+    return "unknown"
+}
+
+function describe(value: int | string): string {
+    if count := value as int && count > 0 {
+        return "positive count " + string(count)
+    } else if text := value as string {
+        return "text " + text
+    }
+    return "other"
+}
+
+function portLabel(): string {
+    if port := loadPort() {
+        return "port " + string(port)
+    } else error {
+        return "no port: " + error
+    }
+}
+```
+
+A condition is a chain of clauses joined by `&&`. A binding clause is
+`name := expr` or `name: Type := expr`, and boolean clauses and binding
+clauses may be mixed in any order:
+
+- A binding clause accepts exactly the subjects declaration-`else` accepts and
+  binds the same present type: `T | none`, `Result<T, E>`,
+  `Result<T | none, E>`, and `Result<T, E> | none` all bind `T`. Any other
+  subject, including `bool` or a plain union, is an error. `Result<none, E>`
+  has no present value to bind, so it accepts only `_`, which tests for
+  success: `if _ := save() { ... }`. Because `as` returns a
+  `Result`, `if circle := shape as Circle { ... }` is a checked narrowing.
+- The name may be `_` to test presence without binding a name. An annotated
+  binding checks the present type against the annotation.
+- A binding clause may appear only as a top-level `&&` operand. It cannot
+  appear under `||`, `!`, or parentheses. Its initializer binds tighter than
+  `&&`, so `user := find() && user.active` is two clauses, and an initializer
+  that uses `||` or `??` must be parenthesized.
+
+Clauses are evaluated left to right, and evaluation stops at the first boolean
+clause that is false or binding clause whose value is absent. Each subject is
+evaluated exactly once. A binding is in scope in later clauses of the same
+condition and in the guarded body, but not in the `else` branch, in later
+`else if` conditions, or after the statement. It holds the value read when the
+clause ran: a struct value is copied and a class value shares the reference,
+as with any assignment.
+
+```doof reject
+function find(): string | none => none
+
+function greet(): none {
+    if user := find() {
+        println("hello " + user)
+    } else {
+        println(user)  // ❌ not in scope: bound only when the condition holds
+    }
+}
+```
+
+The condition is its own scope, so a clause may shadow an outer name. Give a
+nullable local a name that reflects its absence, and the binding the plain
+name, rather than rebinding a name to itself:
+
+```doof check
+class User { name: string }
+
+maybeUser: User | none := User { name: "Ada" }
+if user := maybeUser {
+    println(user.name)
+}
+```
+
+In `while`, the condition is re-evaluated before every iteration and each
+iteration receives fresh bindings. A failed clause ends the loop normally, so
+a loop `then` clause still runs; `break` and `continue` keep their usual
+meaning:
+
+```doof check body
+let remaining: int[] = [3, 2, 1]
+let total = 0
+while next := remaining.pop() {
+    total += next
+} then {
+    println("total " + string(total))
+}
+```
+
+`if` expressions accept binding conditions too. The binding is in scope in the
+`then` value only:
+
+```doof check body
+maybeName: string | none := none
+label := if name := maybeName then name else "guest"
+```
+
+**Failure capture.** When the condition immediately before the final `else`
+is a single binding clause whose subject is a `Result`, the `else` branch may
+capture the failure with the declaration-`else` spelling and typing. The
+captured value has type `E`, or `E | none` when the subject can also be absent
+as `none`. Capture is rejected for nullable-only subjects and for conditions
+with more than one clause, where the branch could not tell which clause
+failed. Without a capture, a `Failure` takes the `else` path and its payload is
+discarded.
 
 ---
 
@@ -620,6 +741,7 @@ function processFlat(maybe: Data | none): int | none {
 | Statement | Purpose |
 |-----------|---------|
 | `if`/`else` | Conditional execution (also usable as expression) |
+| `if name := expr` | Run a body only when a nullable or `Result` value is present |
 | `while` | Loop while condition is true |
 | `for init; cond; update` | Traditional counted loop |
 | `for x of collection` | Iterate over values |

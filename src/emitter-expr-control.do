@@ -11,6 +11,8 @@ import { exprModuleNamespaceFor, hasNoneMember } from "./emitter-expr-utils"
 import { emitContextType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { sameType } from "./checker-types"
 import { emitNoneLiteral } from "./emitter-expr-literals"
+import { emitIfExpressionWithBindings } from "./emitter-conditions"
+import { hasBindingClause } from "./ast-walk"
 
 export function emitDotShorthand(expression: DotShorthand, context: EmitContext): string {
   if expression.resolvedShorthandOwnerKind != "enum" && expression.resolvedShorthandOwnerKind != "class" {
@@ -43,6 +45,9 @@ export function emitIfExpression(expression: IfExpression, context: EmitContext,
       _ -> { }
     }
   }
+  // Binding clauses need statements, so the expression form always lowers
+  // through a lambda with the checked result type.
+  if hasBindingClause(expression.condition) { contextualBranches = true }
   if contextualBranches {
     let resultType = specializeEmitType(expression.resolvedType!, context)
     // Union equality ignores arm order, but C++ variant identity does not.
@@ -50,6 +55,7 @@ export function emitIfExpression(expression: IfExpression, context: EmitContext,
     if expected != none && sameType(resultType, specializeEmitType(expected!, context)) {
       resultType = specializeEmitType(expected!, context)
     }
+    if hasBindingClause(expression.condition) { return emitIfExpressionWithBindings(expression, resultType, context) }
     return "[&]() -> " + emitContextType(resultType, context) + " { if (" + emitCondition(expression.condition, context) + ") { return " + emitExpression(expression.then_, context, resultType) + "; } return " + emitExpression(expression.else_, context, resultType) + "; }()"
   }
   return "(" + emitExpression(expression.condition, context) + " ? " + emitExpression(expression.then_, context) + " : " + emitExpression(expression.else_, context) + ")"

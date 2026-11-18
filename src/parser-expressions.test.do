@@ -1,7 +1,7 @@
 import { Assert as EditorAssert } from "std/assert"
 import { Parser as EditorParser } from "./parser"
 import { Assert } from "std/assert"
-import { ActorCreationExpression, ArrayLiteral, BinaryExpression, CallExpression, ConstructExpression, DoubleLiteral, ExpressionStatement, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral, StringLiteral, TupleLiteral, UnaryExpression } from "./ast"
+import { ActorCreationExpression, ArrayLiteral, BinaryExpression, BindingCondition, CallExpression, IfExpression, IfStatement, ImmutableBinding, ConstructExpression, DoubleLiteral, ExpressionStatement, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral, StringLiteral, TupleLiteral, UnaryExpression } from "./ast"
 import type { Expression } from "./ast"
 import { parse } from "./parser"
 
@@ -178,4 +178,52 @@ export function testScalarKeysAndTagAttributesShareLiteralRecognition(): none {
   let values = ""
   for argument of tag.args { values = values + argument.value.kind + ";" }
   Assert.equal(values, "unary-expression;double-literal;dot-shorthand;")
+}
+
+function ifCondition(source: string): Expression {
+  statement := parse(source).statements[0] as IfStatement else { panic("expected if statement") }
+  return statement.condition
+}
+
+export function testBindingClausesAreTopLevelAndOperands(): none {
+  // The initializer binds tighter than &&, so later clauses can use the binding.
+  condition := ifCondition("if user := find() && user.ok && typed: int := count() { }") as BinaryExpression else { panic("expected && chain") }
+  Assert.equal(condition.operator, "&&")
+  typed := condition.right as BindingCondition else { panic("expected typed binding clause") }
+  Assert.equal(typed.name, "typed")
+  Assert.isTrue(typed.type_ != none)
+  middle := condition.left as BinaryExpression else { panic("expected inner &&") }
+  first := middle.left as BindingCondition else { panic("expected first binding clause") }
+  Assert.equal(first.name, "user")
+  _ := first.value as CallExpression else { panic("expected the call as the whole initializer") }
+  // A boolean clause may come first, and `_` tests presence without a name.
+  leading := ifCondition("if ready && _ := find() { }") as BinaryExpression else { panic("expected && chain") }
+  discard := leading.right as BindingCondition else { panic("expected discard clause") }
+  Assert.equal(discard.name, "_")
+  // The expression form and parenthesized `??` initializers parse too.
+  statement := parse("label := if user := (primary ?? backup) then user.name else \"guest\"").statements[0] as ImmutableBinding else { panic("expected binding") }
+  expression := statement.value as IfExpression else { panic("expected if expression") }
+  binding := expression.condition as BindingCondition else { panic("expected binding condition") }
+  _ := binding.value as BinaryExpression else { panic("expected parenthesized ?? initializer") }
+}
+
+export function testConditionsWithoutBindingsKeepOrdinaryPrecedence(): none {
+  condition := ifCondition("if a && b || c && d { }") as BinaryExpression else { panic("expected ||") }
+  Assert.equal(condition.operator, "||")
+  coalesced := ifCondition("if a ?? b || c { }") as BinaryExpression else { panic("expected ??") }
+  Assert.equal(coalesced.operator, "??")
+}
+
+export function testBindingClausesRejectOrAndCoalescingOperands(): none {
+  trailing := expressionFailure("if user := find() || ready { }")
+  Assert.stringContains(trailing.errorMessage, "A binding clause cannot appear under \"||\"")
+  Assert.equal(trailing.errorOffset, "if user := find() ".length)
+  coalescing := expressionFailure("if user := find() ?? backup { }")
+  Assert.stringContains(coalescing.errorMessage, "A binding clause cannot appear under \"??\"")
+  leading := expressionFailure("if ready || user := find() { }")
+  Assert.stringContains(leading.errorMessage, "A binding clause cannot appear under \"||\"")
+  Assert.equal(leading.errorOffset, "if ready || ".length)
+  // Outside a condition, `:=` is not an expression operator.
+  nested := expressionFailure("if (user := find()) { }")
+  Assert.stringContains(nested.errorMessage, "':='")
 }

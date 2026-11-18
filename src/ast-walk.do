@@ -9,7 +9,7 @@
 
 import {
   ActorCreationExpression, ArrayLiteral, AssignmentExpression, AsyncExpression, BinaryExpression, Block, CallExpression,
-  CaseExpression, CaseStatement, CatchExpression, ConstDeclaration, ConstructExpression, DestructuringStatement,
+  BindingCondition, CaseExpression, CaseStatement, CatchExpression, ConstDeclaration, ConstructExpression, DestructuringStatement,
   Expression, ExpressionStatement, ForOfStatement, ForStatement, IfExpression, IfStatement,
   ImmutableBinding, IndexExpression, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral, RangePattern,
   ReadonlyDeclaration, RetireExpression, ReturnStatement, Statement, StringLiteral, TryStatement, TupleLiteral,
@@ -150,6 +150,7 @@ export function collectNestedExpressions(expression: Expression, result: Express
     }
     yieldBlock: YieldBlockExpression -> { collectBlockExpressions(yieldBlock.body, result, statements) }
     catch_: CatchExpression -> { collectBlockExpressions(catch_.body, result, statements) }
+    binding: BindingCondition -> { result.push(binding.value) }
     async_: AsyncExpression -> {
       case async_.expression {
         block: Block -> { collectBlockExpressions(block, result, statements) }
@@ -232,4 +233,37 @@ function releaseExpression(expression: Expression): none {
     actor: ActorCreationExpression -> { actor.resolvedConstruction = none; actor.resolvedConstructor = none }
     _ -> { }
   }
+}
+
+/** Whether a condition has a binding clause among its top-level `&&` operands. */
+export function hasBindingClause(condition: Expression): bool {
+  case condition {
+    _: BindingCondition -> { return true }
+    binary: BinaryExpression -> { return binary.operator == "&&" && (hasBindingClause(binary.left) || hasBindingClause(binary.right)) }
+    _ -> { return false }
+  }
+}
+
+/**
+ * The clauses of a condition with binding clauses, left to right: its
+ * top-level `&&` operands. A `&&` subtree without bindings stays one clause.
+ */
+export function conditionClauses(condition: Expression): Expression[] {
+  let clauses: Expression[] = []
+  collectConditionClauses(condition, clauses)
+  return clauses
+}
+
+function collectConditionClauses(condition: Expression, clauses: Expression[]): none {
+  case condition {
+    binary: BinaryExpression -> {
+      if binary.operator == "&&" && hasBindingClause(binary) {
+        collectConditionClauses(binary.left, clauses)
+        collectConditionClauses(binary.right, clauses)
+        return
+      }
+    }
+    _ -> { }
+  }
+  clauses.push(condition)
 }

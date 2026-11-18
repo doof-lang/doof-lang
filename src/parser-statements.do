@@ -95,22 +95,27 @@ function parseYield(parser: Parser): Statement {
 function parseIfStatement(parser: Parser): Statement {
   start := parser.location()
   parser.expect(TokenType.If)
-  condition := parser.parseExpression()
+  condition := parser.parseCondition()
   body := parseBlock(parser)
   let elseIfs: IfBranch[] = []
   let else_: Block | none = none
+  let elseFailureName: string | none = none
   while parser.match(TokenType.Else) {
     if parser.match(TokenType.If) {
       branchStart := parser.location()
-      branchCondition := parser.parseExpression()
+      branchCondition := parser.parseCondition()
       branchBody := parseBlock(parser)
       elseIfs.push(IfBranch { condition: branchCondition, body: branchBody, span: parser.span(branchStart) })
     } else {
+      // `else error { ... }` captures the Failure of a Result binding clause.
+      if (parser.check(TokenType.Identifier) || parser.check(TokenType.Underscore)) && parser.peek(1).kind == TokenType.LeftBrace {
+        elseFailureName = parser.text(parser.advance())
+      }
       else_ = parseBlock(parser)
       break
     }
   }
-  return IfStatement { kind: "if-statement", condition, body, elseIfs, else_, span: parser.span(start) }
+  return IfStatement { kind: "if-statement", condition, body, elseIfs, else_, elseFailureName, span: parser.span(start) }
 }
 
 function parseCaseStatement(parser: Parser): Statement {
@@ -253,7 +258,7 @@ function rangePattern(parser: Parser, start: AstLocation, low: Expression | none
 
 function parseWhile(parser: Parser, label: string | none, start: AstLocation): Statement {
   parser.expect(TokenType.While)
-  condition := parser.parseExpression()
+  condition := parser.parseCondition()
   body := parseBlock(parser)
   then_ := parseLoopThen(parser)
   return WhileStatement { kind: "while-statement", condition, body, label, then_, span: parser.span(start) }

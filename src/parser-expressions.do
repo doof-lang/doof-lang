@@ -11,7 +11,7 @@ import {
   ThisExpression, CallerExpression, IfExpression, LambdaExpression,
   TupleLiteral, ObjectLiteral, ConstructExpression, DotShorthand,
   AsyncExpression, RetireExpression, ActorCreationExpression,
-  AsExpression, CatchExpression,
+  AsExpression, CatchExpression, BindingCondition,
 } from "./ast"
 import type { Expression, TypeAnnotation } from "./ast"
 
@@ -26,6 +26,94 @@ function parseAssignment(parser: Parser): Expression {
     return AssignmentExpression { kind: "assignment-expression", operator, target: left, value: right, span: SourceSpan { start, end: right.span.end } }
   }
   return left
+}
+
+// Operands of `&&`: the bitwise-or level.
+readonly logicalAndOperandLevel = 3
+
+/**
+ * Parses an `if`, `else if`, `while`, or `if ... then` condition. Binding
+ * clauses (`name := value`) are accepted only as top-level `&&` operands; their
+ * initializers bind tighter than `&&`, so `a := f() && a.ok` is two clauses.
+ * A condition without binding clauses parses exactly as an expression.
+ */
+export function parseCondition(parser: Parser): Expression {
+  start := parser.location()
+  let hasBinding = false
+  let condition = parseConditionClause(parser)
+  if condition.kind == "binding-condition" { hasBinding = true }
+  while parser.match(TokenType.AmpersandAmpersand) {
+    clause := parseConditionClause(parser)
+    if clause.kind == "binding-condition" { hasBinding = true }
+    condition = binary("&&", condition, clause)
+  }
+  if hasBinding {
+    if parser.check(TokenType.PipePipe) || parser.check(TokenType.QuestionQuestion) {
+      operator := parser.text(parser.current())
+      parser.fail("A binding clause cannot appear under \"" + operator + "\"; parenthesize the initializer if the operator belongs to it, or bind the value before the condition")
+    }
+    if isAssignmentOperator(parser.current().kind) {
+      parser.fail("A binding condition cannot be assigned to")
+    }
+    return condition
+  }
+  // No binding so far: continue the ordinary precedence above `&&`.
+  while parser.match(TokenType.PipePipe) {
+    rightStart := parser.location()
+    let right = parseConditionClause(parser)
+    while parser.match(TokenType.AmpersandAmpersand) { right = binary("&&", right, parseConditionClause(parser)) }
+    if containsBindingClause(right) {
+      parser.failAt(rightStart, "A binding clause cannot appear under \"||\"; bind the value before the condition or use a case expression")
+    }
+    condition = binary("||", condition, right)
+  }
+  if parser.match(TokenType.QuestionQuestion) { condition = binary("??", condition, parseNullCoalescing(parser)) }
+  if isAssignmentOperator(parser.current().kind) {
+    operator := parser.text(parser.advance())
+    value := parseAssignment(parser)
+    return AssignmentExpression { kind: "assignment-expression", operator, target: condition, value, span: SourceSpan { start, end: value.span.end } }
+  }
+  return condition
+}
+
+function containsBindingClause(expression: Expression): bool {
+  case expression {
+    binding: BindingCondition -> { return true }
+    binary: BinaryExpression -> { return binary.operator == "&&" && (containsBindingClause(binary.left) || containsBindingClause(binary.right)) }
+    _ -> { return false }
+  }
+}
+
+// One `&&` operand: a binding clause or an expression above `&&`.
+function parseConditionClause(parser: Parser): Expression {
+  if !startsBindingClause(parser) { return parseBinaryLevel(parser, logicalAndOperandLevel) }
+  start := parser.location()
+  name := parser.text(parser.advance())
+  let typeValue: TypeAnnotation | none = none
+  if parser.match(TokenType.Colon) { typeValue = parser.parseTypeAnnotation() }
+  parser.expect(TokenType.ColonEqual)
+  value := parseBinaryLevel(parser, logicalAndOperandLevel)
+  return BindingCondition { name, type_: typeValue, value, span: parser.span(start) }
+}
+
+// `name :=`, `_ :=`, or `name: Type :=` at the start of a condition clause.
+function startsBindingClause(parser: Parser): bool {
+  next := parser.peek(1).kind
+  if parser.check(TokenType.Underscore) { return next == TokenType.ColonEqual }
+  if !parser.check(TokenType.Identifier) { return false }
+  if next == TokenType.ColonEqual { return true }
+  if next != TokenType.Colon { return false }
+  let index = 2
+  while index < 64 {
+    token := parser.peek(index)
+    if token.kind == TokenType.EndOfFile || token.kind == TokenType.Semicolon || token.kind == TokenType.LeftBrace ||
+        token.kind == TokenType.AmpersandAmpersand || token.kind == TokenType.Then {
+      return false
+    }
+    if token.kind == TokenType.ColonEqual { return true }
+    index = index + 1
+  }
+  return false
 }
 
 function parseNullCoalescing(parser: Parser): Expression {
@@ -183,7 +271,7 @@ function makeAsyncExpression(expression: Expression, start: AstLocation): AsyncE
 function parseIfExpression(parser: Parser): Expression {
   start := parser.location()
   parser.expect(TokenType.If)
-  condition := parser.parseExpression()
+  condition := parseCondition(parser)
   parser.expect(TokenType.Then)
   thenValue := parser.parseExpression()
   parser.expect(TokenType.Else)

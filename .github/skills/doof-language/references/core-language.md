@@ -391,6 +391,47 @@ Other supported forms:
 Plain `if value != none` checks help control flow but do not narrow the static
 type. Use explicit narrowing tools when you need a present or narrowed binding.
 
+### Binding Conditions
+
+`if`, `else if`, `while`, and `if ... then` conditions can bind the present
+value of a nullable or `Result` expression. Clauses are joined by `&&`; each
+binding is visible in later clauses and the guarded body only:
+
+```doof check
+class User { name: string; owner: int }
+function lookup(name: string): User | none => none
+function loadPort(): Result<int, string> => Success(8080)
+
+function describe(name: string, owner: int, value: int | string): string {
+    if existing := lookup(name) && existing.owner == owner {
+        return existing.name
+    }
+    if count := value as int && count > 0 {
+        return string(count)
+    }
+    if port := loadPort() {
+        return "port " + string(port)
+    } else error {
+        return error
+    }
+}
+```
+
+Rules:
+
+- The subject must be nullable or a `Result`; the binding has the present type.
+  A `Result<none, E>` accepts only `_` (`if _ := save() { ... }`), which tests
+  for success.
+- A binding clause is only a top-level `&&` operand: never under `||`, `!`, or
+  parentheses. Parenthesize `||` or `??` initializers.
+- The binding is not in scope in `else`, later `else if` conditions, or after the
+  statement. A failed `Result` goes to `else`; capture it with `else error { ... }`
+  only when the last condition is one `Result` binding clause.
+- `while next := queue.pop() { ... }` rebinds on every iteration; a failed
+  clause ends the loop normally, so a loop `then` still runs.
+- Name a nullable local for its absence and bind the plain name
+  (`if user := maybeUser`), not `if user := user`.
+
 ## Pattern Matching
 
 ```doof check

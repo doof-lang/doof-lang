@@ -364,3 +364,18 @@ export function testInterfacesKeepInstanceAndStaticMemberNamespacesApart(): none
     "Static member \"make\" is already declared in interface \"Shape\"\n",
   )
 }
+
+export function testIfChainsWithBindingConditionsTrackCompletion(): none {
+  load := "function load(): Result<int, string> => Success(1)\n"
+  // Every path returns, so the function needs no trailing return.
+  complete := checked(load + "function run(): int { if value := load() { return value } else if other := load() { return other } else error { return error.length } }")
+  Assert.equal(complete.diagnostics.length, 0)
+  // A missing else leaves a path that completes.
+  incomplete := checked(load + "function run(): int { if value := load() { return value } }")
+  Assert.isTrue(incomplete.diagnostics.length > 0)
+}
+
+export function testEditorScopesSeeConditionBindingsInTheirBody(): none {
+  result := checked("function find(): string | none => \"x\"\nfunction run(): none { if name := find() && name.length > 0 { println(name.length) } }")
+  Assert.equal(result.diagnostics.length, 0)
+}

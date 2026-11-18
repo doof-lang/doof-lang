@@ -1,7 +1,7 @@
 import { Assert as EditorAssert } from "std/assert"
 import { Parser as EditorParser, parse } from "./parser"
 import {
-  BinaryExpression, Block, BreakStatement, CaseExpression, CaseStatement, ContinueStatement, ForOfStatement, ForStatement, FunctionDeclaration, ImmutableBinding,
+  BinaryExpression, BindingCondition, IfStatement, Block, BreakStatement, CaseExpression, CaseStatement, ContinueStatement, ForOfStatement, ForStatement, FunctionDeclaration, ImmutableBinding,
   ExpressionStatement, LambdaExpression, LetDeclaration, MemberExpression, NamedType, TryStatement, UnaryExpression, ValuePattern, RangePattern, DotShorthand, WhileStatement,
   YieldBlockAssignmentStatement, WithStatement, CallExpression,
 } from "./ast"
@@ -312,4 +312,16 @@ export function testWithIsContextualOutsideScopedBindings(): none {
   EditorAssert.equal(scoped.bindings[0].name, "with")
   EditorAssert.equal(scoped.bindings[1].name, "_")
   EditorAssert.equal(program.statements.length, 4)
+}
+
+export function testIfAndWhileParseBindingConditionsAndElseCapture(): none {
+  statement := parse("if value := load() { } else if other := find() { } else failure { }").statements[0] as IfStatement else { panic("expected if statement") }
+  _ := statement.condition as BindingCondition else { panic("expected binding condition") }
+  _ := statement.elseIfs[0].condition as BindingCondition else { panic("expected else-if binding condition") }
+  EditorAssert.equal(statement.elseFailureName ?? "", "failure")
+  plain := parse("if ready { } else { }").statements[0] as IfStatement else { panic("expected if statement") }
+  EditorAssert.isTrue(plain.elseFailureName == none)
+  loop := parse("while token := lexer.next() && token.ok { }").statements[0] as WhileStatement else { panic("expected while") }
+  condition := loop.condition as BinaryExpression else { panic("expected && chain") }
+  _ := condition.left as BindingCondition else { panic("expected while binding clause") }
 }

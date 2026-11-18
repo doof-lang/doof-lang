@@ -6,7 +6,7 @@
 
 import { CarrierPosition } from "./emitter-carriers"
 import { emitCarrierConversion } from "./emitter-carrier-values"
-import { ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpression, AsyncExpression, BinaryExpression, BoolLiteral, CallExpression, CallerExpression, CaseExpression, CatchExpression, CharLiteral, ConstructExpression, DoubleLiteral, DotShorthand, Expression, FloatLiteral, Identifier, IfExpression, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NoneLiteral, ObjectLiteral, RetireExpression, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression } from "./ast"
+import { ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpression, AsyncExpression, BinaryExpression, BindingCondition, BoolLiteral, CallExpression, CallerExpression, CaseExpression, CatchExpression, CharLiteral, ConstructExpression, DoubleLiteral, DotShorthand, Expression, FloatLiteral, Identifier, IfExpression, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NoneLiteral, ObjectLiteral, RetireExpression, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression } from "./ast"
 import { ClassType, SerialValueResolvedType, NoneType, PrimitiveType, ResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitAs, emitAssignment, emitBinary, emitIdentifier, emitIndex, emitMember, emitUnary } from "./emitter-expr-ops"
@@ -59,6 +59,7 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
     case_: CaseExpression -> { value = emitCaseExpression(case_, context, expected) }
     yieldBlock: YieldBlockExpression -> { value = emitYieldBlockExpression(yieldBlock, context, expected) }
     catch_: CatchExpression -> { value = emitCatchExpression(catch_, context) }
+    binding: BindingCondition -> { panic("Binding condition reached the expression emitter outside a condition: " + binding.name) }
     construct: ConstructExpression -> { value = emitConstruct(construct, context) }
     async_: AsyncExpression -> { value = emitAsyncExpression(async_, context) }
     retire_: RetireExpression -> { value = emitRetireActor(retire_, context) }
