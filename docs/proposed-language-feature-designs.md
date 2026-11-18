@@ -1905,6 +1905,12 @@ binding-clause := name [ ":" Type ] ":=" expression
   declaration-`else`.
 - The initializer follows the existing rule for `{` in condition expressions.
 
+Clauses are joined by `&&` rather than a separate separator such as `,`. A
+binding clause reads as "this value is present and ...", which matches the
+short-circuit meaning of `&&`, and conditions that mix binding and boolean
+clauses keep one visual form. The cost is that `||` and `??` initializers need
+parentheses.
+
 The expression form uses `then` as today:
 
 ```doof
@@ -1946,12 +1952,16 @@ if count := value as int && count > 0 { reserve(count) }
   clause ran; later assignment to the source variable or field does not affect
   it. A struct subject is copied and a class subject shares the reference,
   following ordinary assignment.
-- The condition is a nested scope, so a clause may shadow an outer name. The
-  initializer still sees the outer binding:
+- The condition is a nested scope, so a clause may shadow an outer name and the
+  initializer still sees the outer binding. Idiomatic code does not rebind a
+  name to itself (`if user := user`). When a nullable local is later tested for
+  presence, name it for its absence and give the binding the plain name:
 
 ```doof
 if constraint := parameter.constraint { prepare(constraint) }
-if user := user { greet(user) }
+
+maybeUser := session.user
+if user := maybeUser { greet(user) }
 ```
 
 - In `while`, the condition is re-evaluated before every iteration and each
@@ -1976,18 +1986,17 @@ The captured type is `E`, or `E | none` when the subject can also be absent as
 `none`. Capture is rejected for nullable-only subjects and for conditions with
 more than one clause, where the branch would not know which clause failed.
 
-Without capture, a `Failure` takes the `else` path and its payload is
-discarded. This matches declaration-`else` without a capture and satisfies the
-must-use rule.
+Without capture, a `Failure` takes the `else` path and its payload is silently
+discarded. No capture, postfix `?`, or other explicit conversion is required.
+This matches declaration-`else` without a capture and satisfies the must-use
+rule: testing a `Result` in a binding condition counts as using it.
 
 ### Relationship to existing forms
 
 - Declaration-`else` remains the form for "absent means leave this scope".
 - `case` remains the form for exhaustive discrimination and for subjects with
   several interesting members.
-- Postfix `!` remains the assertion form. Once binding conditions exist, the
-  checker may warn when `x!` is applied to a simple name or field path that the
-  enclosing condition compared with `none`, and suggest the binding form.
+- Postfix `!` remains the assertion form.
 - Plain `if x != none` still does not narrow `x`.
 
 ### Lowering
@@ -2027,11 +2036,6 @@ holds
 
 ```text
 Failure capture requires a condition that is a single Result binding clause
-```
-
-```text
-"existing!" follows a none check on "existing"; bind the present value with
-"if existing := existing"
 ```
 
 ### Tests
@@ -2199,12 +2203,6 @@ during emitter work:
 7. Whether normal TaskGroup scope exit statically requires every task to be
    observed or permits an explicit group-level discard operation.
 8. How manifestless multi-entry builds establish implicit package identity.
-9. Whether binding clauses are joined by `&&`, which requires parenthesizing
-   `||` and `??` initializers, or by a separate separator such as `,`.
-10. Whether a binding condition may silently discard a `Failure` payload, or
-    must capture it or spell the conversion with postfix `?`.
-11. Whether the `x!`-after-`none`-check warning ships with binding conditions
-    or after the compiler's own source has migrated.
 
 These are language-contract decisions. Each should be answered in the
 specification before generated C++ shape or runtime convenience determines the
