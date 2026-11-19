@@ -120,6 +120,23 @@ Standard-package vendor builds are not captured as commands: each
 tree and reruns its `build.sh` with `xcrun` compilers before the replayed
 compiles. The snapshot is extracted at a different path, compiled, and smoke-tested.
 
+Only the fixed-point build runs alone. Every later stage reads the finished
+toolchain and writes its own paths, so the release then runs them all at once,
+each in its own process with a log under `build/releases/<version>/logs/` (the
+Linux containers log beside their inputs):
+
+- the two Linux musl container builds;
+- the compiler, tooling, corpus, package, Wasm, iOS, and debugger gates (the
+  compiler suite runs once, with coverage);
+- the native runtime checks, including ThreadSanitizer;
+- the optional Windows remote build;
+- the source snapshot rebuild, followed by signing, notarization, and the
+  signed-toolchain checks.
+
+The tests and platform builds use the copy of the toolchain in the staged
+`source/dist`, because signing rewrites the packaged artifacts in place. The
+first stage to fail stops the others, and its log tail is reported.
+
 The compiler itself imports `std/zstd`, which builds through
 `build.native.vendor`. A seed compiler must therefore support `vendor` before it
 can build against a standard library that uses it: land compiler support and
@@ -143,7 +160,8 @@ the deterministic release archive.
 
 The default image is `docker.io/library/alpine:3.22.1`. Override it with
 `DOOF_LINUX_CONTAINER_IMAGE`. The build VM defaults to 8 CPUs, 8 GB of memory,
-and four compiler jobs; `DOOF_LINUX_CONTAINER_CPUS`,
+and one compiler job per CPU, and the link-time optimizer partitions the final
+link across those CPUs; `DOOF_LINUX_CONTAINER_CPUS`,
 `DOOF_LINUX_CONTAINER_MEMORY`, and `DOOF_LINUX_BUILD_JOBS` override those
 values. The image name, Apple Container version, and per-architecture
 Alpine/GCC/musl versions are recorded in `release.json`.

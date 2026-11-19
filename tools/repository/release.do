@@ -3,15 +3,15 @@ import { join as joinStrings } from "std/string"
 import { exists, File, readBlob, writeBlob } from "std/fs"
 import { formatJsonValue, parseJsonObject } from "std/json"
 import { architecture, platform, Exec, ExecOptions } from "std/os"
-import { basename, dirname } from "std/path"
+import { basename, dirname, executablePath } from "std/path"
 import { Duration, MonotonicInstant, Thread } from "std/time"
 import { BlobBuilder, BlobReader } from "std/blob"
 import { connect, SshClient, SshConnectOptions } from "std/ssh"
 import { wakeOnLan } from "std/wol"
-import { BuildInputs, BuildResult, buildToolchain, prepare } from "./build"
+import { buildToolchain, prepare } from "./build"
 import { capture, cleanRevision, command, copyInputs, copyTree, erase, execute, files, jsonFile, jsonString, makeDirectory, path, read, require, resolveSeed, setting, stableVersion, stamp, stdlibDirectory, write } from "./common"
 import { createSnapshot, isMachO } from "./snapshot"
-import { debuggerChecks, releaseVerification, testRepository } from "./verify"
+import { debuggerChecks, releaseTests, runtimeChecks } from "./verify"
 import { stdlibRevisions } from "./provenance"
 import { WindowsBuildConfig, windowsBuildConfig, windowsBuildEnabled, windowsBuildLogName, windowsBuildLogTail, windowsBuildScript, windowsProjectFile, windowsReleaseArchiveName, windowsVisualStudioCommand, windowsVisualStudioScript } from "./windows-build"
 import { LinuxReleaseTarget, linuxBuildScript, linuxContainerArguments, linuxContainerName, linuxMakefile, linuxProbeSources, linuxReleaseArchiveName, linuxReleaseTargets } from "./linux-build"
@@ -142,58 +142,109 @@ function linuxEmittedProbeSources(stdlib: string, emittedFiles: string[]): Resul
   return Success(result)
 }
 
-/** A Linux container build running in the background, logging to its own file. */
-class LinuxContainerBuild {
-  readonly target: LinuxReleaseTarget
-  readonly name: string
+/** A release stage running in its own process, logging to its own file. */
+class BackgroundStage {
+  readonly label: string
   readonly log: string
+  // A named Apple container to stop with the stage; empty for local processes.
+  readonly container: string
+  started: MonotonicInstant
   process: Exec
+}
+
+export function formatElapsed(seconds: long): string {
+  if seconds < 60L { return `${seconds}s` }
+  remainder := seconds % 60L
+  padding := if remainder < 10L then "0" else ""
+  return `${seconds \ 60L}m${padding}${remainder}s`
+}
+
+function elapsedSince(started: MonotonicInstant): string =>
+  formatElapsed(MonotonicInstant.now().durationSince(started).toMillis() \ 1000L)
+
+function startStage(label: string, log: string, program: string, arguments: string[], container: string = ""): Result<BackgroundStage, string> {
+  try makeDirectory(dirname(log))
+  shellArguments: string[] := ["-c", "exec \"$0\" \"$@\" > \"$DOOF_STAGE_LOG\" 2>&1", program]
+  for argument of arguments { shellArguments.push(argument) }
+  try process := Exec.spawn("sh", shellArguments, ExecOptions { env: { DOOF_STAGE_LOG: log }, withStdin: false })
+  println(`Started ${label}; log: ${log}`)
+  return Success(BackgroundStage { label, log, container, started: MonotonicInstant.now(), process })
+}
+
+function finishStage(stage: BackgroundStage): Result<none, string> {
+  status := stage.process.wait() else error { return Failure(`Could not wait for ${stage.label}: ${error}`) }
+  if status != 0 {
+    log := read(stage.log) else { return Failure(`${stage.label} exited with status ${status}`) }
+    return Failure(`${stage.label} exited with status ${status}; last lines of ${stage.log}:\n${windowsBuildLogTail(log, 60)}`)
+  }
+  println(`Finished ${stage.label} in ${elapsedSince(stage.started)}`)
+  return Success()
+}
+
+function stopStages(stages: BackgroundStage[]): none {
+  for stage of stages {
+    if stage.process.isRunning() {
+      println(`Stopping ${stage.label}`)
+      // The container keeps running if only its client is signalled.
+      if stage.container != "" { _ := execute("container", ["stop", stage.container]) else {} }
+      if stage.process.isRunning() { _ := stage.process.terminate() else {} }
+      _ := stage.process.wait() else {}
+    }
+  }
+}
+
+// Waits for every stage, reporting each as it finishes. The first failure
+// stops the others, so a broken stage never waits behind a slow one.
+function awaitStages(stages: BackgroundStage[]): Result<none, string> {
+  let pending: BackgroundStage[] = []
+  for stage of stages { pending.push(stage) }
+  while pending.length > 0 {
+    let running: BackgroundStage[] = []
+    for stage of pending {
+      if stage.process.isRunning() { running.push(stage); continue }
+      _ := finishStage(stage) else error {
+        stopStages(stages)
+        return Failure(error)
+      }
+    }
+    pending = running
+    if pending.length > 0 { Thread.sleep(Duration.ofSeconds(1L)) }
+  }
+  return Success()
 }
 
 // Stages the target's inputs, then starts its container without waiting; the
 // container needs only files under work, so builds for other targets and the
 // rest of the release can proceed meanwhile.
-function startLinuxReleaseBuild(compiler: string, source: string, stdlib: string, stdlibBundle: string, work: string, version: string, target: LinuxReleaseTarget): Result<LinuxContainerBuild, string> {
+function startLinuxReleaseBuild(compiler: string, source: string, stdlib: string, stdlibBundle: string, work: string, version: string, target: LinuxReleaseTarget): Result<BackgroundStage, string> {
   try stageLinuxReleaseInputs(compiler, source, stdlib, stdlibBundle, work, target)
   image := setting("DOOF_LINUX_CONTAINER_IMAGE", "docker.io/library/alpine:3.22.1")
   cpus := setting("DOOF_LINUX_CONTAINER_CPUS", "8")
   memory := setting("DOOF_LINUX_CONTAINER_MEMORY", "8G")
-  jobs := setting("DOOF_LINUX_BUILD_JOBS", "4")
+  jobs := setting("DOOF_LINUX_BUILD_JOBS", cpus)
   log := path(work, "linux-" + target.name + "/container.log")
-  shellArguments: string[] := ["-c", "exec \"$0\" \"$@\" > \"$DOOF_CONTAINER_LOG\" 2>&1", "container"]
-  for argument of linuxContainerArguments(work, image, version, target, cpus, memory, jobs) { shellArguments.push(argument) }
-  try process := Exec.spawn("sh", shellArguments, ExecOptions { env: { DOOF_CONTAINER_LOG: log }, withStdin: false })
-  println("Started Linux " + target.name + " musl container build; log: " + log)
-  return Success(LinuxContainerBuild { target, name: linuxContainerName(version, target), log, process })
+  arguments := linuxContainerArguments(work, image, version, target, cpus, memory, jobs)
+  return startStage(`Linux ${target.name} musl container build`, log, "container", arguments, linuxContainerName(version, target))
 }
 
-function finishLinuxReleaseBuild(build: LinuxContainerBuild, pending: string, version: string): Result<none, string> {
-  status := build.process.wait() else error {
-    return Failure("Could not wait for the Linux " + build.target.name + " container build: " + error)
+function startLinuxReleaseBuilds(compiler: string, source: string, stdlib: string, stdlibBundle: string, work: string, version: string, stages: BackgroundStage[]): Result<none, string> {
+  for target of linuxReleaseTargets() {
+    started := startLinuxReleaseBuild(compiler, source, stdlib, stdlibBundle, work, version, target) else error {
+      stopStages(stages)
+      return Failure(error)
+    }
+    stages.push(started)
   }
-  if status != 0 {
-    log := read(build.log) else { return Failure("Linux " + build.target.name + " container build exited with status " + string(status)) }
-    return Failure(
-      "Linux " + build.target.name + " container build exited with status " + string(status) +
-        "; last lines of " + build.log + ":\n" + windowsBuildLogTail(log, 60),
-    )
-  }
-  archive := path(pending, linuxReleaseArchiveName(version, build.target))
-  try require(exists(archive), "Linux container did not produce release archive")
-  println("Verified Linux " + build.target.name + " musl release asset: " + archive)
   return Success()
 }
 
-function stopLinuxReleaseBuilds(builds: LinuxContainerBuild[]): none {
-  for build of builds {
-    if build.process.isRunning() {
-      println("Stopping Linux " + build.target.name + " container build " + build.name)
-      // The container keeps running if only its client is signalled.
-      _ := execute("container", ["stop", build.name]) else {}
-      if build.process.isRunning() { _ := build.process.terminate() else {} }
-      _ := build.process.wait() else {}
-    }
+function verifyLinuxReleaseArchives(pending: string, version: string): Result<none, string> {
+  for target of linuxReleaseTargets() {
+    archive := path(pending, linuxReleaseArchiveName(version, target))
+    try require(exists(archive), `Linux ${target.name} container did not produce release archive`)
+    println(`Verified Linux ${target.name} musl release asset: ${archive}`)
   }
+  return Success()
 }
 
 function stageLinuxReleaseInputs(compiler: string, source: string, stdlib: string, stdlibBundle: string, work: string, target: LinuxReleaseTarget): Result<none, string> {
@@ -363,21 +414,55 @@ export function linuxEndToEnd(root: string, version: string): Result<none, strin
   bundle := path(work, "doof-stdlib.tar")
   environment: Map<string, string> := { DOOF_STDLIB_ROOT: stdlib, DOOF_RUNTIME_HEADER: path(source, "runtime/doof_runtime.hpp") }
   try command(compiler, ["run", path(source, "tools/stdlib-bundle.do"), "-o", path(work, "stdlib-bundle-tool"), "--", stdlib, bundle, "linux"], environment)
-  let builds: LinuxContainerBuild[] = []
-  for target of linuxReleaseTargets() {
-    started := startLinuxReleaseBuild(compiler, source, stdlib, bundle, work, version, target) else error {
-      stopLinuxReleaseBuilds(builds)
-      return Failure(error)
-    }
-    builds.push(started)
+  let stages: BackgroundStage[] = []
+  try startLinuxReleaseBuilds(compiler, source, stdlib, bundle, work, version, stages)
+  try awaitStages(stages)
+  return verifyLinuxReleaseArchives(pending, version)
+}
+
+/** The parallel release stages that run in their own repository-tool processes. */
+export function releaseStageNames(windows: bool): string[] {
+  names := ["tests", "runtime", "macos"]
+  if windows { names.push("windows") }
+  return names
+}
+
+export function releaseStageArguments(root: string, version: string, stage: string): string[] =>
+  [root, "release-stage", version, stage]
+
+function releaseStageLabel(stage: string): string {
+  case stage {
+    "tests" -> { return "compiler and release tests" }
+    "runtime" -> { return "native runtime checks" }
+    "macos" -> { return "macOS source rebuild, signing and notarization" }
+    "windows" -> { return "Windows MSVC remote build" }
+    _ -> { return stage }
   }
-  for build of builds {
-    _ := finishLinuxReleaseBuild(build, pending, version) else error {
-      stopLinuxReleaseBuilds(builds)
-      return Failure(error)
+}
+
+/**
+ * Runs one release stage inside a child process started by prepareRelease,
+ * which holds the toolchain lock. Every stage reads the staged release under
+ * build/releases/<version> and writes only its own paths. The tests and
+ * platform builds use the copy of the toolchain in source/dist, because the
+ * macos stage signs the artifacts directory in place.
+ */
+export function runReleaseStage(root: string, version: string, stage: string): Result<none, string> {
+  try require(stableVersion(version), "Release version must be stable MAJOR.MINOR.PATCH")
+  work := path(root, "build/releases/" + version)
+  source := path(work, "source"); stdlib := path(work, "stdlib")
+  artifacts := path(work, "artifacts"); pending := path(work, "pending")
+  compiler := path(source, "dist/doof")
+  try require(exists(compiler) && exists(path(artifacts, "doof")), "Release stages need a built toolchain in " + work)
+  case stage {
+    "tests" -> { return releaseTests(source, compiler, stdlib) }
+    "runtime" -> { return runtimeChecks(source) }
+    "windows" -> { return buildWindowsReleaseArtifact(compiler, source, stdlib, path(source, "dist/doof-stdlib.tar"), work, pending, version) }
+    "macos" -> {
+      return verifyMacRelease(source, stdlib, artifacts, work, pending, version, setting("DOOF_SIGN_IDENTITY"), setting("DOOF_NOTARY_PROFILE"))
     }
+    _ -> { return Failure("Unknown release stage: " + stage) }
   }
-  return Success()
 }
 
 export function prepareRelease(root: string, version: string): Result<none, string> {
@@ -401,33 +486,37 @@ export function prepareRelease(root: string, version: string): Result<none, stri
   try inputs := prepare(root, work, seed, version)
   try currentCompiler := cleanRevision(root); try currentStdlib := stdlibRevisions(liveStdlib)
   try require(currentCompiler == compilerRevision && formatJsonValue(currentStdlib) == formatJsonValue(stdlibRevision), "Release inputs changed during staging")
+  releaseStarted := MonotonicInstant.now()
   try built := buildToolchain(inputs, true, true)
+  println(`Built fixed-point toolchain in ${elapsedSince(releaseStarted)}`)
   try copyTree(built.artifacts, path(inputs.source, "dist"))
-  try testRepository(inputs.source, path(built.artifacts, "doof"), inputs.stdlib)
-  try releaseVerification(inputs.source, path(built.artifacts, "doof"), inputs.stdlib)
   pending := path(work, "pending")
   try makeDirectory(pending)
-  // Platform builds only read the finished toolchain and write their own
-  // directories. The Linux containers run in the background while the Mac
-  // drives the Windows host, rebuilds the source snapshot, and notarizes.
-  let linuxBuilds: LinuxContainerBuild[] = []
-  for target of linuxReleaseTargets() {
-    started := startLinuxReleaseBuild(path(built.artifacts, "doof"), inputs.source, inputs.stdlib, path(built.artifacts, "doof-stdlib.tar"), work, version, target) else error {
-      stopLinuxReleaseBuilds(linuxBuilds)
+  // Every remaining stage only reads the finished toolchain and writes its own
+  // directories, so all of them run at once: the Linux containers, the test
+  // gates, the Windows remote build, and the macOS source rebuild, signing
+  // and notarization. Platform builds emit with the source/dist copy because
+  // the macos stage signs the artifacts directory in place.
+  compiler := path(inputs.source, "dist/doof")
+  let stages: BackgroundStage[] = []
+  try startLinuxReleaseBuilds(compiler, inputs.source, inputs.stdlib, path(inputs.source, "dist/doof-stdlib.tar"), work, version, stages)
+  tool := executablePath() else error {
+    stopStages(stages)
+    return Failure("Cannot locate the repository tool to start release stages: " + error)
+  }
+  for stage of releaseStageNames(windowsBuildEnabled()) {
+    started := startStage(releaseStageLabel(stage), path(work, "logs/" + stage + ".log"), tool, releaseStageArguments(root, version, stage)) else error {
+      stopStages(stages)
       return Failure(error)
     }
-    linuxBuilds.push(started)
+    stages.push(started)
   }
-  submission := verifyMacRelease(inputs, built, work, pending, version, identity, profile) else error {
-    stopLinuxReleaseBuilds(linuxBuilds)
-    return Failure(error)
-  }
-  for build of linuxBuilds {
-    _ := finishLinuxReleaseBuild(build, pending, version) else error {
-      stopLinuxReleaseBuilds(linuxBuilds)
-      return Failure(error)
-    }
-  }
+  try awaitStages(stages)
+  try verifyLinuxReleaseArchives(pending, version)
+  if windowsBuildEnabled() { try require(exists(path(pending, windowsReleaseArchiveName(version))), "Windows stage did not produce its release archive") }
+  try notarization := jsonFile(path(work, "notarization.json"))
+  try submission := jsonString(notarization, "id")
+  println(`All release stages finished in ${elapsedSince(releaseStarted)}`)
   try clang := capture("xcrun", ["clang++", "--version"])
   try swift := capture("xcrun", ["swiftc", "--version"])
   try emscripten := capture("em++", ["--version"])
@@ -478,13 +567,13 @@ export function checkSourceSnapshot(root: string): Result<none, string> {
   return Success()
 }
 
-// Everything the Mac verifies while the Linux containers build: the Windows
-// remote build, the relocated source rebuild, signing, notarization, and the
-// signed-toolchain checks. Returns the notarization submission id.
-function verifyMacRelease(inputs: BuildInputs, built: BuildResult, work: string, pending: string, version: string, identity: string, profile: string): Result<string, string> {
-  if windowsBuildEnabled() { try buildWindowsReleaseArtifact(path(built.artifacts, "doof"), inputs.source, inputs.stdlib, path(built.artifacts, "doof-stdlib.tar"), work, pending, version) }
+// The macos release stage: the relocated source rebuild, signing,
+// notarization, and the signed-toolchain checks. The snapshot is taken before
+// signing modifies the artifacts. signAndNotarize records the submission in
+// work/notarization.json for the release metadata.
+function verifyMacRelease(source: string, stdlib: string, artifacts: string, work: string, pending: string, version: string, identity: string, profile: string): Result<none, string> {
   snapshot := path(work, "doof-" + version + "-source")
-  try createSnapshot(work, inputs.source, built.artifacts, snapshot, version)
+  try createSnapshot(work, source, artifacts, snapshot, version)
   sourceArchive := path(pending, "doof-" + version + "-source.tar.gz")
   try command("tar", ["-czf", sourceArchive, "-C", work, basename(snapshot)])
   // A different path with spaces catches absolute paths and shell quoting errors.
@@ -495,7 +584,8 @@ function verifyMacRelease(inputs: BuildInputs, built: BuildResult, work: string,
   try command("env", ["-u", "DOOF_STDLIB_ROOT", "-u", "DOOF_RUNTIME_HEADER", "-u", "CXX", path(rebuilt, "build.sh")])
   try smokeToolchain(path(rebuilt, "dist"), path(extracted, "smoke"), version)
   binaryArchive := path(pending, "doof-" + version + "-macos-arm64.zip")
-  try submission := signAndNotarize(built.artifacts, work, binaryArchive, identity, profile)
+  try submission := signAndNotarize(artifacts, work, binaryArchive, identity, profile)
+  println("Notarization accepted: " + submission)
   relocated := path(work, "downloaded toolchain")
   try command("ditto", ["-x", "-k", binaryArchive, relocated])
   try command("xattr", ["-r", "-w", "com.apple.quarantine", "0083;00000000;DoofRelease;", relocated])
@@ -507,6 +597,6 @@ function verifyMacRelease(inputs: BuildInputs, built: BuildResult, work: string,
   try command("spctl", ["--assess", "--type", "execute", "--verbose=2", path(relocated, "Doof Debugger.app")])
   try smokeToolchain(relocated, path(work, "signed-smoke"), version)
   try smokeDebuggerApplication(relocated)
-  try debuggerChecks(inputs.source, path(relocated, "doof"), inputs.stdlib)
-  return Success(submission)
+  try debuggerChecks(source, path(relocated, "doof"), stdlib, path(work, "signed-debugger-integration"))
+  return Success()
 }

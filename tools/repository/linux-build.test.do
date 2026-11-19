@@ -16,6 +16,8 @@ export function testLinuxMakefileBuildsExactStaticMuslGraph(): none {
   Assert.stringContains(makefile, "std/time")
   Assert.stringContains(makefile, "$(addprefix -I,$(INCLUDE_DIRS))")
   Assert.stringContains(makefile, "-static")
+  // The link-time optimizer partitions across every container CPU.
+  Assert.stringContains(makefile, "LDFLAGS := -static -flto=auto")
   Assert.stringContains(makefile, "-DZSTD_DISABLE_ASM")
   Assert.stringContains(makefile, "-std=c++17")
   Assert.stringNotContains(makefile, ".doof-cache")
@@ -66,14 +68,14 @@ export function testLinuxContainerInvocationMountsOnlyStagedReleaseWork(): none 
   targets := linuxReleaseTargets()
   arm64 := linuxContainerArguments("/release work", "docker.io/library/alpine:3.22.1", "1.2.3", targets[0])
   readonly expectedArm64 = [
-    "run", "--rm", "--name", "doof-release-1.2.3-linux-arm64", "--platform", "linux/arm64", "--cpus", "8", "--memory", "8G", "--env", "DOOF_BUILD_JOBS=4", "--volume", "/release work:/work",
+    "run", "--rm", "--name", "doof-release-1.2.3-linux-arm64", "--platform", "linux/arm64", "--cpus", "8", "--memory", "8G", "--env", "DOOF_BUILD_JOBS=8", "--volume", "/release work:/work",
     "docker.io/library/alpine:3.22.1", "sh", "/work/linux-arm64/build.sh", "1.2.3",
     "/work/pending/doof-1.2.3-linux-arm64-musl.tar.gz",
   ]
   Assert.arrayEqual(arm64.cloneReadonly(), expectedArm64)
   x64 := linuxContainerArguments("/release work", "docker.io/library/alpine:3.22.1", "1.2.3", targets[1])
   readonly expectedX64 = [
-    "run", "--rm", "--name", "doof-release-1.2.3-linux-x64", "--platform", "linux/amd64", "--rosetta", "--cpus", "8", "--memory", "8G", "--env", "DOOF_BUILD_JOBS=4", "--volume", "/release work:/work",
+    "run", "--rm", "--name", "doof-release-1.2.3-linux-x64", "--platform", "linux/amd64", "--rosetta", "--cpus", "8", "--memory", "8G", "--env", "DOOF_BUILD_JOBS=8", "--volume", "/release work:/work",
     "docker.io/library/alpine:3.22.1", "sh", "/work/linux-x64/build.sh", "1.2.3",
     "/work/pending/doof-1.2.3-linux-x64-musl.tar.gz",
   ]

@@ -1,5 +1,5 @@
 import { Assert } from "std/assert"
-import { codesignTimestampUnavailable, signingPreflight, validateReleaseStatus, smokeDebuggerApplication } from "./release"
+import { codesignTimestampUnavailable, formatElapsed, releaseStageArguments, releaseStageNames, runReleaseStage, signingPreflight, validateReleaseStatus, smokeDebuggerApplication } from "./release"
 import { TemporaryDirectory } from "./test-support"
 import { path, write, command } from "./common"
 export function testRepositoryPublishedVersionsAreImmutable(): none {
@@ -41,4 +41,40 @@ export function testCodesignRetriesOnlyTimestampServiceFailures(): none {
   Assert.isTrue(codesignTimestampUnavailable("/tmp/doof: replacing existing signature\n/tmp/doof: A timestamp was expected but was not found."))
   Assert.isTrue(codesignTimestampUnavailable("/tmp/doof: The timestamp service is not available."))
   Assert.isFalse(codesignTimestampUnavailable("/tmp/doof: no identity found"))
+}
+
+export function testReleaseStageElapsedTimesAreReadable(): none {
+  Assert.equal(formatElapsed(0L), "0s")
+  Assert.equal(formatElapsed(59L), "59s")
+  Assert.equal(formatElapsed(60L), "1m00s")
+  Assert.equal(formatElapsed(605L), "10m05s")
+}
+
+export function testReleaseRunsWindowsStageOnlyWhenConfigured(): none {
+  Assert.arrayEqual(releaseStageNames(false).cloneReadonly(), ["tests", "runtime", "macos"])
+  Assert.arrayEqual(releaseStageNames(true).cloneReadonly(), ["tests", "runtime", "macos", "windows"])
+}
+
+export function testReleaseStagesReenterTheRepositoryTool(): none {
+  Assert.arrayEqual(releaseStageArguments("/repo root", "1.2.3", "tests").cloneReadonly(), ["/repo root", "release-stage", "1.2.3", "tests"])
+}
+
+export function testReleaseStageRejectsUnknownStagesAndMissingToolchains(): none {
+  temp := TemporaryDirectory()!
+  let missing = false
+  case runReleaseStage(temp.root, "1.2.3", "tests") {
+    failure: Failure -> { missing = failure.error.contains("built toolchain") }
+    success: Success -> {}
+  }
+  Assert.isTrue(missing)
+  work := path(temp.root, "build/releases/1.2.3")
+  write(path(work, "source/dist/doof"), "")!
+  write(path(work, "artifacts/doof"), "")!
+  let unknown = false
+  case runReleaseStage(temp.root, "1.2.3", "publish") {
+    failure: Failure -> { unknown = failure.error.contains("Unknown release stage: publish") }
+    success: Success -> {}
+  }
+  Assert.isTrue(unknown)
+  temp.close()
 }

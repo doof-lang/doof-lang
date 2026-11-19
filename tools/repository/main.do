@@ -2,7 +2,7 @@ import { buildExtension, buildEditorService, verifyEditorArtifacts } from "./ext
 import { developmentBuild } from "./build"
 import { captureNative } from "./snapshot"
 import { testRepository, releaseVerification, debuggerChecks } from "./verify"
-import { prepareRelease, checkSourceSnapshot, signingPreflight, linuxEndToEnd, windowsBuildLog, windowsEndToEnd } from "./release"
+import { prepareRelease, checkSourceSnapshot, signingPreflight, linuxEndToEnd, runReleaseStage, windowsBuildLog, windowsEndToEnd } from "./release"
 import { cacheChecks, projectLockChecks, nativeEditorChecks } from "./process-checks"
 import { path, stdlibDirectory, setting } from "./common"
 import { falseNegativeChecks, specExampleChecks } from "./corpus-checks"
@@ -15,11 +15,13 @@ function dispatch(arguments: string[]): Result<int, string> {
     return captureNative(rest)
   }
   try require(arguments.length >= 2, "repository command is required")
-  if arguments[1] != "release" && arguments[1] != "cache-test" && arguments[1] != "linux-test" && arguments[1] != "windows-test" && arguments[1] != "windows-log" { try require(arguments.length == 2, "Unexpected repository command arguments") }
+  if arguments[1] != "release" && arguments[1] != "release-stage" && arguments[1] != "cache-test" && arguments[1] != "linux-test" && arguments[1] != "windows-test" && arguments[1] != "windows-log" { try require(arguments.length == 2, "Unexpected repository command arguments") }
   if arguments[1] == "dev" || arguments[1] == "build" { try developmentBuild(arguments[0], arguments[1] == "build") }
   else if arguments[1] == "preflight" { try signingPreflight(setting("DOOF_SIGN_IDENTITY"), setting("DOOF_NOTARY_PROFILE")) }
   else if arguments[1] == "snapshot-test" { try checkSourceSnapshot(arguments[0]) }
   else if arguments[1] == "release" { try require(arguments.length == 3, "release requires a version"); try prepareRelease(arguments[0], arguments[2]) }
+  // Internal: one parallel stage of a release, started by `release`.
+  else if arguments[1] == "release-stage" { try require(arguments.length == 4, "release-stage requires a version and a stage"); try runReleaseStage(arguments[0], arguments[2], arguments[3]) }
   else if arguments[1] == "linux-test" { try require(arguments.length == 3, "linux-test requires a version"); try linuxEndToEnd(arguments[0], arguments[2]) }
   else if arguments[1] == "windows-test" { try require(arguments.length == 3, "windows-test requires a version"); try windowsEndToEnd(arguments[0], arguments[2]) }
   else if arguments[1] == "windows-log" { try require(arguments.length == 3, "windows-log requires a version"); try windowsBuildLog(arguments[2]) }

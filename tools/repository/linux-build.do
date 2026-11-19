@@ -74,7 +74,7 @@ export function linuxMakefile(emittedFiles: string[], excludedSources: string[] 
     "COMMON_FLAGS := -O2 -DNDEBUG -DZSTD_DISABLE_ASM -ffunction-sections -fdata-sections -flto -pthread\n" +
     "CXXFLAGS := -std=c++17 $(COMMON_FLAGS)\n" +
     "CFLAGS := -std=c11 $(COMMON_FLAGS)\n" +
-    "LDFLAGS := -static -flto -pthread -Wl,--gc-sections -Wl,--strip-all\n\n" +
+    "LDFLAGS := -static -flto=auto -pthread -Wl,--gc-sections -Wl,--strip-all\n\n" +
     ".PHONY: all clean\n" +
     "all: doof\n\n" +
     "doof: $(OBJECTS)\n\t$(CXX) $(OBJECTS) $(LDFLAGS) -o $@\n\n" +
@@ -124,7 +124,7 @@ export function linuxBuildScript(target: LinuxReleaseTarget): string {
 // `container stop`; signalling the `container run` client does not.
 export function linuxContainerName(version: string, target: LinuxReleaseTarget): string => "doof-release-" + version + "-linux-" + target.name
 
-export function linuxContainerArguments(work: string, image: string, version: string, target: LinuxReleaseTarget, cpus: string = "8", memory: string = "8G", jobs: string = "4"): string[] {
+export function linuxContainerArguments(work: string, image: string, version: string, target: LinuxReleaseTarget, cpus: string = "8", memory: string = "8G", jobs: string = "8"): string[] {
   archive := "/work/pending/" + linuxReleaseArchiveName(version, target)
   arguments := ["run", "--rm", "--name", linuxContainerName(version, target), "--platform", target.platform]
   if target.rosetta { arguments.push("--rosetta") }
