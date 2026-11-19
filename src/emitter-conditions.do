@@ -2,11 +2,13 @@
 //
 // Each binding clause evaluates its subject once into a temporary, tests every
 // absent layer recorded by the checker's types, and declares the binding from
-// the unwrapped temporary before later clauses run. Ordinary clauses become
-// nested tests. The guarded body sits inside the innermost test, so a branch
-// body never needs to be emitted twice.
+// the unwrapped temporary before later clauses run. A narrowing `as` subject
+// that is a plain type test skips its Result: the clause binds the source by
+// reference, tests it directly, and narrows it in place. Ordinary clauses
+// become nested tests. The guarded body sits inside the innermost test, so a
+// branch body never needs to be emitted twice.
 
-import { BindingCondition, Block, Expression, IfExpression, IfStatement, WhileStatement } from "./ast"
+import { AsExpression, BindingCondition, Block, Expression, IfExpression, IfStatement, WhileStatement } from "./ast"
 import { conditionClauses, hasBindingClause } from "./ast-walk"
 import { absenceErrorType, presentType } from "./absence-types"
 import { ResolvedType } from "./semantic"
@@ -17,7 +19,39 @@ import { emitExpression } from "./emitter-expr"
 import { cppIdentifier } from "./emitter-names"
 import { emitBlock, emitCondition, emitExtractedLocal } from "./emitter-stmt"
 import { emitContextType, specializeEmitType } from "./emitter-types"
+import { asTypeTest } from "./emitter-expr-ops"
 import { sameType } from "./checker-types"
+
+// How one binding clause evaluates, tests, and reads its subject.
+class ClauseTest {
+  // Declares the temporary, without indentation or newline.
+  subject: string
+  // True when the clause holds.
+  present: string
+  // The present value, of type `presentType`.
+  value: string
+  presentType: ResolvedType
+}
+
+function clauseTest(binding: BindingCondition, temporaryName: string, allowTypeTest: bool, context: EmitContext): ClauseTest {
+  if allowTypeTest && as_ := binding.value as AsExpression && typeTest := asTypeTest(as_, temporaryName, context) {
+    target := specializeEmitType(binding.value.resolvedType!, context)
+    return ClauseTest {
+      subject: "auto&& " + temporaryName + " = " + emitExpression(as_.expression, context) + ";",
+      present: typeTest.test,
+      value: typeTest.value,
+      presentType: presentType(target),
+    }
+  }
+  subjectType := specializeEmitType(binding.value.resolvedType!, context)
+  layers := emitterAbsenceLayers(subjectType, context)
+  return ClauseTest {
+    subject: "auto " + temporaryName + " = " + emitExpression(binding.value, context) + ";",
+    present: "!(" + emitAbsentTest(temporaryName, layers, context) + ")",
+    value: emitPresentValue(temporaryName, layers, context),
+    presentType: presentType(subjectType),
+  }
+}
 
 class ConditionGuard {
   // Declarations and nested tests; the body goes at `bodyLevel`.
@@ -45,11 +79,9 @@ function emitConditionGuard(condition: Expression, level: int, context: EmitCont
     ind := indent(depth)
     case clause {
       binding: BindingCondition -> {
-        temporaryName := context.temporary("_condition_value_")
-        layers := emitterAbsenceLayers(binding.value.resolvedType!, context)
-        opening = opening + ind + "auto " + temporaryName + " = " + emitExpression(binding.value, context) + ";\n"
-        opening = opening + ind + "if (!(" + emitAbsentTest(temporaryName, layers, context) + ")) {\n"
-        opening = opening + emitConditionBinding(binding, temporaryName, depth + 1, context)
+        test := clauseTest(binding, context.temporary("_condition_value_"), true, context)
+        opening = opening + ind + test.subject + "\n" + ind + "if (" + test.present + ") {\n"
+        opening = opening + emitConditionBinding(binding, test, depth + 1, context)
       }
       _ -> { opening = opening + ind + "if (" + emitCondition(clause, context) + ") {\n" }
     }
@@ -60,15 +92,12 @@ function emitConditionGuard(condition: Expression, level: int, context: EmitCont
 }
 
 /** Declares a binding clause's name from its tested temporary. */
-function emitConditionBinding(binding: BindingCondition, temporaryName: string, level: int, context: EmitContext): string {
+function emitConditionBinding(binding: BindingCondition, test: ClauseTest, level: int, context: EmitContext): string {
   if binding.name == "_" { return "" }
   bindingType := binding.resolvedBindingType else { panic("Binding condition has no checked binding type: " + binding.name) }
-  subjectType := specializeEmitType(binding.value.resolvedType!, context)
-  layers := emitterAbsenceLayers(subjectType, context)
-  let value = emitPresentValue(temporaryName, layers, context)
-  present := presentType(subjectType)
-  if !sameType(present, specializeEmitType(bindingType, context)) {
-    value = emitCarrierConversion(value, present, bindingType, context)
+  let value = test.value
+  if !sameType(test.presentType, specializeEmitType(bindingType, context)) {
+    value = emitCarrierConversion(value, test.presentType, bindingType, context)
   }
   return emitExtractedLocal(indent(level), binding.name, bindingType, value, true, true)
 }
@@ -107,20 +136,19 @@ function emitBranch(statement: IfStatement, conditions: Expression[], bodies: Bl
     // A single clause owns its else path, which can read the tested value
     // for an `else error` capture.
     let binding: BindingCondition | none = none
-    case clauses[0] {
-      clause: BindingCondition -> { binding = clause }
-      _ -> { }
-    }
+    if clause := clauses[0] as BindingCondition { binding = clause }
     clause := binding else { panic("Binding condition clause expected") }
     temporaryName := context.temporary("_condition_value_")
     subjectType := specializeEmitType(clause.value.resolvedType!, context)
     layers := emitterAbsenceLayers(subjectType, context)
-    let output = ind + "{\n" + inner + "auto " + temporaryName + " = " + emitExpression(clause.value, context) + ";\n"
-    output = output + inner + "if (!(" + emitAbsentTest(temporaryName, layers, context) + ")) {\n"
-    output = output + emitConditionBinding(clause, temporaryName, level + 2, context)
+    failureName := statement.elseFailureName ?? "_"
+    // A failure capture reads the Result's error, so it keeps the Result.
+    test := clauseTest(clause, temporaryName, !last || failureName == "_", context)
+    let output = ind + "{\n" + inner + test.subject + "\n"
+    output = output + inner + "if (" + test.present + ") {\n"
+    output = output + emitConditionBinding(clause, test, level + 2, context)
     output = output + emitGuardedBody(bodies[index], level + 2, context) + inner + "}"
     let capture = ""
-    failureName := statement.elseFailureName ?? "_"
     if last && failureName != "_" {
       errorType := absenceErrorType(subjectType) else { panic("Failure capture reached emission without a Result subject") }
       error := if layers.length == 1 then "doof::failure_error(" + temporaryName + ")" else emitAbsentError(temporaryName, layers, errorType, context)
@@ -158,11 +186,9 @@ export function emitWhileBindingHead(statement: WhileStatement, level: int, cont
   for clause of conditionClauses(statement.condition) {
     case clause {
       binding: BindingCondition -> {
-        temporaryName := context.temporary("_condition_value_")
-        layers := emitterAbsenceLayers(binding.value.resolvedType!, context)
-        output = output + ind + "auto " + temporaryName + " = " + emitExpression(binding.value, context) + ";\n"
-        output = output + ind + "if (" + emitAbsentTest(temporaryName, layers, context) + ") break;\n"
-        output = output + emitConditionBinding(binding, temporaryName, level, context)
+        test := clauseTest(binding, context.temporary("_condition_value_"), true, context)
+        output = output + ind + test.subject + "\n" + ind + "if (!(" + test.present + ")) break;\n"
+        output = output + emitConditionBinding(binding, test, level, context)
       }
       _ -> { output = output + ind + "if (!(" + emitCondition(clause, context) + ")) break;\n" }
     }

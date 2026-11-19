@@ -63,22 +63,10 @@ function emitValueAs(source: string, sourceType: ResolvedType, result: ResultRes
   case sourceType {
     _: SerialValueResolvedType -> { return emitJsonAs(source, target, resultCpp, success, failure) }
     _: ClassType -> {
-      case target {
-        _: InterfaceType -> { return resultCpp + "{" + success + "{doof::variant_promote<" + targetCpp + ">(" + source + ")}}" }
-        _ -> { }
-      }
+      if _ := target as InterfaceType { return resultCpp + "{" + success + "{doof::variant_promote<" + targetCpp + ">(" + source + ")}}" }
     }
-    interface_: InterfaceType -> {
-      case target {
-        _: ClassType -> {
-          return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (std::holds_alternative<" + targetCpp + ">(_as_value)) return " + success + "{std::get<" + targetCpp + ">(_as_value)}; return " + failure + "{\"Interface narrowing failed\"}; }()"
-        }
-        // Another interface keeps each shared implementation as its own arm.
-        _: InterfaceType -> {
-          return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (doof::variant_is<" + targetCpp + ">(_as_value)) return " + success + "{doof::variant_narrow<" + targetCpp + ">(_as_value)}; return " + failure + "{\"Interface narrowing failed\"}; }()"
-        }
-        _ -> { }
-      }
+    _: InterfaceType -> {
+      if typeTest := asValueTypeTest("_as_value", sourceType, target, context) { return wrapTypeTest(source, typeTest, resultCpp, success, failure) }
     }
     union_: UnionResolvedType -> {
       if unionContainsJsonValue(union_) {
@@ -86,39 +74,77 @@ function emitValueAs(source: string, sourceType: ResolvedType, result: ResultRes
         jsonNarrowing := emitJsonAs(narrowedJson, target, resultCpp, success, failure)
         return "[&]() -> " + resultCpp + " { auto _as_nullable = " + source + "; if (doof::is_null(_as_nullable)) return " + failure + "{\"SerialValue narrowing failed\"}; return " + jsonNarrowing + "; }()"
       }
-      if member := naturalNullableUnionMember(union_) {
-        if sameType(member, target) {
-          case target {
-            class_: ClassType -> {
-              if class_.symbol.kind == "struct" {
-                return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value.has_value()) return " + success + "{_as_value.value()}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
-              }
-              return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value) return " + success + "{_as_value}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
-            }
-            _: ArrayResolvedType -> {
-              return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value) return " + success + "{_as_value}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
-            }
-            _: PrimitiveType -> {
-              return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value.has_value()) return " + success + "{_as_value.value()}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
-            }
-            _: EnumType -> {
-              return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value.has_value()) return " + success + "{_as_value.value()}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
-            }
-            _ -> { }
-          }
-        }
-        if isNumeric(member) && isNumeric(target) {
-          return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (!_as_value.has_value()) return " + failure + "{\"Nullable narrowing failed\"}; auto _as_checked = doof::checked_numeric_as<" + targetCpp + ">(_as_value.value()); if (_as_checked.has_value()) return " + success + "{_as_checked.value()}; return " + failure + "{\"Numeric narrowing failed\"}; }()"
-        }
+      if typeTest := asValueTypeTest("_as_value", sourceType, target, context) { return wrapTypeTest(source, typeTest, resultCpp, success, failure) }
+      if member := naturalNullableUnionMember(union_) && isNumeric(member) && isNumeric(target) {
+        return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (!_as_value.has_value()) return " + failure + "{\"Nullable narrowing failed\"}; auto _as_checked = doof::checked_numeric_as<" + targetCpp + ">(_as_value.value()); if (_as_checked.has_value()) return " + success + "{_as_checked.value()}; return " + failure + "{\"Numeric narrowing failed\"}; }()"
       }
       if isNumeric(target) && unionHasNumericMember(union_) {
         return emitNumericUnionAs(source, union_, targetCpp, resultCpp, success, failure, context)
       }
-      return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (doof::variant_is<" + targetCpp + ">(_as_value)) return " + success + "{doof::variant_narrow<" + targetCpp + ">(_as_value)}; return " + failure + "{\"Union narrowing failed\"}; }()"
     }
     _ -> { }
   }
   return ""
+}
+
+/**
+ * A narrowing `as` that is a plain test on its source value: a variant arm,
+ * an interface implementation, or a natural nullable's present value. `test`
+ * and `value` read the source through `sourceName`. A binding condition uses
+ * them directly; `emitAs` wraps them in a Result with `failure` as its error.
+ */
+export class AsTypeTest {
+  test: string
+  value: string
+  failure: string
+}
+
+/** The direct test for `expression`, or none when its narrowing needs a Result. */
+export function asTypeTest(expression: AsExpression, sourceName: string, context: EmitContext): AsTypeTest | none {
+  sourceType := specializeEmitType(requireExpressionType(expression.expression, "as source"), context)
+  result := specializeEmitType(requireExpressionType(expression, "as expression"), context) as ResultResolvedType else { return none }
+  return asValueTypeTest(sourceName, sourceType, result.valueType, context)
+}
+
+function asValueTypeTest(source: string, sourceType: ResolvedType, target: ResolvedType, context: EmitContext): AsTypeTest | none {
+  if sameType(sourceType, target) || isNumeric(sourceType) && isNumeric(target) { return none }
+  targetCpp := emitContextType(target, context)
+  case sourceType {
+    _: InterfaceType -> {
+      case target {
+        _: ClassType -> { return AsTypeTest { test: "std::holds_alternative<" + targetCpp + ">(" + source + ")", value: "std::get<" + targetCpp + ">(" + source + ")", failure: "Interface narrowing failed" } }
+        // Another interface keeps each shared implementation as its own arm.
+        _: InterfaceType -> { return AsTypeTest { test: "doof::variant_is<" + targetCpp + ">(" + source + ")", value: "doof::variant_narrow<" + targetCpp + ">(" + source + ")", failure: "Interface narrowing failed" } }
+        _ -> { }
+      }
+    }
+    union_: UnionResolvedType -> {
+      if unionContainsJsonValue(union_) { return none }
+      if member := naturalNullableUnionMember(union_) {
+        if sameType(member, target) {
+          case target {
+            class_: ClassType -> {
+              if class_.symbol.kind == "struct" { return AsTypeTest { test: source + ".has_value()", value: source + ".value()", failure: "Nullable narrowing failed" } }
+              return AsTypeTest { test: source, value: source, failure: "Nullable narrowing failed" }
+            }
+            _: ArrayResolvedType -> { return AsTypeTest { test: source, value: source, failure: "Nullable narrowing failed" } }
+            _: PrimitiveType -> { return AsTypeTest { test: source + ".has_value()", value: source + ".value()", failure: "Nullable narrowing failed" } }
+            _: EnumType -> { return AsTypeTest { test: source + ".has_value()", value: source + ".value()", failure: "Nullable narrowing failed" } }
+            _ -> { }
+          }
+        }
+        if isNumeric(member) && isNumeric(target) { return none }
+      }
+      if isNumeric(target) && unionHasNumericMember(union_) { return none }
+      return AsTypeTest { test: "doof::variant_is<" + targetCpp + ">(" + source + ")", value: "doof::variant_narrow<" + targetCpp + ">(" + source + ")", failure: "Union narrowing failed" }
+    }
+    _ -> { }
+  }
+  return none
+}
+
+function wrapTypeTest(source: string, typeTest: AsTypeTest, resultCpp: string, success: string, failure: string): string {
+  return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (" + typeTest.test + ") return " + success + "{" + typeTest.value + "}; return " + failure + "{\"" + typeTest.failure + "\"}; }()"
 }
 
 function emitAsFailureValue(source: ResultResolvedType, target: ResultResolvedType, context: EmitContext): string {
@@ -147,10 +173,7 @@ function emitNumericUnionAs(source: string, union_: UnionResolvedType, targetCpp
 
 function unionContainsJsonValue(union_: UnionResolvedType): bool {
   for member of union_.types {
-    case member {
-      _: SerialValueResolvedType -> { return true }
-      _ -> { }
-    }
+    if _ := member as SerialValueResolvedType { return true }
   }
   return false
 }
@@ -218,14 +241,11 @@ function emitCoalescingAssignment(expression: AssignmentExpression, context: Emi
   layers := emitterAbsenceLayers(targetResolved, context)
   test := if layers.length == 0 then "doof::is_null(_assignment_target)" else emitAbsentTest("_assignment_target", layers, context)
   let value = emitExpression(expression.value, context, targetResolved)
-  case targetResolved {
-    result: ResultResolvedType -> {
-      valueKind := requireExpressionType(expression.value, "coalescing assignment value").kind
-      if valueKind != "result" && valueKind != "success" && valueKind != "failure" && valueKind != "never" {
-        value = "doof::Success<" + emitContextType(result.valueType, context) + ">{" + emitExpression(expression.value, context, result.valueType) + "}"
-      }
+  if result := targetResolved as ResultResolvedType {
+    valueKind := requireExpressionType(expression.value, "coalescing assignment value").kind
+    if valueKind != "result" && valueKind != "success" && valueKind != "failure" && valueKind != "never" {
+      value = "doof::Success<" + emitContextType(result.valueType, context) + ">{" + emitExpression(expression.value, context, result.valueType) + "}"
     }
-    _ -> { }
   }
   return "[&]() -> " + emitContextType(targetResolved, context) + " { auto&& _assignment_target = " + target + "; if (" + test + ") { _assignment_target = " + value + "; } return _assignment_target; }()"
 }
@@ -234,11 +254,8 @@ function emitAssignmentTarget(target: Expression, context: EmitContext): string 
   case target {
     index: IndexExpression -> {
       if objectType := decoratedExpressionType(index.object) {
-        case objectType {
-          map: MapResolvedType -> {
-            return "doof::map_index(" + emitExpression(index.object, context) + ", " + emitExpression(index.index, context, map.keyType) + ", " + quote(moduleDiagnosticPath(context.modulePath, true, context.names)) + ", " + string(index.span.start.line) + ")"
-          }
-          _ -> { }
+        if map := objectType as MapResolvedType {
+          return "doof::map_index(" + emitExpression(index.object, context) + ", " + emitExpression(index.index, context, map.keyType) + ", " + quote(moduleDiagnosticPath(context.modulePath, true, context.names)) + ", " + string(index.span.start.line) + ")"
         }
       }
     }
@@ -426,24 +443,15 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
   if expression.resolvedOptionalReceiver != none && expression.resolvedOptionalValue != none { return emitOptionalMember(expression, context) }
   object := emitExpression(expression.object, context)
   let objectType = decoratedExpressionType(expression.object)
-  case objectType {
-    _: WeakResolvedType -> {
-      if expression.optional || expression.force { return emitWeakFieldAccess(expression, object, context) }
-    }
-    _ -> { }
+  if _ := objectType as WeakResolvedType {
+    if expression.optional || expression.force { return emitWeakFieldAccess(expression, object, context) }
   }
-  case expression.object {
-    this_: ThisExpression -> {
-      let nativeOwner = false
-      if resolvedType := this_.resolvedType {
-        case resolvedType {
-          class_: ClassType -> { nativeOwner = class_.symbol.native_ }
-          _ -> { }
-        }
-      }
-      return "this->" + (if nativeOwner then expression.property else cppIdentifier(expression.property))
+  if this_ := expression.object as ThisExpression {
+    let nativeOwner = false
+    if resolvedType := this_.resolvedType {
+      if class_ := resolvedType as ClassType { nativeOwner = class_.symbol.native_ }
     }
-    _ -> { }
+    return "this->" + (if nativeOwner then expression.property else cppIdentifier(expression.property))
   }
   let staticObjectType = decoratedExpressionType(expression.object)
   case staticObjectType {
@@ -462,10 +470,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
       // `T.name` through an interface bound's static members lowers to the
       // concrete argument's own static member.
       if isTypeParameterName(expression.object) {
-        case specialized {
-          concrete: ClassType -> { return emitContextClassInnerType(concrete, context) + "::" + (if concrete.symbol.native_ then expression.property else cppIdentifier(expression.property)) }
-          _ -> { }
-        }
+        if concrete := specialized as ClassType { return emitContextClassInnerType(concrete, context) + "::" + (if concrete.symbol.native_ then expression.property else cppIdentifier(expression.property)) }
       }
     }
     class_: ClassType -> {
@@ -491,19 +496,13 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
   // Nominal fields and methods take precedence over builtin and aggregate
   // pseudo-members. This keeps ordinary members named length, kind,
   // resolvedType, span, push, or value from being rewritten as accessors.
-  case staticObjectType {
-    class_: ClassType -> {
-      memberName := if class_.symbol.native_ then expression.property else cppIdentifier(expression.property)
-      return object + (if class_.symbol.kind == "struct" then "." else "->") + memberName
-    }
-    _ -> { }
+  if class_ := staticObjectType as ClassType {
+    memberName := if class_.symbol.native_ then expression.property else cppIdentifier(expression.property)
+    return object + (if class_.symbol.kind == "struct" then "." else "->") + memberName
   }
   let callableMember = false
   if resolvedType := expression.resolvedType {
-    case resolvedType {
-      _: FunctionType -> { callableMember = true }
-      _ -> { }
-    }
+    if _ := resolvedType as FunctionType { callableMember = true }
   }
   if empty := implementationlessInterface(staticObjectType, context) { return emitNoImplementationsAccess(object, empty, expression.resolvedType, context) }
   if !callableMember && staticObjectType != none && usesVariantRepresentation(staticObjectType!) {
@@ -575,10 +574,7 @@ export function emitIndex(expression: IndexExpression, context: EmitContext): st
   objectType := decoratedExpressionType(expression.object)
   // Map keys convert to the key representation, e.g. a member into a union key.
   let indexTarget: ResolvedType | none = none
-  case objectType {
-    map: MapResolvedType -> { indexTarget = map.keyType }
-    _ -> { }
-  }
+  if map := objectType as MapResolvedType { indexTarget = map.keyType }
   index := emitExpression(expression.index, context, indexTarget)
   sourcePath := quote(moduleDiagnosticPath(context.modulePath, true, context.names))
   sourceLine := string(expression.span.start.line)

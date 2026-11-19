@@ -176,3 +176,45 @@ export function testDiscardBindingsTestResultNoneForSuccess(): none {
   while _ := conditionSave(loops < 2) { loops = loops + 1 }
   Assert.equal(loops, 2)
 }
+
+class ConditionCircle { radius: int }
+class ConditionSquare { side: int }
+
+function conditionArea(shape: ConditionCircle | ConditionSquare | none): int {
+  if circle := shape as ConditionCircle { return circle.radius * 3 }
+  else if square := shape as ConditionSquare && square.side > 0 { return square.side * square.side }
+  return 0
+}
+
+export function testAsBindingsNarrowEachArm(): none {
+  Assert.equal(conditionArea(ConditionCircle { radius: 2 }), 6)
+  Assert.equal(conditionArea(ConditionSquare { side: 3 }), 9)
+  Assert.equal(conditionArea(ConditionSquare { side: 0 }), 0)
+  Assert.equal(conditionArea(none), 0)
+  let sides = 0
+  shapes: (ConditionCircle | ConditionSquare)[] := [ConditionSquare { side: 2 }, ConditionSquare { side: 4 }, ConditionCircle { radius: 1 }]
+  let index = 0
+  while square := shapes[index] as ConditionSquare {
+    sides += square.side
+    index += 1
+  }
+  Assert.equal(sides, 6)
+}
+
+export function testAsBindingsTestTheVariantWithoutAResult(): none {
+  source := emittedSource("class A { x: int }\nclass B { y: int }\n" +
+    "function f(v: A | B): int { if a := v as A { return a.x }\nreturn 0 }\n" +
+    "function g(v: A | B): int { if a := v as A && a.x > 0 { return a.x }\nreturn 0 }\n" +
+    "function h(v: A | B): none { while a := v as A { println(a.x)\nbreak } }")
+  Assert.stringContains(source, "auto&& _condition_value_")
+  Assert.stringContains(source, "if (doof::variant_is<std::shared_ptr<A>>(_condition_value_")
+  Assert.stringContains(source, "doof::variant_narrow<std::shared_ptr<A>>(_condition_value_")
+  Assert.stringNotContains(source, "Union narrowing failed")
+}
+
+export function testAsBindingWithFailureCaptureKeepsTheResult(): none {
+  source := emittedSource("class A { x: int }\nclass B { y: int }\n" +
+    "function f(v: A | B): string { if a := v as A { return \"a\" } else problem { return problem } }")
+  Assert.stringContains(source, "Union narrowing failed")
+  Assert.stringContains(source, "doof::failure_error(_condition_value_")
+}

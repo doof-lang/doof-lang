@@ -246,7 +246,12 @@ records its subject type and `resolvedBindingType`, and the emitter tests the
 subject's absence layers (`emitter-absence.do`) without re-deciding them. Each
 subject is evaluated once into a `_condition_value_N` temporary, its layers are
 tested, and the binding is declared from the unwrapped temporary inside the
-test, so later clauses and the body see it and the else path does not. A single
+test, so later clauses and the body see it and the else path does not. A
+narrowing `as` subject whose narrowing is a plain test (a union or interface
+arm, or a natural nullable's present value) skips the `Result`: `asTypeTest` in
+`emitter-expr-ops.do` supplies the test and the narrowed value, the clause binds
+the source by reference, and `emitAs` wraps the same test when a `Result` is
+needed, including for an `else error` capture. A single
 binding clause owns its C++ `else`, which is where an `else error` capture reads
 the Failure. A condition with several clauses nests one test per clause and
 sets a `_condition_held_N` flag before the body; the rest of the chain runs
