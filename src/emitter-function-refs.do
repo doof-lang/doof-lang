@@ -31,8 +31,7 @@ export function emitCalleeExpression(callee: Expression, context: EmitContext): 
 /** Wraps an identifier naming a function or method as a callback value. */
 export function emitIdentifierValue(identifier: Identifier, emitted: string, context: EmitContext, expected: ResolvedType | none = none): string {
   let value = emitted
-  if identifier.resolvedBinding == none { return value }
-  binding := identifier.resolvedBinding!
+  binding := identifier.resolvedBinding else { return value }
   // A generic reference names its concrete instantiation instead.
   if reference := identifier.resolvedGenericReference { value = concreteReferenceName(identifier, reference, context) }
   signature := referenceSignature(identifier.resolvedType, expected, context)

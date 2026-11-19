@@ -497,13 +497,13 @@ function markJsonKeyVisited(key: string, visited: string[]): bool {
 }
 
 export function jsonOwnerKey(owner: ClassDeclaration): string {
-  module := if owner.resolvedSymbol == none then "" else owner.resolvedSymbol!.module
+  module := owner.resolvedSymbol?.module ?? ""
   return module + "::" + owner.name
 }
 
 /** Interfaces share the class key space; one module cannot declare both names. */
 export function jsonInterfaceKey(owner: InterfaceDeclaration): string {
-  module := if owner.resolvedSymbol == none then "" else owner.resolvedSymbol!.module
+  module := owner.resolvedSymbol?.module ?? ""
   return module + "::" + owner.name
 }
 

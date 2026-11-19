@@ -65,7 +65,7 @@ export function reusableEditorModules(previous: FrontendResult, sources: SourceF
 export function analyzeEditor(sources: SourceFile[], entry: string, previous: FrontendResult | none = none, additionalEntries: string[] = [], timings: PhaseTimings = PhaseTimings {}): FrontendResult {
   reusable: ModuleInfo[] := if previous == none || previous!.entry != entry || !sameEntries(previous!.additionalEntries, additionalEntries) then [] else reusableEditorModules(previous!, sources)
   // Keep the snapshot source list independent of subsequent caller edits.
-  return analyzeWithLoader(sources.cloneMutable(), entry, noSourceLoader, "executable", timings, true, true, reusable, additionalEntries, if previous == none then none else previous!.isolation)
+  return analyzeWithLoader(sources.cloneMutable(), entry, noSourceLoader, "executable", timings, true, true, reusable, additionalEntries, previous?.isolation)
 }
 
 function importsFingerprint(source: string): string {

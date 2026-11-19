@@ -294,7 +294,7 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
   if typeAnnotation := annotation && inferredCollectionType == none { annotatedType = resolveType(state, typeAnnotation, state.info!, scope) }
   let expectedValueType: ResolvedType | none = if elseBlock == none then annotatedType else none
   if kind == "readonly" && expectedValueType != none { expectedValueType = applyDeepReadonly(expectedValueType!) }
-  let valueType = if inferredCollectionType == none then checkExpression(state, value, scope, expectedValueType) else inferredCollectionType!
+  let valueType = inferredCollectionType ?? checkExpression(state, value, scope, expectedValueType)
   let declaredType: ResolvedType = annotatedType ?? valueType
   if kind == "readonly" {
     valueType = applyDeepReadonly(valueType)
@@ -848,7 +848,7 @@ export function checkBlock(state: CheckerState, block: Block, parent: Scope, inL
 
 /** Checks declaration and assignment destructuring against an already-resolved source shape. */
 export function checkDestructuring(state: CheckerState, statement: DestructuringStatement, scope: Scope, sourceType: ResolvedType | none): none {
-  valueType := if sourceType == none then checkExpression(state, statement.value, scope, none) else sourceType!
+  valueType := sourceType ?? checkExpression(state, statement.value, scope, none)
   let bindingTypes: ResolvedType[] = []
 
   if statement.kind.startsWith("array-destructuring") {
@@ -947,8 +947,7 @@ export function inferredReturn(state: CheckerState, block: Block): ResolvedType 
   for statement of block.statements {
     case statement {
       return_: ReturnStatement -> {
-        if return_.value == none { return noneType() }
-        value := return_.value!
+        value := return_.value else { return noneType() }
         return value.resolvedType ?? unknownType()
       }
       _ -> { }

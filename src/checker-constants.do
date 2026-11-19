@@ -8,9 +8,8 @@ export function constantInt(expression: Expression): long | none {
     literal: IntLiteral -> { return long(literal.value) }
     unary: UnaryExpression -> {
       if !unary.prefix || (unary.operator != "+" && unary.operator != "-") { return none }
-      operand := constantInt(unary.operand)
-      if operand == none { return none }
-      result := if unary.operator == "-" then -operand! else operand!
+      operand := constantInt(unary.operand) else { return none }
+      result := if unary.operator == "-" then -operand else operand
       if result < -2147483648L || result > 2147483647L { return none }
       return result
     }

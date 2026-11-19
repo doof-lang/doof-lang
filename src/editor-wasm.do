@@ -20,7 +20,7 @@ class EditorState { let current: EditorIndex | none = none }
 state := EditorState {}
 
 export function analyze(sources: SourceFile[], entry: string, additionalEntries: string[] = []): Diagnostic[] {
-  previous := if state.current == none then none else state.current!.frontend
+  previous := state.current?.frontend
   frontend := analyzeEditor(sources, entry, previous, additionalEntries)
   state.current = createEditorIndex(frontend)
   return frontend.diagnostics

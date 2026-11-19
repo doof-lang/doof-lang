@@ -44,7 +44,7 @@ export function planHeaderAliases(plan: HeaderPlan, namespace: string, state: He
       state.nextIndex += 1
       while reserved.has(name) { name = "doof_header_type_" + string(state.nextIndex); state.nextIndex += 1 }
       reserved.add(name)
-      aliases.declarations.push("using " + name + " = " + (if registry == none then renderCppType(use.type_, namespace) else registry!.render(use.type_, namespace)) + ";\n")
+      aliases.declarations.push("using " + name + " = " + (if typeRegistry := registry then typeRegistry.render(use.type_, namespace) else renderCppType(use.type_, namespace)) + ";\n")
       aliases.definitionNames.set(use.type_.id, name)
     }
     aliases.names.set(use.type_.id, name)

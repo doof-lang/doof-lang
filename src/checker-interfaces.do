@@ -122,7 +122,7 @@ function classSatisfiesConcreteInterfaceSeen(result: AnalysisResult, class_: Cla
         if required.let_ && !actualField!.let_ { return false }
         actualBase := resolvedClassFieldType(result, actualField!, classType_.symbol, class_.typeParams)
         if actualBase == none { return false }
-        requiredBase := if required.resolvedType == none then resolveAnnotation(required.type_, classModuleFor(result, interfaceType_.symbol), result, interface_.typeParams) else required.resolvedType!
+        requiredBase := required.resolvedType ?? resolveAnnotation(required.type_, classModuleFor(result, interfaceType_.symbol), result, interface_.typeParams)
         actual := substituteTypeParams(actualBase!, class_.typeParams, classType_.typeArgs)
         expected := substituteTypeParams(if required.readonly_ then applyDeepReadonly(requiredBase) else requiredBase, interface_.typeParams, interfaceType_.typeArgs)
         if required.let_ && !sameType(actual, expected) { return false }
@@ -132,7 +132,7 @@ function classSatisfiesConcreteInterfaceSeen(result: AnalysisResult, class_: Cla
         actualMethod := findClassMethod(class_.methods, requiredMethod.name, requiredMethod.static_)
         if actualMethod == none || actualMethod!.private_ { return false }
         actualBase := if actualMethod!.resolvedType == none then methodSignature(actualMethod!, classModuleFor(result, classType_.symbol), result, class_.typeParams) else actualMethod!.resolvedType!
-        requiredBase := if requiredMethod.resolvedType == none then methodSignature(requiredMethod, classModuleFor(result, interfaceType_.symbol), result, interface_.typeParams) else requiredMethod.resolvedType!
+        requiredBase := requiredMethod.resolvedType ?? methodSignature(requiredMethod, classModuleFor(result, interfaceType_.symbol), result, interface_.typeParams)
         actual := substituteTypeParams(actualBase, class_.typeParams, classType_.typeArgs)
         expected := substituteTypeParams(requiredBase, interface_.typeParams, interfaceType_.typeArgs)
         if !compatibleConcreteMethodType(result, actual, expected, next) { return false }

@@ -87,8 +87,7 @@ function checkTryAssignment(state: CheckerState, statement: TryStatement, assign
     return true
   }
   assigned := checkAssignment(state, assignment, scope, true)
-  if assignment.resolvedTriedResult == none { return true }
-  result := assignment.resolvedTriedResult!
+  result := assignment.resolvedTriedResult else { return true }
   validatePropagation(state, scope, result.errorType, statement.span)
   if result.valueType.kind == "none" { typeError(state, "Cannot bind a none success value; use bare 'try expr'", statement.span) }
   return assigned.kind != "never"

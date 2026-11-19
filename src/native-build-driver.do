@@ -458,7 +458,7 @@ function readBuildState(path: string): NativeBuildState {
   if !exists(path) { return NativeBuildState {} }
   source := readText(path) else { return NativeBuildState {} }
   parsed := parseNativeBuildState(source)
-  return if parsed == none then NativeBuildState {} else parsed!
+  return parsed ?? NativeBuildState {}
 }
 
 function writeBuildState(path: string, state: NativeBuildState): none {

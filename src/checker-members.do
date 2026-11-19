@@ -279,8 +279,7 @@ function weakAccessTarget(type_: ResolvedType): ResolvedType {
 function isNamedStaticReceiver(expression: Expression): bool {
   case expression {
     identifier: Identifier -> {
-      if identifier.resolvedBinding == none { return false }
-      binding := identifier.resolvedBinding!
+      binding := identifier.resolvedBinding else { return false }
       if binding.kind == "type-parameter" || binding.kind == "class" || binding.kind == "struct" || binding.kind == "interface" || binding.kind == "enum" { return true }
       if binding.kind == "import" && binding.symbol != none {
         kind := binding.symbol!.kind

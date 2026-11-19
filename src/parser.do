@@ -274,8 +274,7 @@ export class Parser {
   }
 
   immediatelyAfterPrevious(): bool {
-    if previousToken == none { return false }
-    previous := previousToken!
+    previous := previousToken else { return false }
     return previous.offset + previous.length == current().offset
   }
 

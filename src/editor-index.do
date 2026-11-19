@@ -197,7 +197,7 @@ export function createEditorIndex(frontend: FrontendResult, modules: string[] = 
             })
           }
         }
-        object: ObjectLiteral -> { addProperties(index, object.properties, module.path, if object.resolvedConstruction == none then none else object.resolvedConstruction!.owner) }
+        object: ObjectLiteral -> { addProperties(index, object.properties, module.path, object.resolvedConstruction?.owner) }
         construct: ConstructExpression -> {
           case construct.resolvedConstructedType {
             constructed: ClassType -> {

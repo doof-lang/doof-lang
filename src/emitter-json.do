@@ -161,8 +161,7 @@ function emitJsonConstFieldValidation(field: ClassField, name: string, context: 
   }
   // Remaining literal and enum-member values decode with the field's own type
   // and compare against the constant; a mismatch fails instead of being ignored.
-  if field.resolvedType == none { return "" }
-  type_ := field.resolvedType!
+  type_ := field.resolvedType else { return "" }
   if type_.kind != "primitive" && type_.kind != "enum" { return "" }
   json := iterator + "->second"
   message := quote("Field \"" + name + "\" must be " + constFieldDisplay(field.defaultValue!))
@@ -325,7 +324,7 @@ function jsonKindCheck(json: string, jsonKind: string): string {
 // A union accepts exactly the JSON kinds of its members, before any lenient
 // conversion, matching the dispatch in emitJsonUnionRead.
 function emitJsonUnionTypeCheck(json: string, union_: UnionResolvedType, context: EmitContext | none): string {
-  layout := jsonUnionLayout(union_, if context == none then [] else context!.declarations.programs) else { return "false" }
+  layout := jsonUnionLayout(union_, context?.declarations.programs ?? []) else { return "false" }
   let kinds: string[] = []
   if layout.hasNone { kinds.push("null") }
   for arm of layout.arms { if !kinds.contains(arm.jsonKind) { kinds.push(arm.jsonKind) } }
@@ -371,7 +370,7 @@ function emitJsonUnionClassesRead(json: string, union_: UnionResolvedType, union
 }
 
 function jsonUnionTypeName(union_: UnionResolvedType, context: EmitContext | none): string {
-  layout := jsonUnionLayout(union_, if context == none then [] else context!.declarations.programs) else { return "value" }
+  layout := jsonUnionLayout(union_, context?.declarations.programs ?? []) else { return "value" }
   let names: string[] = []
   for arm of layout.arms {
     name := jsonTypeName(arm.member, context)

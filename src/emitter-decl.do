@@ -27,7 +27,7 @@ import { emitGeneratedJsonDeclarations } from "./emitter-json"
 import { emitMetadataDeclaration } from "./emitter-metadata"
 
 export function emitFunctionSignature(fn: FunctionDeclaration, name: string = "", modulePath: string = "", context: EmitContext | none = none): string {
-  return renderDeclaration(planFunctionSignature(fn, name, modulePath, context), typeNamespace(modulePath, if context == none then ModuleNames {} else context!.names), {}, if context == none then none else context!.cppTypes)
+  return renderDeclaration(planFunctionSignature(fn, name, modulePath, context), typeNamespace(modulePath, context?.names ?? ModuleNames {}), {}, context?.cppTypes)
 }
 
 export function planFunctionSignature(fn: FunctionDeclaration, name: string = "", modulePath: string = "", context: EmitContext | none = none): CppDeclaration {
@@ -104,7 +104,7 @@ function emitCallableDefinition(fn: FunctionDeclaration, context: EmitContext, n
 }
 
 export function emitFunctionDeclaration(fn: FunctionDeclaration, name: string = "", modulePath: string = "", context: EmitContext | none = none): string {
-  return renderDeclaration(planFunctionDeclaration(fn, name, modulePath, context), typeNamespace(modulePath, if context == none then ModuleNames {} else context!.names), {}, if context == none then none else context!.cppTypes)
+  return renderDeclaration(planFunctionDeclaration(fn, name, modulePath, context), typeNamespace(modulePath, context?.names ?? ModuleNames {}), {}, context?.cppTypes)
 }
 
 export function planFunctionDeclaration(fn: FunctionDeclaration, name: string = "", modulePath: string = "", context: EmitContext | none = none): CppDeclaration {

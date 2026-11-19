@@ -154,7 +154,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
       declaration := declarationFor(state.result, class_.symbol)
       if expression.typeArgs.length > 0 {
         let declaredTypeParams: string[] = []
-        let constraints: TypeParameterConstraint[] = if expression.resolvedClass == none then [] else expression.resolvedClass!.typeParamConstraints
+        let constraints: TypeParameterConstraint[] = expression.resolvedClass?.typeParamConstraints ?? []
         if targetDeclaration := declaration { case targetDeclaration { classDeclaration: ClassDeclaration -> { declaredTypeParams = classDeclaration.typeParams; constraints = classDeclaration.typeParamConstraints } _ -> { } } }
         if expression.typeArgs.length != declaredTypeParams.length {
           typeError(state, typeArgumentArityMessage("Generic construction", declaredTypeParams.length, expression.typeArgs.length), expression.span)

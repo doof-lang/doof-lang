@@ -454,8 +454,7 @@ function collectConstructionEffects(index: IsolationIndex, plan: CheckedConstruc
 // stay in the domain that creates them unless they cross a boundary, which
 // validateModuleIsolationEffects checks, so creation commits to the destructor.
 function collectDestructorEffects(index: IsolationIndex, class_: ClassDeclaration, span: SourceSpan | none, effects: IsolationEffects): none {
-  if class_.destructor_ == none { return }
-  releaser := class_.destructor_!
+  releaser := class_.destructor_ else { return }
   if effects.visitedDestructors.contains(releaser) { return }
   effects.visitedDestructors.push(releaser)
   let roots: Expression[] = []

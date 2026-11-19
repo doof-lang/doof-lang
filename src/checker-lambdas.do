@@ -45,7 +45,7 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
       typeError(state, "Binding '" + parameter.name + "' is already declared in this scope", parameter.span)
     }
   }
-  let returnType = if expectedFunction == none then unknownType() else expectedFunction!.returnType
+  let returnType = expectedFunction?.returnType ?? unknownType()
   if annotation := expression.returnType {
     returnType = resolveType(state, annotation, state.info!, lambdaScope)
     decorateAnnotationWithResolved(annotation, returnType)

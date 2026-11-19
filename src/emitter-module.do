@@ -220,8 +220,8 @@ class CxxModuleEmitter {
     sectionPlan := planHeader(
       view.program,
       sectionContext,
-      if instantiations == none then [] else instantiations!.methods,
-      if instantiations == none then [] else instantiations!.classes,
+      instantiations?.methods ?? [],
+      instantiations?.classes ?? [],
     )
     for name of view.forwardClassNames {
       declaration := "struct " + name + ";\n"

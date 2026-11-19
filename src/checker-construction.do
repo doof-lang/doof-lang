@@ -174,7 +174,7 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
       if spreadType := constructionSpreadFieldType(state, expression, parameter.name) { spread.push(FunctionParamType { name: parameter.name, type_: spreadType, hasDefault: false }) }
     }
     checkArguments(state, propertyArguments(expression.args), plan.signature.params, scope, expression.span,
-      "Class \"" + constructed.name + "\"", "Argument", true, true, spread, if expression.spread == none then none else expression.spread!.span, true)
+      "Class \"" + constructed.name + "\"", "Argument", true, true, spread, expression.spread?.span, true)
     return finish(state, expression, plan.signature.returnType)
   }
   if resolvedClass := expression.resolvedClass { checkClassProperties(state, expression.args, scope, constructed, resolvedClass, expression.span, false, expression) }

@@ -119,7 +119,7 @@ function readResourceState(path: string): ResourceState {
   if !exists(path) { return ResourceState {} }
   source := readText(path) else { return ResourceState {} }
   parsed := parseResourceState(source)
-  return if parsed == none then ResourceState {} else parsed!
+  return parsed ?? ResourceState {}
 }
 
 function materializeTrackedResource(

@@ -61,8 +61,7 @@ function emitConstructionValue(inputs: ConstructionInputs, name: string, index: 
 }
 
 export function emitClassCall(expression: CallExpression, context: EmitContext): string | none {
-  if expression.resolvedConstruction == none { return none }
-  plan := expression.resolvedConstruction!
+  plan := expression.resolvedConstruction else { return none }
   if plan.factory != expression.resolvedConstructor { panic("Construction has no resolved constructor consistent with its checked plan") }
   inputs := ConstructionInputs { args: expression.args, named: hasNamedArguments(expression.args), span: expression.span }
   return emitPlannedConstruction(plan, inputs, context)
