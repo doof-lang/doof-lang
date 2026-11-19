@@ -8,13 +8,13 @@ import { neverType, typeName, unionType } from "./checker-types"
 
 export function pathType(state: CheckerState, left: ResolvedType, right: ResolvedType, expected: ResolvedType | none, span: SourceSpan): ResolvedType {
   if left.kind == "never" && right.kind == "never" { return left }
-  if expected != none && expected!.kind != "unknown" {
+  if expectedType := expected && expectedType.kind != "unknown" {
     for actual of [left, right] {
-      if !isAssignableWithInterfaces(state.result, actual, expected!) {
-        typeError(state, "Cannot use " + typeName(actual) + " in expression expecting " + typeName(expected!), span)
+      if !isAssignableWithInterfaces(state.result, actual, expectedType) {
+        typeError(state, "Cannot use " + typeName(actual) + " in expression expecting " + typeName(expectedType), span)
       }
     }
-    return expected!
+    return expectedType
   }
   if left.kind == "unknown" || left.kind == "never" { return right }
   if right.kind == "unknown" || right.kind == "never" { return left }

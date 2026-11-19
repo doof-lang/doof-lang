@@ -17,20 +17,19 @@ import { discardDiagnosticsSince, finish, typeError } from "./checker-common"
 import { checkPropertyValue, checkAssignableProperty, sameFixedFieldValue } from "./checker-properties"
 
 export function resolveConstructor(state: CheckerState, owner: ClassType, useFactory: bool = true): CheckedConstruction {
-  target := declarationFor(state.result, owner.symbol)
   let declaration: ClassDeclaration | none = none
-  if target != none { case target! { class_: ClassDeclaration -> { declaration = class_ } _ -> { } } }
+  if class_ := declarationFor(state.result, owner.symbol) as ClassDeclaration { declaration = class_ }
   let factory: FunctionDeclaration | none = none
-  if useFactory && declaration != none {
-    for method of declaration!.methods { if method.name == "constructor" { factory = method; break } }
+  if useFactory && classDeclaration := declaration {
+    for method of classDeclaration.methods { if method.name == "constructor" { factory = method; break } }
   }
-  if factory != none {
-    signature := factory!.resolvedType ?? methodSignature(factory!, classModuleFor(state.result, owner.symbol), state.result, owner.symbol.typeParams)
-    specialized := if declaration == none then signature else substituteTypeParams(signature, declaration!.typeParams, owner.typeArgs)
+  if factoryMethod := factory {
+    signature := factoryMethod.resolvedType ?? methodSignature(factoryMethod, classModuleFor(state.result, owner.symbol), state.result, owner.symbol.typeParams)
+    specialized := if classDeclaration := declaration then substituteTypeParams(signature, classDeclaration.typeParams, owner.typeArgs) else signature
     case specialized {
       fn: FunctionType -> {
         let defaults: ConstructionDefault[] = []
-        for parameter of factory!.params { defaults.push(ConstructionDefault { value: parameter.defaultValue }) }
+        for parameter of factoryMethod.params { defaults.push(ConstructionDefault { value: parameter.defaultValue }) }
         return CheckedConstruction { owner, declaration, factory, signature: fn, defaults }
       }
       _ -> { }
@@ -38,8 +37,8 @@ export function resolveConstructor(state: CheckerState, owner: ClassType, useFac
   }
   let params: FunctionParamType[] = []
   let defaults: ConstructionDefault[] = []
-  if declaration != none {
-    for field of declaration!.fields {
+  if classDeclaration := declaration {
+    for field of classDeclaration.fields {
       if field.static_ || field.const_ { continue }
       for name of field.names {
         defaults.push(ConstructionDefault { value: field.defaultValue })
@@ -178,7 +177,7 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
       "Class \"" + constructed.name + "\"", "Argument", true, true, spread, if expression.spread == none then none else expression.spread!.span, true)
     return finish(state, expression, plan.signature.returnType)
   }
-  if expression.resolvedClass != none { checkClassProperties(state, expression.args, scope, constructed, expression.resolvedClass!, expression.span, false, expression) }
+  if resolvedClass := expression.resolvedClass { checkClassProperties(state, expression.args, scope, constructed, resolvedClass, expression.span, false, expression) }
   return finish(state, expression, constructed)
 }
 

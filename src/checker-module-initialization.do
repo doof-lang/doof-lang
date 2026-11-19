@@ -48,10 +48,10 @@ function validateValue(state: CheckerState, name: string, value: Expression, typ
     )
     return
   }
-  if type_ != none && !supportsDirectStorage(type_!) {
+  if storageType := type_ && !supportsDirectStorage(storageType) {
     typeError(
       state,
-      "Module initializer for '" + name + "' has type " + typeName(type_!) +
+      "Module initializer for '" + name + "' has type " + typeName(storageType) +
         ", which cannot use direct default-constructed assignable storage",
       value.span,
     )

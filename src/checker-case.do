@@ -60,7 +60,7 @@ export function casePatternsExhaustive(state: CheckerState, subjectType: Resolve
     for pattern of patterns {
       case pattern {
         _: WildcardPattern -> { return true }
-        type_: TypePattern -> { if type_.resolvedType != none && sameType(subjectType, type_.resolvedType!) { return true } }
+        type_: TypePattern -> { if resolvedType := type_.resolvedType && sameType(subjectType, resolvedType) { return true } }
         _ -> { }
       }
     }
@@ -85,7 +85,7 @@ function memberCovered(state: CheckerState, member: ResolvedType, arms: CasePatt
   for patterns of arms {
     for pattern of patterns {
       case pattern {
-        type_: TypePattern -> { if type_.resolvedType != none && sameType(member, type_.resolvedType!) { return true } }
+        type_: TypePattern -> { if resolvedType := type_.resolvedType && sameType(member, resolvedType) { return true } }
         value: ValuePattern -> { case value.value { _: NoneLiteral -> { if member.kind == "none" { return true } } _ -> { } } }
         _ -> { }
       }
@@ -256,7 +256,7 @@ function sameGenericHead(member: ResolvedType, name: string, symbol: Symbol | no
     _: FailureResolvedType -> { return name == "Failure" }
     class_: ClassType -> {
       if class_.typeArgs.length == 0 { return false }
-      return if symbol != none then class_.symbol == symbol! else class_.symbol.name == name
+      return if expectedSymbol := symbol then class_.symbol == expectedSymbol else class_.symbol.name == name
     }
     _ -> { return false }
   }
@@ -314,7 +314,7 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
         // A bare Success/Failure arm takes its payload from the subject; an
         // unknown subject has already been reported, so the arm stays unknown.
         bareResultArm := subjectType.kind == "unknown" && casePatternName(type_) != "" && hasNoTypeArguments(type_.type_)
-        if inferred != none { resolved = inferred! }
+        if inferredType := inferred { resolved = inferredType }
         else if !bareResultArm {
           resolved = resolveType(state, type_.type_, state.info!, scope)
           // An explicit generic pattern must name the subject member exactly;

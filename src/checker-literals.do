@@ -102,14 +102,14 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
 }
 
 export function checkArray(state: CheckerState, expression: ArrayLiteral, scope: Scope, expected: ResolvedType | none): ResolvedType {
-  if expected != none {
-    case expected! {
+  if expectedType := expected {
+    case expectedType {
       _: SerialValueResolvedType -> {
         for item of expression.elements {
           actual := checkExpression(state, item, scope, jsonValueType())
           if !isAssignableWithInterfaces(state.result, actual, jsonValueType()) { typeError(state, "Cannot assign " + typeName(actual) + " to SerialValue", item.span) }
         }
-        return finish(state, expression, expected!)
+        return finish(state, expression, expectedType)
       }
       union_: UnionResolvedType -> {
         if containsJsonValue(state, union_) {
@@ -132,21 +132,21 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
     }
   }
   let expectedElement: ResolvedType | none = none
-  if expected != none {
-    case expected! {
+  if expectedType := expected {
+    case expectedType {
       array: ArrayResolvedType -> { expectedElement = array.elementType }
       set: SetResolvedType -> { expectedElement = set.elementType }
       _ -> { }
     }
   }
-  if expectedElement != none {
+  if elementType := expectedElement {
     for item of expression.elements {
-      actual := checkExpression(state, item, scope, expectedElement!)
-      if !isAssignableWithInterfaces(state.result, actual, expectedElement!) { typeError(state, "Cannot assign " + typeName(actual) + " to " + typeName(expectedElement!), item.span) }
+      actual := checkExpression(state, item, scope, elementType)
+      if !isAssignableWithInterfaces(state.result, actual, elementType) { typeError(state, "Cannot assign " + typeName(actual) + " to " + typeName(elementType), item.span) }
     }
     case expected! {
-      array: ArrayResolvedType -> { return finish(state, expression, arrayType(expectedElement!, array.readonly_)) }
-      set: SetResolvedType -> { return finish(state, expression, setType(expectedElement!, set.readonly_)) }
+      array: ArrayResolvedType -> { return finish(state, expression, arrayType(elementType, array.readonly_)) }
+      set: SetResolvedType -> { return finish(state, expression, setType(elementType, set.readonly_)) }
       _ -> { }
     }
   }
@@ -159,8 +159,8 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
 }
 
 export function checkObject(state: CheckerState, expression: ObjectLiteral, scope: Scope, expected: ResolvedType | none): ResolvedType {
-  if expected != none {
-    case expected! {
+  if expectedType := expected {
+    case expectedType {
       result: ResultResolvedType -> {
         let recognized = 0
         let hasValue = false
@@ -191,8 +191,8 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
     }
   }
   let expectedValue: ResolvedType | none = none
-  if expected != none {
-    case expected! {
+  if expectedType := expected {
+    case expectedType {
       _: SerialValueResolvedType -> { expectedValue = jsonValueType() }
       union_: UnionResolvedType -> {
         if containsJsonValue(state, union_) { expectedValue = jsonValueType() }
@@ -213,17 +213,17 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
   }
   for property of expression.properties { checkAssignableProperty(state, property, scope, expectedValue) }
 
-  if expected != none {
-    case expected! {
-      _: SerialValueResolvedType -> { return finish(state, expression, expected!) }
+  if expectedType := expected {
+    case expectedType {
+      _: SerialValueResolvedType -> { return finish(state, expression, expectedType) }
       union_: UnionResolvedType -> { if containsJsonValue(state, union_) { return finish(state, expression, jsonValueType()) } }
-      _: MapResolvedType -> { return finish(state, expression, expected!) }
+      _: MapResolvedType -> { return finish(state, expression, expectedType) }
       interface_: InterfaceType -> {
         let names: string[] = []
         for implementation of interface_.symbol.implementations { names.push(implementation.name) }
         if names.length > 1 { typeError(state, "Ambiguous object literal for " + typeName(interface_) + "; multiple candidates: " + joinNames(names) + ". Use explicit Type { ... } construction", expression.span) }
         else { typeError(state, "Object literal cannot construct interface " + typeName(interface_) + ". Use explicit Type { ... } construction", expression.span) }
-        return finish(state, expression, expected!)
+        return finish(state, expression, expectedType)
       }
       _ -> { }
     }

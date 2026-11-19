@@ -103,7 +103,7 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
   if member.receiverTypeArgs.length > 0 { objectType = explicitStaticReceiver(state, member, objectType, scope) }
   diagnosticCount := state.diagnostics.length
   boundStatic := if isTypeParameterName(member.object) then resolveBoundStaticMember(state, objectType, member.property) else none
-  selected := if boundStatic != none then boundStatic! else resolveMember(state, objectType, member.property, member.span)
+  selected := boundStatic ?? resolveMember(state, objectType, member.property, member.span)
   member.resolvedMember = selected
   let memberValue = selected.type_!
   if memberValue.kind == "unknown" && objectType.kind != "unknown" && state.diagnostics.length == diagnosticCount {

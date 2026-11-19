@@ -351,7 +351,7 @@ function enumMemberType(state: CheckerState, enum_: EnumType, property: string):
       _ -> { }
     }
   }
-  backingType := if declaration != none && declaration!.backingKind == "string" then primitive("string") else primitive("int")
+  backingType := if enumDeclaration := declaration && enumDeclaration.backingKind == "string" then primitive("string") else primitive("int")
   let resolved: ResolvedType = case property {
     "name" -> primitive("string"),
     "value" -> backingType,
@@ -388,7 +388,7 @@ function classMemberType(state: CheckerState, class_: ClassType, property: strin
         for name of field.names {
           if name != property { continue }
           recordMember(selection, class_, class_.symbol.module, none, true, if field.static_ then classDeclaration else none, !field.static_)
-          fieldType := if field.resolvedType != none then field.resolvedType! else if field.type_ != none then resolveType(state, field.type_!, state.info!, state.moduleScope!) else unknownType()
+          fieldType := field.resolvedType ?? (if annotation := field.type_ then resolveType(state, annotation, state.info!, state.moduleScope!) else unknownType())
           if validateVisibility && field.private_ && class_.symbol.module != state.info!.path {
             typeError(state, "Field '" + property + "' is private to module '" + class_.symbol.module + "'", span)
           }

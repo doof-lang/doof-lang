@@ -118,8 +118,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
       // Header bindings are visible to the condition, update and body only.
       headerScope := Scope { parent: scope }
       for init of for_.init { checkStatement(state, init, headerScope) }
-      if for_.condition != none {
-        condition := for_.condition!
+      if condition := for_.condition {
         requireBool(state, checkExpression(state, condition, headerScope, none), condition.span)
       }
       for update of for_.update { checkExpression(state, update, headerScope, none) }
@@ -205,9 +204,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
         typeError(state, "'<-' yield-block reassignment is only allowed for local variables", assignment.span)
       }
       binding := lookup(scope, assignment.name)
-      let expectedType: ResolvedType | none = none
-      if binding != none { expectedType = binding!.type_ }
-      valueType := checkExpression(state, assignment.value, scope, expectedType)
+      valueType := checkExpression(state, assignment.value, scope, binding?.type_)
       if binding == none {
         typeError(state, "Undefined identifier \"" + assignment.name + "\"", assignment.span)
         return true
@@ -252,8 +249,8 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
 }
 
 function createLoopScope(state: CheckerState, parent: Scope, label: string | none, span: SourceSpan): Scope {
-  if label != none && hasActiveLoopLabel(parent, label!) {
-    typeError(state, "Loop label '" + label! + "' is already active", span)
+  if name := label && hasActiveLoopLabel(parent, name) {
+    typeError(state, "Loop label '" + name + "' is already active", span)
   }
   return Scope { parent, loopLabel: label }
 }
@@ -291,15 +288,14 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
     _ -> { }
   }
   let inferredCollectionType: ResolvedType | none = none
-  if annotation != none && elseBlock == none { inferredCollectionType = checkOmittedCollectionLiteral(state, annotation!, value, scope) }
+  if typeAnnotation := annotation && elseBlock == none { inferredCollectionType = checkOmittedCollectionLiteral(state, typeAnnotation, value, scope) }
   // Resolve the annotation once: resolution reports its diagnostics.
   let annotatedType: ResolvedType | none = none
-  if annotation != none && inferredCollectionType == none { annotatedType = resolveType(state, annotation!, state.info!, scope) }
+  if typeAnnotation := annotation && inferredCollectionType == none { annotatedType = resolveType(state, typeAnnotation, state.info!, scope) }
   let expectedValueType: ResolvedType | none = if elseBlock == none then annotatedType else none
   if kind == "readonly" && expectedValueType != none { expectedValueType = applyDeepReadonly(expectedValueType!) }
   let valueType = if inferredCollectionType == none then checkExpression(state, value, scope, expectedValueType) else inferredCollectionType!
-  let declaredType: ResolvedType = valueType
-  if annotatedType != none { declaredType = annotatedType! }
+  let declaredType: ResolvedType = annotatedType ?? valueType
   if kind == "readonly" {
     valueType = applyDeepReadonly(valueType)
     declaredType = applyDeepReadonly(declaredType)
@@ -310,8 +306,8 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
       typeError(state, "Readonly binding \"" + name + "\" must be deeply immutable: " + violation.reason, span)
     }
   }
-  if annotation != none && inferredCollectionType != none { decorateAnnotationWithResolved(annotation!, declaredType) }
-  if elseBlock != none {
+  if typeAnnotation := annotation && inferredCollectionType != none { decorateAnnotationWithResolved(typeAnnotation, declaredType) }
+  if handler := elseBlock {
     // Every absent layer (an outer none, a Failure, a none success value)
     // takes the else path, so the binding is the present value.
     let narrowedType: ResolvedType = unknownType()
@@ -331,16 +327,18 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
       typeError(state, "Cannot assign " + displayTypeName(narrowedType) + " to " + displayTypeName(declaredType), span)
     }
     elseScope := Scope { parent: scope }
-    if failureName != none {
-      if failureType == none {
+    if captured := failureName {
+      if errorType := failureType {
+        if captured != "_" {
+          declare(elseScope, Binding { name: captured, kind: "else-failure", type_: errorType, mutable: false, span: checkerSemanticSpan(span), module: state.info!.path })
+        }
+      } else {
         typeError(state, "declaration-else failure capture requires a Result expression", span)
-      } else if failureName! != "_" {
-        declare(elseScope, Binding { name: failureName!, kind: "else-failure", type_: failureType!, mutable: false, span: checkerSemanticSpan(span), module: state.info!.path })
       }
     }
-    handlerCompletes := checkBlock(state, elseBlock!, elseScope, inLoop)
+    handlerCompletes := checkBlock(state, handler, elseScope, inLoop)
     if name != "_" && handlerCompletes {
-      typeError(state, "Declaration-else block must exit scope", elseBlock!.span)
+      typeError(state, "Declaration-else block must exit scope", handler.span)
     }
   } else if !isAssignableWithInterfaces(state.result, valueType, declaredType) {
     typeError(state, "Cannot assign " + displayTypeName(valueType) + " to " + displayTypeName(declaredType), span)
@@ -364,21 +362,21 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
 export function checkFunction(state: CheckerState, fn: FunctionDeclaration, outer: Scope, owner: ClassType | none): ResolvedType {
   validateUniqueTypeParameters(state, fn.typeParams, fn.span)
   validateTypeParameterShadowing(state, fn.typeParams, outer, fn.span)
-  scope := Scope { parent: outer, typeParams: [], thisType: if owner == none then unknownType() else owner!, functionName: fn.name, staticContext: owner != none && fn.static_ }
+  scope := Scope { parent: outer, typeParams: [], thisType: owner ?? unknownType(), functionName: fn.name, staticContext: owner != none && fn.static_ }
   populateTypeParameters(state, scope, fn.typeParams, fn.typeParamConstraints)
-  if owner != none {
-    if declaration := declarationFor(state.result, owner!.symbol) {
+  if ownerClass := owner {
+    if declaration := declarationFor(state.result, ownerClass.symbol) {
       case declaration {
         classDeclaration: ClassDeclaration -> { populateTypeParameters(state, scope, classDeclaration.typeParams, classDeclaration.typeParamConstraints) }
         _ -> { }
       }
     }
+    // Static methods see the class's static fields by bare name, as they do its
+    // static methods; instance members need an instance.
+    if fn.static_ { addClassFields(state, scope, ownerClass, true) }
+    else { addClassFields(state, scope, ownerClass); addClassMethods(state, scope, ownerClass) }
   }
-  // Static methods see the class's static fields by bare name, as they do its
-  // static methods; instance members need an instance.
-  if owner != none && fn.static_ { addClassFields(state, scope, owner!, true) }
-  if owner != none && !fn.static_ { addClassFields(state, scope, owner!); addClassMethods(state, scope, owner!) }
-  returnType := if fn.returnType == none then noneType() else resolveType(state, fn.returnType!, state.info!, scope)
+  returnType := if annotation := fn.returnType then resolveType(state, annotation, state.info!, scope) else noneType()
   scope.returnType = returnType
   // Resolve through the scope chain so owner type parameters (such as an
   // interface's `V`) are visible to the cached signature, not only the body.
@@ -425,9 +423,9 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
   if completes && returnType.kind != "none" && returnType.kind != "unknown" {
     typeError(state, "Function '" + fn.name + "' may complete without returning " + typeName(returnType), fn.span)
   }
-  if fn.returnType != none { decorateAnnotationWithResolved(fn.returnType!, returnType) }
+  if annotation := fn.returnType { decorateAnnotationWithResolved(annotation, returnType) }
   for parameter of fn.params {
-    if type_ := parameter.type_ && parameter.resolvedType != none { decorateAnnotationWithResolved(type_, parameter.resolvedType!) }
+    if type_ := parameter.type_ && resolvedType := parameter.resolvedType { decorateAnnotationWithResolved(type_, resolvedType) }
   }
   return functionValue
 }
@@ -479,7 +477,7 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
     if method.name == "constructor" { validateConstructorDeclaration(state, class_, method, owner) }
   }
   streamElement := classStreamElementType(class_)
-  if streamElement != none { symbol!.streamElementTypes.push(streamElement!) }
+  if element := streamElement { symbol!.streamElementTypes.push(element) }
   if destructor_ := class_.destructor_ {
     if class_.struct_ {
       typeError(state, "Struct \"" + class_.name + "\" cannot declare a destructor", destructor_.span)
@@ -733,11 +731,11 @@ export function checkEnum(state: CheckerState, enum_: EnumDeclaration, scope: Sc
       continue
     }
     let value: long | none = nextValue
-    if variant.value != none {
-      valueType := checkExpression(state, variant.value!, scope, primitive("int"))
+    if valueExpression := variant.value {
+      valueType := checkExpression(state, valueExpression, scope, primitive("int"))
       if !isAssignableWithInterfaces(state.result, valueType, primitive("int")) { typeError(state, "Enum value must be an int", variant.span) }
-      value = constantInt(variant.value!)
-      if value == none { typeError(state, "Enum variant \"" + variant.name + "\" value must be a compile-time int constant", variant.value!.span) }
+      value = constantInt(valueExpression)
+      if value == none { typeError(state, "Enum variant \"" + variant.name + "\" value must be a compile-time int constant", valueExpression.span) }
     }
     if value == none { continue }
     nextValue = value! + 1L
@@ -829,9 +827,9 @@ export function checkBlock(state: CheckerState, block: Block, parent: Scope, inL
   let completes = true
   let retiredActors: Binding[] = []
   for statement of block.statements {
-    inference := state.lambdaReturns
-    reachable := inference != none && inference!.reachable
-    if !completes && inference != none { inference!.reachable = false }
+    maybeInference := state.lambdaReturns
+    reachable := maybeInference?.reachable ?? false
+    if !completes && inference := maybeInference { inference.reachable = false }
     if completes {
       completes = checkStatement(state, statement, scope, inLoop)
     } else {
@@ -841,7 +839,7 @@ export function checkBlock(state: CheckerState, block: Block, parent: Scope, inL
       // knows the block cannot complete normally.
       let ignored = checkStatement(state, statement, scope, inLoop)
     }
-    if inference != none { inference!.reachable = reachable }
+    if inference := maybeInference { inference.reachable = reachable }
     reportRetiredActorUses(statement, retiredActors, state.info!.path, state.diagnostics)
     collectRetiredActorBindings(statement, retiredActors)
   }

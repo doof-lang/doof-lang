@@ -265,8 +265,8 @@ function typeNeedsCompleteNominalDefinition(type_: ResolvedType): bool {
 }
 
 function collectNativeClassAliases(class_: ClassDeclaration, namespace: string, plan: HeaderPlanBuilder, context: EmitContext): none {
-  for field of class_.fields { if field.resolvedType != none { collectNativeTypeAliases(field.resolvedType!, namespace, plan, context) } }
-  for method of class_.methods { if method.resolvedType != none { collectNativeTypeAliases(method.resolvedType!, namespace, plan, context) } }
+  for field of class_.fields { if resolvedType := field.resolvedType { collectNativeTypeAliases(resolvedType, namespace, plan, context) } }
+  for method of class_.methods { if resolvedType := method.resolvedType { collectNativeTypeAliases(resolvedType, namespace, plan, context) } }
 }
 
 function collectNativeTypeAliases(type_: ResolvedType, namespace: string, plan: HeaderPlanBuilder, context: EmitContext): none {

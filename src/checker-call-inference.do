@@ -42,7 +42,7 @@ export function inferCallTypeArguments(state: CheckerState, args: CallArgument[]
 
   for stage of 1..4 {
     if stage == 3 {
-      if expected != none { recordEvidence(state, evidence, signature.returnType, expected!, true) }
+      if expectedType := expected { recordEvidence(state, evidence, signature.returnType, expectedType, true) }
       continue
     }
     for i of 0..<args.length {

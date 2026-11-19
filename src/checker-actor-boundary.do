@@ -176,8 +176,8 @@ function findInterfaceViolation(result: AnalysisResult, type_: InterfaceType, se
       return ActorBoundaryViolation { reason: "field \"" + field.name + "\" cannot cross actor boundaries: " + violation.reason }
     }
   }
-  if declaration!.resolvedSymbol != none {
-    for implementation of declaration!.resolvedSymbol!.implementations {
+  if symbol := declaration!.resolvedSymbol {
+    for implementation of symbol.implementations {
       if violation := findClassViolation(result, implementationType(result, type_, implementation), nextSeen, true) {
         return ActorBoundaryViolation {
           reason: "implementation \"" + implementation.name + "\" cannot cross actor boundaries: " + violation.reason,

@@ -189,7 +189,7 @@ export class ModuleAnalyzer {
       if mockRootPath == none && mockImportDirectives.length > 0 && completed.path.endsWith(".test.do") {
         mockRootPath = completed.path
       }
-      info := if completed.reused != none then completed.reused! else ModuleInfo {
+      info := completed.reused ?? ModuleInfo {
         path: completed.path,
         physicalPath: completed.physicalPath,
         sourceHash: sha256HexString(completed.source),
@@ -237,7 +237,7 @@ export class ModuleAnalyzer {
     for statement of info!.program.statements {
       case statement {
         import_: ImportDeclaration -> { appendModuleOrder(resolveImportPath(info!, import_.source), ordered, visited) }
-        list: ExportList -> { if list.source != none { appendModuleOrder(resolveImportPath(info!, list.source!), ordered, visited) } }
+        list: ExportList -> { if source := list.source { appendModuleOrder(resolveImportPath(info!, source), ordered, visited) } }
         _ -> { }
       }
     }
@@ -351,13 +351,13 @@ export class ModuleAnalyzer {
           source := resolveModule(sourcePath)
           for named of import_.specifiers {
             let imported: Symbol | none = none
-            if source != none { imported = findExport(source!, named.name) }
+            if sourceModule := source { imported = findExport(sourceModule, named.name) }
             // A failed dependency already owns the actionable diagnostic.
             // Do not reinterpret its missing symbol table as missing exports.
             if source != none && imported == none {
               addError(info, "Module '" + import_.source + "' does not export '" + named.name + "'", named.span)
             }
-            localName := if named.alias == none then named.name else named.alias!
+            localName := named.alias ?? named.name
             if hasModuleBinding(info, localName) {
               addError(info, "Duplicate module binding '" + localName + "'", named.span)
               continue
@@ -384,32 +384,28 @@ export class ModuleAnalyzer {
     for statement of info.program.statements {
       case statement {
         list: ExportList -> {
-          if list.source != none {
-            sourcePath := resolveImportPath(info, list.source!)
-            source := resolveModule(sourcePath)
+          if source := list.source {
+            sourcePath := resolveImportPath(info, source)
             info.reExports.push(sourcePath)
+            sourceModule := resolveModule(sourcePath) else { continue }
             for specifier of list.specifiers {
-              let exported: Symbol | none = none
-              if source != none { exported = findExport(source!, specifier.name) }
-              if source != none && exported == none {
-                addError(info, "Module '" + list.source! + "' does not export '" + specifier.name + "'", specifier.span)
+              if exported := findExport(sourceModule, specifier.name) {
+                info.exports.push(exportedSymbol(exported, specifier.alias ?? specifier.name))
               } else {
-                if exported != none {
-                  exportedName := if specifier.alias == none then specifier.name else specifier.alias!
-                  info.exports.push(exportedSymbol(exported!, exportedName))
-                }
+                addError(info, "Module '" + source + "' does not export '" + specifier.name + "'", specifier.span)
               }
             }
             continue
           }
           for specifier of list.specifiers {
-            local := findSymbol(info, specifier.name)
-            if local != none && isPrivateDeclaration(info, specifier.name) {
-              addError(info, "Cannot export private declaration '" + specifier.name + "'; private declarations are file-local", specifier.span)
-            } else if local != none {
-              exportedName := if specifier.alias == none then specifier.name else specifier.alias!
-              if findExport(info, exportedName) == none {
-                info.exports.push(exportedSymbol(local!, exportedName))
+            if local := findSymbol(info, specifier.name) {
+              if isPrivateDeclaration(info, specifier.name) {
+                addError(info, "Cannot export private declaration '" + specifier.name + "'; private declarations are file-local", specifier.span)
+              } else {
+                exportedName := specifier.alias ?? specifier.name
+                if findExport(info, exportedName) == none {
+                  info.exports.push(exportedSymbol(local, exportedName))
+                }
               }
             } else {
               addError(info, "Cannot export unknown symbol '" + specifier.name + "'", specifier.span)
@@ -442,7 +438,7 @@ export class ModuleAnalyzer {
       class_: ClassDeclaration -> {
         visitTypeParameterConstraints(class_.typeParamConstraints, info, class_.typeParams)
         for annotation of class_.implements_ { visitType(annotation, info, class_.typeParams) }
-        for field of class_.fields { if field.type_ != none { visitType(field.type_!, info, class_.typeParams) } }
+        for field of class_.fields { if type_ := field.type_ { visitType(type_, info, class_.typeParams) } }
         for method of class_.methods { visitFunctionTypes(method, info, class_.typeParams) }
       }
       interface_: InterfaceDeclaration -> {
@@ -453,10 +449,10 @@ export class ModuleAnalyzer {
         for method of interface_.staticMethods { visitFunctionTypes(method, info, interface_.typeParams) }
       }
       alias: TypeAliasDeclaration -> { visitTypeParameterConstraints(alias.typeParamConstraints, info, alias.typeParams); visitType(alias.type_, info, alias.typeParams) }
-      const_: ConstDeclaration -> { if const_.type_ != none { visitType(const_.type_!, info, []) } }
-      readonly_: ReadonlyDeclaration -> { if readonly_.type_ != none { visitType(readonly_.type_!, info, []) } }
-      binding: ImmutableBinding -> { if binding.type_ != none { visitType(binding.type_!, info, []) } }
-      let_: LetDeclaration -> { if let_.type_ != none { visitType(let_.type_!, info, []) } }
+      const_: ConstDeclaration -> { if type_ := const_.type_ { visitType(type_, info, []) } }
+      readonly_: ReadonlyDeclaration -> { if type_ := readonly_.type_ { visitType(type_, info, []) } }
+      binding: ImmutableBinding -> { if type_ := binding.type_ { visitType(type_, info, []) } }
+      let_: LetDeclaration -> { if type_ := let_.type_ { visitType(type_, info, []) } }
       _ -> { }
     }
   }
@@ -466,12 +462,12 @@ export class ModuleAnalyzer {
     for parameter of ownerTypeParams { typeParams.push(parameter) }
     for parameter of fn.typeParams { typeParams.push(parameter) }
     visitTypeParameterConstraints(fn.typeParamConstraints, info, typeParams)
-    for parameter of fn.params { if parameter.type_ != none { visitType(parameter.type_!, info, typeParams) } }
+    for parameter of fn.params { if type_ := parameter.type_ { visitType(type_, info, typeParams) } }
     if returnType := fn.returnType { visitType(returnType, info, typeParams) }
   }
 
   private visitTypeParameterConstraints(constraints: TypeParameterConstraint[], info: ModuleInfo, typeParams: string[]): none {
-    for constraint of constraints { if constraint.type_ != none { visitType(constraint.type_!, info, typeParams) } }
+    for constraint of constraints { if type_ := constraint.type_ { visitType(type_, info, typeParams) } }
   }
 
   private visitType(annotation: TypeAnnotation, info: ModuleInfo, typeParams: string[] = []): none {

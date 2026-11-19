@@ -36,7 +36,9 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
   let params: FunctionParamType[] = []
   for i of 0..<expression.params.length {
     parameter := expression.params[i]
-    parameterType := if parameter.type_ == none then if expectedFunction != none && i < expectedFunction!.params.length then expectedFunction!.params[i].type_ else unknownType() else resolveType(state, parameter.type_!, state.info!, lambdaScope)
+    parameterType := if annotation := parameter.type_ then resolveType(state, annotation, state.info!, lambdaScope)
+      else if expectedType := expectedFunction && i < expectedType.params.length then expectedType.params[i].type_
+      else unknownType()
     parameter.resolvedType = parameterType
     params.push(FunctionParamType { name: parameter.name, type_: parameterType, hasDefault: parameter.defaultValue != none })
     if parameter.name != "_" && !declare(lambdaScope, Binding { name: parameter.name, kind: "parameter", type_: parameterType, mutable: false, span: checkerSemanticSpan(parameter.span), module: state.info!.path }) {
@@ -44,9 +46,9 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
     }
   }
   let returnType = if expectedFunction == none then unknownType() else expectedFunction!.returnType
-  if expression.returnType != none {
-    returnType = resolveType(state, expression.returnType!, state.info!, lambdaScope)
-    decorateAnnotationWithResolved(expression.returnType!, returnType)
+  if annotation := expression.returnType {
+    returnType = resolveType(state, annotation, state.info!, lambdaScope)
+    decorateAnnotationWithResolved(annotation, returnType)
   }
   // A block lambda is its own return target. Without this scope boundary,
   // returns inside an escaping closure are checked against the enclosing

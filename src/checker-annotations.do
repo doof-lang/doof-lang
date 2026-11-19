@@ -113,9 +113,9 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
       typeArgs := resolveTypeArgumentAnnotations(resolution, named, module, scope, validateConstraints)
       declaration := declarationFor(state.result, symbol!)
       let valid = true
-      if declaration != none {
+      if typeDeclaration := declaration {
         declarationModule := classModuleFor(state.result, symbol!)
-        case declaration! {
+        case typeDeclaration {
           interface_: InterfaceDeclaration -> { valid = validateNominalTypeArguments(state, interface_.name, interface_.typeParams, interface_.typeParamConstraints, typeArgs, named.span, declarationModule, scope, validateConstraints) }
           class_: ClassDeclaration -> { valid = validateNominalTypeArguments(state, class_.name, class_.typeParams, class_.typeParamConstraints, typeArgs, named.span, declarationModule, scope, validateConstraints) }
           _ -> {

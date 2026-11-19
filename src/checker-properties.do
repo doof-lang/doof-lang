@@ -23,8 +23,8 @@ export function checkPropertyValue(state: CheckerState, property: ObjectProperty
 
 export function checkAssignableProperty(state: CheckerState, property: ObjectProperty, scope: Scope, expected: ResolvedType | none): ResolvedType {
   actual := checkPropertyValue(state, property, scope, expected)
-  if expected != none && !isAssignableWithInterfaces(state.result, actual, expected!) {
-    typeError(state, "Cannot assign " + displayTypeName(actual) + " to " + displayTypeName(expected!), property.span)
+  if expectedType := expected && !isAssignableWithInterfaces(state.result, actual, expectedType) {
+    typeError(state, "Cannot assign " + displayTypeName(actual) + " to " + displayTypeName(expectedType), property.span)
   }
   return actual
 }

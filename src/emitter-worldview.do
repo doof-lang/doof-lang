@@ -67,7 +67,7 @@ export function planWorldview(
   instantiations: InstantiationPlan | none = none,
   graphIndex: WorldviewGraphIndex | none = none,
 ): WorldviewPlan {
-  index := WorldviewIndex { graph: if graphIndex == none then indexWorldviewGraph(result) else graphIndex! }
+  index := WorldviewIndex { graph: graphIndex ?? indexWorldviewGraph(result) }
   root := findModule(index, rootPath)
   if root == none { return WorldviewPlan {} }
 

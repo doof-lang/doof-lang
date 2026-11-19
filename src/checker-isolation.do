@@ -82,7 +82,7 @@ function indexIsolation(result: AnalysisResult, graph: IsolationGraph): Isolatio
       case statement {
         class_: ClassDeclaration -> {
           if !index.classes.has(declarationKey(module.path, class_.name)) { index.classes.set(declarationKey(module.path, class_.name), class_) }
-          if class_.resolvedSymbol != none && class_.resolvedSymbol!.streamElementTypes.length > 0 { index.streamClasses.push(class_) }
+          if symbol := class_.resolvedSymbol && symbol.streamElementTypes.length > 0 { index.streamClasses.push(class_) }
         }
         value: ConstDeclaration -> { indexValue(index, module.path, value.span, value) }
         value: ReadonlyDeclaration -> { indexValue(index, module.path, value.span, value) }
@@ -159,9 +159,9 @@ function collectGraph(result: AnalysisResult, previous: IsolationGraph | none, r
       }
     }
   }
-  if previous != none {
+  if prior := previous {
     let oldNodes: Map<FunctionDeclaration, IsolationNode> = {}
-    for node of previous!.nodes { if !oldNodes.has(node.declaration) { oldNodes.set(node.declaration, node) } }
+    for node of prior.nodes { if !oldNodes.has(node.declaration) { oldNodes.set(node.declaration, node) } }
     reused: Set<string> := []
     for path of reusedModules { reused.add(path) }
     for node of graph.nodes {
@@ -178,8 +178,8 @@ function collectGraph(result: AnalysisResult, previous: IsolationGraph | none, r
 
 
 function moduleValueDeclaration(index: IsolationIndex, binding: Binding): Statement | none {
-  if binding.symbol != none && (binding.symbol!.kind == "const" || binding.symbol!.kind == "readonly") {
-    return indexedDeclaration(index, binding.symbol!)
+  if symbol := binding.symbol && (symbol.kind == "const" || symbol.kind == "readonly") {
+    return indexedDeclaration(index, symbol)
   }
   statement := index.values.get(spanKey(binding.module, binding.span.start.offset, binding.span.end.offset)) else { return none }
   return statement
@@ -247,7 +247,7 @@ function allExpressions(roots: Expression[], statements: Statement[] | none = no
 
 function functionExpressionRoots(fn: FunctionDeclaration, statements: Statement[] | none = none): Expression[] {
   let roots: Expression[] = []
-  for parameter of fn.params { if parameter.defaultValue != none { roots.push(parameter.defaultValue!) } }
+  for parameter of fn.params { if defaultValue := parameter.defaultValue { roots.push(defaultValue) } }
   case fn.body {
     block: Block -> { collectBlockExpressions(block, roots, statements) }
     expression: Expression -> { roots.push(expression) }
@@ -380,10 +380,8 @@ function collectEffects(index: IsolationIndex, roots: Expression[], effects: Iso
   }
   for expression of expressions {
     if effects.direct == none {
-      let reason = mutableModuleReason(index, expression)
-      if reason == none { reason = mutableStaticReason(index, expression) }
-      if reason != none {
-        effects.direct = if via == none then reason else IsolationReason { kind: reason!.kind, name: reason!.name, span: via! }
+      if reason := (mutableModuleReason(index, expression) ?? mutableStaticReason(index, expression)) {
+        effects.direct = if site := via then IsolationReason { kind: reason.kind, name: reason.name, span: site } else reason
         effects.callsBeforeDirect = effects.calls.length
       }
     }
@@ -417,7 +415,7 @@ class SuppliedArguments {
 
 function suppliedArguments(args: CallArgument[]): SuppliedArguments {
   supplied := SuppliedArguments {}
-  for argument of args { if argument.name != none { supplied.names.push(argument.name!) } }
+  for argument of args { if name := argument.name { supplied.names.push(name) } }
   if supplied.names.length == 0 { supplied.positional = args.length }
   return supplied
 }
@@ -435,10 +433,10 @@ function suppliedPositions(count: int): SuppliedArguments {
 
 function collectConstructionEffects(index: IsolationIndex, plan: CheckedConstruction | none, supplied: SuppliedArguments, span: SourceSpan, effects: IsolationEffects): none {
   if plan == none { return }
-  if plan!.declaration != none { collectDestructorEffects(index, plan!.declaration!, span, effects) }
-  if plan!.factory != none {
+  if declaration := plan!.declaration { collectDestructorEffects(index, declaration, span, effects) }
+  if factory := plan!.factory {
     // Factory parameter defaults belong to the factory's own isolation node.
-    effects.calls.push(IsolationCall { declaration: plan!.factory!, span })
+    effects.calls.push(IsolationCall { declaration: factory, span })
     return
   }
   for position of 0..<plan!.signature.params.length {
@@ -689,7 +687,7 @@ function moduleExpressions(module: ModuleInfo): Expression[] {
         for expression of functionExpressionRoots(fn) { roots.push(expression) }
       }
       class_: ClassDeclaration -> {
-        for field of class_.fields { if field.defaultValue != none { roots.push(field.defaultValue!) } }
+        for field of class_.fields { if defaultValue := field.defaultValue { roots.push(defaultValue) } }
         for method of class_.methods {
           for expression of functionExpressionRoots(method) { roots.push(expression) }
         }
@@ -740,9 +738,9 @@ function validateModuleIsolationEffects(index: IsolationIndex, module: ModuleInf
                 }
                 _ -> { reason = probeReason(index, inner) }
               }
-              if reason != none {
-                pushDiagnostic(diagnostics, module.path, reason!.span,
-                  "Async call is not isolated: " + reasonText(reason!))
+              if found := reason {
+                pushDiagnostic(diagnostics, module.path, found.span,
+                  "Async call is not isolated: " + reasonText(found))
               }
             }
           }

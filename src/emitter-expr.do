@@ -84,7 +84,7 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
   if expression.kind == "none-literal" { return value }
   value = emitJsonValuePromotion(expression, value, sourceType, targetType)
   if sourceType != none {
-    return emitCarrierConversion(value, sourceType!, if targetType == none then sourceType! else targetType!, context, sourcePosition)
+    return emitCarrierConversion(value, sourceType!, targetType ?? sourceType!, context, sourcePosition)
   }
   return value
 }

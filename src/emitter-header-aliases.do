@@ -27,7 +27,7 @@ export function planHeaderAliases(plan: HeaderPlan, namespace: string, state: He
     plan.moduleValueDeclarations, plan.earlyClassDefinitions, plan.classDefinitions, plan.interfaceAliases,
     plan.enumDefinitions, plan.earlyTypeAliases, plan.typeAliases] {
     for declaration of declarations {
-      for part of declaration.parts { if part.type_ != none { collectTypeUses(part.type_!, uses, indices) } }
+      for part of declaration.parts { if type_ := part.type_ { collectTypeUses(type_, uses, indices) } }
     }
   }
   aliases := HeaderAliasPlan {}

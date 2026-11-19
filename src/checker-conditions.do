@@ -121,7 +121,7 @@ export function conditionElseScope(scope: Scope, boundNames: string[]): Scope {
 /** Declares the `else error` capture of an if statement in its else scope. */
 export function declareElseFailure(state: CheckerState, statement: IfStatement, lastCondition: Expression, elseScope: Scope): none {
   failureName := statement.elseFailureName else { return }
-  span := if statement.else_ != none then statement.else_!.span else statement.span
+  span := statement.else_?.span ?? statement.span
   let failureType = unknownType()
   clause := singleBindingClause(lastCondition)
   if clause == none {

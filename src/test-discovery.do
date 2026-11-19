@@ -39,7 +39,7 @@ export function discoverModuleTests(
       list: ExportList -> {
         if list.source != none { continue }
         for specifier of list.specifiers {
-          exportedName := if specifier.alias == none then specifier.name else specifier.alias!
+          exportedName := specifier.alias ?? specifier.name
           if !exportedName.startsWith("test") { continue }
           if declaration := findFunction(program.statements, specifier.name) {
             addDiscoveredTest(result, declaration, exportedName, modulePath, rootDirectory, usesMocks)

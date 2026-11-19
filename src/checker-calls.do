@@ -137,9 +137,9 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         } else {
           typeArgs = explicitCallTypeArguments(state, expression, resolvedFunction, scope)
         }
-        if typeArgs != none {
-          applyCallTypeArguments(state, expression, typeArgs!, scope)
-          effectiveFunction = substituteSignature(resolvedFunction, resolvedFunction.typeParams, typeArgs!)
+        if explicitTypeArgs := typeArgs {
+          applyCallTypeArguments(state, expression, explicitTypeArgs, scope)
+          effectiveFunction = substituteSignature(resolvedFunction, resolvedFunction.typeParams, explicitTypeArgs)
         }
       }
       checkArguments(state, callArguments(expression.args), effectiveFunction.params, scope, expression.span,
@@ -155,7 +155,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
       if expression.typeArgs.length > 0 {
         let declaredTypeParams: string[] = []
         let constraints: TypeParameterConstraint[] = if expression.resolvedClass == none then [] else expression.resolvedClass!.typeParamConstraints
-        if declaration != none { case declaration! { classDeclaration: ClassDeclaration -> { declaredTypeParams = classDeclaration.typeParams; constraints = classDeclaration.typeParamConstraints } _ -> { } } }
+        if targetDeclaration := declaration { case targetDeclaration { classDeclaration: ClassDeclaration -> { declaredTypeParams = classDeclaration.typeParams; constraints = classDeclaration.typeParamConstraints } _ -> { } } }
         if expression.typeArgs.length != declaredTypeParams.length {
           typeError(state, typeArgumentArityMessage("Generic construction", declaredTypeParams.length, expression.typeArgs.length), expression.span)
         } else {
@@ -164,8 +164,8 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           effectiveClass = classType(class_.name, class_.symbol, resolvedTypeArgs)
           validateTypeArgumentConstraints(state, declaredTypeParams, constraints, resolvedTypeArgs, expression.span, classModuleFor(state.result, class_.symbol), scope)
         }
-      } else if declaration != none && class_.typeArgs.length == 0 {
-        case declaration! {
+      } else if targetDeclaration := declaration && class_.typeArgs.length == 0 {
+        case targetDeclaration {
           classDeclaration: ClassDeclaration -> {
             if classDeclaration.typeParams.length > 0 {
               if inferred := inferConstructionTypeArguments(state, expression.args, class_, classDeclaration, scope, expected) {
@@ -393,15 +393,15 @@ export function applyTypeArgumentConstraints(state: CheckerState, declaration: F
       if resolvedBinding := identifier.resolvedBinding && resolvedBinding.kind == "method" {
         let current: Scope | none = scope
         while current != none {
-          if current!.thisType != none && current!.thisType!.kind == "class" { receiver = current!.thisType; break }
+          if thisType := current!.thisType && thisType.kind == "class" { receiver = current!.thisType; break }
           current = current!.parent
         }
       }
     }
     _ -> { }
   }
-  if receiver != none {
-    case receiver! {
+  if receiverType := receiver {
+    case receiverType {
       owner: ClassType -> {
         if ownerDeclaration := declarationFor(state.result, owner.symbol) {
           case ownerDeclaration {

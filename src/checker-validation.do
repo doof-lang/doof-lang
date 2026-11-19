@@ -81,14 +81,14 @@ export function validateStatement(statement: Statement, module: string, diagnost
         }
       }
     }
-    while_: WhileStatement -> { validateExpression(while_.condition, module, diagnostics); validateBlock(while_.body, module, diagnostics); if while_.then_ != none { validateBlock(while_.then_!, module, diagnostics) } }
+    while_: WhileStatement -> { validateExpression(while_.condition, module, diagnostics); validateBlock(while_.body, module, diagnostics); if then_ := while_.then_ { validateBlock(then_, module, diagnostics) } }
     for_: ForStatement -> {
       for init of for_.init { validateStatement(init, module, diagnostics) }
       if condition := for_.condition { validateExpression(condition, module, diagnostics) }
       for update of for_.update { validateExpression(update, module, diagnostics) }
-      validateBlock(for_.body, module, diagnostics); if for_.then_ != none { validateBlock(for_.then_!, module, diagnostics) }
+      validateBlock(for_.body, module, diagnostics); if then_ := for_.then_ { validateBlock(then_, module, diagnostics) }
     }
-    forOf: ForOfStatement -> { validateExpression(forOf.iterable, module, diagnostics); validateBlock(forOf.body, module, diagnostics); if forOf.then_ != none { validateBlock(forOf.then_!, module, diagnostics) } }
+    forOf: ForOfStatement -> { validateExpression(forOf.iterable, module, diagnostics); validateBlock(forOf.body, module, diagnostics); if then_ := forOf.then_ { validateBlock(then_, module, diagnostics) } }
     with_: WithStatement -> {
       for binding of with_.bindings {
         if type_ := binding.type_ { validateTypeAnnotation(type_, module, diagnostics) }
@@ -97,7 +97,7 @@ export function validateStatement(statement: Statement, module: string, diagnost
       }
       validateBlock(with_.body, module, diagnostics)
     }
-    return_: ReturnStatement -> { if return_.value != none { validateExpression(return_.value!, module, diagnostics) } }
+    return_: ReturnStatement -> { if value := return_.value { validateExpression(value, module, diagnostics) } }
     yield_: YieldStatement -> { validateExpression(yield_.value, module, diagnostics) }
     assignment: YieldBlockAssignmentStatement -> { validateExpression(assignment.value, module, diagnostics); validateResolved(assignment.resolvedType, assignment.span, module, "yield-block assignment", diagnostics) }
     expression: ExpressionStatement -> { validateExpression(expression.expression, module, diagnostics) }
@@ -109,7 +109,7 @@ export function validateStatement(statement: Statement, module: string, diagnost
 }
 
 export function validateValue(statement: Statement, resolvedType: ResolvedType | none, annotation: TypeAnnotation | none, module: string, diagnostics: Diagnostic[]): none {
-  if annotation != none { validateTypeAnnotation(annotation!, module, diagnostics) }
+  if typeAnnotation := annotation { validateTypeAnnotation(typeAnnotation, module, diagnostics) }
   validateResolved(resolvedType, statement.span, module, "value", diagnostics)
 }
 

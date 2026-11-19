@@ -54,7 +54,7 @@ export function memberCompletions(index: EditorIndex, module: string, offset: in
     receiver := member.object.resolvedType else { return true }
     let staticReceiver = false
     case member.object {
-      identifier: Identifier -> { if identifier.resolvedBinding != none { staticReceiver = classNameBinding(identifier.resolvedBinding!) } }
+      identifier: Identifier -> { if resolvedBinding := identifier.resolvedBinding { staticReceiver = classNameBinding(resolvedBinding) } }
       _ -> { }
     }
     completeMembers(index, module, offset, receiver, member.span, items, staticReceiver)

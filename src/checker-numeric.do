@@ -27,7 +27,7 @@ export function isNumericOperand(type_: ResolvedType): bool {
 
 function alternatives(type_: ResolvedType): ResolvedType[] {
   case type_ {
-    parameter: TypeParameterType -> { if parameter.constraint != none { return alternatives(parameter.constraint!) } }
+    parameter: TypeParameterType -> { if constraint := parameter.constraint { return alternatives(constraint) } }
     union_: UnionResolvedType -> {
       let members: ResolvedType[] = []
       for member of union_.types { for candidate of alternatives(member) { members.push(candidate) } }

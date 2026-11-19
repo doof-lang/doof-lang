@@ -172,9 +172,9 @@ export function symbolType(symbol: Symbol, info: ModuleInfo, result: AnalysisRes
       return methodSignature(fn, info, result)
     }
     alias: TypeAliasDeclaration -> { return resolveAnnotation(alias.type_, info, result) }
-    const_: ConstDeclaration -> { if const_.resolvedType != none { return const_.resolvedType! } }
-    readonly_: ReadonlyDeclaration -> { if readonly_.resolvedType != none { return readonly_.resolvedType! } }
-    binding: ImmutableBinding -> { if binding.resolvedType != none { return binding.resolvedType! } }
+    const_: ConstDeclaration -> { if resolvedType := const_.resolvedType { return resolvedType } }
+    readonly_: ReadonlyDeclaration -> { if resolvedType := readonly_.resolvedType { return resolvedType } }
+    binding: ImmutableBinding -> { if resolvedType := binding.resolvedType { return resolvedType } }
     _ -> { return unknownType() }
   }
   return unknownType()
@@ -196,7 +196,7 @@ export function functionParametersFor(fn: FunctionDeclaration, info: ModuleInfo,
   for name of fn.typeParams { typeParams.push(name) }
   let resultTypes: FunctionParamType[] = []
   for parameter of fn.params {
-    parameterType := if parameter.resolvedType != none then parameter.resolvedType! else if parameter.type_ == none then unknownType() else resolveAnnotation(parameter.type_!, info, result, typeParams)
+    parameterType := parameter.resolvedType ?? (if annotation := parameter.type_ then resolveAnnotation(annotation, info, result, typeParams) else unknownType())
     resultTypes.push(FunctionParamType { name: parameter.name, type_: parameterType, hasDefault: parameter.defaultValue != none })
   }
   return resultTypes
@@ -286,7 +286,7 @@ export function valueYieldScope(scope: Scope): Scope | none {
 export function currentThisType(scope: Scope): ResolvedType {
   let current: Scope | none = scope
   while current != none {
-    if current!.thisType != none { return current!.thisType! }
+    if thisType := current!.thisType { return thisType }
     current = current!.parent
   }
   return unknownType()

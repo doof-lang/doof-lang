@@ -206,7 +206,7 @@ function collectStatement(statement: Statement, modulePath: string, analysis: An
       for binding of with_.bindings { collectExpression(binding.value, modulePath, analysis, plan, names, arguments) }
       collectBlock(with_.body, modulePath, analysis, plan, names, arguments)
     }
-    return_: ReturnStatement -> { if return_.value != none { collectExpression(return_.value!, modulePath, analysis, plan, names, arguments) } }
+    return_: ReturnStatement -> { if value := return_.value { collectExpression(value, modulePath, analysis, plan, names, arguments) } }
     yield_: YieldStatement -> { collectExpression(yield_.value, modulePath, analysis, plan, names, arguments) }
     expression: ExpressionStatement -> { collectExpression(expression.expression, modulePath, analysis, plan, names, arguments) }
     destructuring: DestructuringStatement -> { collectExpression(destructuring.value, modulePath, analysis, plan, names, arguments) }
@@ -260,7 +260,7 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
     }
     tuple: TupleLiteral -> { for item of tuple.elements { collectExpression(item, modulePath, analysis, plan, names, arguments) } }
     lambda: LambdaExpression -> {
-      for parameter of lambda.params { if parameter.defaultValue != none { collectExpression(parameter.defaultValue!, modulePath, analysis, plan, names, arguments) } }
+      for parameter of lambda.params { if defaultValue := parameter.defaultValue { collectExpression(defaultValue, modulePath, analysis, plan, names, arguments) } }
       case lambda.body {
         block: Block -> { collectBlock(block, modulePath, analysis, plan, names, arguments) }
         inner: Expression -> { collectExpression(inner, modulePath, analysis, plan, names, arguments) }
@@ -279,7 +279,7 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
     }
     construct: ConstructExpression -> {
       if spread := construct.spread { collectExpression(spread, modulePath, analysis, plan, names, arguments) }
-      for property of construct.args { if property.value != none { collectExpression(property.value!, modulePath, analysis, plan, names, arguments) } }
+      for property of construct.args { if value := property.value { collectExpression(value, modulePath, analysis, plan, names, arguments) } }
     }
     async_: AsyncExpression -> {
       case async_.expression {

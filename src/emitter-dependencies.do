@@ -289,12 +289,12 @@ export function collectDependencySurface(
       for method of interface_.methods {
         if resolvedType := method.resolvedType { collectDependencyType(resolvedType, index) }
         if returnType := method.returnType { collectAnnotationAliases(returnType, index) }
-        for parameter of method.params { if parameter.type_ != none { collectAnnotationAliases(parameter.type_!, index) } }
+        for parameter of method.params { if type_ := parameter.type_ { collectAnnotationAliases(type_, index) } }
       }
       for method of interface_.staticMethods {
         if resolvedType := method.resolvedType { collectDependencyType(resolvedType, index) }
         if returnType := method.returnType { collectAnnotationAliases(returnType, index) }
-        for parameter of method.params { if parameter.type_ != none { collectAnnotationAliases(parameter.type_!, index) } }
+        for parameter of method.params { if type_ := parameter.type_ { collectAnnotationAliases(type_, index) } }
       }
       if resolvedSymbol := interface_.resolvedSymbol {
         for implementation of resolvedSymbol.implementations {
@@ -319,7 +319,7 @@ export function collectDependencySurface(
       if type_ := binding.type_ { collectAnnotationAliases(type_, index) }
     }
     enum_: EnumDeclaration -> {
-      for variant of enum_.variants { if variant.value != none { collectDependencyExpression(variant.value!, index) } }
+      for variant of enum_.variants { if value := variant.value { collectDependencyExpression(value, index) } }
     }
     _ -> { }
   }

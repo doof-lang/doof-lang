@@ -112,17 +112,15 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       let elements: ResolvedType[] = []
       let diverges = false
       let expectedTuple: TupleResolvedType | none = none
-      if expected != none {
-        case expected! { tupleExpected: TupleResolvedType -> { expectedTuple = tupleExpected } _ -> { } }
-      }
+      if tupleExpected := expected as TupleResolvedType { expectedTuple = tupleExpected }
       for index of 0..<tuple.elements.length {
         item := tuple.elements[index]
         let itemExpected: ResolvedType | none = none
-        if expectedTuple != none && index < expectedTuple!.elements.length { itemExpected = expectedTuple!.elements[index] }
+        if tuple := expectedTuple && index < tuple.elements.length { itemExpected = tuple.elements[index] }
         itemType := checkExpression(state, item, scope, itemExpected)
         // An element assignable to its expected slot takes that type, as array
         // elements do, so a literal fits a tuple of unions or nullables.
-        elements.push(if itemExpected != none && isAssignableWithInterfaces(state.result, itemType, itemExpected!) then itemExpected! else itemType)
+        elements.push(if expectedItem := itemExpected && isAssignableWithInterfaces(state.result, itemType, expectedItem) then expectedItem else itemType)
         if itemType.kind == "never" { diverges = true }
       }
       if diverges { return finish(state, expression, neverType()) }
@@ -164,8 +162,8 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
 
 // A numeric literal adopts a contextual primitive type it widens to without a cast.
 function numericLiteralType(state: CheckerState, expression: Expression, literal: string, expected: ResolvedType | none): ResolvedType {
-  if expected != none {
-    case expected! {
+  if expectedType := expected {
+    case expectedType {
       primitiveExpected: PrimitiveType -> {
         target := primitiveExpected.name
         widens := case literal {
@@ -174,7 +172,7 @@ function numericLiteralType(state: CheckerState, expression: Expression, literal
           "double" -> target == "float",
           _ -> false
         }
-        if widens { return finish(state, expression, expected!) }
+        if widens { return finish(state, expression, expectedType) }
       }
       _ -> { }
     }

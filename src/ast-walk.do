@@ -37,7 +37,7 @@ export function collectStatementExpressions(statement: Statement, result: Expres
     value: ImmutableBinding -> { result.push(value.value); if value.else_ != none { collectBlockExpressions(value.else_!, result, statements) } }
     value: LetDeclaration -> { result.push(value.value) }
     expression: ExpressionStatement -> { result.push(expression.expression) }
-    return_: ReturnStatement -> { if return_.value != none { result.push(return_.value!) } }
+    return_: ReturnStatement -> { if value := return_.value { result.push(value) } }
     yield_: YieldStatement -> { result.push(yield_.value) }
     if_: IfStatement -> {
       result.push(if_.condition)
@@ -161,7 +161,7 @@ export function collectNestedExpressions(expression: Expression, result: Express
     actor: ActorCreationExpression -> { for argument of actor.args { result.push(argument) } }
     construct: ConstructExpression -> {
       if spread := construct.spread { result.push(spread) }
-      for property of construct.args { if property.value != none { result.push(property.value!) } }
+      for property of construct.args { if value := property.value { result.push(value) } }
     }
     as_: AsExpression -> { result.push(as_.expression) }
     _ -> { }
@@ -192,7 +192,7 @@ export function releaseCheckedReferences(statements: Statement[]): none {
       function_: FunctionDeclaration -> { releaseFunctionBody(function_, pending, expressions) }
       class_: ClassDeclaration -> {
         for method of class_.methods { releaseFunctionBody(method, pending, expressions) }
-        for field of class_.fields { if field.defaultValue != none { expressions.push(field.defaultValue!) } }
+        for field of class_.fields { if defaultValue := field.defaultValue { expressions.push(defaultValue) } }
         if destructor_ := class_.destructor_ { for inner of destructor_.statements { pending.push(inner) } }
       }
       interface_: InterfaceDeclaration -> {
@@ -211,7 +211,7 @@ export function releaseCheckedReferences(statements: Statement[]): none {
 }
 
 function releaseFunctionBody(function_: FunctionDeclaration, pending: Statement[], expressions: Expression[]): none {
-  for param of function_.params { if param.defaultValue != none { expressions.push(param.defaultValue!) } }
+  for param of function_.params { if defaultValue := param.defaultValue { expressions.push(defaultValue) } }
   case function_.body {
     block: Block -> { for inner of block.statements { pending.push(inner) } }
     expression: Expression -> { expressions.push(expression) }
