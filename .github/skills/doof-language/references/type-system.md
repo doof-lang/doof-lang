@@ -226,20 +226,20 @@ value: int := none                // ❌ none is not an int
 
 The second line is a compile error.
 
-Important rule: plain `if value != none` and `if value == none` do not change the static type. Use a binding condition (`if present := value { ... }`), declaration-`else`, `case`, `as`, or postfix `!` for explicit narrowing.
+Important rule: plain `if value != none` and `if value == none` do not change the static type. Use a binding condition (`if value := maybeValue { ... }`), declaration-`else`, `case`, `as`, or postfix `!` for explicit narrowing.
 
 ```doof check
 class Address { city: string }
 class User { age: int; address: Address | none = none }
 
-name: string | none := "Ada"
+maybeName: string | none := "Ada"
 user: User | none := User { age: 36 }
 
-if name != none {
-    println(name!)
+if name := maybeName {
+    println(name)
 }
 
-displayName := name ?? "Anonymous"
+displayName := maybeName ?? "Anonymous"
 city := user?.address?.city
 age := user!.age
 ```

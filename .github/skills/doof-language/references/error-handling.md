@@ -173,10 +173,10 @@ function loadConfig(): Result<string, LoadError> => Success("debug")
 function saveState(): Result<none, string> => Success()
 
 function describe(maybeName: string | none): string {
-    config := loadConfig() else error { return "load failed: " + error.message }
+    config := loadConfig() else error { return "load failed: ${error.message}" }
     name := maybeName else { panic("missing name") }
-    _ := saveState() else error { println("save failed: " + error) }
-    return name + ": " + config
+    _ := saveState() else error { println("save failed: ${error}") }
+    return "${name}: ${config}"
 }
 ```
 
@@ -201,8 +201,8 @@ function report(diagnostic: Diagnostic): none { println(diagnostic.message) }
 function loadSource(path: string): Result<Source | none, Diagnostic> => Success(none)
 
 function compile(path: string): Source | none {
-    source := loadSource(path) else diagnostic {
-        if diagnostic != none { report(diagnostic!) }
+    source := loadSource(path) else maybeDiagnostic {
+        if diagnostic := maybeDiagnostic { report(diagnostic) }
         return none
     }
     return source
@@ -220,7 +220,7 @@ function saveState(): Result<none, string> => Success()
 
 function main(): none {
     saveState() else error {
-        println("save failed: " + error)
+        println("save failed: ${error}")
     }
 }
 ```

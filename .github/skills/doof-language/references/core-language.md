@@ -177,7 +177,7 @@ parenthesized so it is not mistaken for the tag terminator.
 
 ```doof check
 function info(message: string, source: SourceLocation = @caller): none {
-    println(source.fileName + ":" + string(source.line))
+    println("${source.fileName}:${source.line}")
 }
 
 class SourceLocation {
@@ -410,7 +410,7 @@ function describe(name: string, owner: int, value: int | string): string {
         return string(count)
     }
     if port := loadPort() {
-        return "port " + string(port)
+        return "port ${port}"
     } else error {
         return error
     }
@@ -544,6 +544,56 @@ class Builder {
     build(): int => value
 }
 ```
+
+### Idiomatic Absence and Narrowing
+
+```doof check
+class Circle { radius: double }
+class Square { side: double }
+class Pet { name: string; tags: string[] = [] }
+class Owner { name: string; pet: Pet | none = none }
+
+function circleRadius(shape: Circle | Square | none): double {
+    // One type of interest: bind it with `as` instead of a one-arm `case`.
+    if circle := shape as Circle { return circle.radius }
+    return 0.0
+}
+
+function petName(maybeOwner: Owner | none): string {
+    // `?.` skips the rest of the chain once a receiver is absent.
+    return maybeOwner?.pet?.name ?? "no pet"
+}
+
+function firstHashTag(maybeOwner: Owner | none): string {
+    // Declaration-`else` instead of a none check followed by `!`.
+    pet := maybeOwner?.pet else { return "" }
+    return pet.tags.find(=> it.startsWith("#")) ?? ""
+}
+
+function describe(owner: Owner): string {
+    tagged := owner.pet?.tags.some(=> it != "") ?? false
+    label := if tagged then "tagged" else "untagged"
+    return "${owner.name} (${label})"
+}
+```
+
+- Bind a present value in the condition (`if pet := maybePet { ... }`) rather
+  than testing `!= none` and then forcing with `!`.
+- Prefer `if circle := shape as Circle { ... }` to a `case` with one type arm
+  and an empty `_`. It compiles to a direct type test, with no `Result`, unless
+  the `else` captures the failure.
+- `case` accepts a nullable subject directly; `_` (or a `none` pattern) takes
+  the absent value, so do not wrap `case value!` in a none check.
+- After `?.`, plain `.`, `[]`, and method-call steps that read present values
+  need no further `?.`: write `owner?.pet.tags.length` when `pet` is never
+  absent. Use `x?.field ?? fallback` rather than
+  `if x == none then fallback else x!.field`.
+- Guard with declaration-`else` (`pet := maybePet else { return }`), not a
+  `== none` check followed by `maybePet!`.
+- Search collections with `.some`, `.every`, `.find`, `.contains`, and
+  `.indexOf` instead of `let found = false` loops; copy with `.cloneMutable()`.
+- Build strings with interpolation rather than `+` chains. `${count}` formats
+  exactly as `string(count)`, so the conversion call is unnecessary.
 
 ### Result Pipelines
 

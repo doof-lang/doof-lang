@@ -2,7 +2,7 @@
 name: doof-language
 description: Write, read, and reason about Doof programming language code. Doof is a statically-typed language with familiar curly-brace syntax that transpiles to C++. Use when writing .do files, using Doof standard-library packages imported from std/, designing APIs, implementing classes/functions, writing .test.do files, using assert or the doof test runner, handling Result types, working with modules, pattern matching, concurrency, or JSON serialization, or writing doof.json manifests to build, run, and package command-line executables, macOS/iOS apps, or WebAssembly libraries.
 metadata:
-    version: "2.2"
+    version: "2.3"
     languageVersion: "0.1"
 ---
 
@@ -21,6 +21,7 @@ Use this base file as the entry point. Load only the reference file that matches
   multiline text by concatenating quoted lines with `\n`.
 - Use intrinsic `Success<T>` / `Failure<E>` arms and their `Result<T, E>` union alias with `case`, `try`, declaration-`else`, `as`, or `!` for fallible flows. Use `panic(...)` only for programmer errors.
 - Plain `if value != none` checks do **not** narrow static types. Bind the present value in the condition instead (`if user := maybeUser { ... }`), or use another explicit narrowing form.
+- Follow [Idiomatic Absence and Narrowing](./references/core-language.md#idiomatic-absence-and-narrowing): `as` bindings over one-arm `case`, `x?.field ?? fallback`, declaration-`else` guards, collection methods over flag loops, and interpolation over `+` chains.
 - Block-bodied non-`none` functions must return a value on every reachable path; `never` functions must terminate on every path.
 - Classes and structs are nominal. Interfaces are structural.
 - Fields are shallow immutable by default; use `let` for reassignable fields and `readonly` for deep immutability.

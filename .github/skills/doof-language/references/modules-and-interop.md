@@ -181,7 +181,7 @@ import class NativeEvent from "./native_event.hpp" as native::Event {
     text(): string
 
     label(): string {
-        return string(this.kind()) + ":" + this.text()
+        return "${this.kind()}:${this.text()}"
     }
 }
 ```
