@@ -30,10 +30,7 @@ export function checkTry(state: CheckerState, statement: TryStatement, scope: Sc
     destructuring: DestructuringStatement -> { value = destructuring.value }
   }
   if value == none { return true }
-  case value! {
-    assignment: AssignmentExpression -> { return checkTryAssignment(state, statement, assignment, scope) }
-    _ -> { }
-  }
+  if assignment := value! as AssignmentExpression { return checkTryAssignment(state, statement, assignment, scope) }
   resultValue := checkExpression(state, value!, scope, none)
   case resultValue {
     result: ResultResolvedType -> {
@@ -68,10 +65,7 @@ export function checkTry(state: CheckerState, statement: TryStatement, scope: Sc
           }, statement.span)
         }
       } else {
-        case statement.binding {
-          destructuring: DestructuringStatement -> { checkDestructuring(state, destructuring, scope, result.valueType) }
-          _ -> { }
-        }
+        if destructuring := statement.binding as DestructuringStatement { checkDestructuring(state, destructuring, scope, result.valueType) }
       }
       return result.valueType.kind != "never"
     }

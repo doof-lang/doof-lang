@@ -23,68 +23,65 @@ import { checkerSemanticSpan } from "./checker-validation"
 import { optionalAccessType } from "./checker-absence"
 
 export function checkCall(state: CheckerState, expression: CallExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
-  case expression.callee {
-    identifier: Identifier -> {
-      if identifier.name == "string" && lookup(scope, identifier.name) == none {
-        if expression.args.length != 1 {
-          for argument of expression.args { checkExpression(state, argument.value, scope, none) }
-          typeError(state, "string expects exactly one argument", expression.span)
-          return finish(state, expression, primitive("string"))
-        }
-        actual := checkExpression(state, expression.args[0].value, scope, none)
-        let supported = false
-        case actual {
-          _: PrimitiveType -> { supported = true }
-          _: EnumType -> { supported = true }
-          _: UnknownType -> { supported = true }
-          union_: UnionResolvedType -> { supported = isStringConvertibleUnion(union_) }
-          _ -> { }
-        }
-        if !supported { typeError(state, "Argument 1 has type ${typeName(actual)}; expected a primitive, enum, or union of them", expression.args[0].span) }
-        fn := functionType([param("value", actual)], primitive("string"))
-        identifier.resolvedType = fn
-        identifier.resolvedBinding = Binding { name: "string", kind: "builtin", type_: fn, mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
+  if identifier := expression.callee as Identifier {
+    if identifier.name == "string" && lookup(scope, identifier.name) == none {
+      if expression.args.length != 1 {
+        for argument of expression.args { checkExpression(state, argument.value, scope, none) }
+        typeError(state, "string expects exactly one argument", expression.span)
         return finish(state, expression, primitive("string"))
       }
-      if isNumericCastName(identifier.name) && expression.args.length == 1 && lookup(scope, identifier.name) == none {
-        // The accepted-input union is an overload set, not a variant: the
-        // argument keeps its own type so `byte(if c then 255 else 0)` casts
-        // an int rather than a union the emitter cannot static_cast.
-        target := primitive(identifier.name)
-        accepted := numericCastInputs(identifier.name)
-        actual := checkExpression(state, expression.args[0].value, scope, none)
-        if !isNumericCastInput(actual, accepted) {
-          typeError(state, "Argument 1 has type ${typeName(actual)}; expected ${typeName(accepted)}", expression.args[0].span)
-        }
-        fn := functionType([param("value", actual)], target)
-        identifier.resolvedType = fn
-        identifier.resolvedBinding = Binding { name: identifier.name, kind: "builtin", type_: fn, mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
-        return finish(state, expression, target)
+      actual := checkExpression(state, expression.args[0].value, scope, none)
+      let supported = false
+      case actual {
+        _: PrimitiveType -> { supported = true }
+        _: EnumType -> { supported = true }
+        _: UnknownType -> { supported = true }
+        union_: UnionResolvedType -> { supported = isStringConvertibleUnion(union_) }
+        _ -> { }
       }
-      if (identifier.name == "Success" || identifier.name == "Failure") && lookup(scope, identifier.name) == none {
-        // A surrounding Result or matching arm types the payload; otherwise the
-        // payload determines a standalone arm type.
-        expectation := resultArmExpectation(identifier.name, expected)
-        let valueType: ResolvedType = expectation.payload ?? noneType()
-        if expression.args.length > 0 {
-          valueType = checkExpression(state, expression.args[0].value, scope, expectation.payload)
-          if payload := expectation.payload && !isAssignableWithInterfaces(state.result, valueType, payload) {
-            channel := if identifier.name == "Success" then "success" else "failure"
-            owner := expectation.result ?? resultArmType(identifier.name, payload)
-            typeError(state, "Cannot use ${typeName(valueType)} as the ${channel} value of ${typeName(owner)}", expression.args[0].span)
-          }
-          if payload := expectation.payload { valueType = payload }
-        } else if valueType.kind != "none" && valueType.kind != "unknown" {
-          typeError(state, "${identifier.name}() needs a value for ${typeName(expectation.result ?? resultArmType(identifier.name, valueType))}", expression.span)
-        }
-        produced: ResolvedType := expectation.result ?? resultArmType(identifier.name, valueType)
-        callee := functionType([param("value", valueType)], produced)
-        identifier.resolvedType = callee
-        identifier.resolvedBinding = Binding { name: identifier.name, kind: "builtin", type_: callee, mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
-        return finish(state, expression, produced)
-      }
+      if !supported { typeError(state, "Argument 1 has type ${typeName(actual)}; expected a primitive, enum, or union of them", expression.args[0].span) }
+      fn := functionType([param("value", actual)], primitive("string"))
+      identifier.resolvedType = fn
+      identifier.resolvedBinding = Binding { name: "string", kind: "builtin", type_: fn, mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
+      return finish(state, expression, primitive("string"))
     }
-    _ -> { }
+    if isNumericCastName(identifier.name) && expression.args.length == 1 && lookup(scope, identifier.name) == none {
+      // The accepted-input union is an overload set, not a variant: the
+      // argument keeps its own type so `byte(if c then 255 else 0)` casts
+      // an int rather than a union the emitter cannot static_cast.
+      target := primitive(identifier.name)
+      accepted := numericCastInputs(identifier.name)
+      actual := checkExpression(state, expression.args[0].value, scope, none)
+      if !isNumericCastInput(actual, accepted) {
+        typeError(state, "Argument 1 has type ${typeName(actual)}; expected ${typeName(accepted)}", expression.args[0].span)
+      }
+      fn := functionType([param("value", actual)], target)
+      identifier.resolvedType = fn
+      identifier.resolvedBinding = Binding { name: identifier.name, kind: "builtin", type_: fn, mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
+      return finish(state, expression, target)
+    }
+    if (identifier.name == "Success" || identifier.name == "Failure") && lookup(scope, identifier.name) == none {
+      // A surrounding Result or matching arm types the payload; otherwise the
+      // payload determines a standalone arm type.
+      expectation := resultArmExpectation(identifier.name, expected)
+      let valueType: ResolvedType = expectation.payload ?? noneType()
+      if expression.args.length > 0 {
+        valueType = checkExpression(state, expression.args[0].value, scope, expectation.payload)
+        if payload := expectation.payload && !isAssignableWithInterfaces(state.result, valueType, payload) {
+          channel := if identifier.name == "Success" then "success" else "failure"
+          owner := expectation.result ?? resultArmType(identifier.name, payload)
+          typeError(state, "Cannot use ${typeName(valueType)} as the ${channel} value of ${typeName(owner)}", expression.args[0].span)
+        }
+        if payload := expectation.payload { valueType = payload }
+      } else if valueType.kind != "none" && valueType.kind != "unknown" {
+        typeError(state, "${identifier.name}() needs a value for ${typeName(expectation.result ?? resultArmType(identifier.name, valueType))}", expression.span)
+      }
+      produced: ResolvedType := expectation.result ?? resultArmType(identifier.name, valueType)
+      callee := functionType([param("value", valueType)], produced)
+      identifier.resolvedType = callee
+      identifier.resolvedBinding = Binding { name: identifier.name, kind: "builtin", type_: callee, mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
+      return finish(state, expression, produced)
+    }
   }
   // `.identity()` names a static method on the class the call must produce,
   // so a dot-shorthand callee resolves against the call's expected type.
@@ -165,20 +162,17 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           validateTypeArgumentConstraints(state, declaredTypeParams, constraints, resolvedTypeArgs, expression.span, classModuleFor(state.result, class_.symbol), scope)
         }
       } else if targetDeclaration := declaration && class_.typeArgs.length == 0 {
-        case targetDeclaration {
-          classDeclaration: ClassDeclaration -> {
-            if classDeclaration.typeParams.length > 0 {
-              if inferred := inferConstructionTypeArguments(state, expression.args, class_, classDeclaration, scope, expected) {
-                effectiveClass = classType(class_.name, class_.symbol, inferred)
-                expression.resolvedGenericTypeArgs = inferred
-                validateTypeArgumentConstraints(state, classDeclaration.typeParams, classDeclaration.typeParamConstraints, inferred, expression.span, classModuleFor(state.result, class_.symbol), scope)
-              } else {
-                cannotInferConstruction(state, classDeclaration, expression.args, scope, expression.span)
-                return finish(state, expression, unknownType())
-              }
+        if classDeclaration := targetDeclaration as ClassDeclaration {
+          if classDeclaration.typeParams.length > 0 {
+            if inferred := inferConstructionTypeArguments(state, expression.args, class_, classDeclaration, scope, expected) {
+              effectiveClass = classType(class_.name, class_.symbol, inferred)
+              expression.resolvedGenericTypeArgs = inferred
+              validateTypeArgumentConstraints(state, classDeclaration.typeParams, classDeclaration.typeParamConstraints, inferred, expression.span, classModuleFor(state.result, class_.symbol), scope)
+            } else {
+              cannotInferConstruction(state, classDeclaration, expression.args, scope, expression.span)
+              return finish(state, expression, unknownType())
             }
           }
-          _ -> { }
         }
       }
       construction := resolveConstructor(state, effectiveClass, !insideConstructorFactory(scope, effectiveClass))
@@ -218,11 +212,8 @@ function isNumericCastInput(actual: ResolvedType, accepted: ResolvedType): bool 
   case actual {
     _: UnknownType -> { return true }
     primitive_: PrimitiveType -> {
-      case accepted {
-        union_: UnionResolvedType -> {
-          for member of union_.types { if typeName(member) == primitive_.name { return true } }
-        }
-        _ -> { }
+      if union_ := accepted as UnionResolvedType {
+        for member of union_.types { if typeName(member) == primitive_.name { return true } }
       }
       return false
     }
@@ -248,7 +239,7 @@ function isStringConvertibleUnion(union_: UnionResolvedType): bool {
 // emitter passes the argument with the arity the checker accepted.
 function adaptArrayCallbackArity(state: CheckerState, expression: CallExpression, signature: FunctionType, scope: Scope): FunctionType {
   let member: MemberExpression | none = none
-  case expression.callee { callee: MemberExpression -> { member = callee } _ -> { } }
+  if callee := expression.callee as MemberExpression { member = callee }
   if member == none || member!.object.resolvedType == none || member!.object.resolvedType!.kind != "array" { return signature }
   let adapted = signature
   let changed = false
@@ -264,11 +255,8 @@ function adaptArrayCallbackArity(state: CheckerState, expression: CallExpression
     diagnosticMark := state.diagnostics.length
     actual := checkExpression(state, argument.value, scope, none)
     discardDiagnosticsSince(state, diagnosticMark)
-    case actual {
-      function_: FunctionType -> {
-        if narrowed := withCallbackArity(adapted, parameterIndex, function_.params.length) { adapted = narrowed; changed = true }
-      }
-      _ -> { }
+    if function_ := actual as FunctionType {
+      if narrowed := withCallbackArity(adapted, parameterIndex, function_.params.length) { adapted = narrowed; changed = true }
     }
   }
   if changed { member!.resolvedType = adapted }
@@ -276,24 +264,21 @@ function adaptArrayCallbackArity(state: CheckerState, expression: CallExpression
 }
 
 function checkedMemberCallReturnType(expression: CallExpression, returnType: ResolvedType): ResolvedType {
-  case expression.callee {
-    member: MemberExpression -> {
-      if resolvedType := member.object.resolvedType && member.optional {
-        // A Result receiver was already lowered to '(r?)', so every '?.' call
-        // short-circuits to none; a Result-returning method keeps its Failure.
-        let absentReceiver = false
-        case resolvedType {
-          _: WeakResolvedType -> { absentReceiver = true }
-          union_: UnionResolvedType -> { for arm of union_.types { if arm.kind == "none" { absentReceiver = true } } }
-          _ -> { }
-        }
-        if absentReceiver {
-          expression.resolvedOptionalValue = returnType
-          return optionalAccessType(returnType)
-        }
+  if member := expression.callee as MemberExpression {
+    if resolvedType := member.object.resolvedType && member.optional {
+      // A Result receiver was already lowered to '(r?)', so every '?.' call
+      // short-circuits to none; a Result-returning method keeps its Failure.
+      let absentReceiver = false
+      case resolvedType {
+        _: WeakResolvedType -> { absentReceiver = true }
+        union_: UnionResolvedType -> { for arm of union_.types { if arm.kind == "none" { absentReceiver = true } } }
+        _ -> { }
+      }
+      if absentReceiver {
+        expression.resolvedOptionalValue = returnType
+        return optionalAccessType(returnType)
       }
     }
-    _ -> { }
   }
   return returnType
 }
@@ -341,12 +326,9 @@ function instantiateGenericStaticCall(state: CheckerState, expression: CallExpre
   }
   classArgs := inferred!.slice(0, owner.typeParams.length)
   methodArgs := inferred!.slice(owner.typeParams.length, inferred!.length)
-  case member.object.resolvedType! {
-    receiver: ClassType -> {
-      validateTypeArgumentConstraints(state, owner.typeParams, owner.typeParamConstraints, classArgs, expression.span, classModuleFor(state.result, receiver.symbol), scope)
-      member.resolvedStaticReceiver = ClassType { name: receiver.name, symbol: receiver.symbol, typeArgs: classArgs }
-    }
-    _ -> { }
+  if receiver := member.object.resolvedType! as ClassType {
+    validateTypeArgumentConstraints(state, owner.typeParams, owner.typeParamConstraints, classArgs, expression.span, classModuleFor(state.result, receiver.symbol), scope)
+    member.resolvedStaticReceiver = ClassType { name: receiver.name, symbol: receiver.symbol, typeArgs: classArgs }
   }
   if methodArgs.length > 0 { applyCallTypeArguments(state, expression, methodArgs, scope) }
   substituted := substituteSignature(combined, combinedParams, inferred!)
@@ -356,10 +338,7 @@ function instantiateGenericStaticCall(state: CheckerState, expression: CallExpre
 }
 
 function staticReceiver(callee: Expression): MemberExpression | none {
-  case callee {
-    member: MemberExpression -> { if member.resolvedStaticOwner != none { return member } }
-    _ -> { }
-  }
+  if member := callee as MemberExpression { if member.resolvedStaticOwner != none { return member } }
   return none
 }
 
@@ -367,10 +346,7 @@ function staticReceiver(callee: Expression): MemberExpression | none {
 function genericStaticOwner(callee: Expression): ClassDeclaration | none {
   member := staticReceiver(callee)
   if member == none || member!.resolvedStaticReceiver != none || member!.resolvedStaticOwner!.typeParams.length == 0 || member!.object.resolvedType == none { return none }
-  case member!.object.resolvedType! {
-    receiver: ClassType -> { if receiver.typeArgs.length == 0 { return member!.resolvedStaticOwner } }
-    _ -> { }
-  }
+  if receiver := member!.object.resolvedType! as ClassType { if receiver.typeArgs.length == 0 { return member!.resolvedStaticOwner } }
   return none
 }
 
@@ -401,16 +377,10 @@ export function applyTypeArgumentConstraints(state: CheckerState, declaration: F
     _ -> { }
   }
   if receiverType := receiver {
-    case receiverType {
-      owner: ClassType -> {
-        if ownerDeclaration := declarationFor(state.result, owner.symbol) {
-          case ownerDeclaration {
-            class_: ClassDeclaration -> { ownerNames = class_.typeParams; ownerArguments = owner.typeArgs }
-            _ -> { }
-          }
-        }
+    if owner := receiverType as ClassType {
+      if ownerDeclaration := declarationFor(state.result, owner.symbol) {
+        if class_ := ownerDeclaration as ClassDeclaration { ownerNames = class_.typeParams; ownerArguments = owner.typeArgs }
       }
-      _ -> { }
     }
   }
   validateTypeArgumentConstraints(state, declaration!.typeParams, declaration!.typeParamConstraints, arguments, span, module, scope, ownerNames, ownerArguments)
@@ -422,16 +392,10 @@ export function applyTypeArgumentConstraints(state: CheckerState, declaration: F
 // substitution; ordinary calls on the same class remain local calls.
 export function validateActorMethodBoundary(state: CheckerState, expression: CallExpression, method: FunctionType): none {
   let actor: ActorType | none = none
-  case expression.callee {
-    member: MemberExpression -> {
-      if resolvedType := member.object.resolvedType {
-        case resolvedType {
-          actorType_: ActorType -> { actor = actorType_ }
-          _ -> { }
-        }
-      }
+  if member := expression.callee as MemberExpression {
+    if resolvedType := member.object.resolvedType {
+      if actorType_ := resolvedType as ActorType { actor = actorType_ }
     }
-    _ -> { }
   }
   if actor == none { return }
   for parameter of method.params {

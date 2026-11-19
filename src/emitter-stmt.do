@@ -284,21 +284,15 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
   }
   // `try target = expr` tries the assigned value, then stores its success value.
   let triedAssignment: AssignmentExpression | none = none
-  case value {
-    assignment: AssignmentExpression -> {
-      if assignment.resolvedTriedResult != none { triedAssignment = assignment; value = assignment.value }
-    }
-    _ -> { }
+  if assignment := value as AssignmentExpression {
+    if assignment.resolvedTriedResult != none { triedAssignment = assignment; value = assignment.value }
   }
   if context.catchVarName != "" {
       let output = ind + "auto " + temporaryName + " = " + emitExpression(value, context) + ";\n"
       output = output + ind + "if (doof::is_failure(" + temporaryName + ")) { "
       errorType := value.resolvedType
       let hasErrorValue = true
-      case errorType {
-        result: ResultResolvedType -> { if result.errorType.kind == "none" { hasErrorValue = false } }
-        _ -> { }
-      }
+      if result := errorType as ResultResolvedType { if result.errorType.kind == "none" { hasErrorValue = false } }
       if hasErrorValue {
         let promoted = "doof::failure_error(" + temporaryName + ")"
         if catchType := context.catchResultType {
@@ -412,10 +406,7 @@ export function emitExtractedLocal(ind: string, name: string, resolvedType: Reso
 
 function localConstPrefix(resolvedType: ResolvedType, readonly_: bool, shallowImmutable: bool): string {
   if !readonly_ { return "" }
-  case resolvedType {
-    class_: ClassType -> { if shallowImmutable && class_.symbol.kind == "struct" { return "" } }
-    _ -> { }
-  }
+  if class_ := resolvedType as ClassType { if shallowImmutable && class_.symbol.kind == "struct" { return "" } }
   return "const "
 }
 
@@ -508,26 +499,23 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
   breakTarget := loopCompletion(statement.then_, labeledLoopId, level, context)
   loopId := context.nextTemporaryId()
   name := if statement.bindings.length == 0 then "_item" else discardableCppName(statement.bindings[0], loopId, 0)
-  case statement.iterable {
-    range: BinaryExpression -> {
-      // Both bounds are evaluated once, left to right, before the first
-      // iteration, so the body cannot move the end (`0..<items.length`).
-      end := "_range_end_" + string(loopId)
-      lower := emitExpression(range.left, context)
-      upper := emitExpression(range.right, context)
-      if range.operator == "..<" {
-        return ind + "for (int32_t " + name + " = " + lower + ", " + end + " = " + upper + "; " + name + " < " + end + "; ++" + name + ") {\n" +
-          body + ind + "}\n" + breakTarget
-      }
-      if range.operator == ".." {
-        // An end at the maximum int panics, as it does for a Range value, so
-        // the counter cannot overflow past it.
-        checkedEnd := "doof::inclusive_range_end(" + upper + ", " + quote(context.modulePath) + ", " + string(range.span.start.line) + ")"
-        return ind + "for (int32_t " + name + " = " + lower + ", " + end + " = " + checkedEnd + "; " + name + " <= " + end + "; ++" + name + ") {\n" +
-          body + ind + "}\n" + breakTarget
-      }
+  if range := statement.iterable as BinaryExpression {
+    // Both bounds are evaluated once, left to right, before the first
+    // iteration, so the body cannot move the end (`0..<items.length`).
+    end := "_range_end_" + string(loopId)
+    lower := emitExpression(range.left, context)
+    upper := emitExpression(range.right, context)
+    if range.operator == "..<" {
+      return ind + "for (int32_t " + name + " = " + lower + ", " + end + " = " + upper + "; " + name + " < " + end + "; ++" + name + ") {\n" +
+        body + ind + "}\n" + breakTarget
     }
-    _ -> { }
+    if range.operator == ".." {
+      // An end at the maximum int panics, as it does for a Range value, so
+      // the counter cannot overflow past it.
+      checkedEnd := "doof::inclusive_range_end(" + upper + ", " + quote(context.modulePath) + ", " + string(range.span.start.line) + ")"
+      return ind + "for (int32_t " + name + " = " + lower + ", " + end + " = " + checkedEnd + "; " + name + " <= " + end + "; ++" + name + ") {\n" +
+        body + ind + "}\n" + breakTarget
+    }
   }
   iterable := emitExpression(statement.iterable, context)
   iterableName := context.temporary("_iterable_")

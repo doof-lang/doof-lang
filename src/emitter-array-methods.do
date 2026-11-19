@@ -61,17 +61,14 @@ function emitArgument(value: Expression, expected: ResolvedType | none, context:
 
 function checkedSignature(member: MemberExpression, expression: CallExpression, context: EmitContext): FunctionType | none {
   if member.resolvedType == none { return none }
-  case member.resolvedType! {
-    signature: FunctionType -> {
-      if expression.resolvedGenericTypeArgs.length == 0 { return signature }
-      let concrete: ResolvedType[] = []
-      for argument of expression.resolvedGenericTypeArgs { concrete.push(specializeEmitType(argument, context)) }
-      case substituteTypeParams(signature, signature.typeParams, concrete) {
-        specialized: FunctionType -> { return specialized }
-        _ -> { }
-      }
+  if signature := member.resolvedType! as FunctionType {
+    if expression.resolvedGenericTypeArgs.length == 0 { return signature }
+    let concrete: ResolvedType[] = []
+    for argument of expression.resolvedGenericTypeArgs { concrete.push(specializeEmitType(argument, context)) }
+    case substituteTypeParams(signature, signature.typeParams, concrete) {
+      specialized: FunctionType -> { return specialized }
+      _ -> { }
     }
-    _ -> { }
   }
   return none
 }

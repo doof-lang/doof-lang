@@ -341,78 +341,72 @@ export class ModuleAnalyzer {
 
   private resolveImports(info: ModuleInfo): none {
     for statement of info.program.statements {
-      case statement {
-        import_: ImportDeclaration -> {
-          sourcePath := resolveImportPath(info, import_.source)
-          if info.path.endsWith(".test.do") && sourcePath.endsWith(".test.do") {
-            addError(info, "Test file \"${info.path}\" cannot import another test file \"${sourcePath}\"", import_.span)
+      if import_ := statement as ImportDeclaration {
+        sourcePath := resolveImportPath(info, import_.source)
+        if info.path.endsWith(".test.do") && sourcePath.endsWith(".test.do") {
+          addError(info, "Test file \"${info.path}\" cannot import another test file \"${sourcePath}\"", import_.span)
+          continue
+        }
+        source := resolveModule(sourcePath)
+        for named of import_.specifiers {
+          let imported: Symbol | none = none
+          if sourceModule := source { imported = findExport(sourceModule, named.name) }
+          // A failed dependency already owns the actionable diagnostic.
+          // Do not reinterpret its missing symbol table as missing exports.
+          if source != none && imported == none {
+            addError(info, "Module '${import_.source}' does not export '${named.name}'", named.span)
+          }
+          localName := named.alias ?? named.name
+          if hasModuleBinding(info, localName) {
+            addError(info, "Duplicate module binding '${localName}'", named.span)
             continue
           }
-          source := resolveModule(sourcePath)
-          for named of import_.specifiers {
-            let imported: Symbol | none = none
-            if sourceModule := source { imported = findExport(sourceModule, named.name) }
-            // A failed dependency already owns the actionable diagnostic.
-            // Do not reinterpret its missing symbol table as missing exports.
-            if source != none && imported == none {
-              addError(info, "Module '${import_.source}' does not export '${named.name}'", named.span)
-            }
-            localName := named.alias ?? named.name
-            if hasModuleBinding(info, localName) {
-              addError(info, "Duplicate module binding '${localName}'", named.span)
-              continue
-            }
-            if imported == none {
-              info.imports.push(ImportBinding {
-                localName, sourceName: named.name, sourceModule: sourcePath,
-                typeOnly: import_.typeOnly,
-              })
-            } else {
-              info.imports.push(ImportBinding {
-                localName, sourceName: named.name, sourceModule: sourcePath,
-                typeOnly: import_.typeOnly, symbol: imported,
-              })
-            }
+          if imported == none {
+            info.imports.push(ImportBinding {
+              localName, sourceName: named.name, sourceModule: sourcePath,
+              typeOnly: import_.typeOnly,
+            })
+          } else {
+            info.imports.push(ImportBinding {
+              localName, sourceName: named.name, sourceModule: sourcePath,
+              typeOnly: import_.typeOnly, symbol: imported,
+            })
           }
         }
-        _ -> { }
       }
     }
   }
 
   private resolveExportLists(info: ModuleInfo): none {
     for statement of info.program.statements {
-      case statement {
-        list: ExportList -> {
-          if source := list.source {
-            sourcePath := resolveImportPath(info, source)
-            info.reExports.push(sourcePath)
-            sourceModule := resolveModule(sourcePath) else { continue }
-            for specifier of list.specifiers {
-              if exported := findExport(sourceModule, specifier.name) {
-                info.exports.push(exportedSymbol(exported, specifier.alias ?? specifier.name))
-              } else {
-                addError(info, "Module '${source}' does not export '${specifier.name}'", specifier.span)
-              }
-            }
-            continue
-          }
+      if list := statement as ExportList {
+        if source := list.source {
+          sourcePath := resolveImportPath(info, source)
+          info.reExports.push(sourcePath)
+          sourceModule := resolveModule(sourcePath) else { continue }
           for specifier of list.specifiers {
-            if local := findSymbol(info, specifier.name) {
-              if isPrivateDeclaration(info, specifier.name) {
-                addError(info, "Cannot export private declaration '${specifier.name}'; private declarations are file-local", specifier.span)
-              } else {
-                exportedName := specifier.alias ?? specifier.name
-                if findExport(info, exportedName) == none {
-                  info.exports.push(exportedSymbol(local, exportedName))
-                }
-              }
+            if exported := findExport(sourceModule, specifier.name) {
+              info.exports.push(exportedSymbol(exported, specifier.alias ?? specifier.name))
             } else {
-              addError(info, "Cannot export unknown symbol '${specifier.name}'", specifier.span)
+              addError(info, "Module '${source}' does not export '${specifier.name}'", specifier.span)
             }
+          }
+          continue
+        }
+        for specifier of list.specifiers {
+          if local := findSymbol(info, specifier.name) {
+            if isPrivateDeclaration(info, specifier.name) {
+              addError(info, "Cannot export private declaration '${specifier.name}'; private declarations are file-local", specifier.span)
+            } else {
+              exportedName := specifier.alias ?? specifier.name
+              if findExport(info, exportedName) == none {
+                info.exports.push(exportedSymbol(local, exportedName))
+              }
+            }
+          } else {
+            addError(info, "Cannot export unknown symbol '${specifier.name}'", specifier.span)
           }
         }
-        _ -> { }
       }
     }
   }
@@ -574,10 +568,7 @@ export class ModuleAnalyzer {
 function collectMockImportDirectives(program: Program): MockImportDirective[] {
   let directives: MockImportDirective[] = []
   for statement of program.statements {
-    case statement {
-      directive: MockImportDirective -> { directives.push(directive) }
-      _ -> { }
-    }
+    if directive := statement as MockImportDirective { directives.push(directive) }
   }
   return directives
 }

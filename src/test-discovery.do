@@ -24,10 +24,7 @@ export function discoverModuleTests(
   result := TestDiscovery {}
   let usesMocks = false
   for statement of program.statements {
-    case statement {
-      _: MockImportDirective -> { usesMocks = true }
-      _ -> { }
-    }
+    if _ := statement as MockImportDirective { usesMocks = true }
   }
   for statement of program.statements {
     case statement {
@@ -108,10 +105,7 @@ function returnsNone(declaration: FunctionDeclaration): bool {
 
 function findFunction(statements: Statement[], name: string): FunctionDeclaration | none {
   for statement of statements {
-    case statement {
-      fn: FunctionDeclaration -> { if fn.name == name { return fn } }
-      _ -> { }
-    }
+    if fn := statement as FunctionDeclaration { if fn.name == name { return fn } }
   }
   return none
 }

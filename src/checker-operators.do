@@ -193,15 +193,12 @@ export function checkAs(state: CheckerState, expression: AsExpression, scope: Sc
   sourceType := checkExpression(state, expression.expression, scope, none)
   targetType := resolveType(state, expression.targetType, state.info!, scope)
   if sourceType.kind == "never" { return finish(state, expression, neverType()) }
-  case sourceType {
-    result: ResultResolvedType -> {
-      if !isValidAsNarrow(state, result.valueType, targetType) {
-        typeError(state, "Cannot narrow \"${typeName(sourceType)}\" to \"${typeName(targetType)}\" with \"as\"", expression.span)
-        return finish(state, expression, unknownType())
-      }
-      return finish(state, expression, resultType(targetType, unionType([result.errorType, primitive("string")])))
+  if result := sourceType as ResultResolvedType {
+    if !isValidAsNarrow(state, result.valueType, targetType) {
+      typeError(state, "Cannot narrow \"${typeName(sourceType)}\" to \"${typeName(targetType)}\" with \"as\"", expression.span)
+      return finish(state, expression, unknownType())
     }
-    _ -> { }
+    return finish(state, expression, resultType(targetType, unionType([result.errorType, primitive("string")])))
   }
   if !isValidAsNarrow(state, sourceType, targetType) {
     typeError(state, "Cannot narrow \"${typeName(sourceType)}\" to \"${typeName(targetType)}\" with \"as\"", expression.span)
@@ -220,10 +217,7 @@ export function isValidAsNarrow(state: CheckerState, source: ResolvedType, targe
     }
     // A class widens to an interface it implements; the narrowing always succeeds.
     _: ClassType -> {
-      case target {
-        _: InterfaceType -> { return isAssignableWithInterfaces(state.result, source, target) }
-        _ -> { }
-      }
+      if _ := target as InterfaceType { return isAssignableWithInterfaces(state.result, source, target) }
     }
     interface_: InterfaceType -> {
       case target {
@@ -295,10 +289,7 @@ function orderedTypes(state: CheckerState, left: ResolvedType, right: ResolvedTy
       primitive_: PrimitiveType -> { return primitive_.name == "string" || primitive_.name == "char" }
       enum_: EnumType -> {
         if declaration := declarationFor(state.result, enum_.symbol) {
-          case declaration {
-            owner: EnumDeclaration -> { return owner.backingKind == "int" }
-            _ -> { }
-          }
+          if owner := declaration as EnumDeclaration { return owner.backingKind == "int" }
         }
         return true
       }
@@ -329,19 +320,13 @@ function isComparisonCarrier(type_: ResolvedType): bool {
 
 export function typesOverlap(state: CheckerState, left: ResolvedType, right: ResolvedType): bool {
   if left.kind == "unknown" || right.kind == "unknown" { return true }
-  case left {
-    union_: UnionResolvedType -> {
-      for member of union_.types { if typesOverlap(state, member, right) { return true } }
-      return false
-    }
-    _ -> { }
+  if union_ := left as UnionResolvedType {
+    for member of union_.types { if typesOverlap(state, member, right) { return true } }
+    return false
   }
-  case right {
-    union_: UnionResolvedType -> {
-      for member of union_.types { if typesOverlap(state, left, member) { return true } }
-      return false
-    }
-    _ -> { }
+  if union_ := right as UnionResolvedType {
+    for member of union_.types { if typesOverlap(state, left, member) { return true } }
+    return false
   }
   case left {
     result: ResultResolvedType -> { case right { success: SuccessResolvedType -> { return typesOverlap(state, result.valueType, success.valueType) } failure: FailureResolvedType -> { return typesOverlap(state, result.errorType, failure.errorType) } _ -> { } } }
@@ -349,9 +334,6 @@ export function typesOverlap(state: CheckerState, left: ResolvedType, right: Res
     failure: FailureResolvedType -> { case right { result: ResultResolvedType -> { return typesOverlap(state, failure.errorType, result.errorType) } _ -> { } } }
     _ -> { }
   }
-  case left {
-    leftInterface: InterfaceType -> { case right { rightInterface: InterfaceType -> { return interfacesShareImplementation(state.result, leftInterface, rightInterface) } _ -> { } } }
-    _ -> { }
-  }
+  if leftInterface := left as InterfaceType { case right { rightInterface: InterfaceType -> { return interfacesShareImplementation(state.result, leftInterface, rightInterface) } _ -> { } } }
   return isAssignableWithInterfaces(state.result, left, right) || isAssignableWithInterfaces(state.result, right, left) || (isNumericOperand(left) && isNumericOperand(right))
 }

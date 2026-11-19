@@ -245,28 +245,22 @@ export function validateTypeArgumentConstraints(state: CheckerState, names: stri
   for index of 0..<names.length {
     if index >= constraints.length || constraints[index].type_ == none { continue }
     annotation := constraints[index].type_!
-    case annotation {
-      named: NamedType -> {
-        if named.typeArgs.length == 0 && (named.name == "Reflectable" || named.name == "Serializable") {
-          case arguments[index] {
-            parameter: TypeParameterType -> { if parameter.constraintName == named.name { continue } }
-            _ -> { }
-          }
-        }
-        if named.typeArgs.length == 0 && named.name == "Reflectable" {
-          case arguments[index] {
-            _: ClassType -> { memberType(state, arguments[index], "metadata", span) }
-            _ -> { reportConstraintViolation(state, names[index], arguments[index], "Reflectable", span) }
-          }
-          continue
-        }
-        if named.typeArgs.length == 0 && named.name == "Serializable" {
-          result := memberType(state, arguments[index], "fromSerialValue", span)
-          if result.kind == "unknown" { reportConstraintViolation(state, names[index], arguments[index], named.name, span) }
-          continue
-        }
+    if named := annotation as NamedType {
+      if named.typeArgs.length == 0 && (named.name == "Reflectable" || named.name == "Serializable") {
+        if parameter := arguments[index] as TypeParameterType { if parameter.constraintName == named.name { continue } }
       }
-      _ -> { }
+      if named.typeArgs.length == 0 && named.name == "Reflectable" {
+        case arguments[index] {
+          _: ClassType -> { memberType(state, arguments[index], "metadata", span) }
+          _ -> { reportConstraintViolation(state, names[index], arguments[index], "Reflectable", span) }
+        }
+        continue
+      }
+      if named.typeArgs.length == 0 && named.name == "Serializable" {
+        result := memberType(state, arguments[index], "fromSerialValue", span)
+        if result.kind == "unknown" { reportConstraintViolation(state, names[index], arguments[index], named.name, span) }
+        continue
+      }
     }
     resolvedConstraint := resolveType(state, annotation, module, constraintScope, false)
     substitutedConstraint := substituteTypeParams(substituteTypeParams(resolvedConstraint, ownerNames, ownerArguments), names, arguments)

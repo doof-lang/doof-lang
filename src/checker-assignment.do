@@ -37,14 +37,11 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
     }
     _ -> { }
   }
-  case expression.target {
-    identifier: Identifier -> {
-      if binding := lookup(scope, identifier.name) {
-        identifier.resolvedBinding = binding
-        identifier.resolvedType = binding.type_
-      }
+  if identifier := expression.target as Identifier {
+    if binding := lookup(scope, identifier.name) {
+      identifier.resolvedBinding = binding
+      identifier.resolvedType = binding.type_
     }
-    _ -> { }
   }
   let value = checkExpression(state, expression.value, scope, if tried then none else targetType)
   if tried {

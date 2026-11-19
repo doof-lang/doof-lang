@@ -26,13 +26,10 @@ export function resolveConstructor(state: CheckerState, owner: ClassType, useFac
   if factoryMethod := factory {
     signature := factoryMethod.resolvedType ?? methodSignature(factoryMethod, classModuleFor(state.result, owner.symbol), state.result, owner.symbol.typeParams)
     specialized := if classDeclaration := declaration then substituteTypeParams(signature, classDeclaration.typeParams, owner.typeArgs) else signature
-    case specialized {
-      fn: FunctionType -> {
-        let defaults: ConstructionDefault[] = []
-        for parameter of factoryMethod.params { defaults.push(ConstructionDefault { value: parameter.defaultValue }) }
-        return CheckedConstruction { owner, declaration, factory, signature: fn, defaults }
-      }
-      _ -> { }
+    if fn := specialized as FunctionType {
+      let defaults: ConstructionDefault[] = []
+      for parameter of factoryMethod.params { defaults.push(ConstructionDefault { value: parameter.defaultValue }) }
+      return CheckedConstruction { owner, declaration, factory, signature: fn, defaults }
     }
   }
   let params: FunctionParamType[] = []
@@ -131,20 +128,14 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
     return finish(state, expression, unknownType())
   }
   if declaration := declarationFor(state.result, symbol!) {
-    case declaration {
-      classDeclaration: ClassDeclaration -> { expression.resolvedClass = classDeclaration }
-      _ -> { }
-    }
+    if classDeclaration := declaration as ClassDeclaration { expression.resolvedClass = classDeclaration }
   }
   let resolvedTypeArgs = resolveTypeArguments(state, expression.typeArgs, scope)
   if resolvedTypeArgs.length == 0 && expected != none {
-    case expected! {
-      expectedClass: ClassType -> {
-        if expectedClass.symbol.module == symbol!.module && expectedClass.symbol.name == symbol!.name {
-          for argument of expectedClass.typeArgs { resolvedTypeArgs.push(argument) }
-        }
+    if expectedClass := expected! as ClassType {
+      if expectedClass.symbol.module == symbol!.module && expectedClass.symbol.name == symbol!.name {
+        for argument of expectedClass.typeArgs { resolvedTypeArgs.push(argument) }
       }
-      _ -> { }
     }
   }
   generic := expression.resolvedClass

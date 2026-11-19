@@ -43,40 +43,34 @@ export function checkAsync(state: CheckerState, async_: AsyncExpression, scope: 
       innerType := checkExpression(state, inner, scope, none)
       actorCall := isActorMethodCall(inner)
       let isolatedCall = false
-      case inner {
-        call: CallExpression -> {
-          isolatedCall = call.resolvedFunction != none
-          if !actorCall && isolatedCall {
-            for i of 0..<call.args.length {
-              argumentType := call.args[i].value.resolvedType else { continue }
-              if violation := asyncCallOperandViolation(state.result, argumentType) {
-                typeError(state,
-                  "Async call argument " + string(i + 1) + " of type \"" + typeName(argumentType) + "\" cannot cross to the worker: " + violation,
-                  call.args[i].span,
-                )
-              }
-            }
-            case call.callee {
-              member: MemberExpression -> {
-                if member.resolvedStaticOwner == none && receiverType := member.object.resolvedType &&
-                    receiverViolation := asyncCallOperandViolation(state.result, receiverType) {
-                  typeError(state,
-                    "Async call receiver of type \"${typeName(receiverType)}\" cannot cross to the worker: ${receiverViolation}",
-                    member.object.span,
-                  )
-                }
-              }
-              _ -> { }
-            }
-            if resultViolation := asyncResultViolation(state.result, innerType) {
+      if call := inner as CallExpression {
+        isolatedCall = call.resolvedFunction != none
+        if !actorCall && isolatedCall {
+          for i of 0..<call.args.length {
+            argumentType := call.args[i].value.resolvedType else { continue }
+            if violation := asyncCallOperandViolation(state.result, argumentType) {
               typeError(state,
-                "Async call result type \"${typeName(innerType)}\" cannot cross from the worker: ${resultViolation}",
-                async_.span,
+                "Async call argument " + string(i + 1) + " of type \"" + typeName(argumentType) + "\" cannot cross to the worker: " + violation,
+                call.args[i].span,
               )
             }
           }
+          if member := call.callee as MemberExpression {
+            if member.resolvedStaticOwner == none && receiverType := member.object.resolvedType &&
+                receiverViolation := asyncCallOperandViolation(state.result, receiverType) {
+              typeError(state,
+                "Async call receiver of type \"${typeName(receiverType)}\" cannot cross to the worker: ${receiverViolation}",
+                member.object.span,
+              )
+            }
+          }
+          if resultViolation := asyncResultViolation(state.result, innerType) {
+            typeError(state,
+              "Async call result type \"${typeName(innerType)}\" cannot cross from the worker: ${resultViolation}",
+              async_.span,
+            )
+          }
         }
-        _ -> { }
       }
       if !actorCall && !isolatedCall {
         typeError(state, "`async` requires an actor method call or an inferrably isolated function call", async_.span)
@@ -158,14 +152,11 @@ export function asyncBlockCaptures(block: Block): Identifier[] {
   let captures: Identifier[] = []
   let names: string[] = []
   for nested of blockExpressions(block) {
-    case nested {
-      identifier: Identifier -> {
-        if identifier.resolvedBinding == none || !capturesBinding(block, identifier.resolvedBinding!) { continue }
-        if names.contains(identifier.resolvedBinding!.name) { continue }
-        names.push(identifier.resolvedBinding!.name)
-        captures.push(identifier)
-      }
-      _ -> { }
+    if identifier := nested as Identifier {
+      if identifier.resolvedBinding == none || !capturesBinding(block, identifier.resolvedBinding!) { continue }
+      if names.contains(identifier.resolvedBinding!.name) { continue }
+      names.push(identifier.resolvedBinding!.name)
+      captures.push(identifier)
     }
   }
   return captures
@@ -240,18 +231,15 @@ function findClassAsyncViolation(result: AnalysisResult, type_: ClassType, seen:
   if seen.contains(key) { return none }
   next := appended(seen, key)
   declaration := declarationFor(result, type_.symbol) else { return none }
-  case declaration {
-    class_: ClassDeclaration -> {
-      for field of class_.fields {
-        fieldType := field.resolvedType else { continue }
-        effective := substituteTypeParams(fieldType, class_.typeParams, type_.typeArgs)
-        if reason := findAsyncViolation(result, effective, next, safe, resultMode, unbound) {
-          name := fieldDisplayName(field)
-          return AsyncBoundaryViolation { reason: "field \"${name}\" cannot cross the async boundary: ${reason}" }
-        }
+  if class_ := declaration as ClassDeclaration {
+    for field of class_.fields {
+      fieldType := field.resolvedType else { continue }
+      effective := substituteTypeParams(fieldType, class_.typeParams, type_.typeArgs)
+      if reason := findAsyncViolation(result, effective, next, safe, resultMode, unbound) {
+        name := fieldDisplayName(field)
+        return AsyncBoundaryViolation { reason: "field \"${name}\" cannot cross the async boundary: ${reason}" }
       }
     }
-    _ -> { }
   }
   safe.push(key)
   return none
@@ -263,20 +251,17 @@ function findInterfaceAsyncViolation(result: AnalysisResult, type_: InterfaceTyp
   if seen.contains(key) { return none }
   next := appended(seen, key)
   declaration := declarationFor(result, type_.symbol) else { return none }
-  case declaration {
-    interface_: InterfaceDeclaration -> {
-      for field of interface_.fields {
-        fieldType := field.resolvedType else { continue }
-        effective := substituteTypeParams(fieldType, interface_.typeParams, type_.typeArgs)
-        if reason := findAsyncViolation(result, effective, next, safe, resultMode, unbound) { return AsyncBoundaryViolation { reason: "field \"${field.name}\" cannot cross the async boundary: ${reason}" } }
-      }
-      if symbol := interface_.resolvedSymbol {
-        for implementation of symbol.implementations {
-          if violation := findClassAsyncViolation(result, implementationType(result, type_, implementation), next, resultMode, safe, true) { return AsyncBoundaryViolation { reason: "implementation \"${implementation.name}\" cannot cross the async boundary: ${violation.reason}" } }
-        }
+  if interface_ := declaration as InterfaceDeclaration {
+    for field of interface_.fields {
+      fieldType := field.resolvedType else { continue }
+      effective := substituteTypeParams(fieldType, interface_.typeParams, type_.typeArgs)
+      if reason := findAsyncViolation(result, effective, next, safe, resultMode, unbound) { return AsyncBoundaryViolation { reason: "field \"${field.name}\" cannot cross the async boundary: ${reason}" } }
+    }
+    if symbol := interface_.resolvedSymbol {
+      for implementation of symbol.implementations {
+        if violation := findClassAsyncViolation(result, implementationType(result, type_, implementation), next, resultMode, safe, true) { return AsyncBoundaryViolation { reason: "implementation \"${implementation.name}\" cannot cross the async boundary: ${violation.reason}" } }
       }
     }
-    _ -> { }
   }
   safe.push(key)
   return none

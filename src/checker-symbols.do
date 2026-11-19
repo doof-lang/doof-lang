@@ -23,11 +23,8 @@ export function builtinSourceLocationType(): ClassType {
 }
 
 export function casePatternName(pattern: TypePattern): string {
-  case pattern.type_ {
-    named: NamedType -> {
-      if named.name == "Success" || named.name == "Failure" { return named.name }
-    }
-    _ -> { }
+  if named := pattern.type_ as NamedType {
+    if named.name == "Success" || named.name == "Failure" { return named.name }
   }
   return ""
 }
@@ -36,51 +33,36 @@ export function decorateAnnotationWithResolved(annotation: TypeAnnotation, resol
   case annotation {
     named: NamedType -> {
       named.resolvedType = resolved
-      case resolved {
-        class_: ClassType -> {
-          for i of 0..<named.typeArgs.length {
-            if i < class_.typeArgs.length { decorateAnnotationWithResolved(named.typeArgs[i], class_.typeArgs[i]) }
-          }
+      if class_ := resolved as ClassType {
+        for i of 0..<named.typeArgs.length {
+          if i < class_.typeArgs.length { decorateAnnotationWithResolved(named.typeArgs[i], class_.typeArgs[i]) }
         }
-        _ -> { }
       }
     }
     array: ArrayType -> {
       array.resolvedType = resolved
-      case resolved {
-        arrayResolved: ArrayResolvedType -> { decorateAnnotationWithResolved(array.elementType, arrayResolved.elementType) }
-        _ -> { }
-      }
+      if arrayResolved := resolved as ArrayResolvedType { decorateAnnotationWithResolved(array.elementType, arrayResolved.elementType) }
     }
     union: UnionType -> {
       union.resolvedType = resolved
-      case resolved {
-        unionResolved: UnionResolvedType -> {
-          for i of 0..<union.types.length {
-            if i < unionResolved.types.length { decorateAnnotationWithResolved(union.types[i], unionResolved.types[i]) }
-          }
+      if unionResolved := resolved as UnionResolvedType {
+        for i of 0..<union.types.length {
+          if i < unionResolved.types.length { decorateAnnotationWithResolved(union.types[i], unionResolved.types[i]) }
         }
-        _ -> { }
       }
     }
     function_: AstFunctionType -> {
       function_.resolvedType = resolved
-      case resolved {
-        functionResolved: FunctionType -> {
-          for i of 0..<function_.params.length {
-            if i < functionResolved.params.length { decorateAnnotationWithResolved(function_.params[i].type_, functionResolved.params[i].type_) }
-          }
-          decorateAnnotationWithResolved(function_.returnType, functionResolved.returnType)
+      if functionResolved := resolved as FunctionType {
+        for i of 0..<function_.params.length {
+          if i < functionResolved.params.length { decorateAnnotationWithResolved(function_.params[i].type_, functionResolved.params[i].type_) }
         }
-        _ -> { }
+        decorateAnnotationWithResolved(function_.returnType, functionResolved.returnType)
       }
     }
     weak_: WeakType -> {
       weak_.resolvedType = resolved
-      case resolved {
-        weakResolved: WeakResolvedType -> { decorateAnnotationWithResolved(weak_.type_, weakResolved.inner) }
-        _ -> { }
-      }
+      if weakResolved := resolved as WeakResolvedType { decorateAnnotationWithResolved(weak_.type_, weakResolved.inner) }
     }
   }
 }
@@ -99,10 +81,7 @@ export function blockContainsLoopExit(block: Block): bool {
       }
       case_: CaseStatement -> {
         for arm of case_.arms {
-          case arm.body {
-            armBlock: Block -> { if blockContainsLoopExit(armBlock) { return true } }
-            _ -> { }
-          }
+          if armBlock := arm.body as Block { if blockContainsLoopExit(armBlock) { return true } }
         }
       }
       with_: WithStatement -> { if blockContainsLoopExit(with_.body) { return true } }
@@ -164,10 +143,7 @@ export function symbolType(symbol: Symbol, info: ModuleInfo, result: AnalysisRes
   case declaration! {
     fn: FunctionDeclaration -> {
       if resolvedType := fn.resolvedType {
-        case resolvedType {
-          resolved: FunctionType -> { return resolved }
-          _ -> { }
-        }
+        if resolved := resolvedType as FunctionType { return resolved }
       }
       return methodSignature(fn, info, result)
     }
@@ -397,10 +373,7 @@ export function findClassDeclaration(result: AnalysisResult, modulePath: string,
   module := findModule(result, modulePath)
   if module == none { return none }
   for statement of module!.program.statements {
-    case statement {
-      class_: ClassDeclaration -> { if class_.name == name { return class_ } }
-      _ -> { }
-    }
+    if class_ := statement as ClassDeclaration { if class_.name == name { return class_ } }
   }
   return none
 }
@@ -409,10 +382,7 @@ export function findInterfaceDeclaration(result: AnalysisResult, modulePath: str
   module := findModule(result, modulePath)
   if module == none { return none }
   for statement of module!.program.statements {
-    case statement {
-      interface_: InterfaceDeclaration -> { if interface_.name == name { return interface_ } }
-      _ -> { }
-    }
+    if interface_ := statement as InterfaceDeclaration { if interface_.name == name { return interface_ } }
   }
   return none
 }

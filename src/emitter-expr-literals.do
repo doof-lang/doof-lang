@@ -70,10 +70,7 @@ export function emitArray(expression: ArrayLiteral, context: EmitContext, expect
 }
 
 export function emitObject(expression: ObjectLiteral, context: EmitContext, expected: ResolvedType | none): string {
-  case expression.resolvedType {
-    class_: ClassType -> { return emitClassObject(expression, context, class_) }
-    _ -> { }
-  }
+  if class_ := expression.resolvedType as ClassType { return emitClassObject(expression, context, class_) }
   case expected {
     result: ResultResolvedType -> {
       if value := findProperty(expression.properties, "value") {
@@ -93,10 +90,7 @@ export function emitObject(expression: ObjectLiteral, context: EmitContext, expe
     _: UnionResolvedType -> {
       // A nullable map context is checked as the map itself; the caller
       // converts the constructed map into the union carrier.
-      case expression.resolvedType {
-        map: MapResolvedType -> { return emitMapObject(expression, context, map) }
-        _ -> { }
-      }
+      if map := expression.resolvedType as MapResolvedType { return emitMapObject(expression, context, map) }
     }
     _ -> { }
   }
@@ -131,7 +125,7 @@ export function emitTuple(expression: TupleLiteral, context: EmitContext): strin
   // each element's own type (a union or nullable slot).
   let tuple: TupleResolvedType | none = none
   if resolvedType := expression.resolvedType {
-    case resolvedType { checked: TupleResolvedType -> { tuple = checked } _ -> { } }
+    if checked := resolvedType as TupleResolvedType { tuple = checked }
   }
   let values = ""
   for i of 0..<expression.elements.length {

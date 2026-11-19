@@ -142,17 +142,14 @@ function classesJsonDiscriminator(
   if implementations.length == 0 { return none }
   for candidate of implementations[0].fields {
     if candidate.static_ || !candidate.const_ || candidate.names.length != 1 || candidate.defaultValue == none { continue }
-    case candidate.defaultValue! {
-      firstValue: StringLiteral -> {
-        discriminator := JsonDiscriminator { fieldName: candidate.names[0] }
-        for implementation of implementations {
-          matching := fixedStringField(implementation, discriminator.fieldName)
-          if matching == none || discriminatorHasValue(discriminator, matching!) { discriminator.entries = []; break }
-          discriminator.entries.push(JsonDiscriminatorEntry { value: matching!, declaration: implementation })
-        }
-        if discriminator.entries.length == implementations.length { return discriminator }
+    if firstValue := candidate.defaultValue! as StringLiteral {
+      discriminator := JsonDiscriminator { fieldName: candidate.names[0] }
+      for implementation of implementations {
+        matching := fixedStringField(implementation, discriminator.fieldName)
+        if matching == none || discriminatorHasValue(discriminator, matching!) { discriminator.entries = []; break }
+        discriminator.entries.push(JsonDiscriminatorEntry { value: matching!, declaration: implementation })
       }
-      _ -> { }
+      if discriminator.entries.length == implementations.length { return discriminator }
     }
   }
   return none
@@ -612,10 +609,7 @@ function jsonUnionMemberKind(member: ResolvedType, programs: Program[]): string 
 function jsonEnumBackingKind(enum_: EnumType, programs: Program[]): string {
   for program of programs {
     for statement of program.statements {
-      case statement {
-        declaration: EnumDeclaration -> { if declaration.name == enum_.name { return declaration.backingKind } }
-        _ -> { }
-      }
+      if declaration := statement as EnumDeclaration { if declaration.name == enum_.name { return declaration.backingKind } }
     }
   }
   return "int"

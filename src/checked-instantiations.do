@@ -366,30 +366,27 @@ function collectJsonMemberDemand(member: MemberExpression, modulePath: string, a
     return
   }
   if member.property != "metadata" { return }
-  case receiver {
-    class_: ClassType -> {
-      owner := findClassDeclaration(analysis, class_.symbol.module, class_.symbol.name)
-      if owner == none { return }
-      for method of owner!.methods {
-        if method.private_ || method.static_ { continue }
-        for parameter of method.params {
-          if resolvedType := parameter.resolvedType {
-            addJsonDeserializationDemand(plan, specialize(resolvedType, names, arguments), analysis)
-          }
-        }
-        if method.resolvedType == none { continue }
-        case specialize(method.resolvedType!, names, arguments) {
-          function_: FunctionType -> {
-            case function_.returnType {
-              result: ResultResolvedType -> { addJsonSerializationDemand(plan, result.valueType, analysis) }
-              returnType: ResolvedType -> { addJsonSerializationDemand(plan, returnType, analysis) }
-            }
-          }
-          _ -> { }
+  if class_ := receiver as ClassType {
+    owner := findClassDeclaration(analysis, class_.symbol.module, class_.symbol.name)
+    if owner == none { return }
+    for method of owner!.methods {
+      if method.private_ || method.static_ { continue }
+      for parameter of method.params {
+        if resolvedType := parameter.resolvedType {
+          addJsonDeserializationDemand(plan, specialize(resolvedType, names, arguments), analysis)
         }
       }
+      if method.resolvedType == none { continue }
+      case specialize(method.resolvedType!, names, arguments) {
+        function_: FunctionType -> {
+          case function_.returnType {
+            result: ResultResolvedType -> { addJsonSerializationDemand(plan, result.valueType, analysis) }
+            returnType: ResolvedType -> { addJsonSerializationDemand(plan, returnType, analysis) }
+          }
+        }
+        _ -> { }
+      }
     }
-    _ -> { }
   }
 }
 
@@ -643,13 +640,10 @@ function discoverConcreteInterfaceImplementations(analysis: AnalysisResult, plan
   for interface_ of plan.interfaces {
     for module of analysis.modules {
       for statement of module.program.statements {
-        case statement {
-          class_: ClassDeclaration -> {
-            if class_.typeParams.length == 0 && !class_.struct_ && classImplementsConcreteInterface(class_, [], interface_, analysis) {
-              addImplementation(interface_, module.path, class_.name)
-            }
+        if class_ := statement as ClassDeclaration {
+          if class_.typeParams.length == 0 && !class_.struct_ && classImplementsConcreteInterface(class_, [], interface_, analysis) {
+            addImplementation(interface_, module.path, class_.name)
           }
-          _ -> { }
         }
       }
     }

@@ -293,17 +293,14 @@ function collectGeneratedJsonDependencies(program: Program, rootPath: string, in
 }
 
 function collectGeneratedJsonDeclarationDependencies(statement: Statement, rootPath: string, instantiations: InstantiationPlan, index: WorldviewIndex): none {
-  case statement {
-    class_: ClassDeclaration -> {
-      key := rootPath + "::" + class_.name
-      if !instantiations.jsonSerializationKeys.contains(key) && !instantiations.jsonDeserializationKeys.contains(key) { return }
-      dependencies := DependencyBuilder { identities: index.graph.identityPreparation }
-      for field of class_.fields {
-        if !field.static_ && field.resolvedType != none { collectCompleteDependencyType(field.resolvedType!, dependencies) }
-      }
-      replayDependencies(dependencies.finish(), rootPath, index, true)
+  if class_ := statement as ClassDeclaration {
+    key := rootPath + "::" + class_.name
+    if !instantiations.jsonSerializationKeys.contains(key) && !instantiations.jsonDeserializationKeys.contains(key) { return }
+    dependencies := DependencyBuilder { identities: index.graph.identityPreparation }
+    for field of class_.fields {
+      if !field.static_ && field.resolvedType != none { collectCompleteDependencyType(field.resolvedType!, dependencies) }
     }
-    _ -> { }
+    replayDependencies(dependencies.finish(), rootPath, index, true)
   }
 }
 

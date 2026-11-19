@@ -17,10 +17,7 @@ import { addUnique } from "./string-lists"
 
 export function emitLambdaExpression(expression: LambdaExpression, context: EmitContext, expected: ResolvedType | none = none): string {
   let functionType = lambdaFunctionType(expression)
-  case expected {
-    expectedFunction: FunctionType -> { functionType = expectedFunction }
-    _ -> { }
-  }
+  if expectedFunction := expected as FunctionType { functionType = expectedFunction }
   let params = ""
   for i of 0..<expression.params.length {
     if i > 0 { params = params + ", " }
@@ -141,10 +138,7 @@ export function scanCapturedMutablesInExpression(body: Expression): string[] {
 
 function lambdaFunctionType(expression: LambdaExpression): FunctionType {
   if resolvedType := expression.resolvedType {
-    case resolvedType {
-      function_: FunctionType -> { return function_ }
-      _ -> { }
-    }
+    if function_ := resolvedType as FunctionType { return function_ }
   }
   panic("Lambda has no resolved function type")
   return FunctionType { params: [], returnType: NoneType {} }
@@ -169,10 +163,7 @@ function scanExpressionsForLambdas(expressions: Expression[], result: string[]):
   while cursor < expressions.length {
     current := expressions[cursor]
     cursor += 1
-    case current {
-      lambda: LambdaExpression -> { collectLambdaCaptures(lambda, result, true) }
-      _ -> { }
-    }
+    if lambda := current as LambdaExpression { collectLambdaCaptures(lambda, result, true) }
     collectNestedExpressions(current, expressions)
   }
 }

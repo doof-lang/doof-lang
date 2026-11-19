@@ -33,16 +33,10 @@ export function emitCarrierConversion(value: string, source: ResolvedType, targe
   toType := specializeEmitType(target, context)
   case fromType {
     success: SuccessResolvedType -> {
-      case toType {
-        result: ResultResolvedType -> { return emitResultArmConversion(value, success.valueType, result.valueType, true, result, context) }
-        _ -> { }
-      }
+      if result := toType as ResultResolvedType { return emitResultArmConversion(value, success.valueType, result.valueType, true, result, context) }
     }
     failure: FailureResolvedType -> {
-      case toType {
-        result: ResultResolvedType -> { return emitResultArmConversion(value, failure.errorType, result.errorType, false, result, context) }
-        _ -> { }
-      }
+      if result := toType as ResultResolvedType { return emitResultArmConversion(value, failure.errorType, result.errorType, false, result, context) }
     }
     _ -> { }
   }
@@ -53,14 +47,11 @@ export function emitCarrierConversion(value: string, source: ResolvedType, targe
   }
   // An optional weak variant stores each present arm as its own weak_ptr; a
   // strong variant or absent pointer has no implicit conversion into it.
-  case toType {
-    weak_: WeakResolvedType -> {
-      if targetCarrier.kind == .Optional && weakTargetUsesVariant(weak_.inner) {
-        toCpp := emitContextType(toType, context)
-        return if emitContextType(fromType, context) == toCpp then value else "doof::weak_promote<" + toCpp + ">(" + value + ")"
-      }
+  if weak_ := toType as WeakResolvedType {
+    if targetCarrier.kind == .Optional && weakTargetUsesVariant(weak_.inner) {
+      toCpp := emitContextType(toType, context)
+      return if emitContextType(fromType, context) == toCpp then value else "doof::weak_promote<" + toCpp + ">(" + value + ")"
     }
-    _ -> { }
   }
   if targetCarrier.kind == .Variant && !targetCarrier.naturalNullable {
     fromCpp := emitContextType(fromType, context)

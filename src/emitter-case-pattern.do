@@ -109,10 +109,7 @@ function emitCaseTypeTest(
   names: ModuleNames,
   context: EmitContext | none,
 ): CaseTypePatternEmission {
-  case subjectType {
-    _: SerialValueResolvedType -> { return emitJsonValuePattern(patternType, subject, bindingName) }
-    _ -> { }
-  }
+  if _ := subjectType as SerialValueResolvedType { return emitJsonValuePattern(patternType, subject, bindingName) }
   // A pattern naming the subject's own type always matches.
   if sameType(patternType, subjectType) {
     return CaseTypePatternEmission { condition: "true", binding: if bindingName == "" then "" else "const auto " + bindingName + " = " + subject + ";\n" }

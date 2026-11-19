@@ -163,18 +163,15 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
 // A numeric literal adopts a contextual primitive type it widens to without a cast.
 function numericLiteralType(state: CheckerState, expression: Expression, literal: string, expected: ResolvedType | none): ResolvedType {
   if expectedType := expected {
-    case expectedType {
-      primitiveExpected: PrimitiveType -> {
-        target := primitiveExpected.name
-        widens := case literal {
-          "int" -> target == "byte" || target == "long" || target == "float" || target == "double",
-          "long" | "float" -> target == "double",
-          "double" -> target == "float",
-          _ -> false
-        }
-        if widens { return finish(state, expression, expectedType) }
+    if primitiveExpected := expectedType as PrimitiveType {
+      target := primitiveExpected.name
+      widens := case literal {
+        "int" -> target == "byte" || target == "long" || target == "float" || target == "double",
+        "long" | "float" -> target == "double",
+        "double" -> target == "float",
+        _ -> false
       }
-      _ -> { }
+      if widens { return finish(state, expression, expectedType) }
     }
   }
   return finish(state, expression, primitive(literal))
@@ -218,33 +215,30 @@ export function implicitMethod(state: CheckerState, scope: Scope, name: string, 
     owner: ClassType -> {
       declaration := declarationFor(state.result, owner.symbol)
       if declaration == none { return none }
-      case declaration! {
-        class_: ClassDeclaration -> {
-          // Static methods declare only static fields, so an instance field
-          // reaches here by name.
-          if inStaticContext(scope) {
-            for field of class_.fields {
-              if !field.static_ && field.names.contains(name) {
-                typeError(state, "Cannot access instance field '${name}' from a static method", span)
-                return Binding { name, kind: "field", type_: unknownType(), mutable: true, span: checkerSemanticSpan(span), module: state.info!.path }
-              }
-            }
-          }
-          for method of class_.methods {
-            if method.name == name {
-              if !method.static_ && inStaticContext(scope) {
-                typeError(state, "Cannot call instance method '${name}' from a static method", span)
-                return Binding { name, kind: "method", type_: unknownType(), mutable: false, span: checkerSemanticSpan(span), module: state.info!.path, symbol: owner.symbol }
-              }
-              methodType := method.resolvedType ?? checkFunction(state, method, scope, owner)
-              return Binding {
-                name, kind: "method", type_: methodType, mutable: false,
-                span: checkerSemanticSpan(span), module: state.info!.path, symbol: owner.symbol,
-              }
+      if class_ := declaration! as ClassDeclaration {
+        // Static methods declare only static fields, so an instance field
+        // reaches here by name.
+        if inStaticContext(scope) {
+          for field of class_.fields {
+            if !field.static_ && field.names.contains(name) {
+              typeError(state, "Cannot access instance field '${name}' from a static method", span)
+              return Binding { name, kind: "field", type_: unknownType(), mutable: true, span: checkerSemanticSpan(span), module: state.info!.path }
             }
           }
         }
-        _ -> { }
+        for method of class_.methods {
+          if method.name == name {
+            if !method.static_ && inStaticContext(scope) {
+              typeError(state, "Cannot call instance method '${name}' from a static method", span)
+              return Binding { name, kind: "method", type_: unknownType(), mutable: false, span: checkerSemanticSpan(span), module: state.info!.path, symbol: owner.symbol }
+            }
+            methodType := method.resolvedType ?? checkFunction(state, method, scope, owner)
+            return Binding {
+              name, kind: "method", type_: methodType, mutable: false,
+              span: checkerSemanticSpan(span), module: state.info!.path, symbol: owner.symbol,
+            }
+          }
+        }
       }
     }
     _ -> { }
@@ -255,21 +249,18 @@ export function implicitMethod(state: CheckerState, scope: Scope, name: string, 
 export function addClassMethods(state: CheckerState, scope: Scope, owner: ClassType): none {
   declaration := declarationFor(state.result, owner.symbol)
   if declaration == none { return }
-  case declaration! {
-    class_: ClassDeclaration -> {
-      for method of class_.methods {
-        // Predeclare unchecked methods without decorating their annotations.
-        // This helper runs while another method is being checked, so its scope
-        // does not contain the method's own type parameters. The owning method
-        // check is the authority that decorates those annotations.
-        methodType := method.resolvedType ?? methodSignature(method, state.info!, state.result, class_.typeParams)
-        declare(scope, Binding {
-          name: method.name, kind: "method", type_: methodType, mutable: false,
-          span: checkerSemanticSpan(method.span), module: state.info!.path, symbol: owner.symbol,
-        })
-      }
+  if class_ := declaration! as ClassDeclaration {
+    for method of class_.methods {
+      // Predeclare unchecked methods without decorating their annotations.
+      // This helper runs while another method is being checked, so its scope
+      // does not contain the method's own type parameters. The owning method
+      // check is the authority that decorates those annotations.
+      methodType := method.resolvedType ?? methodSignature(method, state.info!, state.result, class_.typeParams)
+      declare(scope, Binding {
+        name: method.name, kind: "method", type_: methodType, mutable: false,
+        span: checkerSemanticSpan(method.span), module: state.info!.path, symbol: owner.symbol,
+      })
     }
-    _ -> { }
   }
 }
 

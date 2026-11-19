@@ -97,10 +97,7 @@ function checkModule(state: CheckerState, entry: string): CheckResult {
 
 function scriptGlobalName(statement: Statement): string {
   let declaration = statement
-  case statement {
-    try_: TryStatement -> { declaration = try_.binding }
-    _ -> { }
-  }
+  if try_ := statement as TryStatement { declaration = try_.binding }
   case declaration {
     value: ConstDeclaration -> { return value.name }
     value: ReadonlyDeclaration -> { return value.name }
@@ -212,26 +209,23 @@ function prepareClassFieldTypes(state: CheckerState): none {
       state.moduleScope = Scope { parent: none }
       predeclareModuleBindings(module, state.moduleScope!, state.result)
       for statement of module.program.statements {
-        case statement {
-          class_: ClassDeclaration -> {
-            classScope := Scope { parent: state.moduleScope, typeParams: class_.typeParams }
-            for field of class_.fields {
-              if field.resolvedType != none { continue }
-              diagnosticCount := state.diagnostics.length
-              let fieldType = unknownType()
-              if type_ := field.type_ {
-                fieldType = resolveType(state, type_, module, classScope)
-              } else if defaultValue := field.defaultValue {
-                fieldType = checkCallerDefault(state, defaultValue, classScope, none)
-              }
-              discardDiagnosticsSince(state, diagnosticCount)
-              if fieldType.kind == "unknown" { continue }
-              if field.readonly_ || field.const_ { fieldType = applyDeepReadonly(fieldType) }
-              field.resolvedType = if field.weak_ then weakType(fieldType) else fieldType
-              changed = true
+        if class_ := statement as ClassDeclaration {
+          classScope := Scope { parent: state.moduleScope, typeParams: class_.typeParams }
+          for field of class_.fields {
+            if field.resolvedType != none { continue }
+            diagnosticCount := state.diagnostics.length
+            let fieldType = unknownType()
+            if type_ := field.type_ {
+              fieldType = resolveType(state, type_, module, classScope)
+            } else if defaultValue := field.defaultValue {
+              fieldType = checkCallerDefault(state, defaultValue, classScope, none)
             }
+            discardDiagnosticsSince(state, diagnosticCount)
+            if fieldType.kind == "unknown" { continue }
+            if field.readonly_ || field.const_ { fieldType = applyDeepReadonly(fieldType) }
+            field.resolvedType = if field.weak_ then weakType(fieldType) else fieldType
+            changed = true
           }
-          _ -> { }
         }
       }
     }
@@ -243,11 +237,8 @@ function prepareClassFieldTypes(state: CheckerState): none {
 
 function hasUnpreparedClassFields(statements: Statement[]): bool {
   for statement of statements {
-    case statement {
-      class_: ClassDeclaration -> {
-        for field of class_.fields { if field.resolvedType == none { return true } }
-      }
-      _ -> { }
+    if class_ := statement as ClassDeclaration {
+      for field of class_.fields { if field.resolvedType == none { return true } }
     }
   }
   return false

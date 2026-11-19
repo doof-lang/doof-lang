@@ -65,13 +65,10 @@ export function casePatternsExhaustive(state: CheckerState, subjectType: Resolve
       }
     }
   }
-  case subjectType {
-    primitive_: PrimitiveType -> {
-      if primitive_.name == "byte" { return integerPatternsExhaustive(arms, 0L, 255L) }
-      if primitive_.name == "int" { return integerPatternsExhaustive(arms, -2147483648L, 2147483647L) }
-      if primitive_.name == "long" { return integerPatternsExhaustive(arms, -9223372036854775807L - 1L, 9223372036854775807L) }
-    }
-    _ -> { }
+  if primitive_ := subjectType as PrimitiveType {
+    if primitive_.name == "byte" { return integerPatternsExhaustive(arms, 0L, 255L) }
+    if primitive_.name == "int" { return integerPatternsExhaustive(arms, -2147483648L, 2147483647L) }
+    if primitive_.name == "long" { return integerPatternsExhaustive(arms, -9223372036854775807L - 1L, 9223372036854775807L) }
   }
   return memberCovered(state, subjectType, arms, false)
 }
@@ -127,14 +124,8 @@ function boolPatternsExhaustive(arms: CasePattern[][]): bool {
   let hasFalse = false
   for patterns of arms {
     for pattern of patterns {
-      case pattern {
-        value: ValuePattern -> {
-          case value.value {
-            boolean: BoolLiteral -> { if boolean.value { hasTrue = true } else { hasFalse = true } }
-            _ -> { }
-          }
-        }
-        _ -> { }
+      if value := pattern as ValuePattern {
+        if boolean := value.value as BoolLiteral { if boolean.value { hasTrue = true } else { hasFalse = true } }
       }
     }
   }
@@ -207,30 +198,24 @@ function integerPatternValue(expression: Expression): long | none {
 function enumPatternsExhaustive(state: CheckerState, enum_: EnumType, arms: CasePattern[][], inUnion: bool): bool {
   declaration := declarationFor(state.result, enum_.symbol)
   if declaration == none { return false }
-  case declaration! {
-    enumDeclaration: EnumDeclaration -> {
-      for variant of enumDeclaration.variants {
-        let found = false
-        for patterns of arms {
-          for pattern of patterns {
-            case pattern {
-              value: ValuePattern -> {
-                if inUnion && (value.value.resolvedType == none || !sameType(value.value.resolvedType!, enum_)) { continue }
-                case value.value {
-                  dot: DotShorthand -> { if dot.name == variant.name { found = true } }
-                  member: MemberExpression -> { if member.property == variant.name { found = true } }
-                  _ -> { }
-                }
-              }
+  if enumDeclaration := declaration! as EnumDeclaration {
+    for variant of enumDeclaration.variants {
+      let found = false
+      for patterns of arms {
+        for pattern of patterns {
+          if value := pattern as ValuePattern {
+            if inUnion && (value.value.resolvedType == none || !sameType(value.value.resolvedType!, enum_)) { continue }
+            case value.value {
+              dot: DotShorthand -> { if dot.name == variant.name { found = true } }
+              member: MemberExpression -> { if member.property == variant.name { found = true } }
               _ -> { }
             }
           }
         }
-        if !found { return false }
       }
-      return true
+      if !found { return false }
     }
-    _ -> { }
+    return true
   }
   return false
 }
@@ -307,10 +292,7 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
         let resolved: ResolvedType = unknownType()
         let inferred: ResolvedType | none = none
         let mismatched = false
-        case type_.type_ {
-          named: NamedType -> { inferred = inferredGenericPattern(named, subjectType) }
-          _ -> { }
-        }
+        if named := type_.type_ as NamedType { inferred = inferredGenericPattern(named, subjectType) }
         // A bare Success/Failure arm takes its payload from the subject; an
         // unknown subject has already been reported, so the arm stays unknown.
         bareResultArm := subjectType.kind == "unknown" && casePatternName(type_) != "" && hasNoTypeArguments(type_.type_)
@@ -324,10 +306,7 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
             typeError(state, "Case type pattern \"${typeName(resolved)}\" must be \"${typeName(member)}\" to match subject type \"${typeName(subjectType)}\"", type_.span)
           }
         }
-        case type_.type_ {
-          named: NamedType -> { named.resolvedType = resolved }
-          _ -> { }
-        }
+        if named := type_.type_ as NamedType { named.resolvedType = resolved }
         type_.resolvedType = resolved
         if !mismatched && !typesOverlap(state, subjectType, resolved) {
           typeError(state, "Case type pattern \"${typeName(resolved)}\" cannot match subject type \"${typeName(subjectType)}\"", type_.span)

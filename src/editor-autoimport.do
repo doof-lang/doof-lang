@@ -40,11 +40,8 @@ export function prepareAutoImports(index: EditorIndex): none {
     }
     for statement of statements {
       if candidate := declarationItem(statement, source.path) { index.exportCandidates.push(candidate) }
-      case statement {
-        list: ExportList -> {
-          for specifier of list.specifiers { index.exportCandidates.push(EditorItem { label: specifier.alias ?? specifier.name, module: source.path, start: specifier.span.start.offset, end: specifier.span.end.offset, importModule: source.path }) }
-        }
-        _ -> { }
+      if list := statement as ExportList {
+        for specifier of list.specifiers { index.exportCandidates.push(EditorItem { label: specifier.alias ?? specifier.name, module: source.path, start: specifier.span.start.offset, end: specifier.span.end.offset, importModule: source.path }) }
       }
     }
   }

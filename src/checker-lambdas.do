@@ -164,12 +164,9 @@ function contextualFunctionType(expected: ResolvedType | none): FunctionType | n
     union_: UnionResolvedType -> {
       let found: FunctionType | none = none
       for member of union_.types {
-        case member {
-          function_: FunctionType -> {
-            if found != none { return none }
-            found = function_
-          }
-          _ -> { }
+        if function_ := member as FunctionType {
+          if found != none { return none }
+          found = function_
         }
       }
       return found

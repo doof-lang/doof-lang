@@ -204,22 +204,16 @@ export function implementationType(result: AnalysisResult, interface_: Interface
   }
   for reference of declaration!.implements_ {
     if reference.resolvedType == none { continue }
-    case reference.resolvedType! {
-      implemented: InterfaceType -> {
-        if implemented.symbol.module != interface_.symbol.module || implemented.symbol.name != interface_.symbol.name { continue }
-        for index of 0..<implemented.typeArgs.length {
-          if index >= interface_.typeArgs.length { break }
-          case implemented.typeArgs[index] {
-            parameter: TypeParameterType -> {
-              for position of 0..<declaration!.typeParams.length {
-                if declaration!.typeParams[position] == parameter.name { typeArgs[position] = interface_.typeArgs[index] }
-              }
-            }
-            _ -> { }
+    if implemented := reference.resolvedType! as InterfaceType {
+      if implemented.symbol.module != interface_.symbol.module || implemented.symbol.name != interface_.symbol.name { continue }
+      for index of 0..<implemented.typeArgs.length {
+        if index >= interface_.typeArgs.length { break }
+        if parameter := implemented.typeArgs[index] as TypeParameterType {
+          for position of 0..<declaration!.typeParams.length {
+            if declaration!.typeParams[position] == parameter.name { typeArgs[position] = interface_.typeArgs[index] }
           }
         }
       }
-      _ -> { }
     }
   }
   return classType(implementation.name, implementation, typeArgs)

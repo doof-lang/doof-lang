@@ -94,10 +94,7 @@ function indexIsolation(result: AnalysisResult, graph: IsolationGraph): Isolatio
   }
   for module of result.modules {
     for statement of module.program.statements {
-      case statement {
-        interface_: InterfaceDeclaration -> { indexImplementations(index, interface_) }
-        _ -> { }
-      }
+      if interface_ := statement as InterfaceDeclaration { indexImplementations(index, interface_) }
     }
   }
   return index
@@ -186,23 +183,20 @@ function moduleValueDeclaration(index: IsolationIndex, binding: Binding): Statem
 }
 
 function mutableModuleReason(index: IsolationIndex, expression: Expression): IsolationReason | none {
-  case expression {
-    identifier: Identifier -> {
-      if identifier.resolvedBinding == none { return none }
-      declaration := moduleValueDeclaration(index, identifier.resolvedBinding!)
-      if declaration == none { return none }
-      case declaration! {
-        _: ReadonlyDeclaration -> { return none }
-        _: LetDeclaration -> { return IsolationReason { kind: "module", name: identifier.name, span: identifier.span } }
-        _: ConstDeclaration -> { }
-        _: ImmutableBinding -> { }
-        _ -> { return none }
-      }
-      if violation := findActorBoundaryViolation(index.result, identifier.resolvedBinding!.type_) {
-        return IsolationReason { kind: "module", name: identifier.name, span: identifier.span }
-      }
+  if identifier := expression as Identifier {
+    if identifier.resolvedBinding == none { return none }
+    declaration := moduleValueDeclaration(index, identifier.resolvedBinding!)
+    if declaration == none { return none }
+    case declaration! {
+      _: ReadonlyDeclaration -> { return none }
+      _: LetDeclaration -> { return IsolationReason { kind: "module", name: identifier.name, span: identifier.span } }
+      _: ConstDeclaration -> { }
+      _: ImmutableBinding -> { }
+      _ -> { return none }
     }
-    _ -> { }
+    if violation := findActorBoundaryViolation(index.result, identifier.resolvedBinding!.type_) {
+      return IsolationReason { kind: "module", name: identifier.name, span: identifier.span }
+    }
   }
   return none
 }
@@ -285,13 +279,10 @@ function receiverMethods(index: IsolationIndex, receiver: ResolvedType, property
     interface_: InterfaceType -> {
       declaration := indexedDeclaration(index, interface_.symbol)
       if declaration == none { return }
-      case declaration! {
-        interfaceDeclaration: InterfaceDeclaration -> {
-          for method of interfaceDeclaration.methods {
-            if method.name == property && !targets.contains(method) { targets.push(method) }
-          }
+      if interfaceDeclaration := declaration! as InterfaceDeclaration {
+        for method of interfaceDeclaration.methods {
+          if method.name == property && !targets.contains(method) { targets.push(method) }
         }
-        _ -> { }
       }
     }
     union_: UnionResolvedType -> { for member of union_.types { receiverMethods(index, member, property, targets) } }
@@ -324,10 +315,7 @@ function streamClasses(index: IsolationIndex, stream: StreamResolvedType): Class
 // A for-of loop over a class or Stream<T> calls next() and value() on it.
 function iterationMethods(index: IsolationIndex, iterable: ResolvedType): FunctionDeclaration[] {
   let targets: FunctionDeclaration[] = []
-  case iterable {
-    _: ActorType -> { return targets }
-    _ -> { }
-  }
+  if _ := iterable as ActorType { return targets }
   receiverMethods(index, iterable, "next", targets)
   receiverMethods(index, iterable, "value", targets)
   return targets
@@ -337,17 +325,14 @@ function callDeclarations(index: IsolationIndex, call: CallExpression): Function
   if resolvedFunction := call.resolvedFunction { return [resolvedFunction] }
   let targets: FunctionDeclaration[] = []
   if resolvedConstructor := call.resolvedConstructor { targets.push(resolvedConstructor) }
-  case call.callee {
-    member: MemberExpression -> {
-      if resolvedType := member.object.resolvedType && member.resolvedStaticOwner == none {
-        case resolvedType {
-          // Actor calls run in the actor's domain and are validated separately.
-          _: ActorType -> { }
-          _ -> { receiverMethods(index, resolvedType, member.property, targets) }
-        }
+  if member := call.callee as MemberExpression {
+    if resolvedType := member.object.resolvedType && member.resolvedStaticOwner == none {
+      case resolvedType {
+        // Actor calls run in the actor's domain and are validated separately.
+        _: ActorType -> { }
+        _ -> { receiverMethods(index, resolvedType, member.property, targets) }
       }
     }
-    _ -> { }
   }
   return targets
 }
@@ -373,10 +358,7 @@ function collectEffects(index: IsolationIndex, roots: Expression[], effects: Iso
   expressions := allExpressions(roots, statements)
   let loops: ForOfStatement[] = []
   for statement of statements {
-    case statement {
-      forOf: ForOfStatement -> { loops.push(forOf) }
-      _ -> { }
-    }
+    if forOf := statement as ForOfStatement { loops.push(forOf) }
   }
   for expression of expressions {
     if effects.direct == none {
@@ -471,18 +453,15 @@ function collectDecodeEffects(index: IsolationIndex, call: CallExpression, span:
     member: MemberExpression -> { if member.property != "fromSerialValue" { return } }
     _ -> { return }
   }
-  case call.resolvedType! {
-    decoded: ResultResolvedType -> {
-      for class_ of reachableClasses(index, decoded.valueType) {
-        for field of class_.fields {
-          if field.static_ || field.defaultValue == none || effects.visitedDefaults.contains(field.defaultValue!) { continue }
-          effects.visitedDefaults.push(field.defaultValue!)
-          collectEffects(index, [field.defaultValue!], effects, span)
-        }
-        collectDestructorEffects(index, class_, span, effects)
+  if decoded := call.resolvedType! as ResultResolvedType {
+    for class_ of reachableClasses(index, decoded.valueType) {
+      for field of class_.fields {
+        if field.static_ || field.defaultValue == none || effects.visitedDefaults.contains(field.defaultValue!) { continue }
+        effects.visitedDefaults.push(field.defaultValue!)
+        collectEffects(index, [field.defaultValue!], effects, span)
       }
+      collectDestructorEffects(index, class_, span, effects)
     }
-    _ -> { }
   }
 }
 

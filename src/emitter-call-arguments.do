@@ -75,23 +75,20 @@ function emitCallDefault(call: CallExpression, value: Expression, expected: Reso
   }
   // Member checking retained the effective owner, including weak receivers and
   // interface contracts. Defaults belong to that owner's declaration scope.
-  case call.callee {
-    member: MemberExpression -> {
-      if resolvedMember := member.resolvedMember && resolvedMember.owner != none {
-        owner := specializeEmitType(resolvedMember.owner!, context)
-        let ownerNames: string[] = []
-        let ownerArguments: ResolvedType[] = []
-        case owner {
-          class_: ClassType -> { ownerNames = class_.symbol.typeParams; ownerArguments = class_.typeArgs }
-          interface_: InterfaceType -> { ownerNames = interface_.symbol.typeParams; ownerArguments = interface_.typeArgs }
-          _ -> { }
-        }
-        for i of 0..<ownerNames.length {
-          if i < ownerArguments.length { addDefaultSubstitution(names, arguments, ownerNames[i], ownerArguments[i]) }
-        }
+  if member := call.callee as MemberExpression {
+    if resolvedMember := member.resolvedMember && resolvedMember.owner != none {
+      owner := specializeEmitType(resolvedMember.owner!, context)
+      let ownerNames: string[] = []
+      let ownerArguments: ResolvedType[] = []
+      case owner {
+        class_: ClassType -> { ownerNames = class_.symbol.typeParams; ownerArguments = class_.typeArgs }
+        interface_: InterfaceType -> { ownerNames = interface_.symbol.typeParams; ownerArguments = interface_.typeArgs }
+        _ -> { }
+      }
+      for i of 0..<ownerNames.length {
+        if i < ownerArguments.length { addDefaultSubstitution(names, arguments, ownerNames[i], ownerArguments[i]) }
       }
     }
-    _ -> { }
   }
   if declaration := call.resolvedFunction {
     for i of 0..<declaration.typeParams.length {

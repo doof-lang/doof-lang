@@ -255,15 +255,12 @@ export function conditionClauses(condition: Expression): Expression[] {
 }
 
 function collectConditionClauses(condition: Expression, clauses: Expression[]): none {
-  case condition {
-    binary: BinaryExpression -> {
-      if binary.operator == "&&" && hasBindingClause(binary) {
-        collectConditionClauses(binary.left, clauses)
-        collectConditionClauses(binary.right, clauses)
-        return
-      }
+  if binary := condition as BinaryExpression {
+    if binary.operator == "&&" && hasBindingClause(binary) {
+      collectConditionClauses(binary.left, clauses)
+      collectConditionClauses(binary.right, clauses)
+      return
     }
-    _ -> { }
   }
   clauses.push(condition)
 }

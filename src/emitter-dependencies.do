@@ -107,13 +107,10 @@ export function collectDependencyExpression(
         // A generic call converts its arguments to the specialized parameter
         // types, such as `Source<int>` for `drain<T>(source: Source<T>)`.
         if call.resolvedGenericTypeArgs.length > 0 && call.callee.resolvedType != none {
-          case call.callee.resolvedType! {
-            generic: FunctionType -> {
-              if generic.typeParams.length == call.resolvedGenericTypeArgs.length {
-                collectDependencyType(substituteTypeParams(generic, generic.typeParams, call.resolvedGenericTypeArgs), index)
-              }
+          if generic := call.callee.resolvedType! as FunctionType {
+            if generic.typeParams.length == call.resolvedGenericTypeArgs.length {
+              collectDependencyType(substituteTypeParams(generic, generic.typeParams, call.resolvedGenericTypeArgs), index)
             }
-            _ -> { }
           }
         }
       }

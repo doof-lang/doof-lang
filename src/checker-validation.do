@@ -131,11 +131,8 @@ export function validateFunction(fn: FunctionDeclaration, module: string, diagno
 function validateTypeParameterConstraints(constraints: TypeParameterConstraint[], module: string, diagnostics: Diagnostic[]): none {
   for constraint of constraints {
     if constraint.type_ == none { continue }
-    case constraint.type_! {
-      named: NamedType -> {
-        if named.typeArgs.length == 0 && (named.name == "Serializable" || named.name == "Reflectable") { continue }
-      }
-      _ -> { }
+    if named := constraint.type_! as NamedType {
+      if named.typeArgs.length == 0 && (named.name == "Serializable" || named.name == "Reflectable") { continue }
     }
     validateTypeAnnotation(constraint.type_!, module, diagnostics)
   }
@@ -183,13 +180,10 @@ export function validateExpression(expression: Expression, module: string, diagn
       if call.resolvedClass != none || call.resolvedConstruction != none {
         validateConstructionPlan(call.resolvedConstruction, call.span, module, diagnostics)
       }
-      case call.callee {
-        member: MemberExpression -> {
-          if resolvedMember := member.resolvedMember && call.resolvedFunction != resolvedMember.function_ {
-            addValidationError(module, call.span, "Call target does not match checked member selection", diagnostics)
-          }
+      if member := call.callee as MemberExpression {
+        if resolvedMember := member.resolvedMember && call.resolvedFunction != resolvedMember.function_ {
+          addValidationError(module, call.span, "Call target does not match checked member selection", diagnostics)
         }
-        _ -> { }
       }
       if call.resolvedFunction != none && call.resolvedFunctionModule == "" {
         addValidationError(module, call.span, "Resolved call target has no defining module", diagnostics)
@@ -208,11 +202,8 @@ export function validateExpression(expression: Expression, module: string, diagn
         if value := property.value { validateExpression(value, module, diagnostics) }
       }
       if resolvedType := object.resolvedType {
-        case resolvedType {
-          _: ClassType -> {
-            if object.resolvedClass == none { addValidationError(module, object.span, "Class object literal has no resolved class", diagnostics) }
-          }
-          _ -> { }
+        if _ := resolvedType as ClassType {
+          if object.resolvedClass == none { addValidationError(module, object.span, "Class object literal has no resolved class", diagnostics) }
         }
       }
     }

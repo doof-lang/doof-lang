@@ -142,25 +142,22 @@ export function createEditorIndex(frontend: FrontendResult, modules: string[] = 
     for region of module.editorScopes { addScope(index, region.scope) }
     for statement of module.program.statements { addMemberDeclarations(index, statement, module.path) }
     for statement of module.program.statements {
-      case statement {
-        list: ExportList -> {
-          if list.source != none { addReexport(index, module, list) }
-          for specifier of list.specifiers {
-            if list.source != none { continue }
-            for indexed of index.bindings {
-              if indexed.binding == none || indexed.item.module != module.path || indexed.item.label != specifier.name { continue }
-              token := nameItem(index, module.path, specifier.name, specifier.span.start.offset, specifier.span.end.offset)
-              index.occurrences.push(occurrence(index, indexed.binding!, module.path, token.start, token.end))
-              if aliasName := specifier.alias {
-                alias := nameItem(index, module.path, aliasName, specifier.span.start.offset, specifier.span.end.offset, "export-alias")
-                target := indexed.item
-                index.occurrences.push(EditorItem { label: alias.label, kind: "export-alias", module: module.path, start: alias.start, end: alias.end, identity: target.identity, renameIdentity: itemIdentity(alias), definitionModule: target.definitionModule, definitionStart: target.definitionStart, definitionEnd: target.definitionEnd, declaration: true })
-              }
-              break
+      if list := statement as ExportList {
+        if list.source != none { addReexport(index, module, list) }
+        for specifier of list.specifiers {
+          if list.source != none { continue }
+          for indexed of index.bindings {
+            if indexed.binding == none || indexed.item.module != module.path || indexed.item.label != specifier.name { continue }
+            token := nameItem(index, module.path, specifier.name, specifier.span.start.offset, specifier.span.end.offset)
+            index.occurrences.push(occurrence(index, indexed.binding!, module.path, token.start, token.end))
+            if aliasName := specifier.alias {
+              alias := nameItem(index, module.path, aliasName, specifier.span.start.offset, specifier.span.end.offset, "export-alias")
+              target := indexed.item
+              index.occurrences.push(EditorItem { label: alias.label, kind: "export-alias", module: module.path, start: alias.start, end: alias.end, identity: target.identity, renameIdentity: itemIdentity(alias), definitionModule: target.definitionModule, definitionStart: target.definitionStart, definitionEnd: target.definitionEnd, declaration: true })
             }
+            break
           }
         }
-        _ -> { }
       }
       import_ := statement as ImportDeclaration else { continue }
       for specifier of import_.specifiers {
@@ -199,18 +196,15 @@ export function createEditorIndex(frontend: FrontendResult, modules: string[] = 
         }
         object: ObjectLiteral -> { addProperties(index, object.properties, module.path, object.resolvedConstruction?.owner) }
         construct: ConstructExpression -> {
-          case construct.resolvedConstructedType {
-            constructed: ClassType -> {
-              target := symbolItem(index, constructed.symbol)
-              token := nameItem(index, module.path, construct.type_, construct.span.start.offset, construct.span.end.offset, "type")
-              index.occurrences.push(EditorItem {
-                label: construct.type_, detail: editorTypeName(constructed), kind: "type",
-                module: module.path, start: token.start, end: token.end,
-                identity: itemIdentity(target), definitionModule: target.module,
-                definitionStart: target.start, definitionEnd: target.end,
-              })
-            }
-            _ -> { }
+          if constructed := construct.resolvedConstructedType as ClassType {
+            target := symbolItem(index, constructed.symbol)
+            token := nameItem(index, module.path, construct.type_, construct.span.start.offset, construct.span.end.offset, "type")
+            index.occurrences.push(EditorItem {
+              label: construct.type_, detail: editorTypeName(constructed), kind: "type",
+              module: module.path, start: token.start, end: token.end,
+              identity: itemIdentity(target), definitionModule: target.module,
+              definitionStart: target.start, definitionEnd: target.end,
+            })
           }
           addProperties(index, construct.args, module.path, construct.resolvedConstructedType)
         }
@@ -218,15 +212,12 @@ export function createEditorIndex(frontend: FrontendResult, modules: string[] = 
       }
     }
     for annotation of module.editorAnnotations {
-      case annotation {
-        named: NamedType -> {
-          if resolvedSymbol := named.resolvedSymbol {
-            target := symbolItem(index, resolvedSymbol)
-            token := nameItem(index, module.path, named.name, named.span.start.offset, named.span.end.offset, "type")
-            index.occurrences.push(EditorItem { label: named.name, detail: if named.resolvedType == none then "" else editorTypeName(named.resolvedType!), kind: "type", module: module.path, start: token.start, end: token.end, identity: itemIdentity(target), definitionModule: target.module, definitionStart: target.start, definitionEnd: target.end })
-          }
+      if named := annotation as NamedType {
+        if resolvedSymbol := named.resolvedSymbol {
+          target := symbolItem(index, resolvedSymbol)
+          token := nameItem(index, module.path, named.name, named.span.start.offset, named.span.end.offset, "type")
+          index.occurrences.push(EditorItem { label: named.name, detail: if named.resolvedType == none then "" else editorTypeName(named.resolvedType!), kind: "type", module: module.path, start: token.start, end: token.end, identity: itemIdentity(target), definitionModule: target.module, definitionStart: target.start, definitionEnd: target.end })
         }
-        _ -> { }
       }
     }
   }

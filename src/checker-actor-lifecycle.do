@@ -27,20 +27,11 @@ export function collectRetiredActorBindings(statement: Statement, retired: Bindi
   let expressions: Expression[] = []
   collectStatementExpressions(statement, expressions)
   for expression of expressions {
-    case expression {
-      retire_: RetireExpression -> {
-        case retire_.actor {
-          identifier: Identifier -> {
-            if identifier.resolvedBinding == none || identifier.resolvedType == none { continue }
-            case identifier.resolvedType! {
-              _: ActorType -> { addBinding(retired, identifier.resolvedBinding!) }
-              _ -> { }
-            }
-          }
-          _ -> { }
-        }
+    if retire_ := expression as RetireExpression {
+      if identifier := retire_.actor as Identifier {
+        if identifier.resolvedBinding == none || identifier.resolvedType == none { continue }
+        if _ := identifier.resolvedType! as ActorType { addBinding(retired, identifier.resolvedBinding!) }
       }
-      _ -> { }
     }
   }
 }
@@ -52,10 +43,7 @@ function collectStatementIdentifiers(statement: Statement, result: Identifier[])
 }
 
 function collectExpressionIdentifiers(expression: Expression, result: Identifier[]): none {
-  case expression {
-    identifier: Identifier -> { result.push(identifier) }
-    _ -> { }
-  }
+  if identifier := expression as Identifier { result.push(identifier) }
   let nested: Expression[] = []
   collectNestedExpressions(expression, nested)
   for child of nested { collectExpressionIdentifiers(child, result) }

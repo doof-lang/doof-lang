@@ -39,11 +39,8 @@ export function emitExpressionReturn(expression: Expression, context: EmitContex
 }
 
 export function decoratedExpressionType(expression: Expression): ResolvedType | none {
-  case expression {
-    identifier: Identifier -> {
-      if resolvedBinding := identifier.resolvedBinding { return resolvedBinding.type_ }
-    }
-    _ -> { }
+  if identifier := expression as Identifier {
+    if resolvedBinding := identifier.resolvedBinding { return resolvedBinding.type_ }
   }
   if expression.resolvedType != none { return expression.resolvedType }
   return none
@@ -70,16 +67,10 @@ export function variantVisitValue(value: string, resolvedType: ResolvedType): st
 // member through doof::variant_member so every alternative compiles. Calls use
 // doof::variant_receiver, which copies an immutable struct arm.
 export function variantMember(visited: string, resolvedType: ResolvedType | none, call: bool = false): string {
-  case resolvedType {
-    union_: UnionResolvedType -> {
-      for member of union_.types {
-        case member {
-          class_: ClassType -> { if class_.symbol.kind == "struct" { return (if call then "doof::variant_receiver(" else "doof::variant_member(") + visited + ")." } }
-          _ -> { }
-        }
-      }
+  if union_ := resolvedType as UnionResolvedType {
+    for member of union_.types {
+      if class_ := member as ClassType { if class_.symbol.kind == "struct" { return (if call then "doof::variant_receiver(" else "doof::variant_member(") + visited + ")." } }
     }
-    _ -> { }
   }
   return visited + "->"
 }

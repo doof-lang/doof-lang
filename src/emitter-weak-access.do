@@ -38,10 +38,7 @@ export function emitWeakAccess(
   context: EmitContext,
 ): string {
   let nullable = false
-  case weakType {
-    weak_: WeakResolvedType -> { nullable = weakTargetAllowsNone(weak_.inner) }
-    _ -> { }
-  }
+  if weak_ := weakType as WeakResolvedType { nullable = weakTargetAllowsNone(weak_.inner) }
   storage := names.storage
   weakValue := if nullable then storage + ".value()" else storage
   returnsVoid := resultType.kind == "none"

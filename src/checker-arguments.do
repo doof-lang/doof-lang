@@ -102,24 +102,18 @@ function checkArgumentValue(state: CheckerState, argument: SuppliedArgument, sco
 // A callback whose parameters line up but whose result does not is reported
 // by result type, which is the part a caller can act on.
 function argumentMismatch(subject: string, actual: ResolvedType, expected: ResolvedType): string {
-  case actual {
-    actualFunction: FunctionType -> {
-      case expected {
-        expectedFunction: FunctionType -> {
-          let sameParams = actualFunction.params.length == expectedFunction.params.length
-          if sameParams {
-            for i of 0..<actualFunction.params.length {
-              if !sameType(actualFunction.params[i].type_, expectedFunction.params[i].type_) { sameParams = false }
-            }
-          }
-          if sameParams {
-            return "${subject} returns ${displayTypeName(actualFunction.returnType)}; expected a callback returning ${displayTypeName(expectedFunction.returnType)}"
-          }
+  if actualFunction := actual as FunctionType {
+    if expectedFunction := expected as FunctionType {
+      let sameParams = actualFunction.params.length == expectedFunction.params.length
+      if sameParams {
+        for i of 0..<actualFunction.params.length {
+          if !sameType(actualFunction.params[i].type_, expectedFunction.params[i].type_) { sameParams = false }
         }
-        _ -> { }
+      }
+      if sameParams {
+        return "${subject} returns ${displayTypeName(actualFunction.returnType)}; expected a callback returning ${displayTypeName(expectedFunction.returnType)}"
       }
     }
-    _ -> { }
   }
   return "${subject} has type ${displayTypeName(actual)}; expected ${displayTypeName(expected)}"
 }

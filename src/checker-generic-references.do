@@ -19,10 +19,7 @@ export function instantiateGenericReference(state: CheckerState, expression: Exp
   clearGenericReference(expression)
   if calleePosition { return referenceType }
   let generic: FunctionType | none = none
-  case referenceType {
-    function_: FunctionType -> { if function_.typeParams.length > 0 { generic = function_ } }
-    _ -> { }
-  }
+  if function_ := referenceType as FunctionType { if function_.typeParams.length > 0 { generic = function_ } }
   if generic == none { return referenceType }
   target := resolveCalleeTarget(state, expression, referenceType)
   if target.function_ == none || target.function_!.typeParams.length == 0 { return referenceType }
@@ -95,12 +92,9 @@ function expectedFunction(expected: ResolvedType | none): FunctionType | none {
     union_: UnionResolvedType -> {
       let found: FunctionType | none = none
       for member of union_.types {
-        case member {
-          function_: FunctionType -> {
-            if found != none || function_.typeParams.length > 0 { return none }
-            found = function_
-          }
-          _ -> { }
+        if function_ := member as FunctionType {
+          if found != none || function_.typeParams.length > 0 { return none }
+          found = function_
         }
       }
       return found

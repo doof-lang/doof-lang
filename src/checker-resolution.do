@@ -75,26 +75,23 @@ export function resolveBoundStaticMember(state: CheckerState, object: ResolvedTy
     interfaceType_: InterfaceType -> {
       declaration := declarationFor(state.result, interfaceType_.symbol)
       if declaration == none { return none }
-      case declaration! {
-        interface_: InterfaceDeclaration -> {
-          module := classModuleFor(state.result, interfaceType_.symbol)
-          for field of interface_.staticFields {
-            if field.name != property { continue }
-            base := field.resolvedType ?? resolveAnnotation(field.type_, module, state.result, interface_.typeParams)
-            selected := CheckedMember {}
-            recordMember(selected, object, interfaceType_.symbol.module, none, true, none, false)
-            selected.type_ = substituteTypeParams(if field.readonly_ && field.resolvedType == none then applyDeepReadonly(base) else base, interface_.typeParams, interfaceType_.typeArgs)
-            return selected
-          }
-          for method of interface_.staticMethods {
-            if method.name != property { continue }
-            selected := CheckedMember {}
-            recordMember(selected, object, interfaceType_.symbol.module, method, false, none, false)
-            selected.type_ = substituteTypeParams(method.resolvedType ?? interfaceMethodSignature(state, method, interface_, interfaceType_.symbol), interface_.typeParams, interfaceType_.typeArgs)
-            return selected
-          }
+      if interface_ := declaration! as InterfaceDeclaration {
+        module := classModuleFor(state.result, interfaceType_.symbol)
+        for field of interface_.staticFields {
+          if field.name != property { continue }
+          base := field.resolvedType ?? resolveAnnotation(field.type_, module, state.result, interface_.typeParams)
+          selected := CheckedMember {}
+          recordMember(selected, object, interfaceType_.symbol.module, none, true, none, false)
+          selected.type_ = substituteTypeParams(if field.readonly_ && field.resolvedType == none then applyDeepReadonly(base) else base, interface_.typeParams, interfaceType_.typeArgs)
+          return selected
         }
-        _ -> { }
+        for method of interface_.staticMethods {
+          if method.name != property { continue }
+          selected := CheckedMember {}
+          recordMember(selected, object, interfaceType_.symbol.module, method, false, none, false)
+          selected.type_ = substituteTypeParams(method.resolvedType ?? interfaceMethodSignature(state, method, interface_, interfaceType_.symbol), interface_.typeParams, interfaceType_.typeArgs)
+          return selected
+        }
       }
     }
     _ -> { }
@@ -245,18 +242,12 @@ function unionMemberType(state: CheckerState, union: UnionResolvedType, property
 // Methods shared by every union arm stay callable when their parameters agree;
 // the call produces the union of the arms' return types.
 function joinMemberTypes(left: ResolvedType, right: ResolvedType): ResolvedType {
-  case left {
-    leftFunction: FunctionType -> {
-      case right {
-        rightFunction: FunctionType -> {
-          if sameMethodParameters(leftFunction, rightFunction) {
-            return functionType(leftFunction.params, joinTypes(leftFunction.returnType, rightFunction.returnType))
-          }
-        }
-        _ -> { }
+  if leftFunction := left as FunctionType {
+    if rightFunction := right as FunctionType {
+      if sameMethodParameters(leftFunction, rightFunction) {
+        return functionType(leftFunction.params, joinTypes(leftFunction.returnType, rightFunction.returnType))
       }
     }
-    _ -> { }
   }
   return joinTypes(left, right)
 }
@@ -346,10 +337,7 @@ function typeParameterMemberType(state: CheckerState, parameter: TypeParameterTy
 function enumMemberType(state: CheckerState, enum_: EnumType, property: string): ResolvedType {
   let declaration: EnumDeclaration | none = none
   if found := declarationFor(state.result, enum_.symbol) {
-    case found {
-      enumDeclaration: EnumDeclaration -> { declaration = enumDeclaration }
-      _ -> { }
-    }
+    if enumDeclaration := found as EnumDeclaration { declaration = enumDeclaration }
   }
   backingType := if enumDeclaration := declaration && enumDeclaration.backingKind == "string" then primitive("string") else primitive("int")
   let resolved: ResolvedType = case property {
@@ -456,19 +444,13 @@ function validateClassMetadata(state: CheckerState, declaration: ClassDeclaratio
       }
     }
     if method.resolvedType == none { continue }
-    case method.resolvedType! {
-      function_: FunctionType -> {
-        let successType = function_.returnType
-        case successType {
-          result: ResultResolvedType -> { successType = result.valueType }
-          _ -> { }
-        }
-        if successType.kind != "none" && !isGeneratedJsonType(successType, programs) {
-          typeError(state, "Return type of method \"${method.name}\" is not JSON-serializable", method.span)
-          valid = false
-        }
+    if function_ := method.resolvedType! as FunctionType {
+      let successType = function_.returnType
+      if result := successType as ResultResolvedType { successType = result.valueType }
+      if successType.kind != "none" && !isGeneratedJsonType(successType, programs) {
+        typeError(state, "Return type of method \"${method.name}\" is not JSON-serializable", method.span)
+        valid = false
       }
-      _ -> { }
     }
   }
   return valid
@@ -477,24 +459,21 @@ function validateClassMetadata(state: CheckerState, declaration: ClassDeclaratio
 function interfaceMemberType(state: CheckerState, interfaceType_: InterfaceType, property: string, span: SourceSpan, declaredOnly: bool, selection: CheckedMember): ResolvedType {
   declaration := declarationFor(state.result, interfaceType_.symbol)
   if declaration == none { return unknownType() }
-  case declaration! {
-    interface_: InterfaceDeclaration -> {
-      for field of interface_.fields {
-        if field.name != property { continue }
-        recordMember(selection, interfaceType_, interfaceType_.symbol.module, none, true)
-        fieldType := field.resolvedType ?? resolveAnnotation(field.type_, classModuleFor(state.result, interfaceType_.symbol), state.result, interface_.typeParams)
-        return substituteTypeParams(if field.readonly_ then applyDeepReadonly(fieldType) else fieldType, interface_.typeParams, interfaceType_.typeArgs)
-      }
-      for method of interface_.methods {
-        if method.name != property { continue }
-        recordMember(selection, interfaceType_, interfaceType_.symbol.module, method, false, none, !method.static_)
-        methodType := method.resolvedType ?? interfaceMethodSignature(state, method, interface_, interfaceType_.symbol)
-        return substituteTypeParams(methodType, interface_.typeParams, interfaceType_.typeArgs)
-      }
-      if declaredOnly || (property != "toSerialObject" && property != "fromSerialValue") { return unknownType() }
-      return interfaceGeneratedMemberType(state, interfaceType_, interface_, property, span, selection)
+  if interface_ := declaration! as InterfaceDeclaration {
+    for field of interface_.fields {
+      if field.name != property { continue }
+      recordMember(selection, interfaceType_, interfaceType_.symbol.module, none, true)
+      fieldType := field.resolvedType ?? resolveAnnotation(field.type_, classModuleFor(state.result, interfaceType_.symbol), state.result, interface_.typeParams)
+      return substituteTypeParams(if field.readonly_ then applyDeepReadonly(fieldType) else fieldType, interface_.typeParams, interfaceType_.typeArgs)
     }
-    _ -> { }
+    for method of interface_.methods {
+      if method.name != property { continue }
+      recordMember(selection, interfaceType_, interfaceType_.symbol.module, method, false, none, !method.static_)
+      methodType := method.resolvedType ?? interfaceMethodSignature(state, method, interface_, interfaceType_.symbol)
+      return substituteTypeParams(methodType, interface_.typeParams, interfaceType_.typeArgs)
+    }
+    if declaredOnly || (property != "toSerialObject" && property != "fromSerialValue") { return unknownType() }
+    return interfaceGeneratedMemberType(state, interfaceType_, interface_, property, span, selection)
   }
   return unknownType()
 }
@@ -542,39 +521,33 @@ export function fieldAssignmentBinding(state: CheckerState, object: ResolvedType
     class_: ClassType -> {
       declaration := declarationFor(state.result, class_.symbol)
       if declaration == none { return none }
-      case declaration! {
-        classDeclaration: ClassDeclaration -> {
-          for field of classDeclaration.fields {
-            for name of field.names {
-              if name == property { return classFieldBinding(field, name, classDeclaration, fieldType, class_.symbol.module, class_.symbol) }
-            }
+      if classDeclaration := declaration! as ClassDeclaration {
+        for field of classDeclaration.fields {
+          for name of field.names {
+            if name == property { return classFieldBinding(field, name, classDeclaration, fieldType, class_.symbol.module, class_.symbol) }
           }
         }
-        _ -> { }
       }
     }
     interfaceType_: InterfaceType -> {
       declaration := declarationFor(state.result, interfaceType_.symbol)
       if declaration == none { return none }
-      case declaration! {
-        interface_: InterfaceDeclaration -> {
-          for field of interface_.fields {
-            if field.name == property {
-              return Binding {
-                name: property,
-                kind: "field",
-                type_: fieldType,
-                mutable: field.let_,
-                span: checkerSemanticSpan(field.span),
-                module: interfaceType_.symbol.module,
-                symbol: interfaceType_.symbol,
-                fieldMode: if field.readonly_ then "readonly" else if field.let_ then "let" else "implicit",
-                fieldOwner: interface_.name,
-              }
+      if interface_ := declaration! as InterfaceDeclaration {
+        for field of interface_.fields {
+          if field.name == property {
+            return Binding {
+              name: property,
+              kind: "field",
+              type_: fieldType,
+              mutable: field.let_,
+              span: checkerSemanticSpan(field.span),
+              module: interfaceType_.symbol.module,
+              symbol: interfaceType_.symbol,
+              fieldMode: if field.readonly_ then "readonly" else if field.let_ then "let" else "implicit",
+              fieldOwner: interface_.name,
             }
           }
         }
-        _ -> { }
       }
     }
     _ -> { }

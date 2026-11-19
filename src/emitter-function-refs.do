@@ -116,10 +116,7 @@ function boundMethod(callbackType: string, signature: FunctionType, receiver: st
     return boundCallback(callbackType, receiver, returnType, "std::visit([&](auto&& _obj) -> " + returnType + " { return " + variantMember("_obj", receiverType, true) + method + "(" + forwardedArguments + "); }, " + variantVisitValue("_self", receiverType) + ")", false)
   }
   let structReceiver = false
-  case receiverType {
-    class_: ClassType -> { structReceiver = class_.symbol.kind == "struct" }
-    _ -> { }
-  }
+  if class_ := receiverType as ClassType { structReceiver = class_.symbol.kind == "struct" }
   return boundCallback(callbackType, receiver, returnType, "_self" + (if structReceiver then "." else "->") + method + "(" + forwardedArguments + ")", structReceiver)
 }
 

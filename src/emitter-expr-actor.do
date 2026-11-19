@@ -18,20 +18,11 @@ export function emitAsyncExpression(expression: AsyncExpression, context: EmitCo
   case expression.expression {
     block: Block -> { return emitAsyncBlock(expression, block, context) }
     inner: Expression -> {
-      case inner {
-        call: CallExpression -> {
-          case call.callee {
-            member: MemberExpression -> {
-              case member.object.resolvedType {
-                actor: ActorType -> { return emitActorMethodCall(call, member, actor, true, context) }
-                _ -> { }
-              }
-            }
-            _ -> { }
-          }
-          if call.resolvedFunction != none { return emitIsolatedFunctionCall(expression, call, context) }
+      if call := inner as CallExpression {
+        if member := call.callee as MemberExpression {
+          if actor := member.object.resolvedType as ActorType { return emitActorMethodCall(call, member, actor, true, context) }
         }
-        _ -> { }
+        if call.resolvedFunction != none { return emitIsolatedFunctionCall(expression, call, context) }
       }
     }
   }
@@ -52,11 +43,8 @@ function emitIsolatedFunctionCall(expression: AsyncExpression, call: CallExpress
   if valueType == none { return "" }
   cppReturn := emitContextReturnType(valueType!, context)
   let operands: HoistedOperand[] = []
-  case call.callee {
-    member: MemberExpression -> {
-      if member.resolvedStaticOwner == none { operands.push(HoistedOperand { span: member.object.span, kind: member.object.kind }) }
-    }
-    _ -> { }
+  if member := call.callee as MemberExpression {
+    if member.resolvedStaticOwner == none { operands.push(HoistedOperand { span: member.object.span, kind: member.object.kind }) }
   }
   for argument of call.args { operands.push(HoistedOperand { span: argument.value.span, kind: argument.value.kind }) }
   previous := context.hoistedOperands
@@ -133,10 +121,7 @@ function emitActorMethodCall(expression: CallExpression, member: MemberExpressio
   className := emitClassInnerType(actor.innerClass, context.modulePath, context.names)
   let methodType: FunctionType | none = none
   if resolvedType := member.resolvedType {
-    case resolvedType {
-      function_: FunctionType -> { methodType = function_ }
-      _ -> { }
-    }
+    if function_ := resolvedType as FunctionType { methodType = function_ }
   }
   returnType := expression.resolvedType
   if returnType == none { panic("Actor method call is missing its resolved return type") }

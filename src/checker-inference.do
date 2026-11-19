@@ -43,9 +43,6 @@ function presentType(type_: ResolvedType): ResolvedType {
 
 function absenceType(type_: ResolvedType): ResolvedType {
   if type_.kind == "none" { return type_ }
-  case type_ {
-    union_: UnionResolvedType -> { for member of union_.types { if member.kind == "none" { return member } } }
-    _ -> { }
-  }
+  if union_ := type_ as UnionResolvedType { for member of union_.types { if member.kind == "none" { return member } } }
   return neverType()
 }

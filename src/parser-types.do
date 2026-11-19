@@ -58,17 +58,14 @@ function parseTypeMember(parser: Parser, weakOperandStart: AstLocation | none): 
     arraySuffix = true
   }
   if readonlyPrefix {
-    case result {
-      named: NamedType -> {
-        if isMapTypeName(named.name) {
-          named.name = "ReadonlyMap"
-          readonlyPrefix = false
-        } else if isSetTypeName(named.name) {
-          named.name = "ReadonlySet"
-          readonlyPrefix = false
-        }
+    if named := result as NamedType {
+      if isMapTypeName(named.name) {
+        named.name = "ReadonlyMap"
+        readonlyPrefix = false
+      } else if isSetTypeName(named.name) {
+        named.name = "ReadonlySet"
+        readonlyPrefix = false
       }
-      _ -> { }
     }
   }
   if readonlyPrefix { parser.fail("Unexpected readonly type modifier; expected an array, Map<K, V>, or Set<T> type") }

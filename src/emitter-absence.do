@@ -68,12 +68,9 @@ export function emitAbsentError(name: string, layers: AbsenceLayer[], errorType:
   for i of 0..<layers.length {
     layer := layers[i]
     if layer.failure {
-      case layer.source {
-        result: ResultResolvedType -> {
-          error := emitCarrierConversion("doof::failure_error(" + sources[i] + ")", result.errorType, errorType, context)
-          body = body + "if (doof::is_failure(" + sources[i] + ")) return " + error + "; "
-        }
-        _ -> { }
+      if result := layer.source as ResultResolvedType {
+        error := emitCarrierConversion("doof::failure_error(" + sources[i] + ")", result.errorType, errorType, context)
+        body = body + "if (doof::is_failure(" + sources[i] + ")) return " + error + "; "
       }
     } else {
       body = body + "if (doof::is_null(" + sources[i] + ")) return " + noneValue + "; "
@@ -94,16 +91,10 @@ export function emitForced(operand: string, operandType: ResolvedType, line: int
     let message = "std::string(\"! failed: value is none\")"
     if layer.failure {
       message = "std::string(\"! failed\")"
-      case layer.source {
-        result: ResultResolvedType -> {
-          case result.errorType {
-            primitive: PrimitiveType -> {
-              if primitive.name == "string" { message = message + " + std::string(\": \") + doof::failure_error(" + sources[i] + ")" }
-            }
-            _ -> { }
-          }
+      if result := layer.source as ResultResolvedType {
+        if primitive := result.errorType as PrimitiveType {
+          if primitive.name == "string" { message = message + " + std::string(\": \") + doof::failure_error(" + sources[i] + ")" }
         }
-        _ -> { }
       }
     }
     body = body + "if (" + layerAbsent(sources[i], layer) + ") doof::panic_at(" + sourcePath + ", " + string(line) + ", " + message + "); "

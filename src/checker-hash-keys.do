@@ -80,17 +80,14 @@ function structBlocker(result: AnalysisResult, class_: ClassType, visited: strin
   visited.push(key)
   declaration := declarationFor(result, class_.symbol)
   if declaration == none { return none }
-  case declaration! {
-    struct_: ClassDeclaration -> {
-      for field of struct_.fields {
-        if field.static_ || field.resolvedType == none { continue }
-        fieldType := if struct_.typeParams.length == 0 then field.resolvedType! else substituteTypeParams(field.resolvedType!, struct_.typeParams, class_.typeArgs)
-        if inner := hashKeyBlocker(result, fieldType, visited) {
-          return if inner == "" then "field \"" + field.names[0] + "\" of \"" + typeName(class_) + "\" has type \"" + typeName(fieldType) + "\"" else inner
-        }
+  if struct_ := declaration! as ClassDeclaration {
+    for field of struct_.fields {
+      if field.static_ || field.resolvedType == none { continue }
+      fieldType := if struct_.typeParams.length == 0 then field.resolvedType! else substituteTypeParams(field.resolvedType!, struct_.typeParams, class_.typeArgs)
+      if inner := hashKeyBlocker(result, fieldType, visited) {
+        return if inner == "" then "field \"" + field.names[0] + "\" of \"" + typeName(class_) + "\" has type \"" + typeName(fieldType) + "\"" else inner
       }
     }
-    _ -> { }
   }
   return none
 }

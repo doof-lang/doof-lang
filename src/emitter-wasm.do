@@ -69,26 +69,20 @@ function addWasmJsonDemands(fn: FunctionDeclaration, analysis: AnalysisResult, p
     if resolvedType := parameter.resolvedType { addJsonDeserializationDemand(plan, resolvedType, analysis) }
   }
   if fn.resolvedType == none { return }
-  case fn.resolvedType! {
-    function_: FunctionType -> {
-      case function_.returnType {
-        result: ResultResolvedType -> {
-          addJsonSerializationDemand(plan, result.valueType, analysis)
-          addJsonSerializationDemand(plan, result.errorType, analysis)
-        }
-        _ -> { addJsonSerializationDemand(plan, function_.returnType, analysis) }
+  if function_ := fn.resolvedType! as FunctionType {
+    case function_.returnType {
+      result: ResultResolvedType -> {
+        addJsonSerializationDemand(plan, result.valueType, analysis)
+        addJsonSerializationDemand(plan, result.errorType, analysis)
       }
+      _ -> { addJsonSerializationDemand(plan, function_.returnType, analysis) }
     }
-    _ -> { }
   }
 }
 
 function collectExportedFunctions(info: ModuleInfo, result: FunctionDeclaration[]): none {
   for statement of info.program.statements {
-    case statement {
-      fn: FunctionDeclaration -> { if fn.exported || moduleExportsFunction(info, fn.name) { result.push(fn) } }
-      _ -> { }
-    }
+    if fn := statement as FunctionDeclaration { if fn.exported || moduleExportsFunction(info, fn.name) { result.push(fn) } }
   }
 }
 

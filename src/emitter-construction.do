@@ -40,14 +40,8 @@ function emitConstructionValues(plan: CheckedConstruction, inputs: ConstructionI
 function emitConstructionValue(inputs: ConstructionInputs, name: string, index: int, expected: ResolvedType, defaultValue: Expression | none, owner: ClassType, ownerTypeParams: string[], missingMessage: string, context: EmitContext): string {
   if property := findProperty(inputs.properties, name) {
     if inputs.aliasThis && property.value != none {
-      case property.value! {
-        _: ThisExpression -> {
-          case expected {
-            class_: ClassType -> { return "std::shared_ptr<" + class_.name + ">(this, [](" + class_.name + "*) {})" }
-            _ -> { }
-          }
-        }
-        _ -> { }
+      if _ := property.value! as ThisExpression {
+        if class_ := expected as ClassType { return "std::shared_ptr<" + class_.name + ">(this, [](" + class_.name + "*) {})" }
       }
     }
     return emitPropertyValue(property, context, expected)

@@ -53,10 +53,7 @@ export function memberCompletions(index: EditorIndex, module: string, offset: in
     if offset < member.object.span.end.offset || offset > member.span.end.offset { continue }
     receiver := member.object.resolvedType else { return true }
     let staticReceiver = false
-    case member.object {
-      identifier: Identifier -> { if resolvedBinding := identifier.resolvedBinding { staticReceiver = classNameBinding(resolvedBinding) } }
-      _ -> { }
-    }
+    if identifier := member.object as Identifier { if resolvedBinding := identifier.resolvedBinding { staticReceiver = classNameBinding(resolvedBinding) } }
     completeMembers(index, module, offset, receiver, member.span, items, staticReceiver)
     return true
   }
@@ -87,12 +84,9 @@ function completeMembers(index: EditorIndex, module: string, offset: int, receiv
       state.diagnostics = []
       selected := resolveMember(state, receiver, name, span)
       if selected.type_ == none || selected.type_!.kind == "unknown" || state.diagnostics.length > 0 { continue }
-      case receiver {
-        _: ClassType -> {
-          if staticReceiver && selected.staticOwner == none { continue }
-          if !staticReceiver && selected.staticOwner != none { continue }
-        }
-        _ -> { }
+      if _ := receiver as ClassType {
+        if staticReceiver && selected.staticOwner == none { continue }
+        if !staticReceiver && selected.staticOwner != none { continue }
       }
       uniquePush(items, EditorItem { label: name, detail: editorTypeName(selected.type_!), kind: if selected.function_ == none then "property" else "method", module, start: offset, end: offset })
     }

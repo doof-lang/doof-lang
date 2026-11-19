@@ -76,12 +76,9 @@ export function absenceErrorType(type_: ResolvedType): ResolvedType | none {
   layers := absenceLayers(type_)
   for layer of layers {
     if layer.failure {
-      case layer.source {
-        result: ResultResolvedType -> {
-          if layers.length == 1 { return result.errorType }
-          return unionType([result.errorType, noneType()])
-        }
-        _ -> { }
+      if result := layer.source as ResultResolvedType {
+        if layers.length == 1 { return result.errorType }
+        return unionType([result.errorType, noneType()])
       }
     }
   }

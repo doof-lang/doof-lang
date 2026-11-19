@@ -44,15 +44,12 @@ function embedsStruct(state: CheckerState, type_: ResolvedType, target: Symbol, 
       visited.push(key)
       declaration := declarationFor(state.result, class_.symbol)
       if declaration == none { return false }
-      case declaration! {
-        nested: ClassDeclaration -> {
-          if !nested.struct_ { return false }
-          for field of nested.fields {
-            if field.static_ || field.resolvedType == none { continue }
-            if embedsStruct(state, field.resolvedType!, target, visited) { return true }
-          }
+      if nested := declaration! as ClassDeclaration {
+        if !nested.struct_ { return false }
+        for field of nested.fields {
+          if field.static_ || field.resolvedType == none { continue }
+          if embedsStruct(state, field.resolvedType!, target, visited) { return true }
         }
-        _ -> { }
       }
       return false
     }

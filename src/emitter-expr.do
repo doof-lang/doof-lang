@@ -67,10 +67,7 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
     this_: ThisExpression -> {
       let structThis = false
       if resolvedType := this_.resolvedType {
-        case resolvedType {
-          class_: ClassType -> { structThis = class_.symbol.kind == "struct" }
-          _ -> { }
-        }
+        if class_ := resolvedType as ClassType { structThis = class_.symbol.kind == "struct" }
       }
       if structThis { value = "*this" }
       else { value = "this->shared_from_this()" }

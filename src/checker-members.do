@@ -91,18 +91,15 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
     }
     _ -> { }
   }
-  case member.object {
-    identifier: Identifier -> {
-      if member.property == "parse" && legacyNumericParseType(identifier) {
-        replacement := if identifier.name == "byte" then "parseByte" else
-          if identifier.name == "int" then "parseInt" else
-          if identifier.name == "long" then "parseLong" else
-          if identifier.name == "float" then "parseFloat" else "parseDouble"
-        typeError(state, "${identifier.name}.parse was removed; import ${replacement} from \"std/parse\"", member.span)
-        return finish(state, member, unknownType())
-      }
+  if identifier := member.object as Identifier {
+    if member.property == "parse" && legacyNumericParseType(identifier) {
+      replacement := if identifier.name == "byte" then "parseByte" else
+        if identifier.name == "int" then "parseInt" else
+        if identifier.name == "long" then "parseLong" else
+        if identifier.name == "float" then "parseFloat" else "parseDouble"
+      typeError(state, "${identifier.name}.parse was removed; import ${replacement} from \"std/parse\"", member.span)
+      return finish(state, member, unknownType())
     }
-    _ -> { }
   }
   if member.receiverTypeArgs.length > 0 { objectType = explicitStaticReceiver(state, member, objectType, scope) }
   diagnosticCount := state.diagnostics.length
@@ -130,20 +127,17 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
       typeError(state, "Static member 'fromSerialValue' cannot be accessed through a value; use '${typeName(objectType)}.fromSerialValue'", member.span)
     }
   }
-  case objectType {
-    _: EnumType -> {
-      namedReceiver := isNamedStaticReceiver(member.object)
-      staticMember := member.property == "values" || member.property == "fromName" || member.property == "fromValue" || member.property == "fromSerialValue"
-      if namedReceiver && (member.property == "name" || member.property == "value" || member.property == "toSerialValue") {
-        typeError(state, "Instance member '${member.property}' cannot be accessed through an enum type", member.span)
-      } else if !namedReceiver && staticMember {
-        typeError(state, "Static enum member '${member.property}' cannot be accessed through a value", member.span)
-      }
-      if !namedReceiver && enumVariantMember(state, objectType, member.property) {
-        typeError(state, "Enum variant '${member.property}' cannot be accessed through a value", member.span)
-      }
+  if _ := objectType as EnumType {
+    namedReceiver := isNamedStaticReceiver(member.object)
+    staticMember := member.property == "values" || member.property == "fromName" || member.property == "fromValue" || member.property == "fromSerialValue"
+    if namedReceiver && (member.property == "name" || member.property == "value" || member.property == "toSerialValue") {
+      typeError(state, "Instance member '${member.property}' cannot be accessed through an enum type", member.span)
+    } else if !namedReceiver && staticMember {
+      typeError(state, "Static enum member '${member.property}' cannot be accessed through a value", member.span)
     }
-    _ -> { }
+    if !namedReceiver && enumVariantMember(state, objectType, member.property) {
+      typeError(state, "Enum variant '${member.property}' cannot be accessed through a value", member.span)
+    }
   }
   member.resolvedCallableField = selected.field
   memberValue = instantiateGenericReference(state, member, memberValue, expected, scope, calleePosition)
@@ -198,25 +192,19 @@ export function checkIndex(state: CheckerState, index: IndexExpression, scope: S
       optionalReceiver = true
       index.resolvedOptionalReceiver = objectType
     } else {
-      case objectType {
-        union_: UnionResolvedType -> {
-          if hasNoneMember(state, union_) {
-            objectType = weakAccessTarget(union_)
-            optionalReceiver = true
-            index.resolvedOptionalReceiver = objectType
-          }
+      if union_ := objectType as UnionResolvedType {
+        if hasNoneMember(state, union_) {
+          objectType = weakAccessTarget(union_)
+          optionalReceiver = true
+          index.resolvedOptionalReceiver = objectType
         }
-        _ -> { }
       }
     }
   }
   // Map keys check against the key type so tuple, enum-shorthand, and union
   // keys get the same context as in map literals.
   let indexContext: ResolvedType = primitive("int")
-  case objectType {
-    map: MapResolvedType -> { indexContext = map.keyType }
-    _ -> { }
-  }
+  if map := objectType as MapResolvedType { indexContext = map.keyType }
   indexValueType := checkExpression(state, index.index, scope, indexContext)
   resolved := indexType(state, objectType, indexValueType, index.span)
   if objectType.kind == "never" || indexValueType.kind == "never" { return finish(state, index, neverType()) }
@@ -234,29 +222,23 @@ export function checkIndex(state: CheckerState, index: IndexExpression, scope: S
  */
 function explicitStaticReceiver(state: CheckerState, member: MemberExpression, objectType: ResolvedType, scope: Scope): ResolvedType {
   resolvedArgs := resolveTypeArguments(state, member.receiverTypeArgs, scope)
-  case objectType {
-    class_: ClassType -> {
-      if declaration := declarationFor(state.result, class_.symbol) && class_.typeArgs.length == 0 && isNamedStaticReceiver(member.object) {
-        case declaration {
-          generic: ClassDeclaration -> {
-            if generic.typeParams.length == 0 {
-              typeError(state, "Class '${generic.name}' is not generic and takes no type arguments", member.span)
-              return objectType
-            }
-            if resolvedArgs.length != generic.typeParams.length {
-              typeError(state, typeArgumentArityMessage("Generic class '${generic.name}'", generic.typeParams.length, resolvedArgs.length), member.span)
-              return unknownType()
-            }
-            validateTypeArgumentConstraints(state, generic.typeParams, generic.typeParamConstraints, resolvedArgs, member.span, classModuleFor(state.result, class_.symbol), scope)
-            receiver := ClassType { name: class_.name, symbol: class_.symbol, typeArgs: resolvedArgs }
-            member.resolvedStaticReceiver = receiver
-            return receiver
-          }
-          _ -> { }
+  if class_ := objectType as ClassType {
+    if declaration := declarationFor(state.result, class_.symbol) && class_.typeArgs.length == 0 && isNamedStaticReceiver(member.object) {
+      if generic := declaration as ClassDeclaration {
+        if generic.typeParams.length == 0 {
+          typeError(state, "Class '${generic.name}' is not generic and takes no type arguments", member.span)
+          return objectType
         }
+        if resolvedArgs.length != generic.typeParams.length {
+          typeError(state, typeArgumentArityMessage("Generic class '${generic.name}'", generic.typeParams.length, resolvedArgs.length), member.span)
+          return unknownType()
+        }
+        validateTypeArgumentConstraints(state, generic.typeParams, generic.typeParamConstraints, resolvedArgs, member.span, classModuleFor(state.result, class_.symbol), scope)
+        receiver := ClassType { name: class_.name, symbol: class_.symbol, typeArgs: resolvedArgs }
+        member.resolvedStaticReceiver = receiver
+        return receiver
       }
     }
-    _ -> { }
   }
   if objectType.kind != "unknown" {
     typeError(state, "Type arguments are only allowed on a generic class name before a static member", member.span)
@@ -265,43 +247,31 @@ function explicitStaticReceiver(state: CheckerState, member: MemberExpression, o
 }
 
 function weakAccessTarget(type_: ResolvedType): ResolvedType {
-  case type_ {
-    union_: UnionResolvedType -> {
-      let present: ResolvedType[] = []
-      for member of union_.types { if member.kind != "none" { present.push(member) } }
-      if present.length > 0 { return unionType(present) }
-    }
-    _ -> { }
+  if union_ := type_ as UnionResolvedType {
+    let present: ResolvedType[] = []
+    for member of union_.types { if member.kind != "none" { present.push(member) } }
+    if present.length > 0 { return unionType(present) }
   }
   return type_
 }
 
 function isNamedStaticReceiver(expression: Expression): bool {
-  case expression {
-    identifier: Identifier -> {
-      binding := identifier.resolvedBinding else { return false }
-      if binding.kind == "type-parameter" || binding.kind == "class" || binding.kind == "struct" || binding.kind == "interface" || binding.kind == "enum" { return true }
-      if binding.kind == "import" && binding.symbol != none {
-        kind := binding.symbol!.kind
-        return kind == "class" || kind == "struct" || kind == "interface" || kind == "enum"
-      }
+  if identifier := expression as Identifier {
+    binding := identifier.resolvedBinding else { return false }
+    if binding.kind == "type-parameter" || binding.kind == "class" || binding.kind == "struct" || binding.kind == "interface" || binding.kind == "enum" { return true }
+    if binding.kind == "import" && binding.symbol != none {
+      kind := binding.symbol!.kind
+      return kind == "class" || kind == "struct" || kind == "interface" || kind == "enum"
     }
-    _ -> { }
   }
   return false
 }
 
 function enumVariantMember(state: CheckerState, receiver: ResolvedType, property: string): bool {
-  case receiver {
-    enum_: EnumType -> {
-      if declaration := declarationFor(state.result, enum_.symbol) {
-        case declaration {
-          owner: EnumDeclaration -> { for variant of owner.variants { if variant.name == property { return true } } }
-          _ -> { }
-        }
-      }
+  if enum_ := receiver as EnumType {
+    if declaration := declarationFor(state.result, enum_.symbol) {
+      if owner := declaration as EnumDeclaration { for variant of owner.variants { if variant.name == property { return true } } }
     }
-    _ -> { }
   }
   return false
 }
@@ -375,10 +345,7 @@ export function checkDotShorthand(state: CheckerState, expression: DotShorthand,
       let variantOwners = 0
       for member of union_.types {
         if member.kind == "class" { variantOwners = 2; break }
-        case member {
-          enum_: EnumType -> { if enumDeclaresVariant(state, enum_, expression.name) { variantOwner = member; variantOwners += 1 } }
-          _ -> { }
-        }
+        if enum_ := member as EnumType { if enumDeclaresVariant(state, enum_, expression.name) { variantOwner = member; variantOwners += 1 } }
       }
       if variantOwners == 1 { return checkDotShorthand(state, expression, variantOwner, true) }
     }
@@ -391,11 +358,8 @@ export function checkDotShorthand(state: CheckerState, expression: DotShorthand,
 function enumDeclaresVariant(state: CheckerState, enum_: EnumType, name: string): bool {
   declaration := declarationFor(state.result, enum_.symbol)
   if declaration == none { return false }
-  case declaration! {
-    enumDeclaration: EnumDeclaration -> {
-      for variant of enumDeclaration.variants { if variant.name == name { return true } }
-    }
-    _ -> { }
+  if enumDeclaration := declaration! as EnumDeclaration {
+    for variant of enumDeclaration.variants { if variant.name == name { return true } }
   }
   return false
 }

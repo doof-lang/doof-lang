@@ -68,10 +68,7 @@ export function validateAssignmentBinding(state: CheckerState, binding: Binding,
   typeError(state, "Cannot assign to immutable field '${binding.fieldOwner}.${binding.name}'${suffix}", span)
 }
 export function requireBool(state: CheckerState, resolvedType: ResolvedType, span: SourceSpan): none {
-  case resolvedType {
-    _: NeverType -> { return }
-    _ -> { }
-  }
+  if _ := resolvedType as NeverType { return }
   if typeName(resolvedType) != "bool" && typeName(resolvedType) != "unknown" { typeError(state, "Expected bool, got " + typeName(resolvedType), span) }
 }
 

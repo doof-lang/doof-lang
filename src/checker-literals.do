@@ -20,83 +20,80 @@ import { findClassField, isAssignableWithInterfaces } from "./checker-interfaces
 // literal inspection here so contextual literal typing and collection
 // finalization share one owner in the Doof checker.
 export function checkOmittedCollectionLiteral(state: CheckerState, annotation: TypeAnnotation, expression: Expression, scope: Scope): ResolvedType | none {
-  case annotation {
-    named: NamedType -> {
-      if named.typeArgs.length != 0 { return none }
-      if named.name == "Set" || named.name == "ReadonlySet" {
-        case expression {
-          array: ArrayLiteral -> {
-            if array.elements.length == 0 {
-              typeError(state, "Cannot infer ${named.name} element type from an empty set literal; provide a full ${named.name}<T> annotation", array.span)
-              return finish(state, expression, setType(unknownType(), named.name == "ReadonlySet"))
-            }
-            inferred := checkArray(state, array, scope, none)
-            case inferred {
-              arrayType_: ArrayResolvedType -> {
-                let hasConcreteElement = true
-                case arrayType_.elementType {
-                  _: UnknownType -> { hasConcreteElement = false; typeError(state, "Cannot infer ${named.name} element type from this set literal; provide a full ${named.name}<T> annotation", array.span) }
-                  _: UnionResolvedType -> { hasConcreteElement = false; typeError(state, "Cannot infer ${named.name} element type from heterogeneous set elements; provide a full ${named.name}<T> annotation", array.span) }
-                  _ -> { }
-                }
-                if hasConcreteElement { reportUnsupportedHashKey(state, arrayType_.elementType, "Set element", array.span) }
-                return finish(state, expression, setType(arrayType_.elementType, named.name == "ReadonlySet"))
-              }
-              _ -> { return finish(state, expression, setType(unknownType(), named.name == "ReadonlySet")) }
-            }
+  if named := annotation as NamedType {
+    if named.typeArgs.length != 0 { return none }
+    if named.name == "Set" || named.name == "ReadonlySet" {
+      case expression {
+        array: ArrayLiteral -> {
+          if array.elements.length == 0 {
+            typeError(state, "Cannot infer ${named.name} element type from an empty set literal; provide a full ${named.name}<T> annotation", array.span)
+            return finish(state, expression, setType(unknownType(), named.name == "ReadonlySet"))
           }
-          _ -> {
-            typeError(state, "Omitted type arguments for ${named.name} require a same-site non-empty set literal", expression.span)
-            checkExpression(state, expression, scope, none)
-            return setType(unknownType(), named.name == "ReadonlySet")
+          inferred := checkArray(state, array, scope, none)
+          case inferred {
+            arrayType_: ArrayResolvedType -> {
+              let hasConcreteElement = true
+              case arrayType_.elementType {
+                _: UnknownType -> { hasConcreteElement = false; typeError(state, "Cannot infer ${named.name} element type from this set literal; provide a full ${named.name}<T> annotation", array.span) }
+                _: UnionResolvedType -> { hasConcreteElement = false; typeError(state, "Cannot infer ${named.name} element type from heterogeneous set elements; provide a full ${named.name}<T> annotation", array.span) }
+                _ -> { }
+              }
+              if hasConcreteElement { reportUnsupportedHashKey(state, arrayType_.elementType, "Set element", array.span) }
+              return finish(state, expression, setType(arrayType_.elementType, named.name == "ReadonlySet"))
+            }
+            _ -> { return finish(state, expression, setType(unknownType(), named.name == "ReadonlySet")) }
           }
         }
-      }
-      if named.name == "Map" || named.name == "ReadonlyMap" {
-        case expression {
-          object: ObjectLiteral -> {
-            if object.properties.length == 0 {
-              typeError(state, "Cannot infer ${named.name} type arguments from an empty map literal; provide a full ${named.name}<K, V> annotation", object.span)
-              return finish(state, expression, mapType(unknownType(), unknownType(), named.name == "ReadonlyMap"))
-            }
-            let keyType = unknownType()
-            let valueType = unknownType()
-            for property of object.properties {
-              propertyKeyType := if property.key == none then primitive("string") else checkExpression(state, property.key!, scope, none)
-              keyType = joinTypes(keyType, propertyKeyType)
-              let propertyType = unknownType()
-              if value := property.value { propertyType = checkExpression(state, value, scope, none) }
-              else {
-                binding := lookup(scope, property.name)
-                if binding == none { typeError(state, "Unknown shorthand property '${property.name}'", property.span) }
-                else { property.resolvedBinding = binding; propertyType = binding!.type_ }
-              }
-              property.resolvedType = propertyType
-              valueType = joinTypes(valueType, propertyType)
-            }
-            case keyType {
-              _: UnknownType -> { typeError(state, "Cannot infer ${named.name} key type from this map literal; provide a full ${named.name}<K, V> annotation", object.span) }
-              _: UnionResolvedType -> { typeError(state, "Cannot infer ${named.name} key type from heterogeneous map keys; provide a full ${named.name}<K, V> annotation", object.span) }
-              _ -> {
-                reportUnsupportedHashKey(state, keyType, "Map key", object.span)
-              }
-            }
-            case valueType {
-              _: UnknownType -> { typeError(state, "Cannot infer ${named.name} type arguments from this map literal; provide a full ${named.name}<K, V> annotation", object.span) }
-              _: UnionResolvedType -> { typeError(state, "Cannot infer ${named.name} value type from heterogeneous map values; provide a full ${named.name}<K, V> annotation", object.span) }
-              _ -> { }
-            }
-            return finish(state, expression, mapType(keyType, valueType, named.name == "ReadonlyMap"))
-          }
-          _ -> {
-            checkExpression(state, expression, scope, none)
-            typeError(state, "Omitted type arguments for ${named.name} require a same-site non-empty map literal", expression.span)
-            return mapType(unknownType(), unknownType(), named.name == "ReadonlyMap")
-          }
+        _ -> {
+          typeError(state, "Omitted type arguments for ${named.name} require a same-site non-empty set literal", expression.span)
+          checkExpression(state, expression, scope, none)
+          return setType(unknownType(), named.name == "ReadonlySet")
         }
       }
     }
-    _ -> { }
+    if named.name == "Map" || named.name == "ReadonlyMap" {
+      case expression {
+        object: ObjectLiteral -> {
+          if object.properties.length == 0 {
+            typeError(state, "Cannot infer ${named.name} type arguments from an empty map literal; provide a full ${named.name}<K, V> annotation", object.span)
+            return finish(state, expression, mapType(unknownType(), unknownType(), named.name == "ReadonlyMap"))
+          }
+          let keyType = unknownType()
+          let valueType = unknownType()
+          for property of object.properties {
+            propertyKeyType := if property.key == none then primitive("string") else checkExpression(state, property.key!, scope, none)
+            keyType = joinTypes(keyType, propertyKeyType)
+            let propertyType = unknownType()
+            if value := property.value { propertyType = checkExpression(state, value, scope, none) }
+            else {
+              binding := lookup(scope, property.name)
+              if binding == none { typeError(state, "Unknown shorthand property '${property.name}'", property.span) }
+              else { property.resolvedBinding = binding; propertyType = binding!.type_ }
+            }
+            property.resolvedType = propertyType
+            valueType = joinTypes(valueType, propertyType)
+          }
+          case keyType {
+            _: UnknownType -> { typeError(state, "Cannot infer ${named.name} key type from this map literal; provide a full ${named.name}<K, V> annotation", object.span) }
+            _: UnionResolvedType -> { typeError(state, "Cannot infer ${named.name} key type from heterogeneous map keys; provide a full ${named.name}<K, V> annotation", object.span) }
+            _ -> {
+              reportUnsupportedHashKey(state, keyType, "Map key", object.span)
+            }
+          }
+          case valueType {
+            _: UnknownType -> { typeError(state, "Cannot infer ${named.name} type arguments from this map literal; provide a full ${named.name}<K, V> annotation", object.span) }
+            _: UnionResolvedType -> { typeError(state, "Cannot infer ${named.name} value type from heterogeneous map values; provide a full ${named.name}<K, V> annotation", object.span) }
+            _ -> { }
+          }
+          return finish(state, expression, mapType(keyType, valueType, named.name == "ReadonlyMap"))
+        }
+        _ -> {
+          checkExpression(state, expression, scope, none)
+          typeError(state, "Omitted type arguments for ${named.name} require a same-site non-empty map literal", expression.span)
+          return mapType(unknownType(), unknownType(), named.name == "ReadonlyMap")
+        }
+      }
+    }
   }
   return none
 }
@@ -253,14 +250,11 @@ function soleNullableMapArm(union_: UnionResolvedType): ResolvedType | none {
 function checkClassObject(state: CheckerState, expression: ObjectLiteral, scope: Scope, class_: ClassType, structural: bool): ResolvedType | none {
   declaration := declarationFor(state.result, class_.symbol)
   if declaration == none { return none }
-  case declaration! {
-    classDeclaration: ClassDeclaration -> {
-      expression.resolvedConstruction = resolveConstructor(state, class_, false)
-      expression.resolvedClass = classDeclaration
-      checkClassProperties(state, expression.properties, scope, class_, classDeclaration, expression.span, structural)
-      return finish(state, expression, class_)
-    }
-    _ -> { }
+  if classDeclaration := declaration! as ClassDeclaration {
+    expression.resolvedConstruction = resolveConstructor(state, class_, false)
+    expression.resolvedClass = classDeclaration
+    checkClassProperties(state, expression.properties, scope, class_, classDeclaration, expression.span, structural)
+    return finish(state, expression, class_)
   }
   return none
 }
@@ -287,12 +281,9 @@ function checkUnionObject(state: CheckerState, expression: ObjectLiteral, scope:
   let matches: ClassType[] = []
   let nominalNames: string[] = []
   for member of union_.types {
-    case member {
-      class_: ClassType -> {
-        nominalNames.push(class_.name)
-        if objectShapeMatchesClass(state, expression, class_) { matches.push(class_) }
-      }
-      _ -> { }
+    if class_ := member as ClassType {
+      nominalNames.push(class_.name)
+      if objectShapeMatchesClass(state, expression, class_) { matches.push(class_) }
     }
   }
   if matches.length == 1 {
@@ -312,22 +303,19 @@ function checkUnionObject(state: CheckerState, expression: ObjectLiteral, scope:
 function objectShapeMatchesClass(state: CheckerState, expression: ObjectLiteral, class_: ClassType): bool {
   declaration := declarationFor(state.result, class_.symbol)
   if declaration == none { return false }
-  case declaration! {
-    classDeclaration: ClassDeclaration -> {
-      for property of expression.properties {
-        if property.key != none { return false }
-        field := findClassField(classDeclaration.fields, property.name)
-        if field == none || field!.static_ { return false }
-      }
-      for field of classDeclaration.fields {
-        if field.static_ { continue }
-        for name of field.names {
-          if (field.const_ || field.defaultValue == none) && !hasObjectProperty(expression.properties, name) { return false }
-        }
-      }
-      return true
+  if classDeclaration := declaration! as ClassDeclaration {
+    for property of expression.properties {
+      if property.key != none { return false }
+      field := findClassField(classDeclaration.fields, property.name)
+      if field == none || field!.static_ { return false }
     }
-    _ -> { }
+    for field of classDeclaration.fields {
+      if field.static_ { continue }
+      for name of field.names {
+        if (field.const_ || field.defaultValue == none) && !hasObjectProperty(expression.properties, name) { return false }
+      }
+    }
+    return true
   }
   return false
 }

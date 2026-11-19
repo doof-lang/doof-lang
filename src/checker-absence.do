@@ -25,10 +25,7 @@ export function optionalType(type_: ResolvedType): ResolvedType {
  * own Failure and receives the none in its success channel.
  */
 export function optionalAccessType(value: ResolvedType): ResolvedType {
-  case value {
-    result: ResultResolvedType -> { return resultType(unionType([result.valueType, noneType()]), result.errorType) }
-    _ -> { }
-  }
+  if result := value as ResultResolvedType { return resultType(unionType([result.valueType, noneType()]), result.errorType) }
   return unionType([value, noneType()])
 }
 

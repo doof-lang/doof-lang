@@ -90,13 +90,10 @@ export function registerConcreteInterfaceImplementations(result: AnalysisResult,
       if symbol.kind != "class" { continue }
       declaration := declarationFor(result, symbol)
       if declaration == none { continue }
-      case declaration! {
-        class_: ClassDeclaration -> {
-          if class_.typeParams.length == 0 && classSatisfiesConcreteInterface(result, class_, classType(class_.name, symbol), interface_) {
-            addImplementedInterfaceType(symbol, typeName(interface_))
-          }
+      if class_ := declaration! as ClassDeclaration {
+        if class_.typeParams.length == 0 && classSatisfiesConcreteInterface(result, class_, classType(class_.name, symbol), interface_) {
+          addImplementedInterfaceType(symbol, typeName(interface_))
         }
-        _ -> { }
       }
     }
   }
@@ -148,21 +145,15 @@ export function classSatisfiesInterface(result: AnalysisResult, classSymbol: Sym
   classDeclaration := declarationFor(result, classSymbol)
   interfaceDeclaration := declarationFor(result, interfaceSymbol)
   if classDeclaration == none || interfaceDeclaration == none { return false }
-  case classDeclaration! {
-    class_: ClassDeclaration -> {
-      case interfaceDeclaration! {
-        interface_: InterfaceDeclaration -> {
-          return classSatisfiesConcreteInterface(
-            result,
-            class_,
-            classType(class_.name, classSymbol),
-            interfaceType(interface_.name, interfaceSymbol),
-          )
-        }
-        _ -> { }
-      }
+  if class_ := classDeclaration! as ClassDeclaration {
+    if interface_ := interfaceDeclaration! as InterfaceDeclaration {
+      return classSatisfiesConcreteInterface(
+        result,
+        class_,
+        classType(class_.name, classSymbol),
+        interfaceType(interface_.name, interfaceSymbol),
+      )
     }
-    _ -> { }
   }
   return false
 }
@@ -200,14 +191,11 @@ export function concreteInterfaceImplementations(result: AnalysisResult, interfa
       // Only declared Doof classes are instantiated into interface carriers.
       declaration := declarationFor(result, symbol)
       if declaration == none { continue }
-      case declaration! {
-        class_: ClassDeclaration -> {
-          case interfaceDeclaration! {
-            required: InterfaceDeclaration -> { if declaresInterfaceMembers(class_, required) { return none } }
-            _ -> { return none }
-          }
+      if class_ := declaration! as ClassDeclaration {
+        case interfaceDeclaration! {
+          required: InterfaceDeclaration -> { if declaresInterfaceMembers(class_, required) { return none } }
+          _ -> { return none }
         }
-        _ -> { }
       }
     }
   }
@@ -235,21 +223,12 @@ export function satisfiesInterfaceBound(result: AnalysisResult, argument: Resolv
 }
 
 export function satisfiesInterfaceInstanceBound(result: AnalysisResult, argument: ResolvedType, bound: ResolvedType): bool {
-  case argument {
-    struct_: ClassType -> {
-      case bound {
-        interface_: InterfaceType -> {
-          if declaration := declarationFor(result, struct_.symbol) {
-            case declaration {
-              owner: ClassDeclaration -> { if owner.struct_ { return classSatisfiesConcreteInterface(result, owner, struct_, interface_) } }
-              _ -> { }
-            }
-          }
-        }
-        _ -> { }
+  if struct_ := argument as ClassType {
+    if interface_ := bound as InterfaceType {
+      if declaration := declarationFor(result, struct_.symbol) {
+        if owner := declaration as ClassDeclaration { if owner.struct_ { return classSatisfiesConcreteInterface(result, owner, struct_, interface_) } }
       }
     }
-    _ -> { }
   }
   return isAssignableWithInterfaces(result, argument, bound)
 }
@@ -357,36 +336,27 @@ function isAssignableWithInterfacesSeen(result: AnalysisResult, value: ResolvedT
       return true
     }
     function_: FunctionType -> {
-      case target {
-        targetFunction: FunctionType -> { return compatibleConcreteMethodType(result, function_, targetFunction, seen) }
-        _ -> { }
-      }
+      if targetFunction := target as FunctionType { return compatibleConcreteMethodType(result, function_, targetFunction, seen) }
     }
     class_: ClassType -> {
-      case target {
-        interface_: InterfaceType -> {
-          declaration := declarationFor(result, class_.symbol)
-          if declaration == none { return false }
-          case declaration! {
-            // Interface values lower to variants of shared class pointers, so
-            // struct values cannot become interface values. Structs may still
-            // satisfy interface generic bounds.
-            owner: ClassDeclaration -> { return !owner.struct_ && classSatisfiesConcreteInterfaceSeen(result, owner, class_, interface_, seen) }
-            _ -> { }
-          }
+      if interface_ := target as InterfaceType {
+        declaration := declarationFor(result, class_.symbol)
+        if declaration == none { return false }
+        case declaration! {
+          // Interface values lower to variants of shared class pointers, so
+          // struct values cannot become interface values. Structs may still
+          // satisfy interface generic bounds.
+          owner: ClassDeclaration -> { return !owner.struct_ && classSatisfiesConcreteInterfaceSeen(result, owner, class_, interface_, seen) }
+          _ -> { }
         }
-        _ -> { }
       }
     }
     _ -> { }
   }
-  case target {
-    union_: UnionResolvedType -> {
-      for member of union_.types {
-        if isAssignableWithInterfacesSeen(result, value, member, seen) { return true }
-      }
+  if union_ := target as UnionResolvedType {
+    for member of union_.types {
+      if isAssignableWithInterfacesSeen(result, value, member, seen) { return true }
     }
-    _ -> { }
   }
   return false
 }

@@ -49,14 +49,8 @@ export function isJsonValueType(resolvedType: ResolvedType): bool {
 
 /** A readonly byte array has a dedicated SerialValue runtime carrier. */
 export function isSerialBytesType(resolvedType: ResolvedType): bool {
-  case resolvedType {
-    array: ArrayResolvedType -> {
-      case array.elementType {
-        primitive: PrimitiveType -> { return array.readonly_ && primitive.name == "byte" }
-        _ -> { }
-      }
-    }
-    _ -> { }
+  if array := resolvedType as ArrayResolvedType {
+    if primitive := array.elementType as PrimitiveType { return array.readonly_ && primitive.name == "byte" }
   }
   return false
 }
@@ -91,12 +85,9 @@ export function resultArmExpectation(arm: string, expected: ResolvedType | none)
     union_: UnionResolvedType -> {
       let found: ResultResolvedType | none = none
       for member of union_.types {
-        case member {
-          result: ResultResolvedType -> {
-            if found != none { return ResultArmExpectation {} }
-            found = result
-          }
-          _ -> { }
+        if result := member as ResultResolvedType {
+          if found != none { return ResultArmExpectation {} }
+          found = result
         }
       }
       if found != none { return resultArmExpectation(arm, found) }
@@ -198,14 +189,8 @@ function canonicalResultArms(members: ResolvedType[]): ResolvedType[] {
   for i of 0..<members.length {
     if i == failureIndex { continue }
     if i != successIndex { canonical.push(members[i]); continue }
-    case members[successIndex] {
-      success: SuccessResolvedType -> {
-        case members[failureIndex] {
-          failure: FailureResolvedType -> { canonical.push(resultType(success.valueType, failure.errorType)) }
-          _ -> { }
-        }
-      }
-      _ -> { }
+    if success := members[successIndex] as SuccessResolvedType {
+      if failure := members[failureIndex] as FailureResolvedType { canonical.push(resultType(success.valueType, failure.errorType)) }
     }
   }
   return canonical
@@ -528,25 +513,19 @@ export function sameType(left: ResolvedType, right: ResolvedType): bool {
 
 /** Union arms must remain distinguishable when collection mutability is erased. */
 export function unionMutabilityConflict(type_: ResolvedType): string | none {
-  case type_ {
-    union_: UnionResolvedType -> {
-      for i of 0..<union_.types.length {
-        left := union_.types[i]
-        // With no type arguments, nominal equality cannot change when mutability is erased.
-        case left {
-          class_: ClassType -> { if class_.typeArgs.length == 0 { continue } }
-          _ -> { }
-        }
-        for j of (i + 1)..<union_.types.length {
-          right := union_.types[j]
-          if compareTypes(left, right, true) && !sameType(left, right) {
-            return "Union members " + typeName(left) + " and " + typeName(right) +
-              " differ only in collection mutability and cannot be distinguished at runtime; use a single mutability or distinct wrapper types"
-          }
+  if union_ := type_ as UnionResolvedType {
+    for i of 0..<union_.types.length {
+      left := union_.types[i]
+      // With no type arguments, nominal equality cannot change when mutability is erased.
+      if class_ := left as ClassType { if class_.typeArgs.length == 0 { continue } }
+      for j of (i + 1)..<union_.types.length {
+        right := union_.types[j]
+        if compareTypes(left, right, true) && !sameType(left, right) {
+          return "Union members " + typeName(left) + " and " + typeName(right) +
+            " differ only in collection mutability and cannot be distinguished at runtime; use a single mutability or distinct wrapper types"
         }
       }
     }
-    _ -> { }
   }
   return none
 }
@@ -727,10 +706,7 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
   case value {
     _: NeverType -> { return true }
     parameter: TypeParameterType -> {
-      case target {
-        _: TypeParameterType -> { return sameType(value, target) }
-        _ -> { }
-      }
+      if _ := target as TypeParameterType { return sameType(value, target) }
       // The constraint widens what T accepts, but T itself must still reach
       // union targets such as `T | none` through the member search below.
       if constraint := parameter.constraint && isAssignable(constraint, target) { return true }
@@ -746,68 +722,44 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
       return true
     }
     valueArray: ArrayResolvedType -> {
-      case target {
-        targetArray: ArrayResolvedType -> {
-          if targetArray.readonly_ != valueArray.readonly_ { return false }
-          // Arrays share mutable backing storage, and the C++ representation
-          // does not convert collection element types at call boundaries.
-          return sameType(valueArray.elementType, targetArray.elementType)
-        }
-        _ -> { }
+      if targetArray := target as ArrayResolvedType {
+        if targetArray.readonly_ != valueArray.readonly_ { return false }
+        // Arrays share mutable backing storage, and the C++ representation
+        // does not convert collection element types at call boundaries.
+        return sameType(valueArray.elementType, targetArray.elementType)
       }
     }
     valueMap: MapResolvedType -> {
-      case target {
-        targetMap: MapResolvedType -> {
-          if targetMap.readonly_ != valueMap.readonly_ { return false }
-          return sameType(valueMap.keyType, targetMap.keyType) && sameType(valueMap.valueType, targetMap.valueType)
-        }
-        _ -> { }
+      if targetMap := target as MapResolvedType {
+        if targetMap.readonly_ != valueMap.readonly_ { return false }
+        return sameType(valueMap.keyType, targetMap.keyType) && sameType(valueMap.valueType, targetMap.valueType)
       }
     }
     valueSet: SetResolvedType -> {
-      case target {
-        targetSet: SetResolvedType -> {
-          if targetSet.readonly_ != valueSet.readonly_ { return false }
-          return sameType(valueSet.elementType, targetSet.elementType)
-        }
-        _ -> { }
+      if targetSet := target as SetResolvedType {
+        if targetSet.readonly_ != valueSet.readonly_ { return false }
+        return sameType(valueSet.elementType, targetSet.elementType)
       }
     }
     valueStream: StreamResolvedType -> {
-      case target {
-        targetStream: StreamResolvedType -> { return sameType(valueStream.elementType, targetStream.elementType) }
-        _ -> { }
-      }
+      if targetStream := target as StreamResolvedType { return sameType(valueStream.elementType, targetStream.elementType) }
     }
     valueWeak: WeakResolvedType -> {
-      case target {
-        targetWeak: WeakResolvedType -> { return weakTargetWidens(valueWeak.inner, targetWeak.inner) }
-        _ -> { }
-      }
+      if targetWeak := target as WeakResolvedType { return weakTargetWidens(valueWeak.inner, targetWeak.inner) }
     }
     valueActor: ActorType -> {
-      case target {
-        targetActor: ActorType -> { return sameType(valueActor.innerClass, targetActor.innerClass) }
-        _ -> { }
-      }
+      if targetActor := target as ActorType { return sameType(valueActor.innerClass, targetActor.innerClass) }
     }
     valuePromise: PromiseType -> {
-      case target {
-        targetPromise: PromiseType -> { return sameType(valuePromise.valueType, targetPromise.valueType) }
-        _ -> { }
-      }
+      if targetPromise := target as PromiseType { return sameType(valuePromise.valueType, targetPromise.valueType) }
     }
     valueFunction: FunctionType -> {
-      case target {
-        targetFunction: FunctionType -> {
-          if valueFunction.params.length != targetFunction.params.length { return false }
-          for i of 0..<valueFunction.params.length {
-            if !sameType(valueFunction.params[i].type_, targetFunction.params[i].type_) { return false }
-          }
-          return isAssignable(valueFunction.returnType, targetFunction.returnType)
+      if targetFunction := target as FunctionType {
+        if valueFunction.params.length != targetFunction.params.length { return false }
+        for i of 0..<valueFunction.params.length {
+          if !sameType(valueFunction.params[i].type_, targetFunction.params[i].type_) { return false }
         }
-        _ -> { }
+        return isAssignable(valueFunction.returnType, targetFunction.returnType)
       }
     }
     _: SerialValueResolvedType -> {
@@ -816,42 +768,33 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
     _ -> { }
   }
   if sameType(value, target) { return true }
-  case target {
-    weakTarget: WeakResolvedType -> { return isAssignable(value, weakTarget.inner) }
-    _ -> { }
-  }
-  case target {
-    _: SerialValueResolvedType -> { return isJsonValueAssignable(value) }
-    _ -> { }
-  }
-  case value {
-    class_: ClassType -> {
-      case target {
-        interface_: InterfaceType -> {
-          for implementedType of class_.symbol.implementedInterfaceTypes {
-            if implementedType == typeName(interface_) { return true }
-          }
-          // The symbol-wide implementation set is valid only for
-          // non-generic interfaces. Concrete generic conformance is recorded
-          // above by its fully substituted type name.
-          if interface_.typeArgs.length == 0 {
-            for implementation of interface_.symbol.implementations {
-              if implementation.module == class_.symbol.module && implementation.name == class_.symbol.name { return true }
-            }
-          }
-          return false
+  if weakTarget := target as WeakResolvedType { return isAssignable(value, weakTarget.inner) }
+  if _ := target as SerialValueResolvedType { return isJsonValueAssignable(value) }
+  if class_ := value as ClassType {
+    case target {
+      interface_: InterfaceType -> {
+        for implementedType of class_.symbol.implementedInterfaceTypes {
+          if implementedType == typeName(interface_) { return true }
         }
-        targetStream: StreamResolvedType -> {
-          for elementPattern of class_.symbol.streamElementTypes {
-            element := substituteTypeParams(elementPattern, class_.symbol.typeParams, class_.typeArgs)
-            if sameType(element, targetStream.elementType) { return true }
+        // The symbol-wide implementation set is valid only for
+        // non-generic interfaces. Concrete generic conformance is recorded
+        // above by its fully substituted type name.
+        if interface_.typeArgs.length == 0 {
+          for implementation of interface_.symbol.implementations {
+            if implementation.module == class_.symbol.module && implementation.name == class_.symbol.name { return true }
           }
-          return false
         }
-        _ -> { }
+        return false
       }
+      targetStream: StreamResolvedType -> {
+        for elementPattern of class_.symbol.streamElementTypes {
+          element := substituteTypeParams(elementPattern, class_.symbol.typeParams, class_.typeArgs)
+          if sameType(element, targetStream.elementType) { return true }
+        }
+        return false
+      }
+      _ -> { }
     }
-    _ -> { }
   }
   case target {
     _: TypeParameterType -> { return false }
@@ -864,27 +807,18 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
   }
   case value {
     primitiveValue: PrimitiveType -> {
-      case target {
-        primitiveTarget: PrimitiveType -> {
-          if primitiveValue.name == "byte" && (primitiveTarget.name == "int" || primitiveTarget.name == "long" || primitiveTarget.name == "float" || primitiveTarget.name == "double") { return true }
-          if primitiveValue.name == "int" && primitiveTarget.name == "long" { return true }
-          if primitiveValue.name == "int" && primitiveTarget.name == "double" { return true }
-          if primitiveValue.name == "float" && primitiveTarget.name == "double" { return true }
-        }
-        _ -> { }
+      if primitiveTarget := target as PrimitiveType {
+        if primitiveValue.name == "byte" && (primitiveTarget.name == "int" || primitiveTarget.name == "long" || primitiveTarget.name == "float" || primitiveTarget.name == "double") { return true }
+        if primitiveValue.name == "int" && primitiveTarget.name == "long" { return true }
+        if primitiveValue.name == "int" && primitiveTarget.name == "double" { return true }
+        if primitiveValue.name == "float" && primitiveTarget.name == "double" { return true }
       }
     }
     _: NoneType -> {
-      case target {
-        union: UnionResolvedType -> {
-          for member of union.types {
-            case member {
-              _: NoneType -> { return true }
-              _ -> { }
-            }
-          }
+      if union := target as UnionResolvedType {
+        for member of union.types {
+          if _ := member as NoneType { return true }
         }
-        _ -> { }
       }
     }
     _ -> { }
@@ -900,9 +834,9 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
 export function weakTargetWidens(value: ResolvedType, target: ResolvedType): bool {
   if sameType(value, target) { return true }
   let targetMembers: ResolvedType[] = [target]
-  case target { union_: UnionResolvedType -> { targetMembers = union_.types } _ -> { } }
+  if union_ := target as UnionResolvedType { targetMembers = union_.types }
   let valueMembers: ResolvedType[] = [value]
-  case value { union_: UnionResolvedType -> { valueMembers = union_.types } _ -> { } }
+  if union_ := value as UnionResolvedType { valueMembers = union_.types }
   for member of valueMembers {
     let widens = false
     for candidate of targetMembers { if sameType(member, candidate) { widens = true } }

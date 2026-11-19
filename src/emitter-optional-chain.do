@@ -94,10 +94,7 @@ function lowerOptional(
 
 /** The value of an optional access whose receiver is absent. */
 export function emitOptionalAbsent(resultType: ResolvedType, context: EmitContext): string {
-  case resultType {
-    out: ResultResolvedType -> { return successOf(emitNoneLiteral(out.valueType, context), out, context) }
-    _ -> { }
-  }
+  if out := resultType as ResultResolvedType { return successOf(emitNoneLiteral(out.valueType, context), out, context) }
   return emitNoneLiteral(resultType, context)
 }
 
@@ -106,24 +103,18 @@ export function emitOptionalAbsent(resultType: ResolvedType, context: EmitContex
  * keeps its Failure and widens its success value with none.
  */
 export function emitOptionalPresent(inner: string, valueType: ResolvedType, resultType: ResolvedType, suffix: string, context: EmitContext): string {
-  case resultType {
-    out: ResultResolvedType -> {
-      case valueType {
-        nested: ResultResolvedType -> {
-          nestedName := "_optional_result_" + suffix
-          let body = "auto&& " + nestedName + " = " + inner + "; "
-          body = body + "if (doof::is_failure(" + nestedName + ")) return " + failureOf(nestedName, out, context) + "; "
-          if nested.valueType.kind == "none" {
-            body = body + "return " + successOf("", out, context) + ";"
-          } else {
-            body = body + "return " + successOf(emitCarrierConversion("doof::success_value(" + nestedName + ")", nested.valueType, out.valueType, context), out, context) + ";"
-          }
-          return "[&]() -> " + emitContextType(out, context) + " { " + body + " }()"
-        }
-        _ -> { }
+  if out := resultType as ResultResolvedType {
+    if nested := valueType as ResultResolvedType {
+      nestedName := "_optional_result_" + suffix
+      let body = "auto&& " + nestedName + " = " + inner + "; "
+      body = body + "if (doof::is_failure(" + nestedName + ")) return " + failureOf(nestedName, out, context) + "; "
+      if nested.valueType.kind == "none" {
+        body = body + "return " + successOf("", out, context) + ";"
+      } else {
+        body = body + "return " + successOf(emitCarrierConversion("doof::success_value(" + nestedName + ")", nested.valueType, out.valueType, context), out, context) + ";"
       }
+      return "[&]() -> " + emitContextType(out, context) + " { " + body + " }()"
     }
-    _ -> { }
   }
   return emitCarrierConversion(inner, valueType, resultType, context)
 }

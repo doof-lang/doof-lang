@@ -85,13 +85,10 @@ export function inferCallTypeArguments(state: CheckerState, args: CallArgument[]
   // Trailing lambdas are statement blocks for none-returning callbacks; one
   // cannot be what determines a generic callback's result.
   for i of 0..<args.length {
-    case args[i].value {
-      lambda: LambdaExpression -> {
-        if lambda.trailing && callbackResultIsGeneric(signature, args, i) {
-          typeError(state, "Trailing lambdas require a callback returning none; use an explicit lambda such as '=> ...' instead", lambda.span)
-        }
+    if lambda := args[i].value as LambdaExpression {
+      if lambda.trailing && callbackResultIsGeneric(signature, args, i) {
+        typeError(state, "Trailing lambdas require a callback returning none; use an explicit lambda such as '=> ...' instead", lambda.span)
       }
-      _ -> { }
     }
   }
   return inferred
@@ -130,13 +127,10 @@ function lambdaInferenceExpected(parameterType: ResolvedType, evidence: TypeArgu
   let known: ResolvedType[] = []
   for i of 0..<evidence.typeParams.length { known.push(evidence.found[i] ?? typeParameter(evidence.typeParams[i])) }
   partial := substituteTypeParams(parameterType, evidence.typeParams, known)
-  case partial {
-    callback: FunctionType -> {
-      if genericInferenceExpected(callback.returnType, openTypeParams(evidence)) == none {
-        return functionType(callback.params, unknownType())
-      }
+  if callback := partial as FunctionType {
+    if genericInferenceExpected(callback.returnType, openTypeParams(evidence)) == none {
+      return functionType(callback.params, unknownType())
     }
-    _ -> { }
   }
   return partial
 }
