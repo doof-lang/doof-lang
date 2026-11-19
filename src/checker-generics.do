@@ -14,8 +14,7 @@ export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, n
     map: MapResolvedType -> {
       case actual {
         concrete: MapResolvedType -> {
-          key := inferTypeArgument(map.keyType, concrete.keyType, name)
-          if key != none { return key }
+          if key := inferTypeArgument(map.keyType, concrete.keyType, name) { return key }
           return inferTypeArgument(map.valueType, concrete.valueType, name)
         }
         _ -> { }
@@ -39,8 +38,7 @@ export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, n
           if class_.symbol.module != concrete.symbol.module || class_.symbol.name != concrete.symbol.name { return none }
           for i of 0..<class_.typeArgs.length {
             if i < concrete.typeArgs.length {
-              candidate := inferTypeArgument(class_.typeArgs[i], concrete.typeArgs[i], name)
-              if candidate != none { return candidate }
+              if candidate := inferTypeArgument(class_.typeArgs[i], concrete.typeArgs[i], name) { return candidate }
             }
           }
         }
@@ -52,8 +50,7 @@ export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, n
         concrete: InterfaceType -> {
           for i of 0..<interface_.typeArgs.length {
             if i < concrete.typeArgs.length {
-              candidate := inferTypeArgument(interface_.typeArgs[i], concrete.typeArgs[i], name)
-              if candidate != none { return candidate }
+              if candidate := inferTypeArgument(interface_.typeArgs[i], concrete.typeArgs[i], name) { return candidate }
             }
           }
         }
@@ -65,8 +62,7 @@ export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, n
         concrete: FunctionType -> {
           for i of 0..<function_.params.length {
             if i < concrete.params.length {
-              candidate := inferTypeArgument(function_.params[i].type_, concrete.params[i].type_, name)
-              if candidate != none { return candidate }
+              if candidate := inferTypeArgument(function_.params[i].type_, concrete.params[i].type_, name) { return candidate }
             }
           }
           return inferTypeArgument(function_.returnType, concrete.returnType, name)
@@ -77,8 +73,7 @@ export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, n
     result_: ResultResolvedType -> {
       case actual {
         concrete: ResultResolvedType -> {
-          value := inferTypeArgument(result_.valueType, concrete.valueType, name)
-          if value != none { return value }
+          if value := inferTypeArgument(result_.valueType, concrete.valueType, name) { return value }
           return inferTypeArgument(result_.errorType, concrete.errorType, name)
         }
         _ -> { }
@@ -101,8 +96,7 @@ export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, n
         concrete: TupleResolvedType -> {
           for i of 0..<tuple.elements.length {
             if i < concrete.elements.length {
-              candidate := inferTypeArgument(tuple.elements[i], concrete.elements[i], name)
-              if candidate != none { return candidate }
+              if candidate := inferTypeArgument(tuple.elements[i], concrete.elements[i], name) { return candidate }
             }
           }
         }

@@ -35,8 +35,7 @@ export function resolveProvisionalAnnotation(annotation: TypeAnnotation, info: M
 function finishAnnotation(resolution: AnnotationResolution, annotation: TypeAnnotation, type_: ResolvedType): ResolvedType {
   if resolution.commit {
     if resolution.state.editorMode { resolution.state.info!.editorAnnotations.push(annotation) }
-    conflict := unionMutabilityConflict(type_)
-    if conflict != none { typeError(resolution.state, conflict!, annotation.span) }
+    if conflict := unionMutabilityConflict(type_) { typeError(resolution.state, conflict, annotation.span) }
     annotation.resolvedType = type_
   }
   return type_
@@ -46,11 +45,10 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
   state := resolution.state
   case annotation {
     named: NamedType -> {
-      fixed := fixedBuiltinType(named.name)
-      if fixed != none {
+      if fixed := fixedBuiltinType(named.name) {
         if rejectUnexpectedTypeArguments(resolution, named, module, scope, validateConstraints) { return finishAnnotation(resolution, annotation, unknownType()) }
         if (named.name == "void" || named.name == "null") && named.resolvedType == none { deprecatedNoneAlias(state, named.name, named.span, module.path) }
-        return finishAnnotation(resolution, annotation, fixed!)
+        return finishAnnotation(resolution, annotation, fixed)
       }
       if hasTypeParam(scope, named.name) {
         if rejectUnexpectedTypeArguments(resolution, named, module, scope, validateConstraints) { return finishAnnotation(resolution, annotation, unknownType()) }

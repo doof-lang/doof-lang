@@ -82,8 +82,7 @@ function findViolation(result: AnalysisResult, type_: ResolvedType, seen: string
     }
     map: MapResolvedType -> {
       if !map.readonly_ { return ActorBoundaryViolation { reason: "map type \"" + typeName(type_) + "\" is mutable" } }
-      keyViolation := findViolation(result, map.keyType, seen, unbound)
-      if keyViolation != none { return keyViolation }
+      if keyViolation := findViolation(result, map.keyType, seen, unbound) { return keyViolation }
       return findViolation(result, map.valueType, seen, unbound)
     }
     set_: SetResolvedType -> {
@@ -92,31 +91,27 @@ function findViolation(result: AnalysisResult, type_: ResolvedType, seen: string
     }
     stream: StreamResolvedType -> { return ActorBoundaryViolation { reason: "stream type \"" + typeName(stream) + "\" is mutable" } }
     result_: ResultResolvedType -> {
-      valueViolation := findViolation(result, result_.valueType, seen, unbound)
-      if valueViolation != none { return valueViolation }
+      if valueViolation := findViolation(result, result_.valueType, seen, unbound) { return valueViolation }
       return findViolation(result, result_.errorType, seen, unbound)
     }
     success: SuccessResolvedType -> { return findViolation(result, success.valueType, seen, unbound) }
     failure: FailureResolvedType -> { return findViolation(result, failure.errorType, seen, unbound) }
     tuple: TupleResolvedType -> {
       for element of tuple.elements {
-        violation := findViolation(result, element, seen, unbound)
-        if violation != none { return violation }
+        if violation := findViolation(result, element, seen, unbound) { return violation }
       }
       return none
     }
     union_: UnionResolvedType -> {
       for member of union_.types {
-        violation := findViolation(result, member, seen, unbound)
-        if violation != none { return violation }
+        if violation := findViolation(result, member, seen, unbound) { return violation }
       }
       return none
     }
     function_: FunctionType -> {
       for parameter of function_.params {
-        violation := findViolation(result, parameter.type_, seen, unbound)
-        if violation != none {
-          return ActorBoundaryViolation { reason: "callback parameter \"" + parameter.name + "\" cannot cross actor boundaries: " + violation!.reason }
+        if violation := findViolation(result, parameter.type_, seen, unbound) {
+          return ActorBoundaryViolation { reason: "callback parameter \"" + parameter.name + "\" cannot cross actor boundaries: " + violation.reason }
         }
       }
       return findViolation(result, function_.returnType, seen, unbound)
@@ -149,19 +144,17 @@ function findClassViolation(result: AnalysisResult, type_: ClassType, seen: stri
     fieldType := field.resolvedType
     if fieldType == none { continue }
     effective := substituteTypeParams(fieldType!, declaration!.typeParams, type_.typeArgs)
-    violation := findViolation(result, effective, nextSeen, unbound)
-    if violation != none {
+    if violation := findViolation(result, effective, nextSeen, unbound) {
       name := fieldDisplayName(field)
-      return ActorBoundaryViolation { reason: "field \"" + name + "\" cannot cross actor boundaries: " + violation!.reason }
+      return ActorBoundaryViolation { reason: "field \"" + name + "\" cannot cross actor boundaries: " + violation.reason }
     }
   }
   // Native code may carry a type argument that no field mentions (a channel's
   // message type), so every type argument must be boundary-safe itself.
   for index of 0..<type_.typeArgs.length {
-    violation := findViolation(result, type_.typeArgs[index], nextSeen, unbound)
-    if violation != none {
+    if violation := findViolation(result, type_.typeArgs[index], nextSeen, unbound) {
       parameterName := if index < declaration!.typeParams.length then declaration!.typeParams[index] else typeName(type_.typeArgs[index])
-      return ActorBoundaryViolation { reason: "type argument \"" + parameterName + "\" cannot cross actor boundaries: " + violation!.reason }
+      return ActorBoundaryViolation { reason: "type argument \"" + parameterName + "\" cannot cross actor boundaries: " + violation.reason }
     }
   }
   return none
@@ -179,17 +172,15 @@ function findInterfaceViolation(result: AnalysisResult, type_: InterfaceType, se
     if field.let_ { return ActorBoundaryViolation { reason: "field \"" + field.name + "\" is mutable" } }
     if field.resolvedType == none { continue }
     effective := substituteTypeParams(field.resolvedType!, declaration!.typeParams, type_.typeArgs)
-    violation := findViolation(result, effective, nextSeen, unbound)
-    if violation != none {
-      return ActorBoundaryViolation { reason: "field \"" + field.name + "\" cannot cross actor boundaries: " + violation!.reason }
+    if violation := findViolation(result, effective, nextSeen, unbound) {
+      return ActorBoundaryViolation { reason: "field \"" + field.name + "\" cannot cross actor boundaries: " + violation.reason }
     }
   }
   if declaration!.resolvedSymbol != none {
     for implementation of declaration!.resolvedSymbol!.implementations {
-      violation := findClassViolation(result, implementationType(result, type_, implementation), nextSeen, true)
-      if violation != none {
+      if violation := findClassViolation(result, implementationType(result, type_, implementation), nextSeen, true) {
         return ActorBoundaryViolation {
-          reason: "implementation \"" + implementation.name + "\" cannot cross actor boundaries: " + violation!.reason,
+          reason: "implementation \"" + implementation.name + "\" cannot cross actor boundaries: " + violation.reason,
         }
       }
     }

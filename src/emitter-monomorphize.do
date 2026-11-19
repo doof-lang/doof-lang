@@ -94,8 +94,7 @@ export function nameInstantiations(checked: CheckedInstantiations, moduleNames: 
       item: DiscoveredMethod -> {
         let ownerEmittedName = item.owner.name
         if item.owner.typeParams.length > 0 {
-          found := classNames.get(item.ownerKey)?
-          if found != none { ownerEmittedName = found! }
+          if found := classNames.get(item.ownerKey)? { ownerEmittedName = found }
         }
         arguments: ResolvedType[] := []
         for i of item.owner.typeParams.length..<item.substitution.arguments.length { arguments.push(item.substitution.arguments[i]) }

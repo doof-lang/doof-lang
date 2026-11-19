@@ -38,9 +38,8 @@ export function resolveCalleeTarget(state: CheckerState, callee: Expression, cal
     identifier: Identifier -> {
       if identifier.resolvedBinding != none && identifier.resolvedBinding!.symbol != none {
         symbol := identifier.resolvedBinding!.symbol!
-        target := declarationFor(state.result, symbol)
-        if target != none {
-          case target! {
+        if target := declarationFor(state.result, symbol) {
+          case target {
             fn: FunctionDeclaration -> { return CheckedMember { type_: calleeType, function_: fn, modulePath: symbol.module } }
             _: ClassDeclaration -> {
               resolved := resolveMember(state, classType(symbol.name, symbol), identifier.name, identifier.span, false)
@@ -346,9 +345,8 @@ function typeParameterMemberType(state: CheckerState, parameter: TypeParameterTy
 
 function enumMemberType(state: CheckerState, enum_: EnumType, property: string): ResolvedType {
   let declaration: EnumDeclaration | none = none
-  found := declarationFor(state.result, enum_.symbol)
-  if found != none {
-    case found! {
+  if found := declarationFor(state.result, enum_.symbol) {
+    case found {
       enumDeclaration: EnumDeclaration -> { declaration = enumDeclaration }
       _ -> { }
     }
@@ -518,9 +516,8 @@ function interfaceGeneratedMemberType(state: CheckerState, interfaceType_: Inter
     }
     return serialDecodeType(interfaceType_)
   }
-  blocker := interfaceJsonSerializationBlocker(interface_, programs)
-  if blocker != none {
-    typeError(state, "Cannot serialize interface \"" + interface_.name + "\": implementing class \"" + blocker! + "\" does not support automatic JSON serialization", span)
+  if blocker := interfaceJsonSerializationBlocker(interface_, programs) {
+    typeError(state, "Cannot serialize interface \"" + interface_.name + "\": implementing class \"" + blocker + "\" does not support automatic JSON serialization", span)
     return unknownType()
   }
   recordMember(selection, interfaceType_, interfaceType_.symbol.module, none, false, none, true)

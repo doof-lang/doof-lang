@@ -30,8 +30,7 @@ export class CppTypeRegistry {
     for argument of arguments { key.append(":" + string(argument.id)) }
     identity := key.drainToString()
     existing := nodes.get(identity) else {
-      inherited := base.nodes.get(identity)?
-      if inherited != none { return inherited! }
+      if inherited := base.nodes.get(identity)? { return inherited }
       node := CppType { id: base.nodes.size + nodes.size, kind, name, owner, arguments: arguments.cloneReadonly() }
       nodes.set(identity, node)
       return node
@@ -42,8 +41,7 @@ export class CppTypeRegistry {
   atom(name: string, owner: string = ""): CppType {
     key := "atom:" + string(name.length) + ":" + name + ":" + string(owner.length) + ":" + owner
     existing := nodes.get(key) else {
-      inherited := base.nodes.get(key)?
-      if inherited != none { return inherited! }
+      if inherited := base.nodes.get(key)? { return inherited }
       node := CppType { id: base.nodes.size + nodes.size, kind: "atom", name, owner, arguments: [] }
       nodes.set(key, node)
       return node
@@ -54,8 +52,7 @@ export class CppTypeRegistry {
   render(type_: CppType, namespace: string): string {
     key := string(type_.id) + ":" + namespace
     text := rendered.get(key) else {
-      inherited := base.rendered.get(key)?
-      if inherited != none { return inherited! }
+      if inherited := base.rendered.get(key)? { return inherited }
       value := renderCppType(type_, namespace)
       rendered.set(key, value)
       return value

@@ -312,25 +312,22 @@ function collectGenericTarget(callee: Expression, function_: FunctionDeclaration
       identifier: Identifier -> {
         if identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "method" && identifier.resolvedBinding!.symbol != none {
           symbol := identifier.resolvedBinding!.symbol!
-          owner := findClassDeclaration(analysis, symbol.module, symbol.name)
-          if owner != none && function_.typeParams.length > 0 {
+          if owner := findClassDeclaration(analysis, symbol.module, symbol.name) && function_.typeParams.length > 0 {
             let ownerArgs: ResolvedType[] = []
-            for typeParam of owner!.typeParams {
+            for typeParam of owner.typeParams {
               ownerArgs.push(specialize(TypeParameterType { name: typeParam }, names, arguments))
             }
-            addMethod(plan, ClassType { name: symbol.name, symbol, typeArgs: ownerArgs }, owner!, function_, concreteArgs)
+            addMethod(plan, ClassType { name: symbol.name, symbol, typeArgs: ownerArgs }, owner, function_, concreteArgs)
             recordedMethod = true
           }
         }
       }
       member: MemberExpression -> {
-        receiverType := memberReceiverType(member)
-        if receiverType != none {
-          case specialize(receiverType!, names, arguments) {
+        if receiverType := memberReceiverType(member) {
+          case specialize(receiverType, names, arguments) {
             ownerType: ClassType -> {
-              owner := findClassDeclaration(analysis, ownerType.symbol.module, ownerType.symbol.name)
-              if owner != none && function_.typeParams.length > 0 {
-                if !owner!.native_ { addMethod(plan, ownerType, owner!, function_, concreteArgs) }
+              if owner := findClassDeclaration(analysis, ownerType.symbol.module, ownerType.symbol.name) && function_.typeParams.length > 0 {
+                if !owner.native_ { addMethod(plan, ownerType, owner, function_, concreteArgs) }
                 recordedMethod = true
               }
             }
@@ -409,9 +406,8 @@ function validateImpliedJsonMember(member: MemberExpression, receiver: ResolvedT
   let reason = ""
   case receiver {
     class_: ClassType -> {
-      owner := if class_.symbol.native_ then none else findClassDeclaration(analysis, class_.symbol.module, class_.symbol.name)
-      if owner != none {
-        supported = if member.property == "toSerialObject" then canGenerateJsonSerialization(owner!, programs) else canGenerateJsonDeserialization(owner!, programs)
+      if owner := (if class_.symbol.native_ then none else findClassDeclaration(analysis, class_.symbol.module, class_.symbol.name)) {
+        supported = if member.property == "toSerialObject" then canGenerateJsonSerialization(owner, programs) else canGenerateJsonDeserialization(owner, programs)
       }
     }
     _: EnumType -> {
@@ -475,8 +471,7 @@ function validateSpecializedHashKey(part: HashKeyCandidate, names: string[], arg
   for index of 0..<names.length {
     if index < arguments.length { bindings = bindings + (if bindings == "" then "" else ", ") + names[index] + " = " + typeName(arguments[index]) }
   }
-  message := hashKeyDiagnostic(analysis, specialize(part.key, names, arguments), part.role, part.key, bindings)
-  if message != none { reportInstantiationError(plan, modulePath, span, message!) }
+  if message := hashKeyDiagnostic(analysis, specialize(part.key, names, arguments), part.role, part.key, bindings) { reportInstantiationError(plan, modulePath, span, message) }
 }
 
 class HashKeyCandidate {
@@ -564,8 +559,7 @@ function collectType(type_: ResolvedType, analysis: AnalysisResult, plan: Checke
     class_: ClassType -> {
       for argument of class_.typeArgs { collectType(argument, analysis, plan) }
       if class_.typeArgs.length > 0 && !containsTypeParameters(class_.typeArgs) {
-        declaration := findClassDeclaration(analysis, class_.symbol.module, class_.symbol.name)
-        if declaration != none && !declaration!.native_ { addClass(plan, class_.symbol.module, declaration!, class_.typeArgs) }
+        if declaration := findClassDeclaration(analysis, class_.symbol.module, class_.symbol.name) && !declaration.native_ { addClass(plan, class_.symbol.module, declaration, class_.typeArgs) }
       }
     }
     interface_: InterfaceType -> {

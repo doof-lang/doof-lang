@@ -95,8 +95,7 @@ function driverSourceDiskPath(
       return joinPath(root.diskRoot, logicalPath.substring(prefix.length, logicalPath.length))
     }
   }
-  acquiredPath := acquiredModuleDiskPath(logicalPath, acquisitions)
-  if acquiredPath != none { return acquiredPath! }
+  if acquiredPath := acquiredModuleDiskPath(logicalPath, acquisitions) { return acquiredPath }
   return logicalPath
 }
 
@@ -125,8 +124,7 @@ function configuredDriverSource(logicalPath: string): Result<SourceFile | none, 
     configuredDriverSourceState.acquisitions,
   )
   if source != none {
-    package := acquiredPackageForLoadedSource(logicalPath, configuredDriverSourceState)
-    if package != none { try registerReachedPackage(package!) }
+    if package := acquiredPackageForLoadedSource(logicalPath, configuredDriverSourceState) { try registerReachedPackage(package) }
   }
   return Success(source)
 }

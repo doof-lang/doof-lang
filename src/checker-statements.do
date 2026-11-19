@@ -306,9 +306,8 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
     value.resolvedType = valueType
     // Readonly collections are applied structurally above; nominal classes
     // must already be deeply immutable, matching readonly field validation.
-    violation := findActorBoundaryViolation(state.result, declaredType)
-    if violation != none {
-      typeError(state, "Readonly binding \"" + name + "\" must be deeply immutable: " + violation!.reason, span)
+    if violation := findActorBoundaryViolation(state.result, declaredType) {
+      typeError(state, "Readonly binding \"" + name + "\" must be deeply immutable: " + violation.reason, span)
     }
   }
   if annotation != none && inferredCollectionType != none { decorateAnnotationWithResolved(annotation!, declaredType) }
@@ -368,9 +367,8 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
   scope := Scope { parent: outer, typeParams: [], thisType: if owner == none then unknownType() else owner!, functionName: fn.name, staticContext: owner != none && fn.static_ }
   populateTypeParameters(state, scope, fn.typeParams, fn.typeParamConstraints)
   if owner != none {
-    declaration := declarationFor(state.result, owner!.symbol)
-    if declaration != none {
-      case declaration! {
+    if declaration := declarationFor(state.result, owner!.symbol) {
+      case declaration {
         classDeclaration: ClassDeclaration -> { populateTypeParameters(state, scope, classDeclaration.typeParams, classDeclaration.typeParamConstraints) }
         _ -> { }
       }
@@ -779,9 +777,8 @@ function validateEnumLiteralField(state: CheckerState, field: ClassField, fieldT
     member: MemberExpression -> {
       case fieldType {
         enum_: EnumType -> {
-          declaration := declarationFor(state.result, enum_.symbol)
-          if declaration != none {
-            case declaration! {
+          if declaration := declarationFor(state.result, enum_.symbol) {
+            case declaration {
               owner: EnumDeclaration -> { for variant of owner.variants { if variant.name == member.property { return } } }
               _ -> { }
             }
@@ -820,9 +817,8 @@ export function checkReturn(state: CheckerState, statement: ReturnStatement, sco
     actualReturn = valueType
     if !isAssignableWithInterfaces(state.result, valueType, returnType) { typeError(state, "Cannot return " + typeName(valueType) + " from function returning " + typeName(returnType), statement.span) }
   }
-  inference := state.lambdaReturns
-  if inference != none && inference!.scope == target! {
-    inference!.returns.push(LambdaReturnObservation { statement, type_: actualReturn, reachable: inference!.reachable })
+  if inference := state.lambdaReturns && inference.scope == target! {
+    inference.returns.push(LambdaReturnObservation { statement, type_: actualReturn, reachable: inference.reachable })
   }
   return false
 }
@@ -894,8 +890,7 @@ function positionalDestructuringTypes(state: CheckerState, valueType: ResolvedTy
   case valueType {
     tuple: TupleResolvedType -> { for element of tuple.elements { result.push(element) } }
     class_: ClassType -> {
-      declaration := declarationFor(state.result, class_.symbol)
-      if declaration != none { case declaration! {
+      if declaration := declarationFor(state.result, class_.symbol) { case declaration {
         owner: ClassDeclaration -> {
           for field of owner.fields {
             if field.static_ { continue }

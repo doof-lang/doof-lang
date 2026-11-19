@@ -93,11 +93,10 @@ function emitCallDefault(call: CallExpression, value: Expression, expected: Reso
     }
     _ -> { }
   }
-  declaration := call.resolvedFunction
-  if declaration != none {
-    for i of 0..<declaration!.typeParams.length {
+  if declaration := call.resolvedFunction {
+    for i of 0..<declaration.typeParams.length {
       if i < call.resolvedGenericTypeArgs.length {
-        addDefaultSubstitution(names, arguments, declaration!.typeParams[i], specializeEmitType(call.resolvedGenericTypeArgs[i], context))
+        addDefaultSubstitution(names, arguments, declaration.typeParams[i], specializeEmitType(call.resolvedGenericTypeArgs[i], context))
       }
     }
   }

@@ -348,8 +348,7 @@ export function validateResolved(resolvedType: ResolvedType | none, span: Source
     weak_: WeakResolvedType -> { validateResolved(weak_.inner, span, module, owner + " weak target", diagnostics) }
     tuple: TupleResolvedType -> { for item of tuple.elements { validateResolved(item, span, module, owner + " tuple element", diagnostics) } }
     union_: UnionResolvedType -> {
-      conflict := unionMutabilityConflict(union_)
-      if conflict != none { addValidationError(module, span, conflict!, diagnostics) }
+      if conflict := unionMutabilityConflict(union_) { addValidationError(module, span, conflict, diagnostics) }
       if union_.types.length == 0 { addValidationError(module, span, "Empty resolved union for " + owner, diagnostics) }
       for member of union_.types { validateResolved(member, span, module, owner + " union member", diagnostics) }
     }

@@ -32,13 +32,12 @@ export function prepareModuleNames(mappings: ModuleNamespaceMapping[], paths: st
 
 export function moduleStem(path: string, names: ModuleNames = ModuleNames {}): string {
   let normalized = path.replaceAll("\\", "/")
-  mapping := namespaceMappingForPath(normalized, names)
-  if mapping != none {
-    let relativePath = normalized.substring(mapping!.logicalPrefix.length, normalized.length)
+  if mapping := namespaceMappingForPath(normalized, names) {
+    let relativePath = normalized.substring(mapping.logicalPrefix.length, normalized.length)
     while relativePath.startsWith("/") {
       relativePath = relativePath.substring(1, relativePath.length)
     }
-    normalized = mapping!.packageName
+    normalized = mapping.packageName
     if relativePath != "" { normalized = normalized + "/" + relativePath }
   }
   // Keep this path-only until the Doof runtime grows string split and
@@ -56,16 +55,15 @@ export function moduleNamespace(path: string, names: ModuleNames = ModuleNames {
 }
 
 function computeModuleNamespace(path: string, names: ModuleNames = ModuleNames {}): string {
-  mapping := namespaceMappingForPath(path, names)
-  if mapping != none {
-    let relativePath = path.substring(mapping!.logicalPrefix.length, path.length)
+  if mapping := namespaceMappingForPath(path, names) {
+    let relativePath = path.substring(mapping.logicalPrefix.length, path.length)
     while relativePath.startsWith("/") {
       relativePath = relativePath.substring(1, relativePath.length)
     }
     if relativePath.endsWith(".do") {
       relativePath = relativePath.substring(0, relativePath.length - 3)
     }
-    let namespace = namespacePath(mapping!.packageName, true)
+    let namespace = namespacePath(mapping.packageName, true)
     if relativePath != "" { namespace = namespace + "::" + namespacePath(relativePath) }
     return namespace
   }
@@ -76,9 +74,8 @@ function computeModuleNamespace(path: string, names: ModuleNames = ModuleNames {
 /** Formats source paths embedded in runtime diagnostics and @caller values. */
 export function moduleDiagnosticPath(path: string, stripExtension: bool, names: ModuleNames = ModuleNames {}): string {
   let normalized = path.replaceAll("\\", "/")
-  mapping := namespaceMappingForPath(normalized, names)
-  if mapping != none {
-    normalized = normalized.substring(mapping!.logicalPrefix.length, normalized.length)
+  if mapping := namespaceMappingForPath(normalized, names) {
+    normalized = normalized.substring(mapping.logicalPrefix.length, normalized.length)
   }
   while normalized.startsWith("/") {
     normalized = normalized.substring(1, normalized.length)

@@ -102,8 +102,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
       resolvedFunction := adaptArrayCallbackArity(state, expression, declaredFunction, scope)
       let effectiveFunction: FunctionType = resolvedFunction
       let genericInferenceFailed = false
-      staticOwner := genericStaticOwner(expression.callee)
-      if staticOwner != none {
+      if staticOwner := genericStaticOwner(expression.callee) {
         // `Stack.empty<int>()` fixes the method's own parameters; the class's
         // are still inferred from the arguments.
         let signature = resolvedFunction
@@ -117,7 +116,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           }
         }
         if !genericInferenceFailed {
-          instantiated := instantiateGenericStaticCall(state, expression, staticOwner!, signature, scope, expected)
+          instantiated := instantiateGenericStaticCall(state, expression, staticOwner, signature, scope, expected)
           if instantiated == none {
             // The reported inference failure leaves the class open; its
             // parameters must not leak into the arguments or the result.
@@ -169,11 +168,10 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         case declaration! {
           classDeclaration: ClassDeclaration -> {
             if classDeclaration.typeParams.length > 0 {
-              inferred := inferConstructionTypeArguments(state, expression.args, class_, classDeclaration, scope, expected)
-              if inferred != none {
-                effectiveClass = classType(class_.name, class_.symbol, inferred!)
-                expression.resolvedGenericTypeArgs = inferred!
-                validateTypeArgumentConstraints(state, classDeclaration.typeParams, classDeclaration.typeParamConstraints, inferred!, expression.span, classModuleFor(state.result, class_.symbol), scope)
+              if inferred := inferConstructionTypeArguments(state, expression.args, class_, classDeclaration, scope, expected) {
+                effectiveClass = classType(class_.name, class_.symbol, inferred)
+                expression.resolvedGenericTypeArgs = inferred
+                validateTypeArgumentConstraints(state, classDeclaration.typeParams, classDeclaration.typeParamConstraints, inferred, expression.span, classModuleFor(state.result, class_.symbol), scope)
               } else {
                 cannotInferConstruction(state, classDeclaration, expression.args, scope, expression.span)
                 return finish(state, expression, unknownType())
@@ -268,8 +266,7 @@ function adaptArrayCallbackArity(state: CheckerState, expression: CallExpression
     discardDiagnosticsSince(state, diagnosticMark)
     case actual {
       function_: FunctionType -> {
-        narrowed := withCallbackArity(adapted, parameterIndex, function_.params.length)
-        if narrowed != none { adapted = narrowed!; changed = true }
+        if narrowed := withCallbackArity(adapted, parameterIndex, function_.params.length) { adapted = narrowed; changed = true }
       }
       _ -> { }
     }
@@ -406,9 +403,8 @@ export function applyTypeArgumentConstraints(state: CheckerState, declaration: F
   if receiver != none {
     case receiver! {
       owner: ClassType -> {
-        ownerDeclaration := declarationFor(state.result, owner.symbol)
-        if ownerDeclaration != none {
-          case ownerDeclaration! {
+        if ownerDeclaration := declarationFor(state.result, owner.symbol) {
+          case ownerDeclaration {
             class_: ClassDeclaration -> { ownerNames = class_.typeParams; ownerArguments = owner.typeArgs }
             _ -> { }
           }
@@ -439,18 +435,16 @@ export function validateActorMethodBoundary(state: CheckerState, expression: Cal
   }
   if actor == none { return }
   for parameter of method.params {
-    violation := findActorBoundaryViolation(state.result, parameter.type_)
-    if violation != none {
+    if violation := findActorBoundaryViolation(state.result, parameter.type_) {
       typeError(state, 
-        "Actor method parameter \"" + parameter.name + "\" of type \"" + typeName(parameter.type_) + "\" cannot cross actor boundary for \"" + typeName(actor!) + "\": " + violation!.reason,
+        "Actor method parameter \"" + parameter.name + "\" of type \"" + typeName(parameter.type_) + "\" cannot cross actor boundary for \"" + typeName(actor!) + "\": " + violation.reason,
         expression.span,
       )
     }
   }
-  returnViolation := findActorBoundaryViolation(state.result, method.returnType)
-  if returnViolation != none {
+  if returnViolation := findActorBoundaryViolation(state.result, method.returnType) {
     typeError(state, 
-      "Actor method return type \"" + typeName(method.returnType) + "\" cannot cross actor boundary for \"" + typeName(actor!) + "\": " + returnViolation!.reason,
+      "Actor method return type \"" + typeName(method.returnType) + "\" cannot cross actor boundary for \"" + typeName(actor!) + "\": " + returnViolation.reason,
       expression.span,
     )
   }
@@ -461,9 +455,8 @@ export { checkLambda } from "./checker-lambdas"
 // println accepts every type that string interpolation can format.
 function checkPrintlnArguments(state: CheckerState, expression: CallExpression): none {
   for argument of expression.args {
-    actual := argument.value.resolvedType
-    if actual != none && !isStringInterpolatable(actual!) {
-      typeError(state, "Type \"" + typeName(actual!) + "\" cannot be passed to println", argument.value.span)
+    if actual := argument.value.resolvedType && !isStringInterpolatable(actual) {
+      typeError(state, "Type \"" + typeName(actual) + "\" cannot be passed to println", argument.value.span)
     }
   }
 }

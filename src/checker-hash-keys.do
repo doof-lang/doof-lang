@@ -18,8 +18,7 @@ export readonly HASH_KEY_RULE = "Map keys and Set elements may be byte, string, 
 
 /** Reports an unsupported Map key or Set element type at its source span. */
 export function reportUnsupportedHashKey(state: CheckerState, type_: ResolvedType, role: string, span: SourceSpan): none {
-  message := hashKeyDiagnostic(state.result, type_, role)
-  if message != none { typeError(state, message!, span) }
+  if message := hashKeyDiagnostic(state.result, type_, role) { typeError(state, message, span) }
 }
 
 /**
@@ -47,16 +46,14 @@ function hashKeyBlocker(result: AnalysisResult, type_: ResolvedType, visited: st
     }
     tuple: TupleResolvedType -> {
       for element of tuple.elements {
-        inner := hashKeyBlocker(result, element, visited)
-        if inner != none { return nested(element, inner!) }
+        if inner := hashKeyBlocker(result, element, visited) { return nested(element, inner) }
       }
       return none
     }
     union_: UnionResolvedType -> {
       for member of union_.types {
         if member.kind == "none" { continue }
-        inner := hashKeyBlocker(result, member, visited)
-        if inner != none { return nested(member, inner!) }
+        if inner := hashKeyBlocker(result, member, visited) { return nested(member, inner) }
       }
       return none
     }
@@ -88,9 +85,8 @@ function structBlocker(result: AnalysisResult, class_: ClassType, visited: strin
       for field of struct_.fields {
         if field.static_ || field.resolvedType == none { continue }
         fieldType := if struct_.typeParams.length == 0 then field.resolvedType! else substituteTypeParams(field.resolvedType!, struct_.typeParams, class_.typeArgs)
-        inner := hashKeyBlocker(result, fieldType, visited)
-        if inner != none {
-          return if inner! == "" then "field \"" + field.names[0] + "\" of \"" + typeName(class_) + "\" has type \"" + typeName(fieldType) + "\"" else inner!
+        if inner := hashKeyBlocker(result, fieldType, visited) {
+          return if inner == "" then "field \"" + field.names[0] + "\" of \"" + typeName(class_) + "\" has type \"" + typeName(fieldType) + "\"" else inner
         }
       }
     }

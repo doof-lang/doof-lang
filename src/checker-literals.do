@@ -119,8 +119,7 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
           }
           return finish(state, expression, jsonValueType())
         }
-        presentCollection := soleNullableCollectionArm(union_)
-        if presentCollection != none { return checkArray(state, expression, scope, presentCollection) }
+        if presentCollection := soleNullableCollectionArm(union_) { return checkArray(state, expression, scope, presentCollection) }
       }
       _ -> { }
     }
@@ -178,8 +177,7 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
         return finish(state, expression, result)
       }
       class_: ClassType -> {
-        checkedClass := checkClassObject(state, expression, scope, class_, false)
-        if checkedClass != none { return checkedClass! }
+        if checkedClass := checkClassObject(state, expression, scope, class_, false) { return checkedClass }
       }
       union_: UnionResolvedType -> {
         if supportsUnionObjectInference(union_) {
@@ -187,8 +185,7 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
         }
         // A nullable map context types the literal like the map itself, so
         // entries are not widened to SerialValue.
-        presentMap := soleNullableMapArm(union_)
-        if presentMap != none { return checkObject(state, expression, scope, presentMap) }
+        if presentMap := soleNullableMapArm(union_) { return checkObject(state, expression, scope, presentMap) }
       }
       _ -> { }
     }
@@ -299,8 +296,7 @@ function checkUnionObject(state: CheckerState, expression: ObjectLiteral, scope:
     }
   }
   if matches.length == 1 {
-    checked := checkClassObject(state, expression, scope, matches[0], true)
-    if checked != none { return checked! }
+    if checked := checkClassObject(state, expression, scope, matches[0], true) { return checked }
   }
   decorateUnresolvedObject(state, expression, scope)
   if matches.length == 0 {

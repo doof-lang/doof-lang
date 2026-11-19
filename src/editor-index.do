@@ -65,15 +65,13 @@ export function bindingItem(index: EditorIndex, binding: Binding): EditorItem {
   if binding.symbol != none { target = symbolItem(index, binding.symbol!) }
   let renameIdentity = itemIdentity(target)
   if binding.kind == "import" {
-    info := editorModule(index, binding.module)
-    if info != none {
-      for imported of info!.imports {
+    if info := editorModule(index, binding.module) {
+      for imported of info.imports {
         if imported.localName == binding.name {
-          alias := exportAliasItem(index, imported.sourceModule, imported.sourceName)
-          if alias != none { renameIdentity = itemIdentity(alias!) }
+          if alias := exportAliasItem(index, imported.sourceModule, imported.sourceName) { renameIdentity = itemIdentity(alias) }
         }
       }
-      for statement of info!.program.statements {
+      for statement of info.program.statements {
         import_ := statement as ImportDeclaration else { continue }
         for specifier of import_.specifiers {
           named := specifier as NamedImport else { continue }
@@ -121,10 +119,9 @@ function occurrence(index: EditorIndex, binding: Binding, module: string, start:
 
 function addProperties(index: EditorIndex, properties: ObjectProperty[], module: string, owner: ResolvedType | none): none {
   for property of properties {
-    target := fieldTarget(index, owner, property.name)
-    if target != none {
+    if target := fieldTarget(index, owner, property.name) {
       token := nameItem(index, module, property.name, property.span.start.offset, property.span.end.offset)
-      index.occurrences.push(EditorItem { label: property.name, kind: if property.value == none then "field-shorthand" else "property", module, start: token.start, end: token.end, identity: itemIdentity(target!), definitionModule: target!.module, definitionStart: target!.start, definitionEnd: target!.end, shorthand: property.value == none })
+      index.occurrences.push(EditorItem { label: property.name, kind: if property.value == none then "field-shorthand" else "property", module, start: token.start, end: token.end, identity: itemIdentity(target), definitionModule: target.module, definitionStart: target.start, definitionEnd: target.end, shorthand: property.value == none })
     }
     if property.value == none && property.resolvedBinding != none {
       name := nameItem(index, module, property.name, property.span.start.offset, property.span.end.offset)

@@ -139,9 +139,8 @@ export function resolveOptionalNativeDependencies(
     if compatibleVersion {
       try cflags := captured(program, ["--cflags", dependency.name])
       try libs := captured(program, ["--libs", dependency.name])
-      candidate := optionalPkgConfigInputs(native, dependency.name, cflags, libs)
-      if candidate != none {
-        plan := optionalNativeProbePlan(candidate!, dependency, compiler, buildDirectory, platform, wasm)
+      if candidate := optionalPkgConfigInputs(native, dependency.name, cflags, libs) {
+        plan := optionalNativeProbePlan(candidate, dependency, compiler, buildDirectory, platform, wasm)
         try probeDirectory(buildDirectory + "/.doof-probes/" + dependency.define)
         let passed = true
         for task of plan.compileTasks {

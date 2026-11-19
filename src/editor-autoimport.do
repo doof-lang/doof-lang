@@ -39,8 +39,7 @@ export function prepareAutoImports(index: EditorIndex): none {
       statements = program.statements
     }
     for statement of statements {
-      candidate := declarationItem(statement, source.path)
-      if candidate != none { index.exportCandidates.push(candidate!) }
+      if candidate := declarationItem(statement, source.path) { index.exportCandidates.push(candidate) }
       case statement {
         list: ExportList -> {
           for specifier of list.specifiers { index.exportCandidates.push(EditorItem { label: specifier.alias ?? specifier.name, module: source.path, start: specifier.span.start.offset, end: specifier.span.end.offset, importModule: source.path }) }
@@ -62,8 +61,7 @@ export function autoImportEdits(index: EditorIndex, module: string, target: stri
   resolver := ModuleResolver { sources: index.frontend.sourceFiles, loader: noSourceLoader }
   let mergeOffset = -1
   for statement of program.statements {
-    declared := declarationItem(statement, module, true)
-    if declared != none && declared!.label == name { return EditorResponse { error: "A declaration already uses this name." } }
+    if declared := declarationItem(statement, module, true) && declared.label == name { return EditorResponse { error: "A declaration already uses this name." } }
     import_ := statement as ImportDeclaration else { continue }
     let lastNamed = -1
     for specifier of import_.specifiers {

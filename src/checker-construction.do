@@ -131,9 +131,8 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
     typeError(state, if message == "" then "Unknown constructed type '" + expression.type_ + "'" else message, expression.span)
     return finish(state, expression, unknownType())
   }
-  declaration := declarationFor(state.result, symbol!)
-  if declaration != none {
-    case declaration! {
+  if declaration := declarationFor(state.result, symbol!) {
+    case declaration {
       classDeclaration: ClassDeclaration -> { expression.resolvedClass = classDeclaration }
       _ -> { }
     }
@@ -167,15 +166,13 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
   checkConstructionSpread(state, expression, scope)
   plan := resolveConstructor(state, constructed, !insideConstructorFactory(scope, constructed))
   expression.resolvedConstruction = plan
-  constructorMethod := plan.factory
-  if constructorMethod != none {
+  if constructorMethod := plan.factory {
     expression.resolvedConstructor = constructorMethod
-    validateConstructorVisibility(state, constructed, constructorMethod!, expression.span)
+    validateConstructorVisibility(state, constructed, constructorMethod, expression.span)
     let spread: FunctionParamType[] = []
     for parameter of plan.signature.params {
       if hasObjectProperty(expression.args, parameter.name) { continue }
-      spreadType := constructionSpreadFieldType(state, expression, parameter.name)
-      if spreadType != none { spread.push(FunctionParamType { name: parameter.name, type_: spreadType!, hasDefault: false }) }
+      if spreadType := constructionSpreadFieldType(state, expression, parameter.name) { spread.push(FunctionParamType { name: parameter.name, type_: spreadType, hasDefault: false }) }
     }
     checkArguments(state, propertyArguments(expression.args), plan.signature.params, scope, expression.span,
       "Class \"" + constructed.name + "\"", "Argument", true, true, spread, if expression.spread == none then none else expression.spread!.span, true)
@@ -262,8 +259,7 @@ export function validateFieldArguments(state: CheckerState, plan: CheckedConstru
   for i of 0..<args.length {
     argument := args[i]
     name := argument.name ?? (if i < plan.signature.params.length then plan.signature.params[i].name else "")
-    field := findClassField(plan.declaration!.fields, name)
-    if field != none && field!.private_ {
+    if field := findClassField(plan.declaration!.fields, name) && field.private_ {
       typeError(state, "Field '" + name + "' is private to module '" + owner.symbol.module + "'", argument.span)
     }
   }
@@ -337,10 +333,9 @@ export function checkActorCreation(state: CheckerState, actorCreation: ActorCrea
     "Actor \"" + actorCreation.className + "\"", "Actor constructor argument")
   for i of 0..<actorCreation.args.length {
     actual := actorCreation.args[i].resolvedType ?? unknownType()
-    violation := findActorBoundaryViolation(state.result, actual)
-    if violation != none {
+    if violation := findActorBoundaryViolation(state.result, actual) {
       typeError(state,
-        "Actor constructor argument " + string(i + 1) + " of type \"" + typeName(actual) + "\" cannot cross actor boundary: " + violation!.reason,
+        "Actor constructor argument " + string(i + 1) + " of type \"" + typeName(actual) + "\" cannot cross actor boundary: " + violation.reason,
         actorCreation.args[i].span,
       )
     }

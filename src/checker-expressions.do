@@ -108,8 +108,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
     call: CallExpression -> { return checkCall(state, call, scope, expected) }
     array: ArrayLiteral -> { return checkArray(state, array, scope, expected) }
     tuple: TupleLiteral -> {
-      constructed := positionalLiteralClass(expected)
-      if constructed != none { return checkPositionalLiteralConstruction(state, tuple, scope, constructed!) }
+      if constructed := positionalLiteralClass(expected) { return checkPositionalLiteralConstruction(state, tuple, scope, constructed) }
       let elements: ResolvedType[] = []
       let diverges = false
       let expectedTuple: TupleResolvedType | none = none

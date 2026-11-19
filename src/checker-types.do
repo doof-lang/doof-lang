@@ -138,8 +138,7 @@ export function unionType(types: ResolvedType[]): ResolvedType {
     }
   }
   members = canonicalResultArms(members)
-  optionalWeak := optionalWeakReference(members)
-  if optionalWeak != none { return optionalWeak! }
+  if optionalWeak := optionalWeakReference(members) { return optionalWeak }
   if members.length == 0 { return neverType() }
   if members.length == 1 { return members[0] }
   return UnionResolvedType { types: members }

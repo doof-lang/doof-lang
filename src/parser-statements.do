@@ -56,8 +56,7 @@ export isolated function parseStatement(parser: Parser): Statement {
   if parser.check(TokenType.Continue) { return parseContinue(parser) }
 
   if startsImmutableBinding(parser) { return parseImmutableBinding(parser, true) }
-  destructuring := parseDestructuringStatement(parser)
-  if destructuring != none { return destructuring! }
+  if destructuring := parseDestructuringStatement(parser) { return destructuring }
   if parser.check(TokenType.LeftBrace) { parser.fail("Bare block statements are not allowed") }
 
   return parseExpressionStatement(parser)

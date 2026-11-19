@@ -23,8 +23,7 @@ export function emitPropertyValue(property: ObjectProperty, context: EmitContext
 
 /** Native returns preserve the checked unit and nonreturning boundaries. */
 export function emitExpressionReturn(expression: Expression, context: EmitContext, expected: ResolvedType | none): string {
-  actual := decoratedExpressionType(expression)
-  if actual != none && specializeEmitType(actual!, context).kind == "never" {
+  if actual := decoratedExpressionType(expression) && specializeEmitType(actual, context).kind == "never" {
     // A diverging return expression produces no value to convert, even when
     // other paths give the callable an inhabited return type.
     return emitExpression(expression, context) + "; doof::panic(\"never function returned\");"

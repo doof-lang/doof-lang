@@ -30,10 +30,9 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
   finish(state, expression.target, targetType)
   case expression.target {
     identifier: Identifier -> {
-      binding := lookup(scope, identifier.name)
-      if binding != none {
+      if binding := lookup(scope, identifier.name) {
         identifier.resolvedBinding = binding
-        identifier.resolvedType = binding!.type_
+        identifier.resolvedType = binding.type_
       }
     }
     _ -> { }
@@ -85,8 +84,7 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
       // inaccessible actor field again or add assignment errors to that failure.
       if targetType.kind == "unknown" { return finish(state, expression, value) }
       objectType := member.object.resolvedType ?? unknownType()
-      fieldBinding := fieldAssignmentBinding(state, objectType, member.property, targetType, member.span)
-      if fieldBinding != none { validateAssignmentBinding(state, fieldBinding!, member.span) }
+      if fieldBinding := fieldAssignmentBinding(state, objectType, member.property, targetType, member.span) { validateAssignmentBinding(state, fieldBinding, member.span) }
       else if objectType.kind != "unknown" && objectType.kind != "never" { typeError(state, "Member '" + member.property + "' is not an assignable field", member.span) }
       if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, targetType) { typeError(state, "Cannot assign " + displayTypeName(value) + " to " + displayTypeName(targetType), expression.span) }
     }

@@ -34,9 +34,8 @@ function hexDigit(value: int): string {
 }
 
 export function emitArray(expression: ArrayLiteral, context: EmitContext, expected: ResolvedType | none): string {
-  arrayType := expression.resolvedType
-  if arrayType != none {
-    case arrayType! {
+  if arrayType := expression.resolvedType {
+    case arrayType {
       array: ArrayResolvedType -> {
         elementType := emitContextType(array.elementType, context)
         let values = ""

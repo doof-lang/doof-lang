@@ -86,9 +86,8 @@ function emitValueAs(source: string, sourceType: ResolvedType, result: ResultRes
         jsonNarrowing := emitJsonAs(narrowedJson, target, resultCpp, success, failure)
         return "[&]() -> " + resultCpp + " { auto _as_nullable = " + source + "; if (doof::is_null(_as_nullable)) return " + failure + "{\"SerialValue narrowing failed\"}; return " + jsonNarrowing + "; }()"
       }
-      member := naturalNullableUnionMember(union_)
-      if member != none {
-        if sameType(member!, target) {
+      if member := naturalNullableUnionMember(union_) {
+        if sameType(member, target) {
           case target {
             class_: ClassType -> {
               if class_.symbol.kind == "struct" {
@@ -108,7 +107,7 @@ function emitValueAs(source: string, sourceType: ResolvedType, result: ResultRes
             _ -> { }
           }
         }
-        if isNumeric(member!) && isNumeric(target) {
+        if isNumeric(member) && isNumeric(target) {
           return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (!_as_value.has_value()) return " + failure + "{\"Nullable narrowing failed\"}; auto _as_checked = doof::checked_numeric_as<" + targetCpp + ">(_as_value.value()); if (_as_checked.has_value()) return " + success + "{_as_checked.value()}; return " + failure + "{\"Numeric narrowing failed\"}; }()"
         }
       }
@@ -234,9 +233,8 @@ function emitCoalescingAssignment(expression: AssignmentExpression, context: Emi
 function emitAssignmentTarget(target: Expression, context: EmitContext): string {
   case target {
     index: IndexExpression -> {
-      objectType := decoratedExpressionType(index.object)
-      if objectType != none {
-        case objectType! {
+      if objectType := decoratedExpressionType(index.object) {
+        case objectType {
           map: MapResolvedType -> {
             return "doof::map_index(" + emitExpression(index.object, context) + ", " + emitExpression(index.index, context, map.keyType) + ", " + quote(moduleDiagnosticPath(context.modulePath, true, context.names)) + ", " + string(index.span.start.line) + ")"
           }
@@ -249,10 +247,9 @@ function emitAssignmentTarget(target: Expression, context: EmitContext): string 
       if objectType != none { objectType = specializeEmitType(objectType!, context) }
       if objectType != none && isVariantCarrier(objectType!) {
         object := emitExpression(member.object, context)
-        empty := implementationlessInterface(objectType, context)
-        if empty != none && member.resolvedType != none {
+        if empty := implementationlessInterface(objectType, context) && member.resolvedType != none {
           // An assignment target needs an lvalue of the field's type.
-          return "(static_cast<void>(" + object + "), doof::no_implementations<" + emitContextType(member.resolvedType!, context) + "&>(" + quote(empty!.name) + "))"
+          return "(static_cast<void>(" + object + "), doof::no_implementations<" + emitContextType(member.resolvedType!, context) + "&>(" + quote(empty.name) + "))"
         }
         return "std::visit([](auto&& _obj) -> decltype(auto) { return (" + variantMember("_obj", objectType) + cppIdentifier(member.property) + "); }, " + variantVisitValue(object, objectType!) + ")"
       }
@@ -515,8 +512,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
       _ -> { }
     }
   }
-  empty := implementationlessInterface(staticObjectType, context)
-  if empty != none { return emitNoImplementationsAccess(object, empty!, expression.resolvedType, context) }
+  if empty := implementationlessInterface(staticObjectType, context) { return emitNoImplementationsAccess(object, empty, expression.resolvedType, context) }
   if !callableMember && staticObjectType != none && usesVariantRepresentation(staticObjectType!) {
     return emitVariantFieldRead(variantVisitValue(object, staticObjectType!), staticObjectType, expression.property, expression.resolvedType, context)
   }
@@ -568,16 +564,14 @@ function emitWeakFieldAccess(expression: MemberExpression, object: string, conte
       if weakTargetUsesVariant(weak_.inner) {
         access = "std::visit([](auto&& _weak_item) { return _weak_item->" + cppIdentifier(expression.property) + "; }, " + temporary + ")"
       }
-      empty := implementationlessInterface(presentWeakTarget(weak_.inner), context)
-      if empty != none { access = emitNoImplementationsAccess(temporary, empty!, if expression.force then expression.resolvedType else expression.resolvedOptionalValue, context) }
+      if empty := implementationlessInterface(presentWeakTarget(weak_.inner), context) { access = emitNoImplementationsAccess(temporary, empty, if expression.force then expression.resolvedType else expression.resolvedOptionalValue, context) }
     }
     _ -> { }
   }
   // A method named as a value binds the locked strong reference.
   case decoratedExpressionType(expression.object)! {
     weak_: WeakResolvedType -> {
-      bound := emitBoundMethodValue(expression, temporary, presentWeakTarget(weak_.inner), context)
-      if bound != none { access = bound! }
+      if bound := emitBoundMethodValue(expression, temporary, presentWeakTarget(weak_.inner), context) { access = bound }
     }
     _ -> { }
   }

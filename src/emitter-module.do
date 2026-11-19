@@ -400,10 +400,9 @@ function emitScriptRunner(programs: Program[], context: EmitContext, instantiati
   for program of programs { for statement of program.statements { source = source + emitScriptClassStatics(statement, context) } }
   source = source + emitConcreteStaticFieldAssignments(context, instantiations)
   for program of programs { for statement of program.statements {
-    declaration := scriptGlobalDeclaration(statement)
-    if declaration != none {
+    if declaration := scriptGlobalDeclaration(statement) {
       source = source + emitStatement(statement, 1, context)
-      name := scriptDeclarationName(declaration!)
+      name := scriptDeclarationName(declaration)
       if name != "" && name != "_" { source = source + "    __doof_script_storage_" + cppIdentifier(name) + ".emplace(" + cppIdentifier(name) + ");\n" }
     } else if !isModuleDeclaration(statement) {
       source = source + emitStatement(statement, 1, context)

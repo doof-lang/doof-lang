@@ -35,8 +35,7 @@ export function queryEditor(index: EditorIndex, operation: string, module: strin
   if operation == "completion" {
     if text != "" && contextualCompletion(index, module, offset, text, response.items) { return response }
     if memberCompletions(index, module, offset, response.items) { return response }
-    scope := editorScopeAt(index, module, offset)
-    if scope != none { scopeCompletions(index, scope!, offset, response.items) }
+    if scope := editorScopeAt(index, module, offset) { scopeCompletions(index, scope, offset, response.items) }
     for name of BUILTIN_TYPES { response.items.push(EditorItem { label: name, kind: "type", module, start: offset, end: offset }) }
     autoImportCompletions(index, module, offset, text, response.items)
     return response
@@ -80,8 +79,7 @@ export function queryEditor(index: EditorIndex, operation: string, module: strin
     if coverage != "" { return EditorResponse { error: coverage } }
     for occurrence of index.occurrences {
       if (if occurrence.renameIdentity == "" then occurrence.identity else occurrence.renameIdentity) != (if item.renameIdentity == "" then item.identity else item.renameIdentity) { continue }
-      scope := editorScopeAt(index, occurrence.module, occurrence.start)
-      if scope != none && lookup(scope!, text) != none && text != item.label { return EditorResponse { error: "The new name conflicts with an existing binding." } }
+      if scope := editorScopeAt(index, occurrence.module, occurrence.start) && lookup(scope, text) != none && text != item.label { return EditorResponse { error: "The new name conflicts with an existing binding." } }
       let duplicate = false
       for edit of response.edits { if edit.module == occurrence.module && edit.start == occurrence.start { duplicate = true } }
       if !duplicate { response.edits.push(EditorEdit { module: occurrence.module, start: occurrence.start, end: occurrence.end, text: if occurrence.kind == "field-shorthand" then text + ": " + occurrence.label else if occurrence.shorthand then occurrence.label + ": " + text else text }) }

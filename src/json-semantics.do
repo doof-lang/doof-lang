@@ -403,8 +403,7 @@ function isGeneratedJsonDeserializationAnnotation(annotation: TypeAnnotation, pr
       return isGeneratedJsonDeserializationAnnotation(array.elementType, programs, visited)
     }
     union_: UnionType -> {
-      jsonUnion := jsonUnionAnnotationType(union_, programs)
-      if jsonUnion != none { return isGeneratedJsonType(jsonUnion!, programs, visited) }
+      if jsonUnion := jsonUnionAnnotationType(union_, programs) { return isGeneratedJsonType(jsonUnion, programs, visited) }
       if union_.types.length != 2 { return false }
       let hasNull = false
       let hasPrimitive = false
@@ -429,8 +428,7 @@ function isGeneratedJsonSerializationAnnotation(annotation: TypeAnnotation, prog
   if annotation.resolvedType != none { return isGeneratedJsonSerializationType(annotation.resolvedType!, programs, visited) }
   case annotation {
     union_: UnionType -> {
-      jsonUnion := jsonUnionAnnotationType(union_, programs)
-      if jsonUnion != none { return isGeneratedJsonSerializationType(jsonUnion!, programs, visited) }
+      if jsonUnion := jsonUnionAnnotationType(union_, programs) { return isGeneratedJsonSerializationType(jsonUnion, programs, visited) }
     }
     named: NamedType -> {
       if named.name == "Tuple" {
@@ -780,14 +778,12 @@ function jsonUnionTypeBlocker(type_: ResolvedType, programs: Program[], decode: 
     map: MapResolvedType -> { return jsonUnionTypeBlocker(map.valueType, programs, decode) }
     tuple: TupleResolvedType -> {
       for element of tuple.elements {
-        blocker := jsonUnionTypeBlocker(element, programs, decode)
-        if blocker != none { return blocker }
+        if blocker := jsonUnionTypeBlocker(element, programs, decode) { return blocker }
       }
       return none
     }
     union_: UnionResolvedType -> {
-      inner := nullableJsonMemberUnchecked(union_)
-      if inner != none { return jsonUnionTypeBlocker(inner!, programs, decode) }
+      if inner := nullableJsonMemberUnchecked(union_) { return jsonUnionTypeBlocker(inner, programs, decode) }
       layout := jsonUnionLayout(type_, programs) else {
         for member of union_.types {
           if member.kind != "none" && jsonUnionMemberKind(member, programs) == none {
@@ -798,12 +794,10 @@ function jsonUnionTypeBlocker(type_: ResolvedType, programs: Program[], decode: 
       }
       if decode {
         let visited: string[] = []
-        reason := jsonUnionDecodeConflict(layout, programs, visited)
-        if reason != none { return JsonUnionBlocker { union_: type_, reason: reason! } }
+        if reason := jsonUnionDecodeConflict(layout, programs, visited) { return JsonUnionBlocker { union_: type_, reason: reason } }
       }
       for arm of layout.arms {
-        blocker := jsonUnionTypeBlocker(arm.member, programs, decode)
-        if blocker != none { return blocker }
+        if blocker := jsonUnionTypeBlocker(arm.member, programs, decode) { return blocker }
       }
       return none
     }

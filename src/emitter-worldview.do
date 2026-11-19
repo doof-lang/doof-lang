@@ -171,8 +171,7 @@ export function planWorldview(
           }
           module := findModule(index, implementation.modulePath)
           if module == none { continue }
-          symbol := findSymbol(index, implementation.modulePath, name)
-          if symbol != none { collectSymbol(symbol!, rootPath, index) }
+          if symbol := findSymbol(index, implementation.modulePath, name) { collectSymbol(symbol, rootPath, index) }
         }
       }
     }
@@ -366,9 +365,8 @@ function collectNativeHeaderClosure(
     key := string(symbol.modulePath.length) + ":" + symbol.modulePath + symbol.nativeHeader
     if index.expandedNativeHeaders.has(key) { return }
     index.expandedNativeHeaders.add(key)
-    module := findModule(index, symbol.modulePath)
-    if module != none {
-      for sibling of module!.symbols {
+    if module := findModule(index, symbol.modulePath) {
+      for sibling of module.symbols {
         if sibling.native_ && sibling.nativeHeader == symbol.nativeHeader {
           collectSymbol(sibling, rootPath, index, true)
         }
@@ -376,15 +374,15 @@ function collectNativeHeaderClosure(
       // Native headers are intentionally opaque. Their supported Doof-facing
       // surface is the nominal imports/exports of their defining module, so
       // project those declarations completely before including the header.
-      for imported of module!.imports {
+      for imported of module.imports {
         if imported.symbol != none && isNominalSurfaceSymbol(imported.symbol!) {
           collectSymbol(imported.symbol!, rootPath, index, true)
         }
       }
-      for exported of module!.exports {
+      for exported of module.exports {
         if isNominalSurfaceSymbol(exported) { collectSymbol(exported, rootPath, index, true) }
       }
-      for reExportPath of module!.reExports {
+      for reExportPath of module.reExports {
         reExported := findModule(index, reExportPath)
         if reExported == none { continue }
         for exported of reExported!.exports {
@@ -433,8 +431,7 @@ function findSymbol(index: WorldviewIndex, modulePath: string, name: string): Sy
 }
 
 function selectionFor(index: WorldviewIndex, path: string): WorldviewSelection {
-  existing := findSelection(index, path)
-  if existing != none { return existing! }
+  if existing := findSelection(index, path) { return existing }
   selection := WorldviewSelection {}
   index.selections.set(path, selection)
   return selection

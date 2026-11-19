@@ -169,8 +169,7 @@ function integerPatternsExhaustive(arms: CasePattern[][], minimum: long, maximum
           lowers.push(lower); uppers.push(upper)
         }
         value: ValuePattern -> {
-          resolved := integerPatternValue(value.value)
-          if resolved != none { lowers.push(resolved!); uppers.push(resolved!) }
+          if resolved := integerPatternValue(value.value) { lowers.push(resolved); uppers.push(resolved) }
         }
         _ -> { }
       }
@@ -197,8 +196,7 @@ function integerPatternValue(expression: Expression): long | none {
     literal: LongLiteral -> { return literal.value }
     unary: UnaryExpression -> {
       if unary.operator == "-" {
-        value := integerPatternValue(unary.operand)
-        if value != none { return -value! }
+        if value := integerPatternValue(unary.operand) { return -value }
       }
     }
     _ -> { }
@@ -321,10 +319,9 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
           resolved = resolveType(state, type_.type_, state.info!, scope)
           // An explicit generic pattern must name the subject member exactly;
           // a different instantiation is never stored in the subject.
-          member := genericPatternMember(resolved, subjectType)
-          if member != none && !sameType(member!, resolved) {
+          if member := genericPatternMember(resolved, subjectType) && !sameType(member, resolved) {
             mismatched = true
-            typeError(state, "Case type pattern \"" + typeName(resolved) + "\" must be \"" + typeName(member!) + "\" to match subject type \"" + typeName(subjectType) + "\"", type_.span)
+            typeError(state, "Case type pattern \"" + typeName(resolved) + "\" must be \"" + typeName(member) + "\" to match subject type \"" + typeName(subjectType) + "\"", type_.span)
           }
         }
         case type_.type_ {

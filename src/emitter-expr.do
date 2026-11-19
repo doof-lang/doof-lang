@@ -23,8 +23,7 @@ import { emitIdentifierValue, emitMemberValue } from "./emitter-function-refs"
 
 export function emitExpression(expression: Expression, context: EmitContext, expected: ResolvedType | none = none): string {
   if context.hoistedOperands.length > 0 {
-    hoisted := emitHoistedOperand(expression, context, expected)
-    if hoisted != none { return hoisted! }
+    if hoisted := emitHoistedOperand(expression, context, expected) { return hoisted }
   }
   let value = ""
   let sourcePosition: CarrierPosition = .Value

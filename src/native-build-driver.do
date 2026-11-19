@@ -441,8 +441,7 @@ function captureTaskState(task: NativeCompileTask, fingerprint: string): NativeT
     for path of dependencies { appendUnique(paths, path) }
   }
   for path of paths {
-    signature := pathSignature(path, true)
-    if signature != none { state.inputs.push(signature!) }
+    if signature := pathSignature(path, true) { state.inputs.push(signature) }
   }
   return state
 }
@@ -451,8 +450,7 @@ function captureLinkState(outputPath: string, fingerprint: string, objectPaths: 
   info := metadata(outputPath)!
   state := NativeTaskState { id: "link:" + outputPath, fingerprint, outputPath, outputSize: info.size, outputModifiedNanos: info.modifiedAt.toEpochNanos() }
   for path of objectPaths {
-    signature := pathSignature(path, false)
-    if signature != none { state.inputs.push(signature!) }
+    if signature := pathSignature(path, false) { state.inputs.push(signature) }
   }
   return state
 }

@@ -294,9 +294,8 @@ function orderedTypes(state: CheckerState, left: ResolvedType, right: ResolvedTy
     case left {
       primitive_: PrimitiveType -> { return primitive_.name == "string" || primitive_.name == "char" }
       enum_: EnumType -> {
-        declaration := declarationFor(state.result, enum_.symbol)
-        if declaration != none {
-          case declaration! {
+        if declaration := declarationFor(state.result, enum_.symbol) {
+          case declaration {
             owner: EnumDeclaration -> { return owner.backingKind == "int" }
             _ -> { }
           }

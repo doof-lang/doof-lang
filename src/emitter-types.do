@@ -37,8 +37,7 @@ function lowerContextPosition(resolvedType: ResolvedType, context: EmitContext, 
     session!.select(context.substitution)
     id = session!.graph.identities.identify(resolvedType)
     if id >= 0 {
-      cached := if return_ then session!.returns.get(id)? else session!.values.get(id)?
-      if cached != none { return cached! }
+      if cached := (if return_ then session!.returns.get(id)? else session!.values.get(id)?) { return cached }
     }
   }
   specialized := lowerRegisteredTypes(specializeEmitType(resolvedType, context), context)
@@ -89,8 +88,7 @@ function lowerRegisteredTypes(type_: ResolvedType, context: EmitContext): Resolv
   session!.select(context.substitution)
   id := session!.graph.identities.identify(type_)
   if id < 0 { return lowerRegisteredTypeUncached(type_, context) }
-  cached := session!.registered.get(id)?
-  if cached != none { return cached! }
+  if cached := session!.registered.get(id)? { return cached }
   result := lowerRegisteredTypeUncached(type_, context)
   session!.registered.set(id, result)
   return result
@@ -184,8 +182,7 @@ export function lowerCppType(type_: ResolvedType, registry: CppTypeRegistry, cac
   if cache == none { return lowerCppTypeUncached(type_, registry, cache) }
   id := cache!.identities.identify(type_)
   if id < 0 { return lowerCppTypeUncached(type_, registry, cache) }
-  cached := cache!.lowered.get(id)?
-  if cached != none { return cached! }
+  if cached := cache!.lowered.get(id)? { return cached }
   result := lowerCppTypeUncached(type_, registry, cache)
   cache!.lowered.set(id, result)
   return result

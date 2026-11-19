@@ -208,9 +208,8 @@ function explicitStaticReceiver(state: CheckerState, member: MemberExpression, o
   resolvedArgs := resolveTypeArguments(state, member.receiverTypeArgs, scope)
   case objectType {
     class_: ClassType -> {
-      declaration := declarationFor(state.result, class_.symbol)
-      if declaration != none && class_.typeArgs.length == 0 && isNamedStaticReceiver(member.object) {
-        case declaration! {
+      if declaration := declarationFor(state.result, class_.symbol) && class_.typeArgs.length == 0 && isNamedStaticReceiver(member.object) {
+        case declaration {
           generic: ClassDeclaration -> {
             if generic.typeParams.length == 0 {
               typeError(state, "Class '" + generic.name + "' is not generic and takes no type arguments", member.span)
@@ -268,9 +267,8 @@ function isNamedStaticReceiver(expression: Expression): bool {
 function enumVariantMember(state: CheckerState, receiver: ResolvedType, property: string): bool {
   case receiver {
     enum_: EnumType -> {
-      declaration := declarationFor(state.result, enum_.symbol)
-      if declaration != none {
-        case declaration! {
+      if declaration := declarationFor(state.result, enum_.symbol) {
+        case declaration {
           owner: EnumDeclaration -> { for variant of owner.variants { if variant.name == property { return true } } }
           _ -> { }
         }

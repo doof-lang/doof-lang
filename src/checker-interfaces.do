@@ -239,9 +239,8 @@ export function satisfiesInterfaceInstanceBound(result: AnalysisResult, argument
     struct_: ClassType -> {
       case bound {
         interface_: InterfaceType -> {
-          declaration := declarationFor(result, struct_.symbol)
-          if declaration != none {
-            case declaration! {
+          if declaration := declarationFor(result, struct_.symbol) {
+            case declaration {
               owner: ClassDeclaration -> { if owner.struct_ { return classSatisfiesConcreteInterface(result, owner, struct_, interface_) } }
               _ -> { }
             }

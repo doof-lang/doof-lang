@@ -70,16 +70,13 @@ function completeMembers(index: EditorIndex, module: string, offset: int, receiv
   let names: string[] = []
     case receiver {
       class_: ClassType -> {
-        declaration := declarationFor(index.frontend.analysis, class_.symbol)
-        if declaration != none { declarationMemberNames(declaration!, names) }
+        if declaration := declarationFor(index.frontend.analysis, class_.symbol) { declarationMemberNames(declaration, names) }
       }
       interface_: InterfaceType -> {
-        declaration := declarationFor(index.frontend.analysis, interface_.symbol)
-        if declaration != none { declarationMemberNames(declaration!, names) }
+        if declaration := declarationFor(index.frontend.analysis, interface_.symbol) { declarationMemberNames(declaration, names) }
       }
       enum_: EnumType -> {
-        declaration := declarationFor(index.frontend.analysis, enum_.symbol)
-        if declaration != none { declarationMemberNames(declaration!, names) }
+        if declaration := declarationFor(index.frontend.analysis, enum_.symbol) { declarationMemberNames(declaration, names) }
       }
       _ -> { }
     }
@@ -119,10 +116,9 @@ export function contextualCompletion(index: EditorIndex, module: string, offset:
   if dot > 0 && (tokens[dot].kind == TokenType.Dot || tokens[dot].kind == TokenType.QuestionDot || tokens[dot].kind == TokenType.BangDot) && tokens[dot - 1].kind == TokenType.Identifier {
     name := tokenValue(tokens[dot - 1], prefix)
     scope := editorScopeAt(index, module, offset) else { return true }
-    binding := lookup(scope, name)
-    if binding != none {
+    if binding := lookup(scope, name) {
       location := AstLocation { line: 1, column: 1, offset }
-      completeMembers(index, module, offset, binding!.type_, SourceSpan { start: location, end: location }, items, classNameBinding(binding!))
+      completeMembers(index, module, offset, binding.type_, SourceSpan { start: location, end: location }, items, classNameBinding(binding))
     }
     return true
   }

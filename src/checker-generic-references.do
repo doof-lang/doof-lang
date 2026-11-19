@@ -63,11 +63,9 @@ export function instantiateGenericReference(state: CheckerState, expression: Exp
 function inferFromSignature(generic: FunctionType, expected: FunctionType, typeParam: string): ResolvedType | none {
   for i of 0..<generic.params.length {
     if i >= expected.params.length { break }
-    candidate := inferTypeArgument(generic.params[i].type_, expected.params[i].type_, typeParam)
-    if candidate != none && candidate!.kind != "unknown" { return candidate }
+    if candidate := inferTypeArgument(generic.params[i].type_, expected.params[i].type_, typeParam) && candidate.kind != "unknown" { return candidate }
   }
-  candidate := inferTypeArgument(generic.returnType, expected.returnType, typeParam)
-  if candidate != none && candidate!.kind != "unknown" { return candidate }
+  if candidate := inferTypeArgument(generic.returnType, expected.returnType, typeParam) && candidate.kind != "unknown" { return candidate }
   return none
 }
 

@@ -198,8 +198,7 @@ function mutableModuleReason(index: IsolationIndex, expression: Expression): Iso
         _: ImmutableBinding -> { }
         _ -> { return none }
       }
-      violation := findActorBoundaryViolation(index.result, identifier.resolvedBinding!.type_)
-      if violation != none {
+      if violation := findActorBoundaryViolation(index.result, identifier.resolvedBinding!.type_) {
         return IsolationReason { kind: "module", name: identifier.name, span: identifier.span }
       }
     }
@@ -669,8 +668,7 @@ function crossingReleaseReason(index: IsolationIndex, type_: ResolvedType): Rele
     if class_.destructor_ == none { continue }
     effects := IsolationEffects {}
     collectDestructorEffects(index, class_, none, effects)
-    reason := effectsReason(index, effects)
-    if reason != none { return ReleaseReason { className: class_.name, reason: reason! } }
+    if reason := effectsReason(index, effects) { return ReleaseReason { className: class_.name, reason: reason } }
   }
   return none
 }
@@ -722,16 +720,14 @@ function validateModuleIsolationEffects(index: IsolationIndex, module: ModuleInf
           block: Block -> {
             validateAsyncBlock(index.result, async_, module.path, diagnostics)
             for capture of asyncBlockCaptures(block) {
-              release := crossingReleaseReason(index, capture.resolvedBinding!.type_)
-              if release != none {
+              if release := crossingReleaseReason(index, capture.resolvedBinding!.type_) {
                 pushDiagnostic(diagnostics, module.path, capture.span,
-                  "Async block capture \"" + capture.name + "\" may be released in the worker, but the destructor of class \"" + release!.className + "\" " + reasonText(release!.reason))
+                  "Async block capture \"" + capture.name + "\" may be released in the worker, but the destructor of class \"" + release.className + "\" " + reasonText(release.reason))
               }
             }
-            reason := probeReason(index, async_)
-            if reason != none {
-              pushDiagnostic(diagnostics, module.path, reason!.span,
-                "Async block is not isolated: " + reasonText(reason!))
+            if reason := probeReason(index, async_) {
+              pushDiagnostic(diagnostics, module.path, reason.span,
+                "Async block is not isolated: " + reasonText(reason))
             }
           }
           inner: Expression -> {
@@ -758,19 +754,17 @@ function validateModuleIsolationEffects(index: IsolationIndex, module: ModuleInf
           for argument of call.args { validateCrossingValue(index, module, argument.value, "actor method \"" + name + "\"", diagnostics) }
         }
         if isActorMethodCall(call) && call.resolvedFunction != none {
-          target := nodeForDeclaration(index, call.resolvedFunction!)
-          if target != none && target!.reason != none {
+          if target := nodeForDeclaration(index, call.resolvedFunction!) && target.reason != none {
             pushDiagnostic(diagnostics, module.path, call.span,
-              "Actor method \"" + target!.declaration.name + "\" is not isolated: " + reasonText(target!.reason!))
+              "Actor method \"" + target.declaration.name + "\" is not isolated: " + reasonText(target.reason!))
           }
         }
       }
       actor: ActorCreationExpression -> {
         for argument of actor.args { validateCrossingValue(index, module, argument, "Actor<" + actor.className + "> construction", diagnostics) }
-        reason := actorConstructionReason(index, actor)
-        if reason != none {
+        if reason := actorConstructionReason(index, actor) {
           pushDiagnostic(diagnostics, module.path, actor.span,
-            "Actor<" + actor.className + "> construction is not isolated: " + reasonText(reason!))
+            "Actor<" + actor.className + "> construction is not isolated: " + reasonText(reason))
         }
       }
       _ -> { }

@@ -7,8 +7,7 @@ export class SemanticTypeIdentitySnapshot {
   readonly owner: SemanticTypeIdentityOwner
 
   identify(type_: ResolvedType): int {
-    existing := type_.emissionIdentity
-    if existing != none && existing!.owner == owner { return existing!.id }
+    if existing := type_.emissionIdentity && existing.owner == owner { return existing.id }
     return -1
   }
 }
@@ -19,8 +18,7 @@ export class SemanticTypeIdentities {
   private let nextId: int = 0
 
   identify(type_: ResolvedType): int {
-    existing := type_.emissionIdentity
-    if existing != none && existing!.owner == owner { return existing!.id }
+    if existing := type_.emissionIdentity && existing.owner == owner { return existing.id }
     id := nextId
     nextId += 1
     type_.emissionIdentity = SemanticTypeIdentity { owner, id }
@@ -56,7 +54,7 @@ export class SemanticTypeIdentities {
       tuple: TupleResolvedType -> { for element of tuple.elements { prepare(element) } }
       union_: UnionResolvedType -> { for member of union_.types { prepare(member) } }
       weak_: WeakResolvedType -> { prepare(weak_.inner) }
-      parameter: TypeParameterType -> { if parameter.constraint != none { prepare(parameter.constraint!) } }
+      parameter: TypeParameterType -> { if constraint := parameter.constraint { prepare(constraint) } }
       metadata: ClassMetadataResolvedType -> { prepare(metadata.classType) }
       reflection: MethodReflectionResolvedType -> { prepare(reflection.classType) }
       _ -> { }

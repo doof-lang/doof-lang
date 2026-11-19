@@ -38,10 +38,9 @@ function emitConstructionValues(plan: CheckedConstruction, inputs: ConstructionI
 }
 
 function emitConstructionValue(inputs: ConstructionInputs, name: string, index: int, expected: ResolvedType, defaultValue: Expression | none, owner: ClassType, ownerTypeParams: string[], missingMessage: string, context: EmitContext): string {
-  property := findProperty(inputs.properties, name)
-  if property != none {
-    if inputs.aliasThis && property!.value != none {
-      case property!.value! {
+  if property := findProperty(inputs.properties, name) {
+    if inputs.aliasThis && property.value != none {
+      case property.value! {
         _: ThisExpression -> {
           case expected {
             class_: ClassType -> { return "std::shared_ptr<" + class_.name + ">(this, [](" + class_.name + "*) {})" }
@@ -51,10 +50,9 @@ function emitConstructionValue(inputs: ConstructionInputs, name: string, index: 
         _ -> { }
       }
     }
-    return emitPropertyValue(property!, context, expected)
+    return emitPropertyValue(property, context, expected)
   }
-  argument := if inputs.named then callArgumentNamed(inputs.args, name) else if index < inputs.args.length then inputs.args[index] else none
-  if argument != none { return emitExpression(argument!.value, context, expected) }
+  if argument := (if inputs.named then callArgumentNamed(inputs.args, name) else if index < inputs.args.length then inputs.args[index] else none) { return emitExpression(argument.value, context, expected) }
   if inputs.construct != none && hasSpreadField(inputs.construct!, name) {
     return emitConstructionSpreadField(inputs.construct!, inputs.spreadName, name, context)
   }
@@ -141,8 +139,7 @@ function emitConstructionSpreadField(expression: ConstructExpression, temporary:
       return temporary + accessor + cppIdentifier(name)
     }
     interface_: InterfaceType -> {
-      empty := implementationlessInterface(interface_, context)
-      if empty != none { return emitNoImplementationsAccess(temporary, empty!, interfaceFieldType(empty!, name, context), context) }
+      if empty := implementationlessInterface(interface_, context) { return emitNoImplementationsAccess(temporary, empty, interfaceFieldType(empty, name, context), context) }
       return emitVariantFieldRead(temporary, interface_, name, interfaceFieldType(interface_, name, context), context)
     }
     _ -> { panic("Construction spread has unsupported resolved type") }

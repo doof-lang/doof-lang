@@ -199,8 +199,7 @@ function emitDestructuredField(source: string, field: string, sourceType: Resolv
       return source + accessor + cppIdentifier(field)
     }
     interface_: InterfaceType -> {
-      empty := implementationlessInterface(interface_, context)
-      if empty != none { return emitNoImplementationsAccess(source, empty!, interfaceFieldType(empty!, field, context), context) }
+      if empty := implementationlessInterface(interface_, context) { return emitNoImplementationsAccess(source, empty, interfaceFieldType(empty, field, context), context) }
       return emitVariantFieldRead(source, interface_, field, interfaceFieldType(interface_, field, context), context)
     }
     _ -> { }

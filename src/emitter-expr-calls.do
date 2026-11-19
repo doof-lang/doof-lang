@@ -112,8 +112,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
     }
     _ -> { }
   }
-  construction := emitClassCall(expression, context)
-  if construction != none { return construction! }
+  if construction := emitClassCall(expression, context) { return construction }
   case expression.callee {
     member: MemberExpression -> {
       let arrayObjectType = decoratedExpressionType(member.object)
@@ -156,8 +155,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
           _: StreamResolvedType -> { return emitInterfaceCall(member, expression, context) }
           union_: UnionResolvedType -> { if usesVariantRepresentation(union_) { return emitVariantMemberCall(member, expression, context) } }
           array: ArrayResolvedType -> {
-            lowered := emitArrayMethodCall(member, expression, array, context)
-            if lowered != none { return lowered! }
+            if lowered := emitArrayMethodCall(member, expression, array, context) { return lowered }
           }
           map: MapResolvedType -> {
             if member.property == "has" {
@@ -248,9 +246,8 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       if !nominalReceiver && member.property == "pop" && expression.args.length == 0 { return "doof::array_pop(" + emitExpression(member.object, context) + ")" }
       if member.property == "toSerialObject" && expression.args.length == 0 {
         object := emitExpression(member.object, context)
-        objectType := decoratedExpressionType(member.object)
-        if objectType != none {
-          case specializeEmitType(objectType!, context) {
+        if objectType := decoratedExpressionType(member.object) {
+          case specializeEmitType(objectType, context) {
             class_: ClassType -> { if class_.symbol.kind == "struct" { return object + ".toSerialObject()" } }
             _ -> { }
           }
@@ -265,9 +262,8 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
           args = args + emitExpression(expression.args[i].value, context)
         }
         if expression.args.length == 1 { args = args + ", false" }
-        objectType := decoratedExpressionType(member.object)
-        if objectType != none {
-          case objectType! {
+        if objectType := decoratedExpressionType(member.object) {
+          case objectType {
             _: InterfaceType -> { return object + "_fromSerialValue(" + args + ")" }
             _ -> { }
           }
@@ -305,14 +301,13 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   functionDeclaration := expression.resolvedFunction
   let usesConcreteInstantiation = false
   if functionDeclaration != none && functionDeclaration!.typeParams.length > 0 {
-    concrete := concreteGenericTarget(expression.callee, functionDeclaration!, expression.resolvedFunctionModule, concreteGenericArgs, context)
-    if concrete != none {
+    if concrete := concreteGenericTarget(expression.callee, functionDeclaration!, expression.resolvedFunctionModule, concreteGenericArgs, context) {
       usesConcreteInstantiation = true
-      if !concrete!.method { callee = concrete!.name }
+      if !concrete.method { callee = concrete.name }
       else {
         case expression.callee {
-          member: MemberExpression -> { callee = callee.substring(0, callee.length - member.property.length) + concrete!.name }
-          _ -> { callee = concrete!.name }
+          member: MemberExpression -> { callee = callee.substring(0, callee.length - member.property.length) + concrete.name }
+          _ -> { callee = concrete.name }
         }
       }
     }
@@ -362,8 +357,7 @@ function emitWeakMemberCall(expression: CallExpression, member: MemberExpression
         if originalReturn == none { panic("Weak union method call has no resolved return type") }
         call = "std::visit([&](auto&& _weak_item) -> " + emitContextReturnType(originalReturn!, context) + " { return _weak_item->" + cppIdentifier(member.property) + "(" + arguments + "); }, " + temporary + ")"
       }
-      empty := implementationlessInterface(presentWeakTarget(weak_.inner), context)
-      if empty != none { call = emitNoImplementationsAccess(temporary, empty!, originalReturn, context) }
+      if empty := implementationlessInterface(presentWeakTarget(weak_.inner), context) { call = emitNoImplementationsAccess(temporary, empty, originalReturn, context) }
     }
     _ -> { }
   }
@@ -382,8 +376,7 @@ function emitBuiltinCall(name: string, object: Expression, expression: CallExpre
 
 function emitInterfaceCall(member: MemberExpression, call: CallExpression, context: EmitContext): string {
   object := emitExpression(member.object, context)
-  empty := implementationlessInterface(decoratedExpressionType(member.object), context)
-  if empty != none { return emitNoImplementationsAccess(object, empty!, call.resolvedType, context) }
+  if empty := implementationlessInterface(decoratedExpressionType(member.object), context) { return emitNoImplementationsAccess(object, empty, call.resolvedType, context) }
   let args = ""
   for i of 0..<call.args.length {
     if i > 0 { args = args + ", " }
@@ -397,8 +390,7 @@ function emitVariantMemberCall(member: MemberExpression, call: CallExpression, c
   objectType := decoratedExpressionType(member.object)
   if objectType == none { panic("Variant member call has no resolved object type") }
   if call.resolvedType == none { panic("Variant member call has no resolved return type") }
-  empty := implementationlessInterface(objectType, context)
-  if empty != none { return emitNoImplementationsAccess(object, empty!, call.resolvedType, context) }
+  if empty := implementationlessInterface(objectType, context) { return emitNoImplementationsAccess(object, empty, call.resolvedType, context) }
   args := emitDispatchCallArguments(call, context)
   invocation := if member.resolvedCallableField then ".call(" else "("
   return "std::visit([&](auto&& _obj) -> " + emitContextReturnType(call.resolvedType!, context) + " { return " + variantMember("_obj", objectType, true) + cppIdentifier(member.property) + invocation + args + "); }, " + variantVisitValue(object, objectType!) + ")"
@@ -470,9 +462,8 @@ export function concreteGenericTarget(reference: Expression, declaration: Functi
       }
     }
     member: MemberExpression -> {
-      receiverType := memberReceiverType(member)
-      if receiverType != none {
-        case specializeEmitType(receiverType!, context) {
+      if receiverType := memberReceiverType(member) {
+        case specializeEmitType(receiverType, context) {
           class_: ClassType -> {
             targetModule = class_.symbol.module
             ownerKey := classInstantiationKey(class_.symbol.module, class_.name, class_.typeArgs)
