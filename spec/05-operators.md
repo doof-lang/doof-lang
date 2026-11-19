@@ -382,6 +382,52 @@ A method named through `?.` without a call is an optional function value
 (`user?.describe` is `((): string) | none`); see [Functions and Methods as
 Values](04-functions-and-lambdas.md#functions-and-methods-as-values).
 
+#### Short-Circuiting Chains
+
+Once a `?.` or `?[]` finds its receiver absent, the rest of the chain is
+skipped. A later plain `.`, `[]`, or method call that reads the chain's present
+value needs no `?.` of its own:
+
+```doof check
+class Box {
+    name: string
+    items: int[] = [1, 2]
+    label(suffix: string): string => name + suffix
+}
+class Holder {
+    box: Box = Box { name: "box" }
+    spare: Box | none = none
+}
+
+holder: Holder | none := Holder {}
+name := holder?.box.name           // string | none
+second := holder?.box.items[1]     // int | none
+label := holder?.box.label("!")    // string | none: "!" is not evaluated when holder is absent
+holder?.box.items.push(3)          // skipped when holder is absent
+spare := holder?.spare?.name       // a nullable step still needs its own '?.'
+```
+
+`a?.b.c` means `a?.b?.c` whenever `b` is a present value. The rules:
+
+- The chain is one run of postfix steps. Parentheses end it, so `(a?.b).c`
+  reads `.c` on `B | none` and is rejected.
+- A plain step short-circuits only when the value it reads cannot itself be
+  absent. If `b` is nullable, a `Result`, or a weak reference, `a?.b.c` is
+  rejected as before: write `a?.b?.c`, `a?.b!.c`, or narrow `b`.
+- `!.`, postfix `!`, and postfix `?` keep their meaning and apply to the chain
+  so far: `a?.b!.c` is `(a?.b)!.c` and panics when `a` is absent.
+- A short-circuiting step cannot be an assignment target:
+  `a?.b.c = value` is rejected like `a?.c = value`.
+
+```doof reject
+class Box { name: string = "box" }
+class Holder { box: Box = Box {} }
+
+function boxName(holder: Holder | none): string | none {
+    return (holder?.box).name  // ❌ parentheses end the chain: '.name' reads Box | none
+}
+```
+
 The receiver's absence becomes `none`. A member that itself returns a `Result`
 keeps its own `Failure`, and the `none` joins its success value:
 

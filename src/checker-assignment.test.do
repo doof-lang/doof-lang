@@ -59,3 +59,18 @@ export function testUnknownAssignmentTargetIsReportedOnce(): none {
   Assert.equal(result.diagnostics.length, 1)
   Assert.stringContains(result.diagnostics[0].message, "Unknown identifier 'missing'")
 }
+
+export function testShortCircuitedChainIsNotAnAssignmentTarget(): none {
+  holder := "class Box { let name: string = \"box\"\nlet items: int[] = [1] }\nclass Holder { box: Box = Box {} }\n"
+  member := checked(holder + "function f(h: Holder | none): none { h?.box.name = \"x\" }")
+  for diagnostic of member.diagnostics { println(diagnostic.message) }
+  Assert.equal(member.diagnostics.length, 1)
+  Assert.equal(member.diagnostics[0].message, "An optional chain cannot be used as an assignment target; '.name' short-circuits with an earlier '?.'")
+  index := checked(holder + "function f(h: Holder | none): none { h?.box.items[0] = 2 }")
+  Assert.isTrue(index.diagnostics.length > 0)
+  Assert.equal(index.diagnostics[0].message, "An optional chain cannot be used as an assignment target; '[]' short-circuits with an earlier '?.' or '?[]'")
+  // A forced step ends the short-circuit, so its field stays assignable.
+  forced := checked("class Box { let name: string = \"box\" }\nclass Holder { maybe: Box | none = none }\nfunction f(h: Holder | none): none { h?.maybe!.name = \"x\" }")
+  for diagnostic of forced.diagnostics { println(diagnostic.message) }
+  Assert.equal(forced.diagnostics.length, 0)
+}

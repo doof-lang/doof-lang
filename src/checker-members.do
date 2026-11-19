@@ -3,7 +3,7 @@
 
 import { canBeAbsent, hasFailureLayer, hasPresentValue, presentType } from "./absence-types"
 import type { TypeAliasDeclaration } from "./ast"
-import { CheckedMember, ClassDeclaration, DotShorthand, EnumDeclaration, Expression, Identifier, IndexExpression, MemberExpression, NamedType } from "./ast"
+import { CallExpression, CheckedMember, ClassDeclaration, DotShorthand, EnumDeclaration, Expression, Identifier, IndexExpression, MemberExpression, NamedType } from "./ast"
 import { isTypeParameterName } from "./ast-walk"
 import { forcedValue, optionalAccessType, optionalConversion } from "./checker-absence"
 import { finish, typeArgumentArityMessage, typeError } from "./checker-common"
@@ -39,6 +39,10 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
   }
   if member.completionPoint { return finish(state, member, unknownType()) }
   if objectType.kind == "never" { return finish(state, member, neverType()) }
+  if member.shortCircuit && !member.optional && shortCircuitsWithChain(member.object) {
+    member.optional = true
+    member.resolvedShortCircuit = true
+  }
   let weakReceiver: WeakResolvedType | none = none
   let nullableReceiver = false
   // 'x!.m' is '(x!).m' for every absent receiver, and 'r?.m' is '(r?)?.m'
@@ -154,9 +158,33 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
   return finish(state, member, optionalAccessType(memberValue))
 }
 
+// A plain step after `?.` or `?[]` in the same postfix chain short-circuits
+// with it: `a?.b.c` reads as `a?.b?.c` when `.c` reads the chain's present
+// value. A present value that can itself be absent, or a weak reference,
+// keeps the plain-access diagnostics, so `a?.b.c` with a nullable `b` still
+// asks for `?.` or `!.`.
+function shortCircuitsWithChain(object: Expression): bool {
+  present := chainPresentValue(object) else { return false }
+  return !canBeAbsent(present) && present.kind != "weak" && present.kind != "unknown"
+}
+
+// The value of an optional step before it is widened with none.
+function chainPresentValue(object: Expression): ResolvedType | none {
+  case object {
+    member: MemberExpression -> { return member.resolvedOptionalValue }
+    index: IndexExpression -> { return index.resolvedOptionalValue }
+    call: CallExpression -> { return call.resolvedOptionalValue }
+    _ -> { return none }
+  }
+}
+
 /** Checks 'object[index]', including '?[]' over absent receivers. */
 export function checkIndex(state: CheckerState, index: IndexExpression, scope: Scope): ResolvedType {
   let objectType = checkExpression(state, index.object, scope, none)
+  if index.shortCircuit && !index.optional && shortCircuitsWithChain(index.object) {
+    index.optional = true
+    index.resolvedShortCircuit = true
+  }
   let optionalReceiver = false
   if index.optional {
     if hasFailureLayer(objectType) {

@@ -157,9 +157,11 @@ user?.address?.city       // string | none
 loadUser()?.name          // string | none: none when loadUser() fails
 ```
 
-`?.` and `?[]` turn the receiver's absence into `none`. A member that itself
-returns `Result<U, E2>` keeps its own Failure: `loadUser()?.profile()` is
-`Result<Profile | none, E2>`; chain `?.`, or add `?`, `!`, or `??`, to collapse it.
+`?.` and `?[]` turn the receiver's absence into `none` and skip the rest of the
+chain, so `loadUser()?.address.city` needs no second `?.` when `address` is
+never absent. A member that itself returns `Result<U, E2>` keeps its own
+Failure: `loadUser()?.profile()` is `Result<Profile | none, E2>`; chain `?.`, or
+add `?`, `!`, or `??`, to collapse it.
 
 ## Declaration-`else`
 

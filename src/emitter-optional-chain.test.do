@@ -46,3 +46,13 @@ export function testOptionalChainOverResultCollapsesTheReceiverAndKeepsTheMember
   Assert.stringContains(source, "if (doof::is_failure(_optional_result_")
   Assert.stringNotContains(source, "doof::variant_promote<")
 }
+
+export function testPlainStepAfterOptionalStepLowersAsAnOptionalStep(): none {
+  source := emitted("class Box { name: string = \"box\"\nlabel(suffix: string): string => name + suffix }\nclass Holder { box: Box = Box {} }\n" +
+    "function name(h: Holder | none): string | none => h?.box.name\n" +
+    "function label(h: Holder | none, suffix: (): string): string | none => h?.box.label(suffix())")
+  // Each step guards its receiver, so the outer step and its arguments are
+  // skipped whenever the chain is already absent.
+  Assert.equal(source.split("if (doof::is_null(_optional_source_").length - 1, 4)
+  Assert.stringNotContains(source, "h->box->name")
+}

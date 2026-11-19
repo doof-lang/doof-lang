@@ -1,7 +1,7 @@
 import { Assert as EditorAssert } from "std/assert"
 import { Parser as EditorParser } from "./parser"
 import { Assert } from "std/assert"
-import { ActorCreationExpression, ArrayLiteral, BinaryExpression, BindingCondition, CallExpression, IfExpression, IfStatement, ImmutableBinding, ConstructExpression, DoubleLiteral, ExpressionStatement, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral, StringLiteral, TupleLiteral, UnaryExpression } from "./ast"
+import { ActorCreationExpression, ArrayLiteral, BinaryExpression, BindingCondition, CallExpression, IfExpression, IfStatement, ImmutableBinding, IndexExpression, ConstructExpression, DoubleLiteral, ExpressionStatement, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral, StringLiteral, TupleLiteral, UnaryExpression } from "./ast"
 import type { Expression } from "./ast"
 import { parse } from "./parser"
 
@@ -226,4 +226,26 @@ export function testBindingClausesRejectOrAndCoalescingOperands(): none {
   // Outside a condition, `:=` is not an expression operator.
   nested := expressionFailure("if (user := find()) { }")
   Assert.stringContains(nested.errorMessage, "':='")
+}
+
+export function testOptionalChainMarksLaterPlainSteps(): none {
+  statement := parse("a?.b.c[0]").statements[0] as ExpressionStatement else { panic("expected statement") }
+  index := statement.expression as IndexExpression else { panic("expected index") }
+  Assert.isTrue(index.shortCircuit)
+  member := index.object as MemberExpression else { panic("expected member") }
+  Assert.isTrue(member.shortCircuit)
+  first := member.object as MemberExpression else { panic("expected optional member") }
+  Assert.isTrue(first.optional)
+  Assert.isFalse(first.shortCircuit)
+  // Optional and forced steps keep their own meaning, and a chain without
+  // '?.' marks nothing.
+  for source of ["a?.b?.c", "a?.b!.c", "a.b.c"] {
+    plain := parse(source).statements[0] as ExpressionStatement else { panic("expected statement") }
+    last := plain.expression as MemberExpression else { panic("expected member") }
+    Assert.isFalse(last.shortCircuit)
+  }
+  // Parentheses end the chain.
+  grouped := parse("(a?.b).c").statements[0] as ExpressionStatement else { panic("expected statement") }
+  outside := grouped.expression as MemberExpression else { panic("expected member") }
+  Assert.isFalse(outside.shortCircuit)
 }

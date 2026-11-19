@@ -7,6 +7,11 @@
 // unwrapped type, so field, method, variant, struct, and builtin access paths
 // are shared with plain member and index expressions. A Result-valued access
 // keeps its Failure and receives the none in its success channel.
+//
+// A plain step that short-circuits with an earlier `?.` in its chain arrives
+// here as an ordinary optional step: the checker marks `a?.b.c` as
+// `a?.b?.c`, which evaluates and lowers the same way because `b` is present
+// whenever `a` is.
 
 import { CallExpression, Expression, Identifier, IndexExpression, MemberExpression, SourceSpan } from "./ast"
 import { ResolvedType, ResultResolvedType } from "./semantic"

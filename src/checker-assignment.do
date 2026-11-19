@@ -29,6 +29,15 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
   // conversions, especially when a member is a nullable AST union field.
   finish(state, expression.target, targetType)
   case expression.target {
+    member: MemberExpression -> {
+      if member.resolvedShortCircuit { typeError(state, "An optional chain cannot be used as an assignment target; '." + member.property + "' short-circuits with an earlier '?.'", expression.target.span) }
+    }
+    index: IndexExpression -> {
+      if index.resolvedShortCircuit { typeError(state, "An optional chain cannot be used as an assignment target; '[]' short-circuits with an earlier '?.' or '?[]'", expression.target.span) }
+    }
+    _ -> { }
+  }
+  case expression.target {
     identifier: Identifier -> {
       if binding := lookup(scope, identifier.name) {
         identifier.resolvedBinding = binding
@@ -83,6 +92,9 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
       // The target was already checked above. In particular, do not resolve an
       // inaccessible actor field again or add assignment errors to that failure.
       if targetType.kind == "unknown" { return finish(state, expression, value) }
+      // An optional target was already reported; its receiver is the
+      // possibly-none value, so field lookup would only add a cascade.
+      if member.optional { return finish(state, expression, value) }
       objectType := member.object.resolvedType ?? unknownType()
       if fieldBinding := fieldAssignmentBinding(state, objectType, member.property, targetType, member.span) { validateAssignmentBinding(state, fieldBinding, member.span) }
       else if objectType.kind != "unknown" && objectType.kind != "never" { typeError(state, "Member '" + member.property + "' is not an assignable field", member.span) }

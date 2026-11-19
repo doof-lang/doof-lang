@@ -501,6 +501,10 @@ Notes:
 - `?.` and `?[]` evaluate their receiver once and short-circuit to `none` when it
   is `none` or a `Failure` (calls returning `none` are skipped). They cannot be
   assignment targets.
+- An absent receiver skips the rest of the chain: `holder?.box.name` and
+  `holder?.box.items[0]` need no second `?.` when `box` is never absent.
+  A step that reads a nullable, `Result`, or weak value still needs `?.` or
+  `!.`; parentheses end the chain; `!.` applies to the chain so far.
 
 ## String Interpolation
 

@@ -282,6 +282,9 @@ function parseIfExpression(parser: Parser): Expression {
 isolated function parsePostfix(parser: Parser): Expression {
   let expression = parsePrimary(parser)
   let typeArgs: TypeAnnotation[] = []
+  // A plain `.` or `[]` after `?.` or `?[]` in this chain may short-circuit
+  // with it. The chain is this loop: parentheses start a new one.
+  let optionalChain = false
   while true {
     if parser.check(TokenType.Less) && looksLikeGenericTypeArguments(parser) {
       typeArgs = parser.parseTypeArguments()
@@ -292,14 +295,16 @@ isolated function parsePostfix(parser: Parser): Expression {
       completionPoint := parser.editorMode && !parser.check(TokenType.Identifier)
       property := if completionPoint then "" else parser.text(parser.expect(TokenType.Identifier, "Expected member name"))
       if completionPoint { parser.reportIssue("Expected member name") }
-      expression = MemberExpression { kind: "member-expression", object: expression, property, optional, force, completionPoint, span: SourceSpan { start: expression.span.start, end: parser.previousEnd() } }
+      expression = MemberExpression { kind: "member-expression", object: expression, property, optional, force, shortCircuit: optionalChain && !optional && !force, completionPoint, span: SourceSpan { start: expression.span.start, end: parser.previousEnd() } }
+      if optional { optionalChain = true }
       typeArgs = []
     } else if (parser.check(TokenType.LeftBracket) || parser.check(TokenType.QuestionBracket)) && parser.sameLineAsPrevious() {
       optional := parser.check(TokenType.QuestionBracket)
       parser.advance()
       index := parser.parseExpression()
       parser.expect(TokenType.RightBracket)
-      expression = IndexExpression { kind: "index-expression", object: expression, index, optional, span: SourceSpan { start: expression.span.start, end: parser.previousEnd() } }
+      expression = IndexExpression { kind: "index-expression", object: expression, index, optional, shortCircuit: optionalChain && !optional, span: SourceSpan { start: expression.span.start, end: parser.previousEnd() } }
+      if optional { optionalChain = true }
     } else if parser.check(TokenType.LeftParen) && parser.sameLineAsPrevious() {
       expression = parseCall(parser, expression, typeArgs)
       typeArgs = []

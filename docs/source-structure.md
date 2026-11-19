@@ -66,7 +66,7 @@ modules own the following decisions:
 | `checker-constants.do` | Compile-time evaluation of constant int expressions, shared by enum backing values and range bound checks |
 | `checker-inference.do` | Contextual path validation and common-type inference; only optional unions are synthesized for value paths |
 | `checker-expressions.do` | Expression dispatch, literals, yield and catch blocks, identifiers, and implicit method bindings |
-| `checker-members.do` | Member and index access (including `?.`, `!.`, `?[]` over absent, Result, and weak receivers), explicit generic static receivers, dot shorthand, and union-alias JSON decoders |
+| `checker-members.do` | Member and index access (including `?.`, `!.`, `?[]` over absent, Result, and weak receivers, and plain steps that short-circuit with an earlier `?.` in their chain), explicit generic static receivers, dot shorthand, and union-alias JSON decoders |
 | `checker-operators.do` | Binary, unary, and `as` operators, `??`, range bounds, comparison carriers, and the operand-overlap rule shared with case patterns |
 | `checker-assignment.do` | Assignment targets, compound and `??=` operators, and `try target = expr` success-type checking |
 | `checker-case.do` | Case expressions, case-pattern binding, bare generic pattern inference, and exhaustiveness |

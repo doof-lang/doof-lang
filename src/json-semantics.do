@@ -193,7 +193,7 @@ export function canGenerateJsonSerialization(
   if memo := cache && memo.serialization.has(key) { return memo.serialization.get(key)! }
   let visited: string[] = []
   result := canGenerateJsonSerializationInner(owner, programs, visited)
-  if memo := cache { memo.serialization.set(key, result) }
+  cache?.serialization.set(key, result)
   return result
 }
 
@@ -216,7 +216,7 @@ export function canGenerateJsonDeserialization(
   if memo := cache && memo.deserialization.has(key) { return memo.deserialization.get(key)! }
   let visited: string[] = []
   result := canGenerateJsonDeserializationInner(owner, programs, visited)
-  if memo := cache { memo.deserialization.set(key, result) }
+  cache?.deserialization.set(key, result)
   return result
 }
 

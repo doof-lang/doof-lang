@@ -237,3 +237,26 @@ export function testDotShorthandNamesTheUnionsOneEnumArmDeclaringIt(): none {
   Assert.equal(ambiguous.diagnostics.length, 1)
   Assert.equal(ambiguous.diagnostics[0].message, "Cannot resolve shorthand .Red for expected type \"Color | Tone\"")
 }
+
+export function testPlainStepsShortCircuitWithAnEarlierOptionalStep(): none {
+  holder := "class Box { name: string = \"box\"\nitems: int[] = [1]\nlabel(suffix: string): string => name + suffix }\n" +
+    "class Holder { box: Box = Box {}\nmaybeBox: Box | none = none\nget(): Box => box\nload(): Result<Box, string> => Success(box) }\n"
+  typed := checked(holder +
+    "function f(h: Holder | none): none {\n" +
+    "let name: string | none = h?.box.name\n" +
+    "let item: int | none = h?.box.items[0]\n" +
+    "let label: string | none = h?.get().label(\"!\")\n" +
+    "h?.box.items.push(2)\n" +
+    // '!.' still forces the chain so far: it panics when h is absent.
+    "let forced: string = h?.maybeBox!.name }",
+  )
+  for diagnostic of typed.diagnostics { println(diagnostic.message) }
+  Assert.equal(typed.diagnostics.length, 0)
+  // A present value that can itself be absent keeps the plain-access error,
+  // as does a Result step, and parentheses end the chain.
+  for access of ["h?.maybeBox.name", "(h?.box).name", "h?.load().name"] {
+    result := checked(holder + "function f(h: Holder | none): none { _ := " + access + " }")
+    for diagnostic of result.diagnostics { println(diagnostic.message) }
+    Assert.equal(result.diagnostics.length, 1)
+  }
+}

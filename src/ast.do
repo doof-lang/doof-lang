@@ -204,8 +204,15 @@ export class MemberExpression {
   // unwrap `(r!)`, and keeps `force` only when the unwrapped value is nullable.
   let object: Expression
   property: string
-  optional: bool
+  // The checker sets `optional` on a plain `.` that short-circuits with an
+  // earlier `?.` in the same postfix chain; see `shortCircuit`.
+  let optional: bool
   let force: bool
+  // Set by the parser on a plain `.` that follows `?.` or `?[]` in the same
+  // postfix chain. Parentheses end a chain, so `(a?.b).c` is not marked.
+  shortCircuit: bool = false
+  // Set when the checker made this `.` short-circuit with the chain.
+  let resolvedShortCircuit: bool = false
   // Explicit class type arguments on a static receiver: `Channel<string>.tag`.
   receiverTypeArgs: TypeAnnotation[] = []
   let resolvedStaticOwner: ClassDeclaration | none = none
@@ -233,7 +240,10 @@ export class IndexExpression {
   // The checker lowers a Result receiver of `?[]` through postfix `?`.
   let object: Expression
   index: Expression
-  optional: bool
+  let optional: bool
+  // As for MemberExpression: a plain `[]` after `?.` or `?[]` in the chain.
+  shortCircuit: bool = false
+  let resolvedShortCircuit: bool = false
   // Set when '?[]' short-circuits a nullable receiver.
   let resolvedOptionalReceiver: ResolvedType | none = none
   let resolvedOptionalValue: ResolvedType | none = none

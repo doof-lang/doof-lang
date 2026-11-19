@@ -553,7 +553,8 @@ compile-time error.
 ## Optional Chaining Across Results
 
 `?.` treats a `Failure` receiver like `none`: `r?.m` is `(r?)?.m`. The receiver
-is evaluated once.
+is evaluated once, and a `Failure` skips the rest of the chain as `none` does
+(see [Short-Circuiting Chains](05-operators.md#short-circuiting-chains)).
 
 ```doof check
 class LookupError { message: string }
