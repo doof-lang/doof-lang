@@ -17,7 +17,7 @@ export function validateStructLayout(state: CheckerState, class_: ClassDeclarati
     if field.static_ || field.resolvedType == none { continue }
     let visited: string[] = []
     if embedsStruct(state, field.resolvedType!, symbol, visited) {
-      typeError(state, "Struct \"" + class_.name + "\" cannot contain itself by value through field \"" + fieldName(field) + "\"; use a class or a collection to add indirection", field.span)
+      typeError(state, "Struct \"${class_.name}\" cannot contain itself by value through field \"${fieldName(field)}\"; use a class or a collection to add indirection", field.span)
     }
   }
 }
@@ -39,7 +39,7 @@ function embedsStruct(state: CheckerState, type_: ResolvedType, target: Symbol, 
     failure: FailureResolvedType -> { return embedsStruct(state, failure.errorType, target, visited) }
     class_: ClassType -> {
       if class_.symbol.module == target.module && class_.symbol.name == target.name { return true }
-      key := class_.symbol.module + ":" + class_.symbol.name
+      key := "${class_.symbol.module}:${class_.symbol.name}"
       for item of visited { if item == key { return false } }
       visited.push(key)
       declaration := declarationFor(state.result, class_.symbol)

@@ -43,7 +43,7 @@ function validateValue(state: CheckerState, name: string, value: Expression, typ
   if !literalTree(state, value) {
     typeError(
       state,
-      "Module initializer for '" + name + "' must be a literal tree; move executable initialization into main() or an explicitly called function",
+      "Module initializer for '${name}' must be a literal tree; move executable initialization into main() or an explicitly called function",
       value.span,
     )
     return
@@ -72,7 +72,7 @@ function validateField(state: CheckerState, owner: ClassDeclaration, field: Clas
     typeError(
       state,
       "Static field initializer for '" + owner.name + "." + field.names[0] + "' has type " +
-        typeName(resolvedType) + ", which cannot use direct default-constructed assignable storage",
+        "${typeName(resolvedType)}, which cannot use direct default-constructed assignable storage",
       field.defaultValue!.span,
     )
   }

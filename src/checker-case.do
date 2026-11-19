@@ -321,7 +321,7 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
           // a different instantiation is never stored in the subject.
           if member := genericPatternMember(resolved, subjectType) && !sameType(member, resolved) {
             mismatched = true
-            typeError(state, "Case type pattern \"" + typeName(resolved) + "\" must be \"" + typeName(member) + "\" to match subject type \"" + typeName(subjectType) + "\"", type_.span)
+            typeError(state, "Case type pattern \"${typeName(resolved)}\" must be \"${typeName(member)}\" to match subject type \"${typeName(subjectType)}\"", type_.span)
           }
         }
         case type_.type_ {
@@ -330,7 +330,7 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
         }
         type_.resolvedType = resolved
         if !mismatched && !typesOverlap(state, subjectType, resolved) {
-          typeError(state, "Case type pattern \"" + typeName(resolved) + "\" cannot match subject type \"" + typeName(subjectType) + "\"", type_.span)
+          typeError(state, "Case type pattern \"${typeName(resolved)}\" cannot match subject type \"${typeName(subjectType)}\"", type_.span)
         }
         if type_.name != "_" {
           declare(scope, Binding {
@@ -347,14 +347,14 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
       value: ValuePattern -> {
         valueType := checkExpression(state, value.value, scope, subjectType)
         if !typesOverlap(state, subjectType, valueType) {
-          typeError(state, "Case value pattern of type \"" + typeName(valueType) + "\" cannot match subject type \"" + typeName(subjectType) + "\"", value.span)
+          typeError(state, "Case value pattern of type \"${typeName(valueType)}\" cannot match subject type \"${typeName(subjectType)}\"", value.span)
         }
       }
       range: RangePattern -> {
         // Ranges compare integer bounds; floating-point and other subjects are
         // reported once per pattern rather than once per bound.
         if subjectType.kind != "unknown" && !isIntegerOperand(subjectType) {
-          typeError(state, "Range patterns require an integer subject (byte, int, or long); got \"" + typeName(subjectType) + "\"", range.span)
+          typeError(state, "Range patterns require an integer subject (byte, int, or long); got \"${typeName(subjectType)}\"", range.span)
           if start := range.start { checkExpression(state, start, scope, none) }
           if end := range.end { checkExpression(state, end, scope, none) }
         } else {
@@ -371,10 +371,10 @@ function validateCaseRangeBound(state: CheckerState, bound: Expression | none, s
   if bound == none { return }
   boundType := checkExpression(state, bound!, scope, subjectType)
   if boundType.kind != "unknown" && !isIntegerOperand(boundType) {
-    typeError(state, "Range pattern bounds must be integers; got \"" + typeName(boundType) + "\"", bound!.span)
+    typeError(state, "Range pattern bounds must be integers; got \"${typeName(boundType)}\"", bound!.span)
     return
   }
   if !typesOverlap(state, subjectType, boundType) {
-    typeError(state, "Case range bound of type \"" + typeName(boundType) + "\" cannot match subject type \"" + typeName(subjectType) + "\"", span)
+    typeError(state, "Case range bound of type \"${typeName(boundType)}\" cannot match subject type \"${typeName(subjectType)}\"", span)
   }
 }

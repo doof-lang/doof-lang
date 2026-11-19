@@ -28,7 +28,7 @@ export function parseResourceState(source: string): ResourceState | none {
 }
 
 export function renderResourceState(state: ResourceState): string {
-  return formatJsonValue(state.toSerialObject()) + "\n"
+  return "${formatJsonValue(state.toSerialObject())}\n"
 }
 
 export function findMaterializedResource(

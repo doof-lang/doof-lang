@@ -110,13 +110,13 @@ export function parsePackageManifest(
   try resources := parseManifestResources(root, manifestPath, rootDirectory)
   try dependencies := parsePackageDependencies(root, manifestPath, rootDirectory)
   if manifestJsonHas(root, "externalDependencies") {
-    return Failure("Invalid doof.json at " + manifestPath + ": externalDependencies is no longer supported; prepare third-party sources outside Doof")
+    return Failure("Invalid doof.json at ${manifestPath}: externalDependencies is no longer supported; prepare third-party sources outside Doof")
   }
   if manifestJsonHas(root, "resolutions") {
-    return Failure("Invalid doof.json at " + manifestPath + ": resolutions is no longer supported because Doof only accepts local path dependencies")
+    return Failure("Invalid doof.json at ${manifestPath}: resolutions is no longer supported because Doof only accepts local path dependencies")
   }
   if manifestJsonHas(root, "policy") {
-    return Failure("Invalid doof.json at " + manifestPath + ": dependency policy is no longer supported because Doof performs no remote acquisition")
+    return Failure("Invalid doof.json at ${manifestPath}: dependency policy is no longer supported because Doof performs no remote acquisition")
   }
   try rejectStdlibPreparation(root, manifestPath)
   try manifestTarget := parseManifestTarget(root, manifestPath)
@@ -142,7 +142,7 @@ function parseObserveUi(root: SerialObject, manifestPath: string, rootDirectory:
   if value == "" { return Failure("Invalid doof.json at " + manifestPath + ": observe.ui must not be empty") }
   resolved := manifestJoinPath(rootDirectory, value)
   if !manifestPathWithinRoot(resolved, rootDirectory) {
-    return Failure("Invalid doof.json at " + manifestPath + ": observe.ui must stay within the package root")
+    return Failure("Invalid doof.json at ${manifestPath}: observe.ui must stay within the package root")
   }
   return Success(resolved)
 }
@@ -156,11 +156,11 @@ function parsePackageDependencies(
   try values := manifestObject(manifestJsonField(root, "dependencies"), manifestPath, "dependencies")
   let result: PackageDependency[] = []
   for name, value of values {
-    fieldPath := "dependencies." + name
+    fieldPath := "dependencies.${name}"
     if name == "" { return Failure("Invalid doof.json at " + manifestPath + ": dependency names must not be empty") }
     try object := manifestObject(value, manifestPath, fieldPath)
     if manifestJsonHas(object, "url") || manifestJsonHas(object, "ref") || manifestJsonHas(object, "commit") {
-      return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + " must use a local path; remote package acquisition is no longer supported")
+      return Failure("Invalid doof.json at ${manifestPath}: ${fieldPath} must use a local path; remote package acquisition is no longer supported")
     }
     try path := requiredManifestString(object, "path", manifestPath, fieldPath)
     result.push(PackageDependency { name, path: manifestJoinPath(rootDirectory, path) })
@@ -172,7 +172,7 @@ function rejectStdlibPreparation(root: SerialObject, manifestPath: string): Resu
   if !manifestJsonHas(root, "build") { return Success() }
   try build := manifestObject(manifestJsonField(root, "build"), manifestPath, "build")
   if manifestJsonHas(build, "stdlib") {
-    return Failure("Invalid doof.json at " + manifestPath + ": build.stdlib.prepare is no longer supported; build vendored native code with build.native.vendor")
+    return Failure("Invalid doof.json at ${manifestPath}: build.stdlib.prepare is no longer supported; build vendored native code with build.native.vendor")
   }
   return Success()
 }
@@ -184,11 +184,11 @@ function requiredManifestString(
   fieldPath: string,
 ): Result<string, string> {
   if !manifestJsonHas(object, name) {
-    return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + "." + name + " is required")
+    return Failure("Invalid doof.json at ${manifestPath}: ${fieldPath}.${name} is required")
   }
-  try value := manifestString(manifestJsonField(object, name), manifestPath, fieldPath + "." + name)
+  try value := manifestString(manifestJsonField(object, name), manifestPath, "${fieldPath}.${name}")
   if value == "" {
-    return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + "." + name + " must not be empty")
+    return Failure("Invalid doof.json at ${manifestPath}: ${fieldPath}.${name} must not be empty")
   }
   return Success(value)
 }
@@ -212,9 +212,9 @@ function parseManifestNativeBuild(
     try platformValue := manifestObject(
       manifestJsonField(native, platformKey),
       manifestPath,
-      "build.native." + platformKey,
+      "build.native.${platformKey}",
     )
-    try appendNativeFragment(result, platformValue, manifestPath, rootDirectory, "build.native." + platformKey)
+    try appendNativeFragment(result, platformValue, manifestPath, rootDirectory, "build.native.${platformKey}")
   }
   try vendor := parseNativeVendorBuild(native, platformKey, manifestPath, rootDirectory)
   if vendorBuild := vendor { result.vendorBuilds.push(vendorBuild) }
@@ -232,9 +232,9 @@ function parseNativeVendorBuild(
   rootDirectory: string,
 ): Result<NativeVendorBuild | none, string> {
   let platformVendor: SerialObject | none = none
-  platformField := "build.native." + platformKey + ".vendor"
+  platformField := "build.native.${platformKey}.vendor"
   if platformKey != "" && manifestJsonHas(native, platformKey) {
-    try platformValue := manifestObject(manifestJsonField(native, platformKey), manifestPath, "build.native." + platformKey)
+    try platformValue := manifestObject(manifestJsonField(native, platformKey), manifestPath, "build.native.${platformKey}")
     if manifestJsonHas(platformValue, "vendor") {
       try parsed := manifestObject(manifestJsonField(platformValue, "vendor"), manifestPath, platformField)
       platformVendor = parsed
@@ -249,7 +249,7 @@ function parseNativeVendorBuild(
     return Success(platformOnly)
   }
   if platformConfig := platformVendor && manifestJsonHas(platformConfig, "key") {
-    return Failure("Invalid doof.json at " + manifestPath + ": " + platformField + ".key is not allowed; declare build.native.vendor.key once")
+    return Failure("Invalid doof.json at ${manifestPath}: ${platformField}.key is not allowed; declare build.native.vendor.key once")
   }
   try base := manifestObject(manifestJsonField(native, "vendor"), manifestPath, "build.native.vendor")
   try key := requiredManifestString(base, "key", manifestPath, "build.native.vendor")
@@ -273,12 +273,12 @@ function appendVendorLibraryNames(
   fieldPath: string,
 ): Result<none, string> {
   if !manifestJsonHas(object, name) { return Success() }
-  try values := manifestArray(manifestJsonField(object, name), manifestPath, fieldPath + "." + name)
+  try values := manifestArray(manifestJsonField(object, name), manifestPath, "${fieldPath}.${name}")
   for index of 0..<values.length {
     entryPath := fieldPath + "." + name + "[" + string(index) + "]"
     try value := manifestString(values[index], manifestPath, entryPath)
     if !vendorLibraryNameIsValid(value) {
-      return Failure("Invalid doof.json at " + manifestPath + ": " + entryPath + " must be a relative path within the vendor build's lib directory")
+      return Failure("Invalid doof.json at ${manifestPath}: ${entryPath} must be a relative path within the vendor build's lib directory")
     }
     appendUnique(target, value)
   }
@@ -353,7 +353,7 @@ function parseMacOSApp(
     manifestPath, "executable",
   )
   if executableName == "" || executableName.contains("/") || executableName.contains("\\") {
-    return Failure("Invalid doof.json at " + manifestPath + ": executable must be a file name without path separators")
+    return Failure("Invalid doof.json at ${manifestPath}: executable must be a file name without path separators")
   }
   defaultBundleId := "dev.doof." + sanitizeBundleName(if packageName == "" then executableName else packageName)
   try bundleId := firstManifestString(root, "id", nested, "bundleId", build, "id", defaultBundleId, manifestPath, "build.macosApp.bundleId")
@@ -376,11 +376,11 @@ function parseMacOSApp(
   let iconPath = ""
   if icon != "" {
     if !icon.toLowerCase().endsWith(".png") {
-      return Failure("Invalid doof.json at " + manifestPath + ": build.macosApp.icon must point to a PNG file")
+      return Failure("Invalid doof.json at ${manifestPath}: build.macosApp.icon must point to a PNG file")
     }
     iconPath = manifestJoinPath(rootDirectory, icon)
     if !manifestPathWithinRoot(iconPath, rootDirectory) {
-      return Failure("Invalid doof.json at " + manifestPath + ": build.macosApp.icon must stay within the package root")
+      return Failure("Invalid doof.json at ${manifestPath}: build.macosApp.icon must stay within the package root")
     }
   }
 
@@ -389,7 +389,7 @@ function parseMacOSApp(
     try parsedInfo := manifestObject(manifestJsonField(nested, "infoPlist"), manifestPath, "build.macosApp.infoPlist")
     for key, ignored of parsedInfo {
       if isManagedMacOSPlistKey(key) {
-        return Failure("Invalid doof.json at " + manifestPath + ": build.macosApp.infoPlist." + key + " conflicts with a Doof-managed Info.plist key")
+        return Failure("Invalid doof.json at ${manifestPath}: build.macosApp.infoPlist.${key} conflicts with a Doof-managed Info.plist key")
       }
     }
     infoPlist = parsedInfo
@@ -429,7 +429,7 @@ function parseMacOSApp(
       if hasLibrary {
         try library := manifestString(manifestJsonField(entry, "library"), manifestPath, "build.macosApp.embeddedLibraries[" + string(index) + "].library")
         if library == "" || library.contains("/") || library.contains("\\") {
-          return Failure("Invalid doof.json at " + manifestPath + ": embedded linked library names must not contain path separators")
+          return Failure("Invalid doof.json at ${manifestPath}: embedded linked library names must not contain path separators")
         }
         embeddedLibraries.push(MacOSEmbeddedLibrary { library })
       } else {
@@ -439,7 +439,7 @@ function parseMacOSApp(
           return Failure("Invalid doof.json at " + manifestPath + ": build.macosApp.embeddedLibraries[" + string(index) + "].path must stay within the package root")
         }
         if !resolvedPath.endsWith(".dylib") && !resolvedPath.endsWith(".so") && !resolvedPath.endsWith(".framework") {
-          return Failure("Invalid doof.json at " + manifestPath + ": embedded library paths must be .dylib, .so, or .framework")
+          return Failure("Invalid doof.json at ${manifestPath}: embedded library paths must be .dylib, .so, or .framework")
         }
         embeddedLibraries.push(MacOSEmbeddedLibrary { path: resolvedPath })
       }
@@ -477,7 +477,7 @@ function parseIOSApp(
     manifestPath, "executable",
   )
   if executableName == "" || executableName.contains("/") || executableName.contains("\\") {
-    return Failure("Invalid doof.json at " + manifestPath + ": executable must be a file name without path separators")
+    return Failure("Invalid doof.json at ${manifestPath}: executable must be a file name without path separators")
   }
   defaultBundleId := "dev.doof." + sanitizeBundleName(if packageName == "" then executableName else packageName)
   try bundleId := firstManifestString(root, "id", nested, "bundleId", build, "id", defaultBundleId, manifestPath, "build.iosApp.bundleId")
@@ -499,11 +499,11 @@ function parseIOSApp(
   let iconPath = ""
   if icon != "" {
     if !icon.toLowerCase().endsWith(".png") {
-      return Failure("Invalid doof.json at " + manifestPath + ": build.iosApp.icon must point to a PNG file")
+      return Failure("Invalid doof.json at ${manifestPath}: build.iosApp.icon must point to a PNG file")
     }
     iconPath = manifestJoinPath(rootDirectory, icon)
     if !manifestPathWithinRoot(iconPath, rootDirectory) {
-      return Failure("Invalid doof.json at " + manifestPath + ": build.iosApp.icon must stay within the package root")
+      return Failure("Invalid doof.json at ${manifestPath}: build.iosApp.icon must stay within the package root")
     }
   }
 
@@ -512,7 +512,7 @@ function parseIOSApp(
     try parsedInfo := manifestObject(manifestJsonField(nested, "infoPlist"), manifestPath, "build.iosApp.infoPlist")
     for key, ignored of parsedInfo {
       if isManagedIOSPlistKey(key) {
-        return Failure("Invalid doof.json at " + manifestPath + ": build.iosApp.infoPlist." + key + " conflicts with a Doof-managed Info.plist key")
+        return Failure("Invalid doof.json at ${manifestPath}: build.iosApp.infoPlist.${key} conflicts with a Doof-managed Info.plist key")
       }
     }
     infoPlist = parsedInfo
@@ -547,21 +547,21 @@ function parseIOSApp(
       try entry := manifestObject(entries[index], manifestPath, field)
       hasLibrary := manifestJsonHas(entry, "library")
       hasPath := manifestJsonHas(entry, "path")
-      if hasLibrary == hasPath { return Failure("Invalid doof.json at " + manifestPath + ": " + field + " requires exactly one of library or path") }
+      if hasLibrary == hasPath { return Failure("Invalid doof.json at ${manifestPath}: ${field} requires exactly one of library or path") }
       if hasLibrary {
         try library := manifestString(manifestJsonField(entry, "library"), manifestPath, field + ".library")
         if library == "" || library.contains("/") || library.contains("\\") {
-          return Failure("Invalid doof.json at " + manifestPath + ": embedded linked library names must not contain path separators")
+          return Failure("Invalid doof.json at ${manifestPath}: embedded linked library names must not contain path separators")
         }
         embeddedLibraries.push(IOSEmbeddedLibrary { library })
       } else {
         try path := manifestString(manifestJsonField(entry, "path"), manifestPath, field + ".path")
         resolvedPath := manifestJoinPath(rootDirectory, path)
         if !manifestPathWithinRoot(resolvedPath, rootDirectory) {
-          return Failure("Invalid doof.json at " + manifestPath + ": " + field + ".path must stay within the package root")
+          return Failure("Invalid doof.json at ${manifestPath}: ${field}.path must stay within the package root")
         }
         if !resolvedPath.endsWith(".dylib") && !resolvedPath.endsWith(".so") && !resolvedPath.endsWith(".framework") {
-          return Failure("Invalid doof.json at " + manifestPath + ": embedded library paths must be .dylib, .so, or .framework")
+          return Failure("Invalid doof.json at ${manifestPath}: embedded library paths must be .dylib, .so, or .framework")
         }
         embeddedLibraries.push(IOSEmbeddedLibrary { path: resolvedPath })
       }
@@ -592,7 +592,7 @@ function parseMacOSPackage(root: SerialObject, manifestPath: string, rootDirecto
     try value := manifestString(manifestJsonField(package, "distDir"), manifestPath, "build.package.distDir")
     distDirectory = manifestJoinPath(rootDirectory, value)
     if !manifestPathWithinRoot(distDirectory, rootDirectory) {
-      return Failure("Invalid doof.json at " + manifestPath + ": build.package.distDir must stay within the package root")
+      return Failure("Invalid doof.json at ${manifestPath}: build.package.distDir must stay within the package root")
     }
   }
   if manifestJsonHas(package, "macos") {
@@ -600,7 +600,7 @@ function parseMacOSPackage(root: SerialObject, manifestPath: string, rootDirecto
     if manifestJsonHas(macos, "signing") {
       try value := manifestString(manifestJsonField(macos, "signing"), manifestPath, "build.package.macos.signing")
       if value != "developer-id" && value != "ad-hoc" {
-        return Failure("Invalid doof.json at " + manifestPath + ": build.package.macos.signing must be one of \"developer-id\", \"ad-hoc\"")
+        return Failure("Invalid doof.json at ${manifestPath}: build.package.macos.signing must be one of \"developer-id\", \"ad-hoc\"")
       }
       signing = value
     }
@@ -611,14 +611,14 @@ function parseMacOSPackage(root: SerialObject, manifestPath: string, rootDirecto
     if manifestJsonHas(macos, "sandbox") {
       case manifestJsonField(macos, "sandbox") {
         value: bool -> { sandbox = value },
-        _ -> { return Failure("Invalid doof.json at " + manifestPath + ": build.package.macos.sandbox must be a boolean") }
+        _ -> { return Failure("Invalid doof.json at ${manifestPath}: build.package.macos.sandbox must be a boolean") }
       }
     }
     if manifestJsonHas(macos, "entitlements") {
       try value := manifestString(manifestJsonField(macos, "entitlements"), manifestPath, "build.package.macos.entitlements")
       entitlementsPath = manifestJoinPath(rootDirectory, value)
       if !manifestPathWithinRoot(entitlementsPath, rootDirectory) {
-        return Failure("Invalid doof.json at " + manifestPath + ": build.package.macos.entitlements must stay within the package root")
+        return Failure("Invalid doof.json at ${manifestPath}: build.package.macos.entitlements must stay within the package root")
       }
     }
   }
@@ -642,7 +642,7 @@ function parseIOSPackage(root: SerialObject, manifestPath: string, rootDirectory
     try value := manifestString(manifestJsonField(ios, "provisioningProfile"), manifestPath, "build.package.ios.provisioningProfile")
     provisioningProfilePath = manifestJoinPath(rootDirectory, value)
     if !manifestPathWithinRoot(provisioningProfilePath, rootDirectory) {
-      return Failure("Invalid doof.json at " + manifestPath + ": build.package.ios.provisioningProfile must stay within the package root")
+      return Failure("Invalid doof.json at ${manifestPath}: build.package.ios.provisioningProfile must stay within the package root")
     }
   }
   return Success(IOSPackageConfig { identity, provisioningProfilePath })
@@ -768,7 +768,7 @@ function normalizeResourceDestination(
 ): Result<string, string> {
   portable := destination.replaceAll("\\", "/")
   if portable.startsWith("/") || (portable.length >= 3 && portable[1] == ':' && portable[2] == '/') {
-    return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + " must be relative")
+    return Failure("Invalid doof.json at ${manifestPath}: ${fieldPath} must be relative")
   }
 
   let segments: string[] = []
@@ -776,7 +776,7 @@ function normalizeResourceDestination(
     if segment == "" || segment == "." { continue }
     if segment == ".." {
       if segments.length == 0 {
-        return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + " must stay within the executable resource directory")
+        return Failure("Invalid doof.json at ${manifestPath}: ${fieldPath} must stay within the executable resource directory")
       }
       ignored := segments.pop()!
       continue
@@ -822,7 +822,7 @@ function appendStringArrayField(
   pathRoot: string,
 ): Result<none, string> {
   if !manifestJsonHas(object, name) { return Success() }
-  try values := manifestArray(manifestJsonField(object, name), manifestPath, fieldPath + "." + name)
+  try values := manifestArray(manifestJsonField(object, name), manifestPath, "${fieldPath}.${name}")
   for index of 0..<values.length {
     try value := manifestString(
       values[index],
@@ -861,21 +861,21 @@ function appendUnique(target: string[], value: string): none {
 function manifestObject(value: SerialValue, manifestPath: string, fieldPath: string): Result<SerialObject, string> {
   case value {
     object: SerialObject -> return Success(object)
-    _ -> return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + " must be an object")
+    _ -> return Failure("Invalid doof.json at ${manifestPath}: ${fieldPath} must be an object")
   }
 }
 
 function manifestArray(value: SerialValue, manifestPath: string, fieldPath: string): Result<readonly SerialValue[], string> {
   case value {
     array: readonly SerialValue[] -> return Success(array)
-    _ -> return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + " must be an array")
+    _ -> return Failure("Invalid doof.json at ${manifestPath}: ${fieldPath} must be an array")
   }
 }
 
 function manifestString(value: SerialValue, manifestPath: string, fieldPath: string): Result<string, string> {
   case value {
     text: string -> return Success(text)
-    _ -> return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + " must be a string")
+    _ -> return Failure("Invalid doof.json at ${manifestPath}: ${fieldPath} must be a string")
   }
 }
 

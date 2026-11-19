@@ -67,7 +67,7 @@ export function buildAndLaunchProject(
   outputPath := driverOutputPath(layout.outputDirectory, layout.executableName)
   if project.macosApp == none && project.iosApp == none {
     _ := synchronizeExecutableResources(project.resources, layout.outputDirectory, frontendCachePath(layout.cacheDirectory, "resources")) else error {
-      println("error: " + error)
+      println("error: ${error}")
       return 1
     }
   }
@@ -91,7 +91,7 @@ function launchIOSApp(
 ): int {
   outputDirectory := layout.outputDirectory
   appPath := assembleIOSApp(outputDirectory, outputPath, project.iosApp!, layout.iosDestination) else error {
-    println("error: " + error)
+    println("error: ${error}")
     return 1
   }
   if request.command == "build" { return 0 }
@@ -103,7 +103,7 @@ function launchIOSApp(
       request.iosProvisioningProfile,
       signingWorkDirectory,
     ) else error {
-      println("error: " + error)
+      println("error: ${error}")
       return 1
     }
     _ := signIOSDeviceApp(
@@ -112,14 +112,14 @@ function launchIOSApp(
       signing,
       driverOutputPath(outputDirectory, ".doof-ios-sign"),
     ) else error {
-      println("error: " + error)
+      println("error: ${error}")
       return 1
     }
     deviceIdentifier := resolveIOSDeviceIdentifier(
       request.iosDevice,
       driverOutputPath(outputDirectory, ".doof-ios-device-discovery"),
     ) else error {
-      println("error: " + error)
+      println("error: ${error}")
       return 1
     }
     installPlan := planIOSDeviceInstall(appPath, deviceIdentifier, project.rootDirectory)
@@ -153,7 +153,7 @@ function launchMacOSApp(
 ): int {
   outputDirectory := layout.outputDirectory
   appPath := assembleMacOSApp(outputDirectory, outputPath, project.macosApp!, emission.nativeBuild.libraryPaths, emission.nativeBuild.bundledLibraries) else error {
-    println("error: " + error)
+    println("error: ${error}")
     return 1
   }
   if request.command == "build" { return 0 }
@@ -166,12 +166,12 @@ function launchMacOSApp(
   }
   if request.command == "profile" {
     return runProfileTarget(
-      request, appPath, outputPath, appPath + ".dSYM",
+      request, appPath, outputPath, "${appPath}.dSYM",
       project.rootDirectory, layout.buildDirectory, layout.executableName, false,
     )
   }
   projectLock.close()!
-  urlFile := driverOutputPath(outputDirectory, ".doof-observe-url-" + string(Instant.now().toEpochMillis()))
+  urlFile := driverOutputPath(outputDirectory, ".doof-observe-url-${Instant.now().toEpochMillis()}")
   launchPlan := if request.command == "observe"
     then planObservedMacOSAppRun(appPath, project.rootDirectory, observeEnvironment(request.observePort, request.observeNoOpen, request.observeRetainEvents, layout.observeUiRoot, urlFile))
     else planMacOSAppRun(appPath, project.rootDirectory)
@@ -183,7 +183,7 @@ function launchMacOSApp(
       println("error: observed macOS app did not publish its local URL")
       return 1
     }
-    println("DOOF_OBSERVE_URL=" + url)
+    println("DOOF_OBSERVE_URL=${url}")
   }
   return launchResult.exitCode
 }
@@ -202,7 +202,7 @@ function launchConsoleProgram(
   }
   if request.command == "profile" {
     return runProfileTarget(
-      request, outputPath, outputPath, outputPath + ".dSYM",
+      request, outputPath, outputPath, "${outputPath}.dSYM",
       project.rootDirectory, layout.buildDirectory, layout.executableName, true,
     )
   }
@@ -231,14 +231,14 @@ function runProfileTarget(
   symbolsResult := runNativeCommand(symbolsPlan.command, symbolsPlan.arguments, symbolsPlan.directory, true)
   if symbolsResult.error != "" { println("error: " + symbolsResult.error) }
   if symbolsResult.exitCode != 0 {
-    println("error: could not create profiling symbols at " + symbolsPath)
+    println("error: could not create profiling symbols at ${symbolsPath}")
     return symbolsResult.exitCode
   }
   tracePath := if request.traceOutput == ""
     then joinPath(joinPath(buildDirectory, "profiles"), traceName + "-" + string(Instant.now().toEpochMillis()) + ".trace")
     else absolute(request.traceOutput)!
   if exists(tracePath) {
-    println("error: profile trace already exists: " + tracePath)
+    println("error: profile trace already exists: ${tracePath}")
     return 1
   }
   ensureOutputDirectory(parentPath(tracePath))
@@ -249,14 +249,14 @@ function runProfileTarget(
   result := runNativeCommand(plan.command, plan.arguments, plan.directory, true, .Inherited)
   if !exists(tracePath) {
     if result.error != "" { println("error: " + result.error) }
-    println("error: profiling did not produce a trace at " + tracePath)
+    println("error: profiling did not produce a trace at ${tracePath}")
     return 1
   }
   if !request.profileNoOpen {
     openPlan := planProfileOpen(tracePath, packageRoot)
     opened := runNativeCommand(openPlan.command, openPlan.arguments, openPlan.directory)
     if opened.exitCode != 0 {
-      println("error: profile trace was saved at " + tracePath + " but could not be opened")
+      println("error: profile trace was saved at ${tracePath} but could not be opened")
       return 1
     }
   }

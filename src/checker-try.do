@@ -52,7 +52,7 @@ export function checkTry(state: CheckerState, statement: TryStatement, scope: Sc
           valueType = applyDeepReadonly(valueType)
         }
         if !isAssignableWithInterfaces(state.result, valueType, bindingType) {
-          typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(bindingType), statement.span)
+          typeError(state, "Cannot assign ${typeName(valueType)} to ${typeName(bindingType)}", statement.span)
         }
         case statement.binding {
           declaration: ConstDeclaration -> { declaration.resolvedType = bindingType }
@@ -83,7 +83,7 @@ export function checkTry(state: CheckerState, statement: TryStatement, scope: Sc
 // `try target = expr` assigns the success value to an existing target.
 function checkTryAssignment(state: CheckerState, statement: TryStatement, assignment: AssignmentExpression, scope: Scope): bool {
   if assignment.operator != "=" {
-    typeError(state, "'try' assignment requires '='; '" + assignment.operator + "' cannot apply to a Result", assignment.span)
+    typeError(state, "'try' assignment requires '='; '${assignment.operator}' cannot apply to a Result", assignment.span)
     return true
   }
   assigned := checkAssignment(state, assignment, scope, true)
@@ -108,7 +108,7 @@ function validatePropagation(state: CheckerState, scope: Scope, errorType: Resol
       case returnType {
         result: ResultResolvedType -> {
           if !isAssignableWithInterfaces(state.result, errorType, result.errorType) {
-            typeError(state, "Cannot propagate error " + typeName(errorType) + " from function returning " + typeName(result), span)
+            typeError(state, "Cannot propagate error ${typeName(errorType)} from function returning ${typeName(result)}", span)
           }
           return
         }

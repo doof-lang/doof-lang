@@ -9,7 +9,7 @@ export function renderProgressBar(completed: int, total: int, width: int = 24): 
   safeCompleted := if completed < 0 then 0 else if completed > safeTotal then safeTotal else completed
   filled := if safeTotal == 0 then barWidth else (safeCompleted * barWidth) \ total
   return "[" + "#".repeat(filled) + "-".repeat(barWidth - filled) + "] " +
-    string(safeCompleted) + "/" + string(safeTotal)
+    "${safeCompleted}/${safeTotal}"
 }
 
 /** Chooses a positive hardware-bounded worker count without idle workers. */

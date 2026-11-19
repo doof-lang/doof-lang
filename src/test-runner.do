@@ -49,7 +49,7 @@ export function groupTestsForCompilation(tests: DiscoveredTest[]): TestCompilati
       if existing.tests.length > 0 && existing.tests[0].modulePath == test.modulePath { group = existing; break }
     }
     if group == none {
-      group = TestCompilationGroup { outputName: "mock-" + safeGroupName(test.moduleDisplayPath) }
+      group = TestCompilationGroup { outputName: "mock-${safeGroupName(test.moduleDisplayPath)}" }
       mocked.push(group!)
     }
     group!.tests.push(test)
@@ -90,25 +90,25 @@ export function generateTestHarness(harnessPath: string, tests: DiscoveredTest[]
   let source = ""
   for index of 0..<tests.length {
     test := tests[index]
-    source = source + "import { " + test.name + " as __doof_test_" + string(index) + " } from \"" + relativeImportSpecifier(harnessPath, test.modulePath) + "\"\n"
+    source = "${source}import { ${test.name} as __doof_test_${index} } from \"${relativeImportSpecifier(harnessPath, test.modulePath)}\"\n"
   }
-  source = source + "\nfunction main(args: string[]): int {\n"
-  source = source + "    if args.length < 1 {\n"
-  source = source + "        println(\"missing test id\")\n"
-  source = source + "        return 2\n"
-  source = source + "    }\n\n"
-  source = source + "    testId := args[0]\n"
+  source = "${source}\nfunction main(args: string[]): int {\n"
+  source = "${source}    if args.length < 1 {\n"
+  source = "${source}        println(\"missing test id\")\n"
+  source = "${source}        return 2\n"
+  source = "${source}    }\n\n"
+  source = "${source}    testId := args[0]\n"
   for index of 0..<tests.length {
     id := escapeDoofString(tests[index].id)
-    source = source + "    if testId == \"" + id + "\" {\n"
-    source = source + "        __doof_test_" + string(index) + "()\n"
-    source = source + "        return 0\n"
-    source = source + "    }\n"
+    source = "${source}    if testId == \"${id}\" {\n"
+    source = "${source}        __doof_test_${index}()\n"
+    source = "${source}        return 0\n"
+    source = "${source}    }\n"
   }
-  source = source + "\n"
+  source = "${source}\n"
   source = source + "    println(\"unknown test id: $" + "{testId}\")\n"
-  source = source + "    return 2\n"
-  source = source + "}\n"
+  source = "${source}    return 2\n"
+  source = "${source}}\n"
   return source
 }
 
@@ -125,7 +125,7 @@ export function formatParseFailure(
   column: int,
   message: string,
 ): string {
-  header := modulePath + ":" + string(line) + ":" + string(column) + ": error: " + message
+  header := "${modulePath}:${line}:${column}: error: ${message}"
   lines := source.split("\n")
   if line < 1 || line > lines.length { return header }
   caretColumn := if column < 1 then 1 else column
@@ -199,18 +199,18 @@ export function buildCoverageReport(
 
 /** Renders the portable JSON coverage artifact. */
 export function renderCoverageJson(report: CoverageReport): string {
-  let output = "{\n  \"timestamp\": \"\",\n  \"totals\": { \"covered\": " + string(report.totalCovered)
-  output = output + ", \"total\": " + string(report.totalLines) + ", \"percent\": " + coveragePercentText(report.totalPercentTenths) + " },\n"
+  let output = "{\n  \"timestamp\": \"\",\n  \"totals\": { \"covered\": ${report.totalCovered}"
+  output = "${output}, \"total\": ${report.totalLines}, \"percent\": ${coveragePercentText(report.totalPercentTenths)} },\n"
   output = output + "  \"files\": ["
   for index of 0..<report.files.length {
     file := report.files[index]
     output = output + (if index == 0 then "\n" else ",\n")
-    output = output + "    {\n      \"path\": \"" + escapeJson(file.path) + "\",\n"
-    output = output + "      \"covered\": " + string(file.covered) + ",\n"
-    output = output + "      \"total\": " + string(file.total) + ",\n"
-    output = output + "      \"percent\": " + coveragePercentText(file.percentTenths) + ",\n"
-    output = output + "      \"hitLines\": " + renderLineArray(file.hitLines) + ",\n"
-    output = output + "      \"missedLines\": " + renderLineArray(file.missedLines) + "\n    }"
+    output = "${output}    {\n      \"path\": \"${escapeJson(file.path)}\",\n"
+    output = "${output}      \"covered\": ${file.covered},\n"
+    output = "${output}      \"total\": ${file.total},\n"
+    output = "${output}      \"percent\": ${coveragePercentText(file.percentTenths)},\n"
+    output = "${output}      \"hitLines\": ${renderLineArray(file.hitLines)},\n"
+    output = "${output}      \"missedLines\": ${renderLineArray(file.missedLines)}\n    }"
   }
   return output + (if report.files.length == 0 then "]\n}\n" else "\n  ]\n}\n")
 }
@@ -219,10 +219,10 @@ export function renderCoverageJson(report: CoverageReport): string {
 export function renderCoverageHtml(report: CoverageReport, fileDirectoryName: string): string {
   let rows = ""
   for file of report.files {
-    href := escapeHtml(fileDirectoryName + "/" + coverageFileRelativePath(file.path))
-    rows = rows + "<tr><td><a href=\"" + href + "\">" + escapeHtml(file.path) + "</a></td>"
-    rows = rows + "<td>" + string(file.covered) + "/" + string(file.total) + "</td>"
-    rows = rows + "<td>" + coveragePercentText(file.percentTenths) + "%</td></tr>\n"
+    href := escapeHtml("${fileDirectoryName}/${coverageFileRelativePath(file.path)}")
+    rows = "${rows}<tr><td><a href=\"${href}\">${escapeHtml(file.path)}</a></td>"
+    rows = "${rows}<td>${file.covered}/${file.total}</td>"
+    rows = "${rows}<td>${coveragePercentText(file.percentTenths)}%</td></tr>\n"
   }
   overall := coveragePercentText(report.totalPercentTenths)
   return "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\">" +
@@ -241,7 +241,7 @@ export function renderCoverageFileHtml(file: CoverageFileReport, source: string,
   for index of 0..<sourceLines.length {
     line := index + 1
     className := if containsLine(file.hitLines, line) then "covered" else if containsLine(file.missedLines, line) then "missed" else "neutral"
-    lines = lines + "<div class=\"line " + className + "\"><span>" + string(line) + "</span><code>" + escapeHtml(sourceLines[index]) + "</code></div>\n"
+    lines = "${lines}<div class=\"line ${className}\"><span>${line}</span><code>${escapeHtml(sourceLines[index])}</code></div>\n"
   }
   return "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\">" +
     "<title>" + escapeHtml(file.path) + " — Doof Coverage</title><style>body{font:15px system-ui;margin:2rem;color:#1f2933}" +
@@ -268,7 +268,7 @@ function coveragePathComponent(value: string): string {
   // Escape marker names as well as the escape character, so distinct source
   // names cannot collide with absolute/parent paths or encoded punctuation.
   if value == "_absolute" || value == "_external" || value == "_empty" {
-    return "~95~" + value.substring(1, value.length)
+    return "~95~${value.substring(1, value.length)}"
   }
   let result = ""
   for index of 0..<value.length {
@@ -276,7 +276,7 @@ function coveragePathComponent(value: string): string {
     if character >= 'a' && character <= 'z' || character >= 'A' && character <= 'Z' ||
         character >= '0' && character <= '9' || character == '_' || character == '-' || character == '.' {
       result = result + string(character)
-    } else { result = result + "~" + string(int(character)) + "~" }
+    } else { result = "${result}~${int(character)}~" }
   }
   return result
 }
@@ -318,13 +318,13 @@ function coveragePercentTenths(covered: int, total: int): int {
 }
 
 function coveragePercentText(tenths: int): string {
-  return string(tenths \ 10) + "." + string(tenths % 10)
+  return "${tenths \ 10}.${tenths % 10}"
 }
 
 function renderLineArray(lines: int[]): string {
   let result = "["
   for index of 0..<lines.length {
-    if index > 0 { result = result + ", " }
+    if index > 0 { result = "${result}, " }
     result = result + string(lines[index])
   }
   return result + "]"
@@ -352,7 +352,7 @@ function relativeImportSpecifier(harnessPath: string, modulePath: string): strin
     common = common + 1
   }
   let result = ""
-  for ignored of common..<sourceComponents.length { result = result + "../" }
+  for ignored of common..<sourceComponents.length { result = "${result}../" }
   for index of common..<to.length {
     if result != "" && !result.endsWith("/") { result = result + "/" }
     result = result + to[index]
@@ -396,6 +396,6 @@ export function selectTestsFromJson(tests: DiscoveredTest[], source: string): Re
   for test of tests {
     if ids.has(test.id) { selected.push(test); ids.delete(test.id) }
   }
-  for missing of ids { return Failure("Selected test no longer exists: " + missing) }
+  for missing of ids { return Failure("Selected test no longer exists: ${missing}") }
   return Success(selected)
 }

@@ -131,7 +131,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
       iterable := checkExpression(state, forOf.iterable, scope, none)
       element := forOfElement(state, iterable, forOf.iterable.span)
       if iterable.kind != "unknown" && iterable.kind != "never" && element.kind == "unknown" {
-        typeError(state, "For-of requires an array, map, set, Range, or Stream value; got " + typeName(iterable), forOf.iterable.span)
+        typeError(state, "For-of requires an array, map, set, Range, or Stream value; got ${typeName(iterable)}", forOf.iterable.span)
       }
       if forOf.bindings.length > 1 {
         let validArity = false
@@ -140,7 +140,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
           _ -> { }
         }
         if !validArity {
-          typeError(state, "For-of destructuring requires a tuple with " + string(forOf.bindings.length) + " elements; got " + typeName(element), forOf.span)
+          typeError(state, "For-of destructuring requires a tuple with ${forOf.bindings.length} elements; got ${typeName(element)}", forOf.span)
         }
       }
       bodyScope := Scope { parent: scope }
@@ -172,7 +172,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
         if valueType.kind == "never" { bindingsComplete = false }
         declaredType := if binding.type_ == none then valueType else resolveType(state, binding.type_!, state.info!, scope)
         binding.resolvedType = declaredType
-        if !isAssignableWithInterfaces(state.result, valueType, declaredType) { typeError(state, "Cannot assign " + displayTypeName(valueType) + " to " + displayTypeName(declaredType), binding.span) }
+        if !isAssignableWithInterfaces(state.result, valueType, declaredType) { typeError(state, "Cannot assign ${displayTypeName(valueType)} to ${displayTypeName(declaredType)}", binding.span) }
         if binding.name == "_" {
           case valueType {
             _: ResultResolvedType -> { typeError(state, "Scoped discard '_' cannot discard a Result; handle the Result before entering the with scope", binding.span) }
@@ -206,12 +206,12 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
       binding := lookup(scope, assignment.name)
       valueType := checkExpression(state, assignment.value, scope, binding?.type_)
       if binding == none {
-        typeError(state, "Undefined identifier \"" + assignment.name + "\"", assignment.span)
+        typeError(state, "Undefined identifier \"${assignment.name}\"", assignment.span)
         return true
       }
       validateAssignmentBinding(state, binding!, assignment.span)
       if !isAssignableWithInterfaces(state.result, valueType, binding!.type_) {
-        typeError(state, "Cannot assign " + displayTypeName(valueType) + " to " + displayTypeName(binding!.type_), assignment.span)
+        typeError(state, "Cannot assign ${displayTypeName(valueType)} to ${displayTypeName(binding!.type_)}", assignment.span)
       }
       assignment.resolvedType = binding!.type_
       return true
@@ -232,13 +232,13 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
     try_: TryStatement -> { return checkTry(state, try_, scope) }
     continue_: ContinueStatement -> {
       if label := continue_.label {
-        if !hasActiveLoopLabel(scope, label) { typeError(state, "Unknown loop label '" + label + "'", continue_.span) }
+        if !hasActiveLoopLabel(scope, label) { typeError(state, "Unknown loop label '${label}'", continue_.span) }
       } else if !inLoop { typeError(state, "Continue is only valid inside a loop", continue_.span) }
       return false
     }
     break_: BreakStatement -> {
       if label := break_.label {
-        if !hasActiveLoopLabel(scope, label) { typeError(state, "Unknown loop label '" + label + "'", break_.span) }
+        if !hasActiveLoopLabel(scope, label) { typeError(state, "Unknown loop label '${label}'", break_.span) }
       } else if !inLoop { typeError(state, "Break is only valid inside a loop", break_.span) }
       return false
     }
@@ -250,7 +250,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
 
 function createLoopScope(state: CheckerState, parent: Scope, label: string | none, span: SourceSpan): Scope {
   if name := label && hasActiveLoopLabel(parent, name) {
-    typeError(state, "Loop label '" + name + "' is already active", span)
+    typeError(state, "Loop label '${name}' is already active", span)
   }
   return Scope { parent, loopLabel: label }
 }
@@ -303,7 +303,7 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
     // Readonly collections are applied structurally above; nominal classes
     // must already be deeply immutable, matching readonly field validation.
     if violation := findActorBoundaryViolation(state.result, declaredType) {
-      typeError(state, "Readonly binding \"" + name + "\" must be deeply immutable: " + violation.reason, span)
+      typeError(state, "Readonly binding \"${name}\" must be deeply immutable: ${violation.reason}", span)
     }
   }
   if typeAnnotation := annotation && inferredCollectionType != none { decorateAnnotationWithResolved(typeAnnotation, declaredType) }
@@ -324,7 +324,7 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
     }
     if annotation == none { declaredType = narrowedType }
     else if validElseSubject && !isAssignableWithInterfaces(state.result, narrowedType, declaredType) {
-      typeError(state, "Cannot assign " + displayTypeName(narrowedType) + " to " + displayTypeName(declaredType), span)
+      typeError(state, "Cannot assign ${displayTypeName(narrowedType)} to ${displayTypeName(declaredType)}", span)
     }
     elseScope := Scope { parent: scope }
     if captured := failureName {
@@ -341,7 +341,7 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
       typeError(state, "Declaration-else block must exit scope", handler.span)
     }
   } else if !isAssignableWithInterfaces(state.result, valueType, declaredType) {
-    typeError(state, "Cannot assign " + displayTypeName(valueType) + " to " + displayTypeName(declaredType), span)
+    typeError(state, "Cannot assign ${displayTypeName(valueType)} to ${displayTypeName(declaredType)}", span)
   }
   case declaration {
     const_: ConstDeclaration -> { const_.resolvedType = declaredType }
@@ -397,11 +397,11 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
     if defaultValue := parameter.defaultValue {
       defaultType := checkCallerDefault(state, defaultValue, scope, parameterType)
       if !isAssignableWithInterfaces(state.result, defaultType, parameterType) {
-        typeError(state, "Cannot use default value of type " + typeName(defaultType) + " for parameter '" + parameter.name + "' of type " + typeName(parameterType), defaultValue.span)
+        typeError(state, "Cannot use default value of type ${typeName(defaultType)} for parameter '${parameter.name}' of type ${typeName(parameterType)}", defaultValue.span)
       }
     }
     if !declareShadowing(scope, Binding { name: parameter.name, kind: "parameter", type_: parameterType, mutable: false, span: checkerSemanticSpan(parameter.span), module: state.info!.path }) {
-      typeError(state, "Binding '" + parameter.name + "' is already declared in this scope", parameter.span)
+      typeError(state, "Binding '${parameter.name}' is already declared in this scope", parameter.span)
     }
   }
   if fn.bodyless { return functionValue }
@@ -411,17 +411,17 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
     expression: Expression -> {
       actualReturn = checkExpression(state, expression, scope, returnType)
       if returnType.kind != "never" && !isAssignableWithInterfaces(state.result, actualReturn, returnType) {
-        typeError(state, "Cannot return " + typeName(actualReturn) + " from function returning " + typeName(returnType), expression.span)
+        typeError(state, "Cannot return ${typeName(actualReturn)} from function returning ${typeName(returnType)}", expression.span)
       }
       if returnType.kind == "never" && actualReturn.kind != "never" {
-        typeError(state, "Cannot return " + typeName(actualReturn) + " from function returning never", expression.span)
+        typeError(state, "Cannot return ${typeName(actualReturn)} from function returning never", expression.span)
       }
       completes = false
     }
     block: Block -> { completes = checkBlock(state, block, scope); actualReturn = inferredReturn(state, block) }
   }
   if completes && returnType.kind != "none" && returnType.kind != "unknown" {
-    typeError(state, "Function '" + fn.name + "' may complete without returning " + typeName(returnType), fn.span)
+    typeError(state, "Function '${fn.name}' may complete without returning ${typeName(returnType)}", fn.span)
   }
   if annotation := fn.returnType { decorateAnnotationWithResolved(annotation, returnType) }
   for parameter of fn.params {
@@ -443,7 +443,7 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
   for field of class_.fields {
     deprecatedConstField(state, field)
     for fieldName of field.names {
-      if generatedMemberName(fieldName) { typeError(state, "Member name \"" + fieldName + "\" is reserved for compiler-generated reflection and JSON support", field.span) }
+      if generatedMemberName(fieldName) { typeError(state, "Member name \"${fieldName}\" is reserved for compiler-generated reflection and JSON support", field.span) }
     }
     let fieldType = unknownType()
     if type_ := field.type_ {
@@ -456,23 +456,23 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
     field.resolvedType = if field.weak_ then weakType(fieldType) else fieldType
     if field.weak_ && !isWeakReferenceTarget(fieldType) {
       name := fieldDisplayName(field)
-      typeError(state, "Field \"" + name + "\" has type \"" + typeName(fieldType) + "\", which is not a valid weak reference target", field.span)
+      typeError(state, "Field \"${name}\" has type \"${typeName(fieldType)}\", which is not a valid weak reference target", field.span)
     }
     if class_.struct_ && (field.weak_ || containsWeakType(fieldType)) {
       name := fieldDisplayName(field)
-      typeError(state, "Struct field \"" + name + "\" cannot be weak", field.span)
+      typeError(state, "Struct field \"${name}\" cannot be weak", field.span)
     }
     if defaultValue := field.defaultValue && field.type_ != none {
       defaultType := checkCallerDefault(state, defaultValue, classScope, fieldType)
       if !isAssignableWithInterfaces(state.result, defaultType, fieldType) {
-        typeError(state, "Cannot use default value of type " + typeName(defaultType) + " for field of type " + typeName(fieldType), defaultValue.span)
+        typeError(state, "Cannot use default value of type ${typeName(defaultType)} for field of type ${typeName(fieldType)}", defaultValue.span)
       }
     }
   }
   validateStructLayout(state, class_, symbol!)
   for method of class_.methods {
     deprecatedClassMethodFunction(state, method)
-    if generatedMemberName(method.name) { typeError(state, "Method name \"" + method.name + "\" is reserved for compiler-generated reflection and JSON support", method.span) }
+    if generatedMemberName(method.name) { typeError(state, "Method name \"${method.name}\" is reserved for compiler-generated reflection and JSON support", method.span) }
     checkFunction(state, method, classScope, owner)
     if method.name == "constructor" { validateConstructorDeclaration(state, class_, method, owner) }
   }
@@ -480,13 +480,13 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
   if element := streamElement { symbol!.streamElementTypes.push(element) }
   if destructor_ := class_.destructor_ {
     if class_.struct_ {
-      typeError(state, "Struct \"" + class_.name + "\" cannot declare a destructor", destructor_.span)
+      typeError(state, "Struct \"${class_.name}\" cannot declare a destructor", destructor_.span)
     } else {
       destructorScope := Scope {
         parent: classScope,
         returnType: noneType(),
         thisType: owner,
-        functionName: class_.name + ".destructor",
+        functionName: "${class_.name}.destructor",
       }
       addClassFields(state, destructorScope, owner)
       addClassMethods(state, destructorScope, owner)
@@ -495,7 +495,7 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
   }
   for interfaceRef of class_.implements_ {
     if class_.struct_ {
-      typeError(state, "Struct \"" + class_.name + "\" cannot implement interfaces; use a class for interface participation", interfaceRef.span)
+      typeError(state, "Struct \"${class_.name}\" cannot implement interfaces; use a class for interface participation", interfaceRef.span)
       continue
     }
     target := resolveType(state, interfaceRef, state.info!, classScope)
@@ -503,23 +503,23 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
       _: UnknownType -> { if interfaceRef.name != "Stream" { typeError(state, "Interface \"" + interfaceRef.name + "\" is not defined", interfaceRef.span) } }
       interface_: InterfaceType -> {
         if !classSatisfiesConcreteInterface(state.result, class_, owner, interface_) {
-          typeError(state, "Class \"" + class_.name + "\" does not satisfy interface \"" + typeName(target) + "\"", interfaceRef.span)
+          typeError(state, "Class \"${class_.name}\" does not satisfy interface \"${typeName(target)}\"", interfaceRef.span)
         } else {
           addImplementedInterfaceType(symbol!, typeName(target))
         }
       }
       stream: StreamResolvedType -> {
         if streamElement == none || !sameType(streamElement!, stream.elementType) {
-          typeError(state, "Class \"" + class_.name + "\" does not satisfy interface \"" + typeName(target) + "\"", interfaceRef.span)
+          typeError(state, "Class \"${class_.name}\" does not satisfy interface \"${typeName(target)}\"", interfaceRef.span)
         }
       }
-      _ -> { typeError(state, "\"" + interfaceRef.name + "\" is not an interface", interfaceRef.span) }
+      _ -> { typeError(state, "\"${interfaceRef.name}\" is not an interface", interfaceRef.span) }
     }
   }
 }
 
 function validateUniqueClassMembers(state: CheckerState, class_: ClassDeclaration): none {
-  owner := "class \"" + class_.name + "\""
+  owner := "class \"${class_.name}\""
   let names: string[] = []
   for field of class_.fields {
     for name of field.names { declareUniqueName(state, names, "Member", name, owner, field.span) }
@@ -529,13 +529,13 @@ function validateUniqueClassMembers(state: CheckerState, class_: ClassDeclaratio
 
 // Reports a name already declared in the same namespace and records the rest.
 function declareUniqueName(state: CheckerState, names: string[], label: string, name: string, owner: string, span: SourceSpan): none {
-  if names.contains(name) { typeError(state, label + " \"" + name + "\" is already declared in " + owner, span) }
+  if names.contains(name) { typeError(state, "${label} \"${name}\" is already declared in ${owner}", span) }
   else { names.push(name) }
 }
 
 function validateConstructorDeclaration(state: CheckerState, class_: ClassDeclaration, constructor: FunctionDeclaration, owner: ClassType): none {
   if !constructor.static_ {
-    typeError(state, "Constructor method for \"" + class_.name + "\" must be static", constructor.span)
+    typeError(state, "Constructor method for \"${class_.name}\" must be static", constructor.span)
   }
   if constructor.resolvedType == none { return }
   case constructor.resolvedType! {
@@ -546,7 +546,7 @@ function validateConstructorDeclaration(state: CheckerState, class_: ClassDeclar
         _ -> { }
       }
       if !validReturn {
-        typeError(state, "Constructor method for \"" + class_.name + "\" must return " + class_.name + " or Result<" + class_.name + ", E>", constructor.span)
+        typeError(state, "Constructor method for \"${class_.name}\" must return ${class_.name} or Result<${class_.name}, E>", constructor.span)
       }
     }
     _ -> { }
@@ -608,7 +608,7 @@ function resolveInterfaceField(state: CheckerState, field: InterfaceField, scope
 }
 
 function validateUniqueInterfaceMembers(state: CheckerState, interface_: InterfaceDeclaration): none {
-  owner := "interface \"" + interface_.name + "\""
+  owner := "interface \"${interface_.name}\""
   let names: string[] = []
   for field of interface_.fields { declareUniqueName(state, names, "Member", field.name, owner, field.span) }
   for method of interface_.methods { declareUniqueName(state, names, "Member", method.name, owner, method.span) }
@@ -643,7 +643,7 @@ function populateConstraint(state: CheckerState, scope: Scope, names: string[], 
   if index >= constraints.length || constraints[index].type_ == none { completed.push(names[index]); return }
   annotation := constraints[index].type_!
   if active.contains(names[index]) {
-    typeError(state, "Cyclic constraint for type parameter '" + names[index] + "'", annotation.span)
+    typeError(state, "Cyclic constraint for type parameter '${names[index]}'", annotation.span)
     scope.typeParamConstraints[offset + index].type_ = unknownType()
     completed.push(names[index])
     return
@@ -680,7 +680,7 @@ function validateUniqueTypeParameters(state: CheckerState, names: string[], span
   for index of 0..<names.length {
     for previous of 0..<index {
       if names[previous] == names[index] {
-        typeError(state, "Type parameter \"" + names[index] + "\" is already declared in this declaration", span)
+        typeError(state, "Type parameter \"${names[index]}\" is already declared in this declaration", span)
         break
       }
     }
@@ -693,7 +693,7 @@ function validateTypeParameterShadowing(state: CheckerState, names: string[], ou
     for name of names {
       for visible of current!.typeParams {
         if name == visible {
-          typeError(state, "Type parameter \"" + name + "\" shadows a type parameter from the enclosing declaration", span)
+          typeError(state, "Type parameter \"${name}\" shadows a type parameter from the enclosing declaration", span)
         }
       }
     }
@@ -707,7 +707,7 @@ export function checkEnum(state: CheckerState, enum_: EnumDeclaration, scope: Sc
     if value := variant.value && literalStringValue(value) != none { stringBacked = true }
   }
   enum_.backingKind = if stringBacked then "string" else "int"
-  owner := "enum \"" + enum_.name + "\""
+  owner := "enum \"${enum_.name}\""
   let names: string[] = []
   // Values are compared by their source text; one enum never mixes kinds.
   let values: string[] = []
@@ -717,13 +717,13 @@ export function checkEnum(state: CheckerState, enum_: EnumDeclaration, scope: Sc
     declareUniqueName(state, names, "Variant", variant.name, owner, variant.span)
     if stringBacked {
       if variant.value == none {
-        typeError(state, "String enum variant \"" + variant.name + "\" requires an explicit string value", variant.span)
+        typeError(state, "String enum variant \"${variant.name}\" requires an explicit string value", variant.span)
         continue
       }
       checkExpression(state, variant.value!, scope, primitive("string"))
       value := literalStringValue(variant.value!)
       if value == none {
-        typeError(state, "String enum variant \"" + variant.name + "\" value must be a non-interpolated string literal", variant.value!.span)
+        typeError(state, "String enum variant \"${variant.name}\" value must be a non-interpolated string literal", variant.value!.span)
         continue
       }
       recordUniqueEnumValue(state, values, valueNames, value!, variant)
@@ -735,12 +735,12 @@ export function checkEnum(state: CheckerState, enum_: EnumDeclaration, scope: Sc
       valueType := checkExpression(state, valueExpression, scope, primitive("int"))
       if !isAssignableWithInterfaces(state.result, valueType, primitive("int")) { typeError(state, "Enum value must be an int", variant.span) }
       value = constantInt(valueExpression)
-      if value == none { typeError(state, "Enum variant \"" + variant.name + "\" value must be a compile-time int constant", valueExpression.span) }
+      if value == none { typeError(state, "Enum variant \"${variant.name}\" value must be a compile-time int constant", valueExpression.span) }
     }
     if value == none { continue }
     nextValue = value! + 1L
     if value! < -2147483648L || value! > 2147483647L {
-      typeError(state, "Enum variant \"" + variant.name + "\" value is outside the int range", variant.span)
+      typeError(state, "Enum variant \"${variant.name}\" value is outside the int range", variant.span)
       continue
     }
     recordUniqueEnumValue(state, values, valueNames, string(value!), variant)
@@ -759,7 +759,7 @@ function literalStringValue(expression: Expression): string | none {
 function recordUniqueEnumValue(state: CheckerState, values: string[], valueNames: string[], value: string, variant: EnumVariant): none {
   for previous of 0..<values.length {
     if values[previous] == value {
-      typeError(state, "Enum variant \"" + variant.name + "\" duplicates the value of \"" + valueNames[previous] + "\"", variant.span)
+      typeError(state, "Enum variant \"${variant.name}\" duplicates the value of \"${valueNames[previous]}\"", variant.span)
       break
     }
   }
@@ -784,7 +784,7 @@ function validateEnumLiteralField(state: CheckerState, field: ClassField, fieldT
         }
         _ -> { }
       }
-      typeError(state, "Literal-valued field \"" + field.names[0] + "\" must be a literal or an enum variant such as Kind.Variant", member.span)
+      typeError(state, "Literal-valued field \"${field.names[0]}\" must be a literal or an enum variant such as Kind.Variant", member.span)
     }
     _ -> { }
   }
@@ -808,12 +808,12 @@ export function checkReturn(state: CheckerState, statement: ReturnStatement, sco
   let actualReturn = noneType()
   if statement.value == none {
     if returnType.kind != "none" && returnType.kind != "unknown" {
-      typeError(state, "Expected a return value of type " + typeName(returnType), statement.span)
+      typeError(state, "Expected a return value of type ${typeName(returnType)}", statement.span)
     }
   } else {
     valueType := checkExpression(state, statement.value!, scope, returnType)
     actualReturn = valueType
-    if !isAssignableWithInterfaces(state.result, valueType, returnType) { typeError(state, "Cannot return " + typeName(valueType) + " from function returning " + typeName(returnType), statement.span) }
+    if !isAssignableWithInterfaces(state.result, valueType, returnType) { typeError(state, "Cannot return ${typeName(valueType)} from function returning ${typeName(returnType)}", statement.span) }
   }
   if inference := state.lambdaReturns && inference.scope == target! {
     inference.returns.push(LambdaReturnObservation { statement, type_: actualReturn, reachable: inference.reachable })
@@ -854,12 +854,12 @@ export function checkDestructuring(state: CheckerState, statement: Destructuring
   if statement.kind.startsWith("array-destructuring") {
     case valueType {
       array: ArrayResolvedType -> { for ignored of statement.bindings { bindingTypes.push(array.elementType) } }
-      _ -> { typeError(state, "Array destructuring requires a T[] value, but got \"" + typeName(valueType) + "\"", statement.value.span) }
+      _ -> { typeError(state, "Array destructuring requires a T[] value, but got \"${typeName(valueType)}\"", statement.value.span) }
     }
   } else if statement.kind.startsWith("positional-destructuring") {
     bindingTypes = positionalDestructuringTypes(state, valueType, statement.value.span)
     if bindingTypes.length < statement.bindings.length {
-      typeError(state, "Positional destructuring expected at least " + string(statement.bindings.length) + " values, but got " + string(bindingTypes.length), statement.span)
+      typeError(state, "Positional destructuring expected at least ${statement.bindings.length} values, but got ${bindingTypes.length}", statement.span)
     }
   }
 
@@ -898,7 +898,7 @@ function positionalDestructuringTypes(state: CheckerState, valueType: ResolvedTy
         _ -> { }
       } }
     }
-    _ -> { typeError(state, "Positional destructuring requires a tuple or nominal object value, but got \"" + typeName(valueType) + "\"", span) }
+    _ -> { typeError(state, "Positional destructuring requires a tuple or nominal object value, but got \"${typeName(valueType)}\"", span) }
   }
   return result
 }
@@ -912,14 +912,14 @@ function declareDestructuredBinding(state: CheckerState, scope: Scope, name: str
 }
 
 export function declareUserBinding(state: CheckerState, scope: Scope, binding: Binding, span: SourceSpan): none {
-  if !declare(scope, binding) { typeError(state, "Binding '" + binding.name + "' is already declared in this scope", span) }
+  if !declare(scope, binding) { typeError(state, "Binding '${binding.name}' is already declared in this scope", span) }
 }
 
 function validateDestructuringTarget(state: CheckerState, scope: Scope, name: string, valueType: ResolvedType, span: SourceSpan): none {
   target := lookup(scope, name)
-  if target == none { typeError(state, "Destructuring assignment target \"" + name + "\" is not defined", span); return }
+  if target == none { typeError(state, "Destructuring assignment target \"${name}\" is not defined", span); return }
   validateAssignmentBinding(state, target!, span)
-  if !isAssignableWithInterfaces(state.result, valueType, target!.type_) { typeError(state, "Cannot assign " + displayTypeName(valueType) + " to " + displayTypeName(target!.type_), span) }
+  if !isAssignableWithInterfaces(state.result, valueType, target!.type_) { typeError(state, "Cannot assign ${displayTypeName(valueType)} to ${displayTypeName(target!.type_)}", span) }
 }
 
 export function checkCase(state: CheckerState, statement: CaseStatement, scope: Scope, inLoop: bool = false): bool {

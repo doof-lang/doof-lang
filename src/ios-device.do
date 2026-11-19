@@ -196,7 +196,7 @@ export function selectProvisioningProfile(
     if selected == none || betterProvisioningProfile(profile, selected!, bundleId, nowEpochMs) { selected = profile }
   }
   if selected == none {
-    return Failure("Could not auto-detect a provisioning profile for bundle id \"" + bundleId + "\". Pass --ios-provisioning-profile.")
+    return Failure("Could not auto-detect a provisioning profile for bundle id \"${bundleId}\". Pass --ios-provisioning-profile.")
   }
   return Success(selected!)
 }
@@ -207,14 +207,14 @@ export function selectSigningIdentity(
   identities: IOSCodesignIdentity[],
 ): Result<string, string> {
   if profile.certFingerprints.length == 0 {
-    return Failure("Provisioning profile \"" + profile.profilePath + "\" does not include DeveloperCertificates. Pass --ios-sign-identity.")
+    return Failure("Provisioning profile \"${profile.profilePath}\" does not include DeveloperCertificates. Pass --ios-sign-identity.")
   }
   for identity of identities {
     for fingerprint of profile.certFingerprints {
       if identity.fingerprint == fingerprint { return Success(identity.name) }
     }
   }
-  return Failure("Could not auto-detect a signing identity for profile \"" + profile.profilePath + "\". Pass --ios-sign-identity.")
+  return Failure("Could not auto-detect a signing identity for profile \"${profile.profilePath}\". Pass --ios-sign-identity.")
 }
 
 /** Resolves the sole installed distribution identity whose certificate is authorized by an Ad Hoc profile. */
@@ -232,7 +232,7 @@ export function resolveIOSAdHocSigningIdentity(
   if matching.length == 0 {
     return Failure(
       "No installed Apple Distribution identity is included in provisioning profile \"" +
-      profile.profilePath + "\"",
+      "${profile.profilePath}\"",
     )
   }
   if matching.length > 1 {
@@ -260,11 +260,11 @@ export function validateIOSAdHocSigning(
   if !profileMatchesBundleId(profile.applicationIdentifier, bundleId) {
     return Failure(
       "Provisioning profile application-identifier \"" + profile.applicationIdentifier +
-      "\" does not match bundle id \"" + bundleId + "\"",
+      "\" does not match bundle id \"${bundleId}\"",
     )
   }
   if profile.expirationEpochMs <= nowEpochMs {
-    return Failure("Provisioning profile is expired: " + profile.profilePath)
+    return Failure("Provisioning profile is expired: ${profile.profilePath}")
   }
   if profile.provisionsAllDevices {
     return Failure("Enterprise provisioning profiles cannot be used for Ad Hoc packaging")
@@ -273,22 +273,22 @@ export function validateIOSAdHocSigning(
     return Failure("Development provisioning profiles cannot be used for Ad Hoc packaging")
   }
   if profile.provisionedDeviceCount == 0 {
-    return Failure("Ad Hoc provisioning profile contains no registered devices: " + profile.profilePath)
+    return Failure("Ad Hoc provisioning profile contains no registered devices: ${profile.profilePath}")
   }
   if !identityName.startsWith("Apple Distribution:") && !identityName.startsWith("iPhone Distribution:") {
-    return Failure("iOS Ad Hoc packaging requires an Apple Distribution signing identity, got \"" + identityName + "\"")
+    return Failure("iOS Ad Hoc packaging requires an Apple Distribution signing identity, got \"${identityName}\"")
   }
   let selected: IOSCodesignIdentity | none = none
   for identity of identities {
     if identity.name == identityName { selected = identity; break }
   }
   if selected == none {
-    return Failure("Configured iOS signing identity is not currently valid: \"" + identityName + "\"")
+    return Failure("Configured iOS signing identity is not currently valid: \"${identityName}\"")
   }
   if !profile.certFingerprints.contains(selected!.fingerprint) {
     return Failure(
       "Configured iOS signing identity \"" + identityName +
-      "\" is not included in provisioning profile \"" + profile.profilePath + "\"",
+      "\" is not included in provisioning profile \"${profile.profilePath}\"",
     )
   }
   return Success()
@@ -381,7 +381,7 @@ export function parseProvisioningProfile(profilePath: string, workDirectory: str
     "reading provisioning profile application identifier",
   )
   if applicationIdentifier == "" {
-    return Failure("Provisioning profile missing Entitlements.application-identifier: " + profilePath)
+    return Failure("Provisioning profile missing Entitlements.application-identifier: ${profilePath}")
   }
   expirationResult := deviceCommandText(
     "plutil", ["-extract", "ExpirationDate", "raw", "-o", "-", decodedPath],
@@ -563,7 +563,7 @@ export function signIOSDeviceApp(
 ): Result<none, string> {
   if hostPlatform() != "macos" { return Failure("iOS device signing is only supported on macOS") }
   if !exists(options.provisioningProfilePath) {
-    return Failure("Provisioning profile not found: " + options.provisioningProfilePath)
+    return Failure("Provisioning profile not found: ${options.provisioningProfilePath}")
   }
   removeTree(workDirectory)
   ensureDirectory(workDirectory)
@@ -578,7 +578,7 @@ export function signIOSDeviceApp(
     removeTree(workDirectory)
     return Failure(
       "Provisioning profile application-identifier \"" + applicationIdentifier +
-      "\" does not match bundle id \"" + bundleId + "\"",
+      "\" does not match bundle id \"${bundleId}\"",
     )
   }
   try ignored := deviceCommandText(

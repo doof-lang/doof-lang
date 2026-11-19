@@ -107,7 +107,7 @@ export function buildNativeProject(
         output,
         error: pkgConfigResult.error,
       })
-      _ := applied else error { println("error: " + error); return 1 }
+      _ := applied else error { println("error: ${error}"); return 1 }
     }
   }
 
@@ -120,7 +120,7 @@ export function buildNativeProject(
   }
   if compiler == "" { compiler = if platform == "windows" then "cl.exe" else "c++" }
   optional := resolveOptionalNativeDependencies(project.nativeBuild, compiler, outputDirectory, platform, wasm, pkgConfigCommand) else error {
-    println("error: " + error)
+    println("error: ${error}")
     return 1
   }
   if outputMode == .Progress { for description of optional { println(description) } }
@@ -133,7 +133,7 @@ export function buildNativeProject(
       outputDirectory, project.nativeBuild, toolchain, compilerIdentity(toolchain.cxx, identities),
       platform, mode, outputMode == .Progress,
     ) else error {
-      println("error: " + error)
+      println("error: ${error}")
       return 1
     }
     if wasm && project.nativeBuild.bundledLibraries.length > 0 {
@@ -152,7 +152,7 @@ export function buildNativeProject(
   exitCode := executeNativePlan(outputDirectory, plan, project, outputMode)
   if exitCode != 0 { return exitCode }
   _ := copyBundledLibraries(project.nativeBuild.bundledLibraries, parentDirectory(outputPath)) else error {
-    println("error: " + error)
+    println("error: ${error}")
     return 1
   }
   return 0
@@ -164,15 +164,15 @@ function copyBundledLibraries(libraries: string[], directory: string): Result<no
   for library of libraries {
     destination := joinOutput(directory, fileNameOf(library))
     if isDirectory(library) {
-      return Failure("Bundled vendor library " + library + " is a directory; frameworks are only supported in app bundles")
+      return Failure("Bundled vendor library ${library} is a directory; frameworks are only supported in app bundles")
     }
-    content := readBlob(library) else { return Failure("Could not read bundled vendor library " + library) }
+    content := readBlob(library) else { return Failure("Could not read bundled vendor library ${library}") }
     if exists(destination) {
-      previous := readBlob(destination) else { return Failure("Could not read " + destination) }
+      previous := readBlob(destination) else { return Failure("Could not read ${destination}") }
       if blobsEqual(previous, content) { continue }
     }
-    _ := writeBlob(destination, content) else { return Failure("Could not copy bundled vendor library to " + destination) }
-    _ := copyPermissions(library, destination) else { return Failure("Could not copy permissions to " + destination) }
+    _ := writeBlob(destination, content) else { return Failure("Could not copy bundled vendor library to ${destination}") }
+    _ := copyPermissions(library, destination) else { return Failure("Could not copy permissions to ${destination}") }
   }
   return Success()
 }
@@ -226,8 +226,8 @@ function executeNativePlan(
       pchResult := runBuildCommand(pchTask.compiler, mutableArguments(pchTask.arguments))
       if pchResult.exitCode != 0 {
         printBuildOutput(pchResult)
-        if pchResult.truncated { println("... native compiler output capture truncated after " + string(MAX_NATIVE_OUTPUT_BYTES) + " bytes"); truncationReported = true }
-        println("error: native compiler failed to build the precompiled runtime header with code " + string(pchResult.exitCode))
+        if pchResult.truncated { println("... native compiler output capture truncated after ${MAX_NATIVE_OUTPUT_BYTES} bytes"); truncationReported = true }
+        println("error: native compiler failed to build the precompiled runtime header with code ${pchResult.exitCode}")
         return pchResult.exitCode
       }
       nextState.tasks.push(captureTaskState(pchTask, pchFingerprint))
@@ -269,12 +269,12 @@ function executeNativePlan(
     taskResult := promises.takeFirstCompleted() else error {
       for worker of workers { ignoredWorker := retire worker }
       if outputMode == .Progress && dirtyTasks.length > 0 { println("") }
-      println("error: native compiler worker failed: " + error)
+      println("error: native compiler worker failed: ${error}")
       return 1
     }
     commandResults.push(taskResult.output)
     completedTasks += 1
-    if outputMode == .Progress { printFlushed("\r" + renderProgressBar(completedTasks, dirtyTasks.length)) }
+    if outputMode == .Progress { printFlushed("\r${renderProgressBar(completedTasks, dirtyTasks.length)}") }
     if nextTaskIndex < dirtyTasks.length {
       promises.push(async workers[taskResult.workerIndex].compile(taskResult.workerIndex, dirtyTasks[nextTaskIndex]))
       nextTaskIndex += 1
@@ -285,11 +285,11 @@ function executeNativePlan(
   for commandResult of commandResults {
     if shouldPrintNativeCommandOutput(commandResult.exitCode) {
       printBuildOutput(commandResult)
-      if commandResult.truncated && !truncationReported { println("... native compiler output capture truncated after " + string(MAX_NATIVE_OUTPUT_BYTES) + " bytes"); truncationReported = true }
+      if commandResult.truncated && !truncationReported { println("... native compiler output capture truncated after ${MAX_NATIVE_OUTPUT_BYTES} bytes"); truncationReported = true }
     }
     if compileExitCode == 0 && commandResult.exitCode != 0 { compileExitCode = commandResult.exitCode }
   }
-  if compileExitCode != 0 { println("error: native object compiler exited with code " + string(compileExitCode)); return compileExitCode }
+  if compileExitCode != 0 { println("error: native object compiler exited with code ${compileExitCode}"); return compileExitCode }
 
   let objectPaths: string[] = []
   if pchTask := plan.precompiledHeaderTask {
@@ -302,7 +302,7 @@ function executeNativePlan(
     else { nextState.tasks.push(indexedNativeTaskState(previousTasks, task.id)!) }
   }
 
-  linkId := "link:" + plan.outputPath
+  linkId := "link:${plan.outputPath}"
   computedLinkFingerprint := linkFingerprint(plan.linker, plan.linkArguments, plan.outputPath, identities)
   linkPrevious := indexedNativeTaskState(previousTasks, linkId)
   let linkChanged = false
@@ -312,13 +312,13 @@ function executeNativePlan(
     if isMsvcLinker(plan.linker) {
       responsePath := msvcLinkResponsePath(outputDirectory)
       writeTextIfChanged(responsePath, msvcLinkResponseFile(plan.linkArguments))
-      executedLinkArguments = ["@" + responsePath]
+      executedLinkArguments = ["@${responsePath}"]
     }
     linkResult := runBuildCommand(plan.linker, executedLinkArguments)
     if linkResult.exitCode != 0 {
       printBuildOutput(linkResult)
-      if linkResult.truncated && !truncationReported { println("... native linker output capture truncated after " + string(MAX_NATIVE_OUTPUT_BYTES) + " bytes") }
-      println("error: native linker exited with code " + string(linkResult.exitCode))
+      if linkResult.truncated && !truncationReported { println("... native linker output capture truncated after ${MAX_NATIVE_OUTPUT_BYTES} bytes") }
+      println("error: native linker exited with code ${linkResult.exitCode}")
       return linkResult.exitCode
     }
     nextState.tasks.push(captureLinkState(plan.outputPath, computedLinkFingerprint, objectPaths))
@@ -350,21 +350,21 @@ function compilerIdentity(command: string, identities: NativeCompilerIdentity[])
   for identity of identities { if identity.command == command { return identity.signature } }
   result := runBuildCommand(command, if isMsvcCompiler(command) then ["/?"] else ["--version"])
   let description = command
-  if result.exitCode == 0 { description = description + "\n" + BlobReader(result.output).readString(long(result.output.length)) }
+  if result.exitCode == 0 { description = "${description}\n${BlobReader(result.output).readString(long(result.output.length))}" }
   signature := sha256HexString(description)
   identities.push(NativeCompilerIdentity { command, signature })
   return signature
 }
 
 function taskFingerprint(task: NativeCompileTask, identities: NativeCompilerIdentity[]): string {
-  let value = task.id + "\n" + compilerIdentity(task.compiler, identities)
-  for argument of task.arguments { value = value + "\n" + argument }
+  let value = "${task.id}\n${compilerIdentity(task.compiler, identities)}"
+  for argument of task.arguments { value = "${value}\n${argument}" }
   return sha256HexString(value)
 }
 
 function linkFingerprint(linker: string, arguments: string[], outputPath: string, identities: NativeCompilerIdentity[]): string {
-  let value = "link:" + outputPath + "\n" + compilerIdentity(linker, identities)
-  for argument of arguments { value = value + "\n" + argument }
+  let value = "link:${outputPath}\n${compilerIdentity(linker, identities)}"
+  for argument of arguments { value = "${value}\n${argument}" }
   return sha256HexString(value)
 }
 
@@ -372,7 +372,7 @@ function pathSignature(path: string, contentHash: bool): NativeInputSignature | 
   if !exists(path) || isDirectory(path) { return none }
   info := metadata(path) else { return none }
   modifiedNanos := info.modifiedAt.toEpochNanos()
-  signature := if contentHash then sha256Hex(readBlob(path)!) else string(info.size) + ":" + string(modifiedNanos)
+  signature := if contentHash then sha256Hex(readBlob(path)!) else "${info.size}:${modifiedNanos}"
   return NativeInputSignature { path, signature, contentHash, size: info.size, modifiedNanos }
 }
 
@@ -447,7 +447,7 @@ function captureTaskState(task: NativeCompileTask, fingerprint: string): NativeT
 
 function captureLinkState(outputPath: string, fingerprint: string, objectPaths: string[]): NativeTaskState {
   info := metadata(outputPath)!
-  state := NativeTaskState { id: "link:" + outputPath, fingerprint, outputPath, outputSize: info.size, outputModifiedNanos: info.modifiedAt.toEpochNanos() }
+  state := NativeTaskState { id: "link:${outputPath}", fingerprint, outputPath, outputSize: info.size, outputModifiedNanos: info.modifiedAt.toEpochNanos() }
   for path of objectPaths {
     if signature := pathSignature(path, false) { state.inputs.push(signature) }
   }
@@ -462,7 +462,7 @@ function readBuildState(path: string): NativeBuildState {
 }
 
 function writeBuildState(path: string, state: NativeBuildState): none {
-  temporaryPath := path + ".tmp"
+  temporaryPath := "${path}.tmp"
   writeText(temporaryPath, renderNativeBuildState(state))!
   rename(temporaryPath, path)!
 }
@@ -483,7 +483,7 @@ export function nativeSupportFileNeedsWrite(previous: string | none, content: st
 /** Renders one quoted MSVC linker argument per line for an @response file. */
 export function msvcLinkResponseFile(arguments: string[]): string {
   let content = ""
-  for argument of arguments { content = content + quoteMsvcResponseArgument(argument) + "\n" }
+  for argument of arguments { content = "${content}${quoteMsvcResponseArgument(argument)}\n" }
   return content
 }
 

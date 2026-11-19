@@ -174,10 +174,10 @@ export function deriveRanlib(compiler: string, platform: string): string {
 // llvm-ar/llvm-ranlib, and the plain ar/ranlib pair.
 function deriveArchiveTool(compiler: string, platform: string, tool: string): string {
   if compiler == "em++" || compiler.endsWith("/em++") {
-    return compiler.substring(0, compiler.length - 4) + "em" + tool
+    return "${compiler.substring(0, compiler.length - 4)}em${tool}"
   }
   if compiler == "g++" || compiler.endsWith("/g++") {
-    return compiler.substring(0, compiler.length - 3) + "gcc-" + tool
+    return "${compiler.substring(0, compiler.length - 3)}gcc-${tool}"
   }
   name := compiler.toLowerCase()
   // Apple's ar reads LLVM bitcode through libLTO; elsewhere Clang needs
@@ -214,7 +214,7 @@ export function planNativeCompile(
   swiftLink := hasSwiftSource(native.sourceFiles)
   let compileArguments: string[] = ["-std=c++17"]
   for flag of gccModeFlags(mode, wasm, swiftLink) { compileArguments.push(flag) }
-  for define of native.defines { compileArguments.push("-D" + define) }
+  for define of native.defines { compileArguments.push("-D${define}") }
   compileArguments.push("-I")
   compileArguments.push(outputDirectory)
   for includePath of native.includePaths {
@@ -233,7 +233,7 @@ export function planNativeCompile(
     pchPath := runtimeHeader + if clangPch then ".pch" else ".gch"
     let pchArguments: string[] = []
     for argument of compileArguments { pchArguments.push(argument) }
-    dependencyFile := pchPath + ".d"
+    dependencyFile := "${pchPath}.d"
     pchArguments.push("-MMD")
     pchArguments.push("-MF")
     pchArguments.push(dependencyFile)
@@ -243,7 +243,7 @@ export function planNativeCompile(
     pchArguments.push("-o")
     pchArguments.push(pchPath)
     precompiledHeaderTask = NativeCompileTask {
-      id: "pch:" + pchPath,
+      id: "pch:${pchPath}",
       compiler,
       sourcePath: runtimeHeader,
       outputPath: pchPath,
@@ -258,7 +258,7 @@ export function planNativeCompile(
   for index of 0..<modules.length {
     sourcePath := resolveBuildPath(outputDirectory, modules[index].sourceName)
     objectPath := resolveBuildPath(outputDirectory, ".doof-objects/generated/" + replaceSourceExtension(modules[index].sourceName, ".o"))
-    dependencyFile := objectPath + ".d"
+    dependencyFile := "${objectPath}.d"
     arguments := copyArguments(compileArguments)
     // A C++ PCH is valid for generated C++ translation units. Native sources
     // may be C or Objective-C++, whose compiler language mode is incompatible.
@@ -271,7 +271,7 @@ export function planNativeCompile(
     arguments.push(dependencyFile)
     appendObjectArguments(arguments, sourcePath, objectPath)
     compileTasks.push(NativeCompileTask {
-      id: "object:" + objectPath,
+      id: "object:${objectPath}",
       compiler,
       sourcePath,
       outputPath: objectPath,
@@ -284,7 +284,7 @@ export function planNativeCompile(
   for index of 0..<native.sourceFiles.length {
     sourcePath := resolveBuildPath(outputDirectory, native.sourceFiles[index])
     swiftSource := isSwiftSource(sourcePath)
-    objectPath := resolveBuildPath(outputDirectory, ".doof-objects/native/" + sha1HexString(native.sourceFiles[index]) + ".o")
+    objectPath := resolveBuildPath(outputDirectory, ".doof-objects/native/${sha1HexString(native.sourceFiles[index])}.o")
     dependencyFile := if swiftSource then "" else objectPath + ".d"
     cSource := isCSource(sourcePath)
     arguments := if swiftSource then swiftObjectArguments(sourcePath, objectPath, mode) else copyNativeCompileArguments(compileArguments, cSource)
@@ -296,7 +296,7 @@ export function planNativeCompile(
     }
     taskCompiler := if swiftSource then "swiftc" else if cSource then deriveCCompiler(compiler) else compiler
     compileTasks.push(NativeCompileTask {
-      id: "object:" + objectPath,
+      id: "object:${objectPath}",
       compiler: taskCompiler,
       sourcePath,
       outputPath: objectPath,
@@ -320,9 +320,9 @@ export function planNativeCompile(
     }
   }
   for libraryPath of native.libraryPaths {
-    linkArguments.push("-L" + resolveBuildPath(outputDirectory, libraryPath))
+    linkArguments.push("-L${resolveBuildPath(outputDirectory, libraryPath)}")
   }
-  for library of native.linkLibraries { linkArguments.push("-l" + library) }
+  for library of native.linkLibraries { linkArguments.push("-l${library}") }
   for framework of native.frameworks {
     linkArguments.push("-framework")
     linkArguments.push(framework)
@@ -347,7 +347,7 @@ export function planNativeCompile(
     linkArguments.push("-fwasm-exceptions")
     if !wasmCommand {
       linkArguments.push("--no-entry")
-      linkArguments.push("-sEXPORTED_FUNCTIONS=" + wasmExportList(wasmExportNames))
+      linkArguments.push("-sEXPORTED_FUNCTIONS=${wasmExportList(wasmExportNames)}")
     }
     for flag of native.linkerFlags { linkArguments.push(flag) }
   }
@@ -378,7 +378,7 @@ function planMsvcNativeCompile(
     "/nologo", "/std:c++17", "/EHsc", "/utf-8", "/Zc:__cplusplus", "/Zc:lambda", "/permissive-",
   ]
   for flag of msvcModeFlags(mode) { compileArguments.push(flag) }
-  for define of native.defines { compileArguments.push("/D" + define) }
+  for define of native.defines { compileArguments.push("/D${define}") }
   compileArguments.push("/I")
   compileArguments.push(outputDirectory)
   for includePath of native.includePaths {
@@ -398,20 +398,20 @@ function planMsvcNativeCompile(
     pchSourcePath := resolveBuildPath(outputDirectory, "doof_msvc_pch.cpp")
     pchPath = resolveBuildPath(outputDirectory, ".doof-objects/pch/doof_msvc.pch")
     pchObjectPath = resolveBuildPath(outputDirectory, ".doof-objects/pch/doof_msvc_pch.obj")
-    pchDependencyPath := pchPath + ".json"
+    pchDependencyPath := "${pchPath}.json"
     supportFiles.push(NativeBuildSupportFile { outputPath: pchHeaderPath, content: msvcPchHeaderSource() })
-    supportFiles.push(NativeBuildSupportFile { outputPath: pchSourcePath, content: "#include \"" + pchHeaderName + "\"\n" })
+    supportFiles.push(NativeBuildSupportFile { outputPath: pchSourcePath, content: "#include \"${pchHeaderName}\"\n" })
     pchArguments := copyArguments(compileArguments)
     pchArguments.push("/TP")
-    pchArguments.push("/Yc" + pchHeaderName)
-    pchArguments.push("/Fp" + pchPath)
+    pchArguments.push("/Yc${pchHeaderName}")
+    pchArguments.push("/Fp${pchPath}")
     pchArguments.push("/sourceDependencies")
     pchArguments.push(pchDependencyPath)
     pchArguments.push("/c")
     pchArguments.push(pchSourcePath)
-    pchArguments.push("/Fo" + pchObjectPath)
+    pchArguments.push("/Fo${pchObjectPath}")
     precompiledHeaderTask = NativeCompileTask {
-      id: "pch:" + pchPath,
+      id: "pch:${pchPath}",
       compiler,
       sourcePath: pchSourcePath,
       outputPath: pchPath,
@@ -427,16 +427,16 @@ function planMsvcNativeCompile(
   for module of modules {
     sourcePath := resolveBuildPath(outputDirectory, module.sourceName)
     objectPath := resolveBuildPath(outputDirectory, ".doof-objects/generated/" + replaceSourceExtension(module.sourceName, ".obj"))
-    dependencyFile := objectPath + ".json"
+    dependencyFile := "${objectPath}.json"
     arguments := copyArguments(compileArguments)
     if precompiledHeaderTask != none {
-      arguments.push("/FI" + pchHeaderName)
-      arguments.push("/Yu" + pchHeaderName)
-      arguments.push("/Fp" + pchPath)
+      arguments.push("/FI${pchHeaderName}")
+      arguments.push("/Yu${pchHeaderName}")
+      arguments.push("/Fp${pchPath}")
     }
     appendMsvcObjectArguments(arguments, sourcePath, objectPath, dependencyFile, false)
     compileTasks.push(NativeCompileTask {
-      id: "object:" + objectPath,
+      id: "object:${objectPath}",
       compiler,
       sourcePath,
       outputPath: objectPath,
@@ -448,12 +448,12 @@ function planMsvcNativeCompile(
   }
   for sourceFile of native.sourceFiles {
     sourcePath := resolveBuildPath(outputDirectory, sourceFile)
-    objectPath := resolveBuildPath(outputDirectory, ".doof-objects/native/" + sha1HexString(sourceFile) + ".obj")
-    dependencyFile := objectPath + ".json"
+    objectPath := resolveBuildPath(outputDirectory, ".doof-objects/native/${sha1HexString(sourceFile)}.obj")
+    dependencyFile := "${objectPath}.json"
     arguments := copyArguments(compileArguments)
     appendMsvcObjectArguments(arguments, sourcePath, objectPath, dependencyFile, isCSource(sourcePath))
     compileTasks.push(NativeCompileTask {
-      id: "object:" + objectPath,
+      id: "object:${objectPath}",
       compiler,
       sourcePath,
       outputPath: objectPath,
@@ -467,7 +467,7 @@ function planMsvcNativeCompile(
   for objectPath of objectPaths { linkArguments.push(objectPath) }
   for linkInput of native.linkInputs { linkArguments.push(linkInput) }
   for libraryPath of native.libraryPaths {
-    linkArguments.push("/LIBPATH:" + resolveBuildPath(outputDirectory, libraryPath))
+    linkArguments.push("/LIBPATH:${resolveBuildPath(outputDirectory, libraryPath)}")
   }
   for library of native.linkLibraries {
     linkArguments.push(if library.toLowerCase().endsWith(".lib") then library else library + ".lib")
@@ -479,7 +479,7 @@ function planMsvcNativeCompile(
   }
   if profile { linkArguments.push("/DEBUG") }
   for flag of native.linkerFlags { linkArguments.push(flag) }
-  linkArguments.push("/OUT:" + outputPath)
+  linkArguments.push("/OUT:${outputPath}")
   return NativeCompilePlan {
     compiler,
     linker: "link.exe",
@@ -515,7 +515,7 @@ function appendMsvcObjectArguments(
   arguments.push(dependencyFilePath)
   arguments.push("/c")
   arguments.push(sourcePath)
-  arguments.push("/Fo" + outputPath)
+  arguments.push("/Fo${outputPath}")
 }
 
 /** Adds optimized dead-code elimination and optional release symbol stripping. */
@@ -537,7 +537,7 @@ function appendLinkerOption(arguments: string[], option: string, swiftLink: bool
     arguments.push("-Xlinker")
     arguments.push(option)
   } else {
-    arguments.push("-Wl," + option)
+    arguments.push("-Wl,${option}")
   }
 }
 
@@ -587,13 +587,13 @@ function swiftObjectArguments(sourcePath: string, objectPath: string, mode: Nati
 /** Selects the C driver adjacent to the configured GCC-compatible C++ driver. */
 function deriveCCompiler(compiler: string): string {
   if compiler == "em++" || compiler.endsWith("/em++") {
-    return compiler.substring(0, compiler.length - 4) + "emcc"
+    return "${compiler.substring(0, compiler.length - 4)}emcc"
   }
   if compiler == "g++" || compiler.endsWith("/g++") {
-    return compiler.substring(0, compiler.length - 3) + "gcc"
+    return "${compiler.substring(0, compiler.length - 3)}gcc"
   }
   if compiler == "c++" || compiler.endsWith("/c++") {
-    return compiler.substring(0, compiler.length - 3) + "cc"
+    return "${compiler.substring(0, compiler.length - 3)}cc"
   }
   if compiler.endsWith("++") {
     return compiler.substring(0, compiler.length - 2)
@@ -603,7 +603,7 @@ function deriveCCompiler(compiler: string): string {
 
 function wasmExportList(names: string[]): string {
   let result = "[\"_malloc\",\"_free\",\"_doof_free\""
-  for name of names { result = result + ",\"_" + name + "\"" }
+  for name of names { result = "${result},\"_${name}\"" }
   return result + "]"
 }
 
@@ -626,5 +626,5 @@ function usesClangPrecompiledHeader(compiler: string, platform: string): bool {
 function resolveBuildPath(outputDirectory: string, path: string): string {
   if path.startsWith("/") || path.startsWith("\\\\") || (path.length > 1 && path[1] == ':') { return path }
   if outputDirectory.endsWith("/") { return outputDirectory + path }
-  return outputDirectory + "/" + path
+  return "${outputDirectory}/${path}"
 }

@@ -17,7 +17,7 @@ export function reportRetiredActorUses(statement: Statement, retired: Binding[],
     if identifier.resolvedBinding == none { continue }
     for binding of retired {
       if sameBinding(identifier.resolvedBinding!, binding) {
-        pushDiagnostic(diagnostics, module, identifier.span, "Cannot use actor binding \"" + identifier.name + "\" after it has been retired")
+        pushDiagnostic(diagnostics, module, identifier.span, "Cannot use actor binding \"${identifier.name}\" after it has been retired")
       }
     }
   }

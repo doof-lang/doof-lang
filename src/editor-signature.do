@@ -10,7 +10,7 @@ import { Lexer, TokenType, tokenValue } from "./lexer"
 function signatureResponse(type_: ResolvedType, module: string, offset: int, active: int): EditorResponse {
   fn := type_ as FunctionType else { return EditorResponse {} }
   let parameters: string[] = []
-  for parameter of fn.params { parameters.push(parameter.name + ": " + editorTypeName(parameter.type_)) }
+  for parameter of fn.params { parameters.push("${parameter.name}: ${editorTypeName(parameter.type_)}") }
   return EditorResponse { activeParameter: active, items: [EditorItem { label: editorTypeName(fn), parameters, kind: "function", module, start: offset, end: offset }] }
 }
 

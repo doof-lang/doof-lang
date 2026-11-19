@@ -50,7 +50,7 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
   // step. Weak references keep their own checked access.
   if member.force && canBeAbsent(objectType) || member.optional && hasFailureLayer(objectType) {
     if !hasPresentValue(objectType) {
-      typeError(state, "Cannot access member \"" + member.property + "\" on " + typeName(objectType) + ": the Result has no success value", member.span)
+      typeError(state, "Cannot access member \"${member.property}\" on ${typeName(objectType)}: the Result has no success value", member.span)
       return finish(state, member, unknownType())
     }
     if member.optional {
@@ -64,7 +64,7 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
       objectType = presentType(objectType)
     }
   } else if member.force && objectType.kind != "weak" && objectType.kind != "unknown" {
-    typeError(state, "Force access '!.' requires a nullable or Result receiver, got " + typeName(objectType), member.span)
+    typeError(state, "Force access '!.' requires a nullable or Result receiver, got ${typeName(objectType)}", member.span)
     member.force = false
   }
   case objectType {
@@ -86,7 +86,7 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
       } else if !member.optional && !member.force && hasNoneMember(state, union_) {
         // Member resolution skips the none arm so '?.' and '!.' can share
         // it; a plain '.' must not read through an absent value.
-        typeError(state, "Cannot access member \"" + member.property + "\" on possibly-none value of type \"" + typeName(objectType) + "\"; use '?.', '!.', or narrow it first", member.span)
+        typeError(state, "Cannot access member \"${member.property}\" on possibly-none value of type \"${typeName(objectType)}\"; use '?.', '!.', or narrow it first", member.span)
       }
     }
     _ -> { }
@@ -98,7 +98,7 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
           if identifier.name == "int" then "parseInt" else
           if identifier.name == "long" then "parseLong" else
           if identifier.name == "float" then "parseFloat" else "parseDouble"
-        typeError(state, identifier.name + ".parse was removed; import " + replacement + " from \"std/parse\"", member.span)
+        typeError(state, "${identifier.name}.parse was removed; import ${replacement} from \"std/parse\"", member.span)
         return finish(state, member, unknownType())
       }
     }
@@ -111,23 +111,23 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
   member.resolvedMember = selected
   let memberValue = selected.type_!
   if memberValue.kind == "unknown" && objectType.kind != "unknown" && state.diagnostics.length == diagnosticCount {
-    typeError(state, "Type \"" + typeName(objectType) + "\" has no member \"" + member.property + "\"", member.span)
+    typeError(state, "Type \"${typeName(objectType)}\" has no member \"${member.property}\"", member.span)
   }
   member.resolvedStaticOwner = selected.staticOwner
   if resolvedStaticOwner := member.resolvedStaticOwner && !isNamedStaticReceiver(member.object) {
-    typeError(state, "Static member '" + member.property + "' must be accessed through its class: use '" + resolvedStaticOwner.name + "." + member.property + "'", member.span)
+    typeError(state, "Static member '${member.property}' must be accessed through its class: use '${resolvedStaticOwner.name}.${member.property}'", member.span)
   }
   if member.resolvedStaticOwner == none && isNamedStaticReceiver(member.object) && selected.instance {
-    typeError(state, "Instance member '" + member.property + "' cannot be accessed through a class", member.span)
+    typeError(state, "Instance member '${member.property}' cannot be accessed through a class", member.span)
   }
   // The implied JSON members on a type parameter keep their static/instance
   // split: `T.fromSerialValue(...)` but `value.toSerialObject()`.
   if objectType.kind == "type-parameter" {
     typeReceiver := isTypeParameterName(member.object)
     if typeReceiver && member.property == "toSerialObject" {
-      typeError(state, "Instance member 'toSerialObject' cannot be accessed through type parameter \"" + typeName(objectType) + "\"; call it on a value", member.span)
+      typeError(state, "Instance member 'toSerialObject' cannot be accessed through type parameter \"${typeName(objectType)}\"; call it on a value", member.span)
     } else if !typeReceiver && member.property == "fromSerialValue" {
-      typeError(state, "Static member 'fromSerialValue' cannot be accessed through a value; use '" + typeName(objectType) + ".fromSerialValue'", member.span)
+      typeError(state, "Static member 'fromSerialValue' cannot be accessed through a value; use '${typeName(objectType)}.fromSerialValue'", member.span)
     }
   }
   case objectType {
@@ -135,12 +135,12 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
       namedReceiver := isNamedStaticReceiver(member.object)
       staticMember := member.property == "values" || member.property == "fromName" || member.property == "fromValue" || member.property == "fromSerialValue"
       if namedReceiver && (member.property == "name" || member.property == "value" || member.property == "toSerialValue") {
-        typeError(state, "Instance member '" + member.property + "' cannot be accessed through an enum type", member.span)
+        typeError(state, "Instance member '${member.property}' cannot be accessed through an enum type", member.span)
       } else if !namedReceiver && staticMember {
-        typeError(state, "Static enum member '" + member.property + "' cannot be accessed through a value", member.span)
+        typeError(state, "Static enum member '${member.property}' cannot be accessed through a value", member.span)
       }
       if !namedReceiver && enumVariantMember(state, objectType, member.property) {
-        typeError(state, "Enum variant '" + member.property + "' cannot be accessed through a value", member.span)
+        typeError(state, "Enum variant '${member.property}' cannot be accessed through a value", member.span)
       }
     }
     _ -> { }
@@ -190,7 +190,7 @@ export function checkIndex(state: CheckerState, index: IndexExpression, scope: S
     if hasFailureLayer(objectType) {
       // 'r?[i]' is '(r?)?[i]'.
       if !hasPresentValue(objectType) {
-        typeError(state, "Cannot index " + typeName(objectType) + ": the Result has no success value", index.span)
+        typeError(state, "Cannot index ${typeName(objectType)}: the Result has no success value", index.span)
         return finish(state, index, unknownType())
       }
       index.object = optionalConversion(state, index.object, objectType)
@@ -240,11 +240,11 @@ function explicitStaticReceiver(state: CheckerState, member: MemberExpression, o
         case declaration {
           generic: ClassDeclaration -> {
             if generic.typeParams.length == 0 {
-              typeError(state, "Class '" + generic.name + "' is not generic and takes no type arguments", member.span)
+              typeError(state, "Class '${generic.name}' is not generic and takes no type arguments", member.span)
               return objectType
             }
             if resolvedArgs.length != generic.typeParams.length {
-              typeError(state, typeArgumentArityMessage("Generic class '" + generic.name + "'", generic.typeParams.length, resolvedArgs.length), member.span)
+              typeError(state, typeArgumentArityMessage("Generic class '${generic.name}'", generic.typeParams.length, resolvedArgs.length), member.span)
               return unknownType()
             }
             validateTypeArgumentConstraints(state, generic.typeParams, generic.typeParamConstraints, resolvedArgs, member.span, classModuleFor(state.result, class_.symbol), scope)
@@ -308,13 +308,13 @@ function enumVariantMember(state: CheckerState, receiver: ResolvedType, property
 
 export function checkDotShorthand(state: CheckerState, expression: DotShorthand, expected: ResolvedType | none, allowsNone: bool = false): ResolvedType {
   if expected == none {
-    typeError(state, "Cannot resolve shorthand ." + expression.name + " without an expected class or enum type", expression.span)
+    typeError(state, "Cannot resolve shorthand .${expression.name} without an expected class or enum type", expression.span)
     return finish(state, expression, unknownType())
   }
   case expected! {
     enum_: EnumType -> {
       if !enumDeclaresVariant(state, enum_, expression.name) {
-        typeError(state, "Enum \"" + enum_.name + "\" has no variant \"" + expression.name + "\"", expression.span)
+        typeError(state, "Enum \"${enum_.name}\" has no variant \"${expression.name}\"", expression.span)
         return finish(state, expression, unknownType())
       }
       expression.resolvedShorthandOwnerName = enum_.name
@@ -330,7 +330,7 @@ export function checkDotShorthand(state: CheckerState, expression: DotShorthand,
       value := selected.type_!
       if selected.staticOwner == none {
         if state.diagnostics.length == diagnosticCount {
-          typeError(state, "Type \"" + class_.name + "\" has no static member \"" + expression.name + "\"", expression.span)
+          typeError(state, "Type \"${class_.name}\" has no static member \"${expression.name}\"", expression.span)
         }
         return finish(state, expression, unknownType())
       }
@@ -347,13 +347,13 @@ export function checkDotShorthand(state: CheckerState, expression: DotShorthand,
       case value {
         method: FunctionType -> {
           if !producesShorthandOwner(method.returnType, class_, allowsNone) {
-            typeError(state, "Shorthand ." + expression.name + " must name a static method returning " + allowed + "; it returns " + displayTypeName(method.returnType), expression.span)
+            typeError(state, "Shorthand .${expression.name} must name a static method returning ${allowed}; it returns ${displayTypeName(method.returnType)}", expression.span)
             return finish(state, expression, unknownType())
           }
         }
         _ -> {
           if value.kind != "unknown" && !producesShorthandOwner(value, class_, allowsNone) {
-            typeError(state, "Shorthand ." + expression.name + " must name a static field of type " + allowed + "; it has type " + displayTypeName(value), expression.span)
+            typeError(state, "Shorthand .${expression.name} must name a static field of type ${allowed}; it has type ${displayTypeName(value)}", expression.span)
             return finish(state, expression, unknownType())
           }
         }
@@ -384,7 +384,7 @@ export function checkDotShorthand(state: CheckerState, expression: DotShorthand,
     }
     _ -> { }
   }
-  typeError(state, "Cannot resolve shorthand ." + expression.name + " for expected type \"" + typeName(expected!) + "\"", expression.span)
+  typeError(state, "Cannot resolve shorthand .${expression.name} for expected type \"${typeName(expected!)}\"", expression.span)
   return finish(state, expression, unknownType())
 }
 
@@ -452,11 +452,11 @@ function checkUnionAliasJsonMember(state: CheckerState, member: MemberExpression
   finish(state, identifier, aliasType)
   if aliasType.kind == "unknown" { return finish(state, member, unknownType()) }
   if alias.typeParams.length > 0 {
-    typeError(state, "Automatic JSON deserialization is not available on generic type alias \"" + alias.name + "\"", member.span)
+    typeError(state, "Automatic JSON deserialization is not available on generic type alias \"${alias.name}\"", member.span)
     return finish(state, member, unknownType())
   }
   if unionAliasJsonDiscriminator(alias, jsonPrograms(state.result)) == none {
-    typeError(state, "Cannot deserialize type alias \"" + alias.name + "\": it must be a union of classes that share a literal-valued string field with distinct values (e.g. kind: \"variant\")", member.span)
+    typeError(state, "Cannot deserialize type alias \"${alias.name}\": it must be a union of classes that share a literal-valued string field with distinct values (e.g. kind: \"variant\")", member.span)
     return finish(state, member, unknownType())
   }
   alias.needsJson = true

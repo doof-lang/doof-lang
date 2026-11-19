@@ -44,5 +44,5 @@ export function parseFrontendCacheState(source: string): FrontendCacheState | no
 }
 
 export function renderFrontendCacheState(state: FrontendCacheState): string {
-  return formatJsonValue(state.toSerialObject()) + "\n"
+  return "${formatJsonValue(state.toSerialObject())}\n"
 }

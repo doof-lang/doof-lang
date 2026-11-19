@@ -58,7 +58,7 @@ export function symbolItem(index: EditorIndex, symbol: Symbol): EditorItem {
 export function itemIdentity(item: EditorItem): string => item.module + ":" + string(item.start) + ":" + item.label
 
 export function bindingItem(index: EditorIndex, binding: Binding): EditorItem {
-  key := binding.module + ":" + string(binding.span.start.offset) + ":" + binding.name
+  key := "${binding.module}:${binding.span.start.offset}:${binding.name}"
   if index.bindingItems.has(key) { return index.bindingItems.get(key)! }
   local := nameItem(index, binding.module, binding.name, binding.span.start.offset, binding.span.end.offset, binding.kind)
   let target = local
@@ -93,7 +93,7 @@ export function bindingItem(index: EditorIndex, binding: Binding): EditorItem {
 
 function addBinding(index: EditorIndex, binding: Binding): none {
   item := bindingItem(index, binding)
-  key := item.module + ":" + string(item.start) + ":" + item.label
+  key := "${item.module}:${item.start}:${item.label}"
   if index.indexedBindings.has(key) { return }
   index.indexedBindings.add(key)
   index.bindings.push(IndexedBinding { item, binding, type_: binding.type_ })

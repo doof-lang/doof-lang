@@ -58,7 +58,7 @@ export function renameCoverageError(index: EditorIndex, item: EditorItem): strin
         _ -> { }
       }
       if specifier != "" && resolver.resolve(source.path, specifier) == item.definitionModule {
-        return "Open the dependent module " + source.path + " before renaming; its references have not been checked."
+        return "Open the dependent module ${source.path} before renaming; its references have not been checked."
       }
     }
   }

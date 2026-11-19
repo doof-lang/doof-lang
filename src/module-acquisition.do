@@ -57,7 +57,7 @@ export function acquiredManifestPath(acquisition: ModuleAcquisition): string {
 }
 
 function acquisitionMatches(prefix: string, logicalPath: string): bool {
-  return logicalPath == prefix || logicalPath.startsWith(prefix + "/")
+  return logicalPath == prefix || logicalPath.startsWith("${prefix}/")
 }
 
 function selectedAcquisition(logicalPath: string, acquisitions: ModuleAcquisition[]): ModuleAcquisition | none {
@@ -75,5 +75,5 @@ function selectedAcquisition(logicalPath: string, acquisitions: ModuleAcquisitio
 function acquisitionJoinPath(directory: string, suffix: string): string {
   if suffix == "" { return directory }
   if directory.endsWith("/") { return directory + suffix }
-  return directory + "/" + suffix
+  return "${directory}/${suffix}"
 }

@@ -498,13 +498,13 @@ function markJsonKeyVisited(key: string, visited: string[]): bool {
 
 export function jsonOwnerKey(owner: ClassDeclaration): string {
   module := owner.resolvedSymbol?.module ?? ""
-  return module + "::" + owner.name
+  return "${module}::${owner.name}"
 }
 
 /** Interfaces share the class key space; one module cannot declare both names. */
 export function jsonInterfaceKey(owner: InterfaceDeclaration): string {
   module := owner.resolvedSymbol?.module ?? ""
-  return module + "::" + owner.name
+  return "${module}::${owner.name}"
 }
 
 function findJsonClassDeclaration(programs: Program[], symbol: Symbol): ClassDeclaration | none {
@@ -698,7 +698,7 @@ function jsonUnionDecodeConflict(layout: JsonUnionLayout, programs: Program[], v
       if first.jsonKind != second.jsonKind { continue }
       // Classes and interfaces share the object kind through a discriminator.
       if classMembers.length > 1 && classMembers.contains(first.member) && classMembers.contains(second.member) { continue }
-      return "whose members " + typeName(first.member) + " and " + typeName(second.member) + " both decode from a JSON " + first.jsonKind
+      return "whose members ${typeName(first.member)} and ${typeName(second.member)} both decode from a JSON ${first.jsonKind}"
     }
   }
   if classMembers.length > 1 && programs.length > 0 && classMembersJsonDiscriminator(classMembers, programs, none, visited) == none {
@@ -761,7 +761,7 @@ export function jsonUnionFieldBlocker(owner: ClassDeclaration, programs: Program
     if decode && field.const_ { continue }
     blocker := jsonUnionTypeBlocker(field.resolvedType!, programs, decode) else { continue }
     name := if field.names.length == 0 then "<field>" else field.names[0]
-    return "field \"" + name + "\" has union type \"" + typeName(blocker.union_) + "\", " + blocker.reason
+    return "field \"${name}\" has union type \"${typeName(blocker.union_)}\", ${blocker.reason}"
   }
   return none
 }
@@ -786,7 +786,7 @@ function jsonUnionTypeBlocker(type_: ResolvedType, programs: Program[], decode: 
       layout := jsonUnionLayout(type_, programs) else {
         for member of union_.types {
           if member.kind != "none" && jsonUnionMemberKind(member, programs) == none {
-            return JsonUnionBlocker { union_: type_, reason: "whose member " + typeName(member) + " has no single JSON kind" }
+            return JsonUnionBlocker { union_: type_, reason: "whose member ${typeName(member)} has no single JSON kind" }
           }
         }
         return none

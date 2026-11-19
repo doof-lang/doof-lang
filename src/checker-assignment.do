@@ -30,7 +30,7 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
   finish(state, expression.target, targetType)
   case expression.target {
     member: MemberExpression -> {
-      if member.resolvedShortCircuit { typeError(state, "An optional chain cannot be used as an assignment target; '." + member.property + "' short-circuits with an earlier '?.'", expression.target.span) }
+      if member.resolvedShortCircuit { typeError(state, "An optional chain cannot be used as an assignment target; '.${member.property}' short-circuits with an earlier '?.'", expression.target.span) }
     }
     index: IndexExpression -> {
       if index.resolvedShortCircuit { typeError(state, "An optional chain cannot be used as an assignment target; '[]' short-circuits with an earlier '?.' or '?[]'", expression.target.span) }
@@ -81,7 +81,7 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
         }
         map: MapResolvedType -> {
           key := checkExpression(state, index.index, scope, map.keyType)
-          if !isAssignableWithInterfaces(state.result, key, map.keyType) { typeError(state, "Cannot use " + typeName(key) + " as map key " + typeName(map.keyType), index.index.span) }
+          if !isAssignableWithInterfaces(state.result, key, map.keyType) { typeError(state, "Cannot use ${typeName(key)} as map key ${typeName(map.keyType)}", index.index.span) }
           if map.readonly_ { typeError(state, "Cannot assign through readonly map", expression.span) }
           if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, map.valueType) { typeError(state, "Cannot assign " + displayTypeName(value) + " to " + displayTypeName(map.valueType), expression.span) }
         }
@@ -113,14 +113,14 @@ function validateAssignmentOperator(state: CheckerState, operator: string, targe
     case target {
       result: ResultResolvedType -> {
         if !isAssignableWithInterfaces(state.result, value, target) && !isAssignableWithInterfaces(state.result, value, result.valueType) {
-          typeError(state, "Cannot assign " + typeName(value) + " through ??= to " + typeName(target), span)
+          typeError(state, "Cannot assign ${typeName(value)} through ??= to ${typeName(target)}", span)
         }
       }
-      _ -> { if !isAssignableWithInterfaces(state.result, value, target) { typeError(state, "Cannot assign " + typeName(value) + " through ??= to " + typeName(target), span) } }
+      _ -> { if !isAssignableWithInterfaces(state.result, value, target) { typeError(state, "Cannot assign ${typeName(value)} through ??= to ${typeName(target)}", span) } }
     }
     return
   }
   base := operator.substring(0, operator.length - 1)
   result := binaryOperatorType(state, base, target, value, span)
-  if !isAssignableWithInterfaces(state.result, result, target) { typeError(state, "Operator '" + operator + "' produces " + typeName(result) + ", which cannot be assigned to " + typeName(target), span) }
+  if !isAssignableWithInterfaces(state.result, result, target) { typeError(state, "Operator '${operator}' produces ${typeName(result)}, which cannot be assigned to ${typeName(target)}", span) }
 }

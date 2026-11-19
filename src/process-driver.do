@@ -69,10 +69,10 @@ export function printDiagnostics(diagnostics: Diagnostic[]): none {
     diagnostic := diagnostics[index]
     println(
       diagnostic.module + ":" + string(diagnostic.span.start.line) + ":" + string(diagnostic.span.start.column) +
-      ": " + diagnostic.severity + ": " + diagnostic.message,
+      ": ${diagnostic.severity}: ${diagnostic.message}",
     )
   }
   if diagnostics.length > displayCount {
-    println("... " + string(diagnostics.length - displayCount) + " more diagnostics omitted")
+    println("... ${diagnostics.length - displayCount} more diagnostics omitted")
   }
 }

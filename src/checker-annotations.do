@@ -86,10 +86,10 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
               typeError(state, typeArgumentArityMessage(alias.name, alias.typeParams.length, named.typeArgs.length), named.span)
               return finishAnnotation(resolution, annotation, unknownType())
             }
-            key := symbol!.module + ":" + alias.name
+            key := "${symbol!.module}:${alias.name}"
             for active of resolution.aliases {
               if active == key {
-                typeError(state, "Cyclic type alias '" + alias.name + "'", named.span)
+                typeError(state, "Cyclic type alias '${alias.name}'", named.span)
                 return finishAnnotation(resolution, annotation, unknownType())
               }
             }
@@ -120,13 +120,13 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
           class_: ClassDeclaration -> { valid = validateNominalTypeArguments(state, class_.name, class_.typeParams, class_.typeParamConstraints, typeArgs, named.span, declarationModule, scope, validateConstraints) }
           _ -> {
             if !isInterface {
-              typeError(state, "Symbol '" + named.name + "' is not a type", named.span)
+              typeError(state, "Symbol '${named.name}' is not a type", named.span)
               valid = false
             }
           }
         }
       } else if !isInterface && symbol!.kind != "class" && symbol!.kind != "struct" {
-        typeError(state, "Symbol '" + named.name + "' is not a type", named.span)
+        typeError(state, "Symbol '${named.name}' is not a type", named.span)
         valid = false
       }
       if !valid { return finishAnnotation(resolution, annotation, unknownType()) }
@@ -153,7 +153,7 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
     }
     weak_: WeakType -> {
       inner := resolveAnnotationType(resolution, weak_.type_, module, scope, validateConstraints)
-      if !isWeakReferenceTarget(inner) { typeError(state, "Type \"" + typeName(inner) + "\" is not a valid weak reference target", weak_.span) }
+      if !isWeakReferenceTarget(inner) { typeError(state, "Type \"${typeName(inner)}\" is not a valid weak reference target", weak_.span) }
       return finishAnnotation(resolution, annotation, weakType(inner))
     }
   }
@@ -219,7 +219,7 @@ export function resolveTypeArguments(state: CheckerState, annotations: TypeAnnot
 function rejectUnexpectedTypeArguments(resolution: AnnotationResolution, named: NamedType, module: ModuleInfo, scope: Scope, validateConstraints: bool): bool {
   if named.typeArgs.length == 0 { return false }
   resolveTypeArgumentAnnotations(resolution, named, module, scope, validateConstraints)
-  typeError(resolution.state, named.name + " does not accept type arguments", named.span)
+  typeError(resolution.state, "${named.name} does not accept type arguments", named.span)
   return true
 }
 
@@ -283,5 +283,5 @@ export function validateTypeArgumentConstraints(state: CheckerState, names: stri
 }
 
 function reportConstraintViolation(state: CheckerState, typeParam: string, argument: ResolvedType, constraint: string, span: SourceSpan, detail: string = ""): none {
-  typeError(state, "Type \"" + typeName(argument) + "\" does not satisfy constraint \"" + constraint + "\" for type parameter \"" + typeParam + "\"" + detail, span)
+  typeError(state, "Type \"${typeName(argument)}\" does not satisfy constraint \"${constraint}\" for type parameter \"${typeParam}\"${detail}", span)
 }

@@ -73,7 +73,7 @@ export function editorTypeName(type_: ResolvedType): string {
       for index of 0..<function_.params.length {
         if index > 0 { signature += ", " }
         parameter := function_.params[index]
-        signature += parameter.name + ": " + editorTypeName(parameter.type_)
+        signature += "${parameter.name}: ${editorTypeName(parameter.type_)}"
         if parameter.hasDefault { signature += " = …" }
       }
       return signature + "): " + editorTypeName(function_.returnType)

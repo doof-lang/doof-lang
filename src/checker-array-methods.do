@@ -16,7 +16,7 @@ export function arrayMemberType(state: CheckerState, array: ArrayResolvedType, p
   element := array.elementType
   if property == "length" { return primitive("int") }
   if array.readonly_ && mutatingMethods.contains(property) {
-    typeError(state, "Method \"" + property + "\" is not available on readonly array", span)
+    typeError(state, "Method \"${property}\" is not available on readonly array", span)
     return unknownType()
   }
   if property == "push" { return functionType([param("value", element)], noneType()) }
@@ -49,7 +49,7 @@ export function arrayMemberType(state: CheckerState, array: ArrayResolvedType, p
   }
   if property == "slice" { return functionType([param("start", primitive("int")), param("end", primitive("int"))], arrayType(element, array.readonly_)) }
   if array.readonly_ && (property == "buildReadonly" || property == "drainToReadonly" || property == "cloneReadonly") {
-    typeError(state, "Method \"" + property + "\" is not available on readonly array", span)
+    typeError(state, "Method \"${property}\" is not available on readonly array", span)
     return unknownType()
   }
   if property == "buildReadonly" { deprecatedBuildReadonly(state, span); return functionType([], arrayType(element, true)) }

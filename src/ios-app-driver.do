@@ -138,7 +138,7 @@ export function assembleIOSApp(
   if config.embeddedLibraries.length > 0 {
     return Failure("Self-hosted iOS embedded library bundling is not yet supported")
   }
-  appPath := outputPath(buildDirectory, config.executableName + ".app")
+  appPath := outputPath(buildDirectory, "${config.executableName}.app")
   removeTree(appPath)
   ensureDirectory(appPath)
   bundleExecutable := outputPath(appPath, config.executableName)
@@ -170,7 +170,7 @@ export function signAndArchiveIOSApp(
   if config.provisioningProfilePath == "" {
     return Failure("No iOS provisioning profile configured; pass --ios-provisioning-profile")
   }
-  if !exists(config.provisioningProfilePath) { return Failure("Provisioning profile not found: " + config.provisioningProfilePath) }
+  if !exists(config.provisioningProfilePath) { return Failure("Provisioning profile not found: ${config.provisioningProfilePath}") }
 
   workDirectory := outputPath(buildDirectory, ".doof-ios-package")
   removeTree(workDirectory)
@@ -233,7 +233,7 @@ export function signAndArchiveIOSApp(
   )
   if signedEntitlements.contains("invalid entitlements blob") || !signedEntitlements.contains(exactApplicationIdentifier) {
     removeTree(workDirectory)
-    return Failure("Signed iOS entitlements do not contain the exact application identifier \"" + exactApplicationIdentifier + "\"")
+    return Failure("Signed iOS entitlements do not contain the exact application identifier \"${exactApplicationIdentifier}\"")
   }
 
   payloadDirectory := outputPath(workDirectory, "Payload")

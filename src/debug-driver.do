@@ -18,13 +18,13 @@ export function launchDebugger(binary: string, source: string, directory: string
     app = resolved
   }
   if launchJson == "" && !exists(app + "/Contents/MacOS/DoofDebugger") {
-    println("error: Doof Debugger.app is missing at " + app + "; run ./install.sh or reinstall Doof")
+    println("error: Doof Debugger.app is missing at ${app}; run ./install.sh or reinstall Doof")
     return 1
   }
-  symbols := binary + ".dSYM"
+  symbols := "${binary}.dSYM"
   plan := planProfileSymbols(binary, symbols, directory)
   built := run(plan.command, plan.arguments, ExecOptions { cwd: directory, inheritOutput: true }) else error {
-    println("error: Could not generate debug symbols: " + error); return 1
+    println("error: Could not generate debug symbols: ${error}"); return 1
   }
   if built.exitCode != 0 { return built.exitCode }
   launch := DebugLaunch { executable: binary, source, directory, symbols, arguments }
@@ -36,10 +36,10 @@ export function launchDebugger(binary: string, source: string, directory: string
   result := run(invocation.command, invocation.arguments, ExecOptions {
     cwd: directory, inheritOutput: true, withStdin: false,
   })
-  _ := remove(descriptor) else { println("warning: Could not remove debugger launch descriptor " + descriptor) }
+  _ := remove(descriptor) else { println("warning: Could not remove debugger launch descriptor ${descriptor}") }
   case result {
     success: Success -> return success.value.exitCode,
-    failure: Failure -> { println("error: Could not launch Doof Debugger: " + failure.error); return 1 },
+    failure: Failure -> { println("error: Could not launch Doof Debugger: ${failure.error}"); return 1 },
   }
 }
 
@@ -47,7 +47,7 @@ export function writeDebugLaunch(launch: DebugLaunch, descriptor: string): int {
   error := debugLaunchError(launch)
   if error != "" { println("error: " + error); return 1 }
   _ := writeText(descriptor, formatJsonValue(launch.toSerialObject())) else error {
-    println("error: Could not write debugger launch: " + string(error)); return 1
+    println("error: Could not write debugger launch: ${error}"); return 1
   }
   return 0
 }

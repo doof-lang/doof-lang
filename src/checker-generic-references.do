@@ -29,7 +29,7 @@ export function instantiateGenericReference(state: CheckerState, expression: Exp
   name := referenceName(expression)
   contextual := expectedFunction(expected)
   if contextual == none {
-    typeError(state, "Generic function '" + name + "' can only be used as a value where a function type is expected, such as a typed parameter or an annotated binding", expression.span)
+    typeError(state, "Generic function '${name}' can only be used as a value where a function type is expected, such as a typed parameter or an annotated binding", expression.span)
     // The uninstantiated signature still reports the reference's arity.
     return referenceType
   }
@@ -37,7 +37,7 @@ export function instantiateGenericReference(state: CheckerState, expression: Exp
   for typeParam of generic!.typeParams {
     inferred := inferFromSignature(generic!, contextual!, typeParam)
     if inferred == none {
-      typeError(state, "Cannot infer type argument '" + typeParam + "' of generic function '" + name + "' from expected type " + displayTypeName(contextual!), expression.span)
+      typeError(state, "Cannot infer type argument '${typeParam}' of generic function '${name}' from expected type ${displayTypeName(contextual!)}", expression.span)
       return unknownType()
     }
     typeArgs.push(inferred!)

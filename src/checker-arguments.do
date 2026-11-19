@@ -48,10 +48,10 @@ export function checkArguments(
     let requiredCount = 0
     for i of 0..<params.length { if !params[i].hasDefault { requiredCount = i + 1 } }
     if args.length < requiredCount || args.length > params.length {
-      range := if requiredCount == params.length then string(requiredCount) else string(requiredCount) + "-" + string(params.length)
+      range := if requiredCount == params.length then string(requiredCount) else "${requiredCount}-${params.length}"
       prefix := if countSubject == "" then "Expected " else countSubject + " expects "
       suffix := if countSubject == "" then " argument(s)" else " constructor argument(s)"
-      typeError(state, prefix + range + suffix + " but got " + string(args.length), span)
+      typeError(state, "${prefix}${range}${suffix} but got ${args.length}", span)
     }
   }
   for i of 0..<args.length {
@@ -65,11 +65,11 @@ export function checkArguments(
       }
       index = functionParameterIndex(params, argument.name!)
       if index < 0 {
-        typeError(state, "Unknown named argument '" + argument.name! + "'", argument.span)
+        typeError(state, "Unknown named argument '${argument.name!}'", argument.span)
         checkArgumentValue(state, argument, scope, none)
         continue
       }
-      if used.contains(argument.name!) { typeError(state, "Duplicate named argument '" + argument.name! + "'", argument.span) }
+      if used.contains(argument.name!) { typeError(state, "Duplicate named argument '${argument.name!}'", argument.span) }
       used.push(argument.name!)
     }
     let expected: ResolvedType | none = none
@@ -77,7 +77,7 @@ export function checkArguments(
     actual := checkArgumentValue(state, argument, scope, if contextual then expected else none)
     if validateTypes && expected != none && !isAssignableWithInterfaces(state.result, actual, expected!) {
       label := if named then "'" + argument.name! + "'" else string(i + 1)
-      typeError(state, argumentMismatch(argumentPrefix + " " + label, actual, expected!), argument.span)
+      typeError(state, argumentMismatch("${argumentPrefix} ${label}", actual, expected!), argument.span)
     }
   }
   if named {
@@ -87,9 +87,9 @@ export function checkArguments(
       if spreadIndex >= 0 {
         actual := spread[spreadIndex].type_
         if !isAssignableWithInterfaces(state.result, actual, parameter.type_) {
-          typeError(state, "Cannot assign spread field " + typeName(actual) + " to " + typeName(parameter.type_), spreadSpan ?? span)
+          typeError(state, "Cannot assign spread field ${typeName(actual)} to ${typeName(parameter.type_)}", spreadSpan ?? span)
         }
-      } else if !parameter.hasDefault { typeError(state, "Missing required argument '" + parameter.name + "'", span) }
+      } else if !parameter.hasDefault { typeError(state, "Missing required argument '${parameter.name}'", span) }
     }
   }
 }
@@ -113,7 +113,7 @@ function argumentMismatch(subject: string, actual: ResolvedType, expected: Resol
             }
           }
           if sameParams {
-            return subject + " returns " + displayTypeName(actualFunction.returnType) + "; expected a callback returning " + displayTypeName(expectedFunction.returnType)
+            return "${subject} returns ${displayTypeName(actualFunction.returnType)}; expected a callback returning ${displayTypeName(expectedFunction.returnType)}"
           }
         }
         _ -> { }
@@ -121,5 +121,5 @@ function argumentMismatch(subject: string, actual: ResolvedType, expected: Resol
     }
     _ -> { }
   }
-  return subject + " has type " + displayTypeName(actual) + "; expected " + displayTypeName(expected)
+  return "${subject} has type ${displayTypeName(actual)}; expected ${displayTypeName(expected)}"
 }

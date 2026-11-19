@@ -34,7 +34,7 @@ export function packageProject(
   if exitCode != 0 { return exitCode }
   if project.macosApp == none && project.iosApp == none {
     _ := materializeExecutableResources(project.resources, distDirectory) else error {
-      println("error: " + error)
+      println("error: ${error}")
       return 1
     }
     return 0
@@ -54,7 +54,7 @@ function packageIOSApp(
   iosDestination: string,
 ): int {
   appPath := assembleIOSApp(outputDirectory, outputPath, project.iosApp!, iosDestination) else error {
-    println("error: " + error)
+    println("error: ${error}")
     return 1
   }
   if project.iosPackageConfig == none { panic("iOS package settings were not resolved") }
@@ -67,10 +67,10 @@ function packageIOSApp(
   if request.iosProvisioningProfile != "" { iosConfig.provisioningProfilePath = absolute(request.iosProvisioningProfile)! }
   archivePath := driverOutputPath(distDirectory, iosPackageArchiveName(project.iosApp!.executableName, project.iosApp!.version))
   _ := signAndArchiveIOSApp(appPath, archivePath, project.iosApp!.bundleId, iosConfig, outputDirectory) else error {
-    println("error: " + error)
+    println("error: ${error}")
     return 1
   }
-  println("Package: " + archivePath)
+  println("Package: ${archivePath}")
   return 0
 }
 
@@ -83,7 +83,7 @@ function packageMacOSApp(
   distDirectory: string,
 ): int {
   appPath := assembleMacOSApp(outputDirectory, outputPath, project.macosApp!, emission.nativeBuild.libraryPaths, emission.nativeBuild.bundledLibraries) else error {
-    println("error: " + error)
+    println("error: ${error}")
     return 1
   }
   packageConfig := project.packageConfig!
@@ -95,9 +95,9 @@ function packageMacOSApp(
   if request.macosEntitlements != "" { packageConfig.entitlementsPath = absolute(request.macosEntitlements)! }
   archivePath := driverOutputPath(distDirectory, macOSPackageArchiveName(project.macosApp!.executableName, project.macosApp!.version))
   _ := signAndArchiveMacOSApp(appPath, archivePath, packageConfig, outputDirectory) else error {
-    println("error: " + error)
+    println("error: ${error}")
     return 1
   }
-  println("Package: " + archivePath)
+  println("Package: ${archivePath}")
   return 0
 }

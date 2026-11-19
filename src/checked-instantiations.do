@@ -127,19 +127,19 @@ export function discoverInstantiations(result: AnalysisResult): CheckedInstantia
 }
 
 export function functionInstantiationKey(modulePath: string, name: string, typeArgs: ResolvedType[]): string {
-  return modulePath + "::function::" + name + "::" + concreteTypeListKey(typeArgs)
+  return "${modulePath}::function::${name}::${concreteTypeListKey(typeArgs)}"
 }
 
 export function classInstantiationKey(modulePath: string, name: string, typeArgs: ResolvedType[]): string {
-  return modulePath + "::class::" + name + "::" + concreteTypeListKey(typeArgs)
+  return "${modulePath}::class::${name}::${concreteTypeListKey(typeArgs)}"
 }
 
 export function interfaceInstantiationKey(modulePath: string, name: string, typeArgs: ResolvedType[]): string {
-  return modulePath + "::interface::" + name + "::" + concreteTypeListKey(typeArgs)
+  return "${modulePath}::interface::${name}::${concreteTypeListKey(typeArgs)}"
 }
 
 export function methodInstantiationKey(ownerKey: string, name: string, typeArgs: ResolvedType[]): string {
-  return ownerKey + "::method::" + name + "::" + concreteTypeListKey(typeArgs)
+  return "${ownerKey}::method::${name}::${concreteTypeListKey(typeArgs)}"
 }
 
 function collectFunctionBody(fn: FunctionDeclaration, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
@@ -521,7 +521,7 @@ export function collectJsonDemand(keys: string[], type_: ResolvedType, analysis:
       if class_.typeArgs.length > 0 || class_.symbol.native_ { return }
       owner := findClassDeclaration(analysis, class_.symbol.module, class_.symbol.name)
       if owner == none { return }
-      key := class_.symbol.module + "::" + class_.symbol.name
+      key := "${class_.symbol.module}::${class_.symbol.name}"
       if keys.contains(key) { return }
       keys.push(key)
       for field of owner!.fields {
@@ -533,7 +533,7 @@ export function collectJsonDemand(keys: string[], type_: ResolvedType, analysis:
     // key also selects the generated interface decoder.
     interface_: InterfaceType -> {
       if interface_.typeArgs.length > 0 { return }
-      key := interface_.symbol.module + "::" + interface_.symbol.name
+      key := "${interface_.symbol.module}::${interface_.symbol.name}"
       if keys.contains(key) { return }
       keys.push(key)
       for implementation of interface_.symbol.implementations {
@@ -722,25 +722,25 @@ function concreteTypeListKey(types: ResolvedType[]): string {
 
 function canonicalTypeKey(type_: ResolvedType): string {
   case type_ {
-    class_: ClassType -> { return "class:" + class_.symbol.module + ":" + class_.name + concreteTypeListKey(class_.typeArgs) }
-    enum_: EnumType -> { return "enum:" + enum_.symbol.module + ":" + enum_.name }
-    interface_: InterfaceType -> { return "interface:" + interface_.symbol.module + ":" + interface_.name + concreteTypeListKey(interface_.typeArgs) }
+    class_: ClassType -> { return "class:${class_.symbol.module}:${class_.name}${concreteTypeListKey(class_.typeArgs)}" }
+    enum_: EnumType -> { return "enum:${enum_.symbol.module}:${enum_.name}" }
+    interface_: InterfaceType -> { return "interface:${interface_.symbol.module}:${interface_.name}${concreteTypeListKey(interface_.typeArgs)}" }
     array: ArrayResolvedType -> { return (if array.readonly_ then "readonly-array:" else "array:") + canonicalTypeKey(array.elementType) }
     map: MapResolvedType -> { return (if map.readonly_ then "readonly-map:" else "map:") + canonicalTypeKey(map.keyType) + ":" + canonicalTypeKey(map.valueType) }
     set_: SetResolvedType -> { return (if set_.readonly_ then "readonly-set:" else "set:") + canonicalTypeKey(set_.elementType) }
-    stream: StreamResolvedType -> { return "stream:" + canonicalTypeKey(stream.elementType) }
-    result: ResultResolvedType -> { return "result:" + canonicalTypeKey(result.valueType) + ":" + canonicalTypeKey(result.errorType) }
-    success: SuccessResolvedType -> { return "success:" + canonicalTypeKey(success.valueType) }
-    failure: FailureResolvedType -> { return "failure:" + canonicalTypeKey(failure.errorType) }
-    actor: ActorType -> { return "actor:" + canonicalTypeKey(actor.innerClass) }
-    promise: PromiseType -> { return "promise:" + canonicalTypeKey(promise.valueType) }
-    tuple: TupleResolvedType -> { return "tuple:" + concreteTypeListKey(tuple.elements) }
-    union_: UnionResolvedType -> { return "union:" + concreteTypeListKey(union_.types) }
-    weak_: WeakResolvedType -> { return "weak:" + canonicalTypeKey(weak_.inner) }
+    stream: StreamResolvedType -> { return "stream:${canonicalTypeKey(stream.elementType)}" }
+    result: ResultResolvedType -> { return "result:${canonicalTypeKey(result.valueType)}:${canonicalTypeKey(result.errorType)}" }
+    success: SuccessResolvedType -> { return "success:${canonicalTypeKey(success.valueType)}" }
+    failure: FailureResolvedType -> { return "failure:${canonicalTypeKey(failure.errorType)}" }
+    actor: ActorType -> { return "actor:${canonicalTypeKey(actor.innerClass)}" }
+    promise: PromiseType -> { return "promise:${canonicalTypeKey(promise.valueType)}" }
+    tuple: TupleResolvedType -> { return "tuple:${concreteTypeListKey(tuple.elements)}" }
+    union_: UnionResolvedType -> { return "union:${concreteTypeListKey(union_.types)}" }
+    weak_: WeakResolvedType -> { return "weak:${canonicalTypeKey(weak_.inner)}" }
     function_: FunctionType -> {
       let parameters: ResolvedType[] = []
       for parameter of function_.params { parameters.push(parameter.type_) }
-      return "function:" + concreteTypeListKey(parameters) + "->" + canonicalTypeKey(function_.returnType)
+      return "function:${concreteTypeListKey(parameters)}->${canonicalTypeKey(function_.returnType)}"
     }
     _ -> { return typeName(type_) }
   }

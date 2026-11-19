@@ -12,7 +12,7 @@ import { copyPermissions, exists, isDirectory, metadata, mkdir, readBlob, readDi
 
 export function driverOutputPath(directory: string, name: string): string {
   if directory.endsWith("/") { return directory + name }
-  return directory + "/" + name
+  return "${directory}/${name}"
 }
 
 export function ensureOutputDirectory(path: string): none {
@@ -24,21 +24,21 @@ export function ensureOutputDirectory(path: string): none {
 
 function materializeNativeCopy(sourcePath: string, outputPath: string): Result<none, string> {
   if !exists(sourcePath) {
-    return Failure("Native package input " + sourcePath + " does not exist; check build.native paths in its doof.json")
+    return Failure("Native package input ${sourcePath} does not exist; check build.native paths in its doof.json")
   }
   if isDirectory(sourcePath) {
     ensureOutputDirectory(outputPath)
-    entries := readDir(sourcePath) else { return Failure("Could not read native package directory " + sourcePath) }
+    entries := readDir(sourcePath) else { return Failure("Could not read native package directory ${sourcePath}") }
     for entry of entries {
       try materializeNativeCopy(joinPath(sourcePath, entry.name), joinPath(outputPath, entry.name))
     }
     return Success()
   }
   ensureOutputDirectory(parentPath(outputPath))
-  content := readBlob(sourcePath) else { return Failure("Could not read native package input " + sourcePath) }
+  content := readBlob(sourcePath) else { return Failure("Could not read native package input ${sourcePath}") }
   writeBlobIfChanged(outputPath, content)
   // Vendor build scripts and autoconf helpers run from the emitted graph.
-  _ := copyPermissions(sourcePath, outputPath) else { return Failure("Could not copy permissions for " + sourcePath) }
+  _ := copyPermissions(sourcePath, outputPath) else { return Failure("Could not copy permissions for ${sourcePath}") }
   return Success()
 }
 
@@ -103,7 +103,7 @@ function resourceOutputPath(resource: PackageResource, outputDirectory: string):
 
 function checkResourceSource(resource: PackageResource): Result<none, string> {
   if exists(resource.sourcePath) { return Success() }
-  return Failure("Resource " + resource.sourcePath + " does not exist; check resources in doof.json")
+  return Failure("Resource ${resource.sourcePath} does not exist; check resources in doof.json")
 }
 
 export function materializeExecutableResources(resources: PackageResource[], outputDirectory: string): Result<none, string> {
@@ -186,7 +186,7 @@ export function synchronizeExecutableResources(
     remove(old.outputPath)!
   }
   ensureOutputDirectory(parentPath(statePath))
-  temporaryPath := statePath + ".tmp"
+  temporaryPath := "${statePath}.tmp"
   writeText(temporaryPath, renderResourceState(next))!
   rename(temporaryPath, statePath)!
   return Success()
@@ -204,7 +204,7 @@ export function materializeRuntimeHeader(outputDirectory: string): none {
 
 export function materializeObserverRuntime(outputDirectory: string): none {
   for name of ["doof_observer.hpp", "doof_observer_platform.hpp"] {
-    content := readTextResource(name) else { panic("Could not read embedded observer runtime resource " + name) }
+    content := readTextResource(name) else { panic("Could not read embedded observer runtime resource ${name}") }
     writeTextIfChanged(driverOutputPath(outputDirectory, name), content)
   }
 }
@@ -213,8 +213,8 @@ export function materializeObserverUi(outputDirectory: string): none {
   uiDirectory := driverOutputPath(outputDirectory, "observer-ui")
   ensureOutputDirectory(uiDirectory)
   for name of ["index.html", "app.css", "app.js"] {
-    source := readTextResource("observer-ui/" + name) else {
-      panic("Could not read embedded observer UI asset " + name)
+    source := readTextResource("observer-ui/${name}") else {
+      panic("Could not read embedded observer UI asset ${name}")
     }
     writeTextIfChanged(driverOutputPath(uiDirectory, name), source)
   }

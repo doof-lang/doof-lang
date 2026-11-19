@@ -86,11 +86,11 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
   let project = readProjectSpec(request.entry, requestedNativePlatform, request.targetOverride)
   entryError := projectEntryRequestError(project, request.entry)
   if entryError != "" {
-    println("error: " + entryError)
+    println("error: ${entryError}")
     return 1
   }
   projectLock := acquireProjectBuildLock(project.rootDirectory, project.buildDirectory) else error {
-    println("error: " + error)
+    println("error: ${error}")
     return 1
   }
   if request.command == "profile" && (project.target == "wasm" || project.iosApp != none) {
@@ -105,12 +105,12 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     observeError := observeTargetError(project.target, project.iosApp != none)
     if observeError != "" { println("error: " + observeError); return 1 }
     if project.observeUiRoot != "" && (!isDirectory(project.observeUiRoot) || !exists(joinPath(project.observeUiRoot, "index.html"))) {
-      println("error: observe.ui must name a directory containing index.html: " + project.observeUiRoot)
+      println("error: observe.ui must name a directory containing index.html: ${project.observeUiRoot}")
       return 1
     }
   }
   iosDestination := if request.command == "package" then "device" else request.iosDestination
-  nativePlatform := if project.iosApp == none then requestedNativePlatform else "ios-" + iosDestination
+  nativePlatform := if project.iosApp == none then requestedNativePlatform else "ios-${iosDestination}"
   if project.iosApp != none { project = readProjectSpec(request.entry, nativePlatform, request.targetOverride) }
   stdlibTarget := stdlibTargetForRequest(project.target, nativePlatform)
   rootManifest := project.manifest
@@ -128,12 +128,12 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
   loader := sourceLoaderForRequest(
     entryPath, stdlibRoot, namespaceMappings, rootManifest, buildDirectory, nativePlatform, stdlibTarget,
   ) else error {
-    println("error: " + error)
+    println("error: ${error}")
     return 1
   }
   if project.target == "wasm" {
     _ := ensureStdPackageReached("std/json") else error {
-      println("error: " + error)
+      println("error: ${error}")
       return 1
     }
   }
@@ -208,7 +208,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
   timings.finish("command.project-planning", projectStart)
   materializationStart := timings.start()
   _ := materializeProject(outputDirectory, emission) else error {
-    println("error: " + error)
+    println("error: ${error}")
     return 1
   }
   materializeRuntimeHeader(outputDirectory)
@@ -227,7 +227,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
   timings.finish("command.materialization-cache", materializationStart)
   if iosApp := project.iosApp {
     _ := configureIOSNativeBuild(outputDirectory, iosApp, iosDestination, emission.nativeBuild) else error {
-      println("error: " + error)
+      println("error: ${error}")
       return 1
     }
   }
@@ -246,13 +246,13 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
 
 function main(args: string[]): int {
   parsed := parseCli(args)
-  if parsed.version { println("doof " + compilerVersion); return 0 }
+  if parsed.version { println("doof ${compilerVersion}"); return 0 }
   if parsed.help {
     println(cliUsage())
     return 0
   }
   if parsed.error != "" {
-    println("error: " + parsed.error)
+    println("error: ${parsed.error}")
     println(cliUsage())
     return 2
   }

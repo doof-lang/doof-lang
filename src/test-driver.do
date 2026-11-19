@@ -87,9 +87,9 @@ export function silentTestFailureMessage(exitCode: int): string {
       15 -> " (SIGTERM)",
       _ -> ""
     }
-    return "test process terminated by signal " + string(signal) + name + " without output"
+    return "test process terminated by signal ${signal}${name} without output"
   }
-  return "test process exited with code " + string(exitCode) + " without output"
+  return "test process exited with code ${exitCode} without output"
 }
 
 function buildAppleWasmTestRunner(buildRoot: string): Result<string, string> {
@@ -115,7 +115,7 @@ function buildAppleWasmTestRunner(buildRoot: string): Result<string, string> {
       else BlobReader(built.output).readString(long(built.output.length)).trim()
     return Failure("Could not build the Apple JavaScriptCore Wasm test runner" + if output == "" then "" else ":\n" + output)
   }
-  writeText(fingerprintPath, fingerprint + "\n")!
+  writeText(fingerprintPath, "${fingerprint}\n")!
   return Success(runnerPath)
 }
 
@@ -197,22 +197,22 @@ function mergeCoverageGroup(
 function printCoverageSummary(report: CoverageReport): none {
   println("Coverage summary:")
   for file of report.files {
-    percent := string(file.percentTenths \ 10) + "." + string(file.percentTenths % 10)
+    percent := "${file.percentTenths \ 10}.${file.percentTenths % 10}"
     println("  " + file.path + ": " + string(file.covered) + "/" + string(file.total) + " lines (" + percent + "%)")
   }
-  overall := string(report.totalPercentTenths \ 10) + "." + string(report.totalPercentTenths % 10)
+  overall := "${report.totalPercentTenths \ 10}.${report.totalPercentTenths % 10}"
   println("Overall: " + string(report.totalCovered) + "/" + string(report.totalLines) + " lines (" + overall + "%)")
 }
 
 function coverageHtmlPath(jsonPath: string): string {
   if jsonPath.endsWith(".json") { return jsonPath.substring(0, jsonPath.length - 5) + ".html" }
-  return jsonPath + ".html"
+  return "${jsonPath}.html"
 }
 
 export function writeCoverageHtml(report: CoverageReport, jsonPath: string, rootDirectory: string): string {
   indexPath := coverageHtmlPath(jsonPath)
   ensureOutputDirectory(parentPath(indexPath))
-  filesDirectory := indexPath.substring(0, indexPath.length - 5) + "_files"
+  filesDirectory := "${indexPath.substring(0, indexPath.length - 5)}_files"
   filesDirectoryName := fileName(filesDirectory)
   for file of report.files {
     relativePage := coverageFileRelativePath(file.path)
@@ -234,7 +234,7 @@ export function writeCoverageHtml(report: CoverageReport, jsonPath: string, root
 export function testRequest(request: CliRequest): int {
   target := absolute(request.entry)!
   if !exists(target) {
-    println("error: File not found: " + target)
+    println("error: File not found: ${target}")
     return 1
   }
   rootDirectory := if isDirectory(target) then target else parentPath(target)
@@ -244,7 +244,7 @@ export function testRequest(request: CliRequest): int {
   let discovered: DiscoveredTest[] = []
   for testFile of testFiles {
     source := readText(testFile) else {
-      println("error: Could not read test file: " + testFile)
+      println("error: Could not read test file: ${testFile}")
       return 1
     }
     parser := Parser { source }
@@ -263,11 +263,11 @@ export function testRequest(request: CliRequest): int {
   let selected = filterDiscoveredTests(discovered, request.filter, request.exactFilter)
   if request.selectionJson != "" {
     selectionSource := readText(request.selectionJson) else {
-      println("error: Could not read test selection: " + request.selectionJson)
+      println("error: Could not read test selection: ${request.selectionJson}")
       return 1
     }
     exactSelection := selectTestsFromJson(discovered, selectionSource) else error {
-      println("error: " + error)
+      println("error: ${error}")
       return 1
     }
     selected = exactSelection
@@ -280,7 +280,7 @@ export function testRequest(request: CliRequest): int {
   }
   if selected.length == 0 {
     suffix := if request.filter == "" then "" else " matching \"" + request.filter + "\""
-    println("error: No tests found under " + target + suffix)
+    println("error: No tests found under ${target}${suffix}")
     return 1
   }
   if request.listOnly {
@@ -299,7 +299,7 @@ export function testRequest(request: CliRequest): int {
   let projectLocks: File[] = []
   for directory of sortedTestFiles(lockDirectories) {
     projectLock := acquireProjectBuildLock(directory, ".") else error {
-      println("error: " + error)
+      println("error: ${error}")
       return 1
     }
     projectLocks.push(projectLock)
@@ -343,7 +343,7 @@ export function testRequest(request: CliRequest): int {
     loader := sourceLoaderForRequest(
       harnessPath, stdlibRoot, namespaceMappings, project.manifest, buildRoot, hostPlatform(), testStdlibTarget,
     ) else error {
-      println("error: " + error)
+      println("error: ${error}")
       return 1
     }
     entry := driverRootLogicalPath(harnessPath, project.rootDirectory, project.name)
@@ -355,7 +355,7 @@ export function testRequest(request: CliRequest): int {
       then cachedModuleGraph(prior, outputDirectory) else none
     result := if graph := cached then Compilation { emission: graph, diagnostics: [] }
       else compileWithLoader([], entry, loader, namespaceMappings, "executable", request.coverage)
-    if cached != none { println("REUSE frontend " + group.outputName) }
+    if cached != none { println("REUSE frontend ${group.outputName}") }
     if result.diagnostics.length > 0 { printDiagnostics(result.diagnostics) }
     if hasErrorDiagnostics(result.diagnostics) { return 1 }
     if result.emission == none { panic("test compiler produced no emission") }
@@ -363,7 +363,7 @@ export function testRequest(request: CliRequest): int {
     emission := planProjectEmission(result.emission!, projectNativePackages(project.rootDirectory, rootManifest))
     if request.coverage { emission.nativeBuild.defines.push("DOOF_COVERAGE") }
     _ := materializeProject(outputDirectory, emission) else error {
-      println("error: " + error)
+      println("error: ${error}")
       return 1
     }
     materializeRuntimeHeader(outputDirectory)
@@ -373,7 +373,7 @@ export function testRequest(request: CliRequest): int {
       writeFrontendState(cachePath, next)
     }
     binary := joinPath(outputDirectory, if wasmTests then "doof-tests.wasm" else "doof-tests")
-    println("BUILD " + group.outputName)
+    println("BUILD ${group.outputName}")
     buildExitCode := buildNativeProject(
       request.compiler, outputDirectory, binary, emission, .Debug, hostPlatform(), .Progress,
       wasmTests,
@@ -382,7 +382,7 @@ export function testRequest(request: CliRequest): int {
 
     if wasmTests && appleWasmRunner == "" {
       builtRunner := buildAppleWasmTestRunner(buildRoot) else error {
-        println("error: " + error)
+        println("error: ${error}")
         return 1
       }
       appleWasmRunner = builtRunner
@@ -412,12 +412,12 @@ export function testRequest(request: CliRequest): int {
       workerResult := pendingTests.takeFirstCompleted() else error {
         for worker of testWorkers { ignoredWorker := retire worker }
         println("")
-        println("error: test worker failed: " + error)
+        println("error: test worker failed: ${error}")
         return 1
       }
       executionResults.push(workerResult.test)
       completedTests += 1
-      printFlushed("\r" + renderProgressBar(completedTests, moduleTests.length))
+      printFlushed("\r${renderProgressBar(completedTests, moduleTests.length)}")
       if nextTestIndex < moduleTests.length {
         test := moduleTests[nextTestIndex]
         pendingTests.push(async testWorkers[workerResult.workerIndex].runTest(workerResult.workerIndex, test.id))
@@ -429,11 +429,11 @@ export function testRequest(request: CliRequest): int {
 
     for test of moduleTests {
       execution := findTestExecutionResult(executionResults, test.id)
-      if execution == none { panic("test worker returned no result for " + test.id) }
+      if execution == none { panic("test worker returned no result for ${test.id}") }
       testResult := execution!.command
       if request.coverage {
         if testResult.truncated {
-          println("error: coverage output exceeded " + string(MAX_COVERAGE_OUTPUT_BYTES) + " bytes for " + test.id)
+          println("error: coverage output exceeded ${MAX_COVERAGE_OUTPUT_BYTES} bytes for ${test.id}")
           return 1
         }
         output := BlobReader(testResult.output).readString(long(testResult.output.length))
@@ -448,7 +448,7 @@ export function testRequest(request: CliRequest): int {
       } else if testResult.exitCode != 0 {
         remaining := printNativeCommandOutput(testResult, MAX_PRINTED_DIAGNOSTICS)
         if remaining == MAX_PRINTED_DIAGNOSTICS { println(silentTestFailureMessage(testResult.exitCode)) }
-        if testResult.truncated { println("... test output capture truncated after " + string(MAX_NATIVE_COMPILER_OUTPUT_BYTES) + " bytes") }
+        if testResult.truncated { println("... test output capture truncated after ${MAX_NATIVE_COMPILER_OUTPUT_BYTES} bytes") }
       }
       exitCode := testResult.exitCode
       if request.reportJson != "" {
@@ -459,17 +459,17 @@ export function testRequest(request: CliRequest): int {
         passed = passed + 1
       } else {
         failed = failed + 1
-        println("FAIL " + test.id)
+        println("FAIL ${test.id}")
       }
     }
   }
   if request.reportJson != "" {
     _ := writeText(request.reportJson, formatJsonValue(resultValues.cloneReadonly())) else error {
-      println("error: Could not write test report: " + request.reportJson)
+      println("error: Could not write test report: ${request.reportJson}")
       return 1
     }
   }
-  println("Tests finished: " + string(passed) + " passed, " + string(failed) + " failed")
+  println("Tests finished: ${passed} passed, ${failed} failed")
   if request.coverage && coverageModules.length > 0 {
     report := buildCoverageReport(coverageModules, coverageHits, rootDirectory)
     printCoverageSummary(report)
@@ -478,9 +478,9 @@ export function testRequest(request: CliRequest): int {
       else absolute(request.coverageOutput)!
     ensureOutputDirectory(parentPath(outputPath))
     writeText(outputPath, renderCoverageJson(report))!
-    println("Coverage report written to " + outputPath)
+    println("Coverage report written to ${outputPath}")
     htmlPath := writeCoverageHtml(report, outputPath, rootDirectory)
-    println("Coverage HTML report written to " + htmlPath)
+    println("Coverage HTML report written to ${htmlPath}")
   }
   return if failed == 0 then 0 else 1
 }

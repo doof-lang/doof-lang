@@ -27,7 +27,7 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
         case expression {
           array: ArrayLiteral -> {
             if array.elements.length == 0 {
-              typeError(state, "Cannot infer " + named.name + " element type from an empty set literal; provide a full " + named.name + "<T> annotation", array.span)
+              typeError(state, "Cannot infer ${named.name} element type from an empty set literal; provide a full ${named.name}<T> annotation", array.span)
               return finish(state, expression, setType(unknownType(), named.name == "ReadonlySet"))
             }
             inferred := checkArray(state, array, scope, none)
@@ -35,8 +35,8 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
               arrayType_: ArrayResolvedType -> {
                 let hasConcreteElement = true
                 case arrayType_.elementType {
-                  _: UnknownType -> { hasConcreteElement = false; typeError(state, "Cannot infer " + named.name + " element type from this set literal; provide a full " + named.name + "<T> annotation", array.span) }
-                  _: UnionResolvedType -> { hasConcreteElement = false; typeError(state, "Cannot infer " + named.name + " element type from heterogeneous set elements; provide a full " + named.name + "<T> annotation", array.span) }
+                  _: UnknownType -> { hasConcreteElement = false; typeError(state, "Cannot infer ${named.name} element type from this set literal; provide a full ${named.name}<T> annotation", array.span) }
+                  _: UnionResolvedType -> { hasConcreteElement = false; typeError(state, "Cannot infer ${named.name} element type from heterogeneous set elements; provide a full ${named.name}<T> annotation", array.span) }
                   _ -> { }
                 }
                 if hasConcreteElement { reportUnsupportedHashKey(state, arrayType_.elementType, "Set element", array.span) }
@@ -46,7 +46,7 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
             }
           }
           _ -> {
-            typeError(state, "Omitted type arguments for " + named.name + " require a same-site non-empty set literal", expression.span)
+            typeError(state, "Omitted type arguments for ${named.name} require a same-site non-empty set literal", expression.span)
             checkExpression(state, expression, scope, none)
             return setType(unknownType(), named.name == "ReadonlySet")
           }
@@ -56,7 +56,7 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
         case expression {
           object: ObjectLiteral -> {
             if object.properties.length == 0 {
-              typeError(state, "Cannot infer " + named.name + " type arguments from an empty map literal; provide a full " + named.name + "<K, V> annotation", object.span)
+              typeError(state, "Cannot infer ${named.name} type arguments from an empty map literal; provide a full ${named.name}<K, V> annotation", object.span)
               return finish(state, expression, mapType(unknownType(), unknownType(), named.name == "ReadonlyMap"))
             }
             let keyType = unknownType()
@@ -68,29 +68,29 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
               if value := property.value { propertyType = checkExpression(state, value, scope, none) }
               else {
                 binding := lookup(scope, property.name)
-                if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span) }
+                if binding == none { typeError(state, "Unknown shorthand property '${property.name}'", property.span) }
                 else { property.resolvedBinding = binding; propertyType = binding!.type_ }
               }
               property.resolvedType = propertyType
               valueType = joinTypes(valueType, propertyType)
             }
             case keyType {
-              _: UnknownType -> { typeError(state, "Cannot infer " + named.name + " key type from this map literal; provide a full " + named.name + "<K, V> annotation", object.span) }
-              _: UnionResolvedType -> { typeError(state, "Cannot infer " + named.name + " key type from heterogeneous map keys; provide a full " + named.name + "<K, V> annotation", object.span) }
+              _: UnknownType -> { typeError(state, "Cannot infer ${named.name} key type from this map literal; provide a full ${named.name}<K, V> annotation", object.span) }
+              _: UnionResolvedType -> { typeError(state, "Cannot infer ${named.name} key type from heterogeneous map keys; provide a full ${named.name}<K, V> annotation", object.span) }
               _ -> {
                 reportUnsupportedHashKey(state, keyType, "Map key", object.span)
               }
             }
             case valueType {
-              _: UnknownType -> { typeError(state, "Cannot infer " + named.name + " type arguments from this map literal; provide a full " + named.name + "<K, V> annotation", object.span) }
-              _: UnionResolvedType -> { typeError(state, "Cannot infer " + named.name + " value type from heterogeneous map values; provide a full " + named.name + "<K, V> annotation", object.span) }
+              _: UnknownType -> { typeError(state, "Cannot infer ${named.name} type arguments from this map literal; provide a full ${named.name}<K, V> annotation", object.span) }
+              _: UnionResolvedType -> { typeError(state, "Cannot infer ${named.name} value type from heterogeneous map values; provide a full ${named.name}<K, V> annotation", object.span) }
               _ -> { }
             }
             return finish(state, expression, mapType(keyType, valueType, named.name == "ReadonlyMap"))
           }
           _ -> {
             checkExpression(state, expression, scope, none)
-            typeError(state, "Omitted type arguments for " + named.name + " require a same-site non-empty map literal", expression.span)
+            typeError(state, "Omitted type arguments for ${named.name} require a same-site non-empty map literal", expression.span)
             return mapType(unknownType(), unknownType(), named.name == "ReadonlyMap")
           }
         }
@@ -107,7 +107,7 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
       _: SerialValueResolvedType -> {
         for item of expression.elements {
           actual := checkExpression(state, item, scope, jsonValueType())
-          if !isAssignableWithInterfaces(state.result, actual, jsonValueType()) { typeError(state, "Cannot assign " + typeName(actual) + " to SerialValue", item.span) }
+          if !isAssignableWithInterfaces(state.result, actual, jsonValueType()) { typeError(state, "Cannot assign ${typeName(actual)} to SerialValue", item.span) }
         }
         return finish(state, expression, expectedType)
       }
@@ -115,7 +115,7 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
         if containsJsonValue(state, union_) {
           for item of expression.elements {
             actual := checkExpression(state, item, scope, jsonValueType())
-            if !isAssignableWithInterfaces(state.result, actual, jsonValueType()) { typeError(state, "Cannot assign " + typeName(actual) + " to SerialValue", item.span) }
+            if !isAssignableWithInterfaces(state.result, actual, jsonValueType()) { typeError(state, "Cannot assign ${typeName(actual)} to SerialValue", item.span) }
           }
           return finish(state, expression, jsonValueType())
         }
@@ -142,7 +142,7 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
   if elementType := expectedElement {
     for item of expression.elements {
       actual := checkExpression(state, item, scope, elementType)
-      if !isAssignableWithInterfaces(state.result, actual, elementType) { typeError(state, "Cannot assign " + typeName(actual) + " to " + typeName(elementType), item.span) }
+      if !isAssignableWithInterfaces(state.result, actual, elementType) { typeError(state, "Cannot assign ${typeName(actual)} to ${typeName(elementType)}", item.span) }
     }
     case expected! {
       array: ArrayResolvedType -> { return finish(state, expression, arrayType(elementType, array.readonly_)) }
@@ -201,9 +201,9 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
         for property of expression.properties {
           if key := property.key {
             actualKey := checkExpression(state, key, scope, map.keyType)
-            if !isAssignableWithInterfaces(state.result, actualKey, map.keyType) { typeError(state, "Cannot assign " + typeName(actualKey) + " to map key type " + typeName(map.keyType), property.span) }
+            if !isAssignableWithInterfaces(state.result, actualKey, map.keyType) { typeError(state, "Cannot assign ${typeName(actualKey)} to map key type ${typeName(map.keyType)}", property.span) }
           } else if !sameType(map.keyType, primitive("string")) {
-            typeError(state, "Cannot assign string to map key type " + typeName(map.keyType), property.span)
+            typeError(state, "Cannot assign string to map key type ${typeName(map.keyType)}", property.span)
           }
         }
         expectedValue = map.valueType
@@ -221,8 +221,8 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
       interface_: InterfaceType -> {
         let names: string[] = []
         for implementation of interface_.symbol.implementations { names.push(implementation.name) }
-        if names.length > 1 { typeError(state, "Ambiguous object literal for " + typeName(interface_) + "; multiple candidates: " + joinNames(names) + ". Use explicit Type { ... } construction", expression.span) }
-        else { typeError(state, "Object literal cannot construct interface " + typeName(interface_) + ". Use explicit Type { ... } construction", expression.span) }
+        if names.length > 1 { typeError(state, "Ambiguous object literal for ${typeName(interface_)}; multiple candidates: ${joinNames(names)}. Use explicit Type { ... } construction", expression.span) }
+        else { typeError(state, "Object literal cannot construct interface ${typeName(interface_)}. Use explicit Type { ... } construction", expression.span) }
         return finish(state, expression, expectedType)
       }
       _ -> { }
@@ -300,11 +300,11 @@ function checkUnionObject(state: CheckerState, expression: ObjectLiteral, scope:
   }
   decorateUnresolvedObject(state, expression, scope)
   if matches.length == 0 {
-    typeError(state, "Object literal does not match any constructible member of " + typeName(union_) + "; candidates: " + joinNames(nominalNames) + ". Use explicit Type { ... } construction", expression.span)
+    typeError(state, "Object literal does not match any constructible member of ${typeName(union_)}; candidates: ${joinNames(nominalNames)}. Use explicit Type { ... } construction", expression.span)
   } else {
     let matchingNames: string[] = []
     for match of matches { matchingNames.push(match.name) }
-    typeError(state, "Ambiguous object literal for " + typeName(union_) + "; matching members: " + joinNames(matchingNames) + ". Use explicit Type { ... } construction", expression.span)
+    typeError(state, "Ambiguous object literal for ${typeName(union_)}; matching members: ${joinNames(matchingNames)}. Use explicit Type { ... } construction", expression.span)
   }
   return finish(state, expression, union_)
 }
@@ -343,7 +343,7 @@ function decorateUnresolvedObject(state: CheckerState, expression: ObjectLiteral
 function joinNames(names: string[]): string {
   let result = ""
   for i of 0..<names.length {
-    if i > 0 { result = result + ", " }
+    if i > 0 { result = "${result}, " }
     result = result + names[i]
   }
   return result

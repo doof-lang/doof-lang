@@ -14,7 +14,7 @@ function ensureLockDirectory(directory: string): Result<none, string> {
   if parent != directory { try ensureLockDirectory(parent) }
   _ := mkdir(directory) else {
     // Another invocation may have created the directory concurrently.
-    if !isDirectory(directory) { return Failure("Could not create project build directory: " + directory) }
+    if !isDirectory(directory) { return Failure("Could not create project build directory: ${directory}") }
   }
   return Success()
 }
@@ -26,13 +26,13 @@ export function acquireProjectBuildLock(root: string, buildDirectory: string): R
   path := projectBuildLockPath(root, buildDirectory)
   handle := File { path, mode: .ReadWrite, create: true, lock: .Exclusive, waitForLock: false } else error {
     if error != IoError.WouldBlock {
-      return Failure("Could not acquire project build lock: " + path)
+      return Failure("Could not acquire project build lock: ${path}")
     }
-    printFlushed("Waiting for project build lock: " + path + "\n")
+    printFlushed("Waiting for project build lock: ${path}\n")
     while true {
       waiting := File { path, mode: .ReadWrite, create: true, lock: .Exclusive, waitForLock: true } else waitError {
         if waitError == IoError.Interrupted { continue }
-        return Failure("Could not acquire project build lock: " + path)
+        return Failure("Could not acquire project build lock: ${path}")
       }
       return Success(waiting)
     }

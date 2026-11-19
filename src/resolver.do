@@ -43,11 +43,11 @@ export class ModuleResolver {
   resolve(importer: string, specifier: string): string {
     base := if specifier.startsWith(".")
       then relativeBase(importer, specifier)
-      else "/" + specifier
+      else "/${specifier}"
     exact := withExtension(base)
     if base.endsWith(".do") { return exact }
     if find(exact) != none { return exact }
-    barrel := base + "/index.do"
+    barrel := "${base}/index.do"
     if find(barrel) != none { return barrel }
     return exact
   }
@@ -55,7 +55,7 @@ export class ModuleResolver {
 
 function withExtension(path: string): string {
   if path.endsWith(".do") { return path }
-  return path + ".do"
+  return "${path}.do"
 }
 
 function relativeBase(importer: string, specifier: string): string {
@@ -69,7 +69,7 @@ function relativeBase(importer: string, specifier: string): string {
     remaining = remaining.substring(2, remaining.length)
   }
   if directory == "/" { return "/" + remaining }
-  return directory + "/" + remaining
+  return "${directory}/${remaining}"
 }
 
 function parentDirectory(path: string): string {

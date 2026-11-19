@@ -37,7 +37,7 @@ export class PhaseTimings {
     let output = "[timings] wall milliseconds; parent phases include their children\n"
     for entry of entries {
       output = output + "[timings] " + entry.name + " ms=" +
-        string(double(entry.nanos) / 1000000.0) + " count=" + string(entry.count) + "\n"
+        "${double(entry.nanos) / 1000000.0} count=${entry.count}\n"
     }
     return output
   }

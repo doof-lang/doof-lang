@@ -605,7 +605,7 @@ function parseNativeBinding(parser: Parser): NativeBinding {
 function parseCppQualifiedName(parser: Parser): string {
   let result = parser.text(parser.expect(TokenType.Identifier))
   while parser.match(TokenType.DoubleColon) {
-    result = result + "::" + parser.text(parser.expect(TokenType.Identifier))
+    result = "${result}::${parser.text(parser.expect(TokenType.Identifier))}"
   }
   return result
 }

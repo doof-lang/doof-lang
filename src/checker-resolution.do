@@ -161,7 +161,7 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
     actor: ActorType -> {
       resolved := resolveMemberType(state, actor.innerClass, property, span, validateVisibility, declaredOnly, selection)
       if validateVisibility && selection.field && selection.instance {
-        typeError(state, "Cannot access actor field '" + property + "' directly; use an actor method to read or update actor state", span)
+        typeError(state, "Cannot access actor field '${property}' directly; use an actor method to read or update actor state", span)
         return unknownType()
       }
       return resolved
@@ -274,7 +274,7 @@ function sameMethodParameters(left: FunctionType, right: FunctionType): bool {
 function rejectReadonlyCollectionMember(state: CheckerState, readonly_: bool, kind: string, mutators: string[], property: string, span: SourceSpan): bool {
   if !readonly_ { return false }
   if !mutators.contains(property) && property != "buildReadonly" && property != "drainToReadonly" && property != "cloneReadonly" { return false }
-  typeError(state, "Method \"" + property + "\" is not available on readonly " + kind, span)
+  typeError(state, "Method \"${property}\" is not available on readonly ${kind}", span)
   return true
 }
 
@@ -333,7 +333,7 @@ function typeParameterMemberType(state: CheckerState, parameter: TypeParameterTy
   if required == "" { return unknownType() }
   if parameter.constraintName != required {
     memberKind := if property == "toSerialObject" then "Member" else "Static member"
-    typeError(state, memberKind + " \"" + property + "\" requires type parameter \"" + parameter.name + "\" to be constrained by " + required, span)
+    typeError(state, "${memberKind} \"${property}\" requires type parameter \"${parameter.name}\" to be constrained by ${required}", span)
     return unknownType()
   }
   return case property {
@@ -390,7 +390,7 @@ function classMemberType(state: CheckerState, class_: ClassType, property: strin
           recordMember(selection, class_, class_.symbol.module, none, true, if field.static_ then classDeclaration else none, !field.static_)
           fieldType := field.resolvedType ?? (if annotation := field.type_ then resolveType(state, annotation, state.info!, state.moduleScope!) else unknownType())
           if validateVisibility && field.private_ && class_.symbol.module != state.info!.path {
-            typeError(state, "Field '" + property + "' is private to module '" + class_.symbol.module + "'", span)
+            typeError(state, "Field '${property}' is private to module '${class_.symbol.module}'", span)
           }
           return substituteTypeParams(fieldType, classDeclaration.typeParams, class_.typeArgs)
         }
@@ -400,7 +400,7 @@ function classMemberType(state: CheckerState, class_: ClassType, property: strin
         recordMember(selection, class_, class_.symbol.module, method, false, if method.static_ then classDeclaration else none, !method.static_)
         methodType := method.resolvedType ?? methodSignature(method, classModuleFor(state.result, class_.symbol), state.result, class_.symbol.typeParams)
         if validateVisibility && method.private_ && class_.symbol.module != state.info!.path {
-          typeError(state, "Method '" + property + "' is private to module '" + class_.symbol.module + "'", span)
+          typeError(state, "Method '${property}' is private to module '${class_.symbol.module}'", span)
         }
         return substituteTypeParams(methodType, classDeclaration.typeParams, class_.typeArgs)
       }
@@ -439,11 +439,11 @@ function classGeneratedMemberType(state: CheckerState, class_: ClassType, declar
 // each parameter and success value must itself be JSON-serializable.
 function validateClassMetadata(state: CheckerState, declaration: ClassDeclaration, programs: Program[], span: SourceSpan): bool {
   if declaration.typeParams.length > 0 {
-    typeError(state, "Metadata is not available on generic type \"" + declaration.name + "\"", span)
+    typeError(state, "Metadata is not available on generic type \"${declaration.name}\"", span)
     return false
   }
   if !canGenerateJsonSerialization(declaration, programs) || !canGenerateJsonDeserialization(declaration, programs) {
-    typeError(state, "Type \"" + declaration.name + "\" is not eligible for metadata because it does not support automatic JSON generation", span)
+    typeError(state, "Type \"${declaration.name}\" is not eligible for metadata because it does not support automatic JSON generation", span)
     return false
   }
   let valid = true
@@ -451,7 +451,7 @@ function validateClassMetadata(state: CheckerState, declaration: ClassDeclaratio
     if method.private_ || method.static_ { continue }
     for parameter of method.params {
       if resolvedType := parameter.resolvedType && !isGeneratedJsonType(resolvedType, programs) {
-        typeError(state, "Parameter \"" + parameter.name + "\" of method \"" + method.name + "\" is not JSON-serializable", parameter.span)
+        typeError(state, "Parameter \"${parameter.name}\" of method \"${method.name}\" is not JSON-serializable", parameter.span)
         valid = false
       }
     }
@@ -464,7 +464,7 @@ function validateClassMetadata(state: CheckerState, declaration: ClassDeclaratio
           _ -> { }
         }
         if successType.kind != "none" && !isGeneratedJsonType(successType, programs) {
-          typeError(state, "Return type of method \"" + method.name + "\" is not JSON-serializable", method.span)
+          typeError(state, "Return type of method \"${method.name}\" is not JSON-serializable", method.span)
           valid = false
         }
       }
@@ -511,13 +511,13 @@ function interfaceGeneratedMemberType(state: CheckerState, interfaceType_: Inter
     // Without implementations no value can be decoded; the generated decoder
     // always fails, so library helpers still check on their own.
     if interfaceJsonDiscriminator(interface_, programs) == none && interfaceType_.symbol.implementations.length > 0 {
-      typeError(state, "Cannot deserialize interface \"" + interface_.name + "\": all implementing classes must share a literal-valued string field with distinct values (e.g. kind: \"variant\")", span)
+      typeError(state, "Cannot deserialize interface \"${interface_.name}\": all implementing classes must share a literal-valued string field with distinct values (e.g. kind: \"variant\")", span)
       return unknownType()
     }
     return serialDecodeType(interfaceType_)
   }
   if blocker := interfaceJsonSerializationBlocker(interface_, programs) {
-    typeError(state, "Cannot serialize interface \"" + interface_.name + "\": implementing class \"" + blocker + "\" does not support automatic JSON serialization", span)
+    typeError(state, "Cannot serialize interface \"${interface_.name}\": implementing class \"${blocker}\" does not support automatic JSON serialization", span)
     return unknownType()
   }
   recordMember(selection, interfaceType_, interfaceType_.symbol.module, none, false, none, true)
@@ -611,7 +611,7 @@ export function indexType(state: CheckerState, object: ResolvedType, index: Reso
     union_: UnionResolvedType -> {
       for member of union_.types {
         if member.kind == "none" {
-          typeError(state, "Cannot index possibly-none value of type \"" + typeName(object) + "\"; use '?[]' or narrow it first", span)
+          typeError(state, "Cannot index possibly-none value of type \"${typeName(object)}\"; use '?[]' or narrow it first", span)
           return unknownType()
         }
       }
@@ -620,7 +620,7 @@ export function indexType(state: CheckerState, object: ResolvedType, index: Reso
     _: NeverType -> { return unknownType() }
     _ -> { }
   }
-  typeError(state, "Type \"" + typeName(object) + "\" cannot be indexed", span)
+  typeError(state, "Type \"${typeName(object)}\" cannot be indexed", span)
   return unknownType()
 }
 

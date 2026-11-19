@@ -15,7 +15,7 @@ export function nativePkgConfigProgram(configured: string): string {
 
 export function optionalNativePath(outputDirectory: string, path: string): string {
   if path.startsWith("/") || path.startsWith("\\\\") || (path.length > 1 && path[1] == ':') { return path }
-  return outputDirectory + "/" + path
+  return "${outputDirectory}/${path}"
 }
 
 function appendAll(target: string[], values: string[]): none {
@@ -50,14 +50,14 @@ export function applyOptionalNativeSelection(
   native: NativeBuildPlan, define: string, selected: NativeBuildPlan | none,
 ): Result<none, string> {
   for existing of native.defines {
-    if existing == define || existing.startsWith(define + "=") {
-      return Failure("Optional native capability define \"" + define + "\" is already declared; give each optional dependency a unique define and do not set it manually")
+    if existing == define || existing.startsWith("${define}=") {
+      return Failure("Optional native capability define \"${define}\" is already declared; give each optional dependency a unique define and do not set it manually")
     }
   }
   if pkgConfig := selected {
     for supplied of pkgConfig.defines {
-      if supplied == define || supplied.startsWith(define + "=") {
-        return Failure("pkg-config must not supply the optional capability define \"" + define + "\"")
+      if supplied == define || supplied.startsWith("${define}=") {
+        return Failure("pkg-config must not supply the optional capability define \"${define}\"")
       }
     }
     appendInputs(native, pkgConfig)
@@ -78,11 +78,11 @@ export function optionalNativeProbePlan(
   for path of native.includePaths { candidate.includePaths.push(optionalNativePath(outputDirectory, path)) }
   for path of native.libraryPaths { candidate.libraryPaths.push(optionalNativePath(outputDirectory, path)) }
   candidate.includePaths.push(outputDirectory)
-  candidate.defines.push(dependency.define + "=1")
+  candidate.defines.push("${dependency.define}=1")
   candidate.sourceFiles.push(optionalNativePath(outputDirectory, dependency.probeSource))
-  probeDirectory := outputDirectory + "/.doof-probes/" + dependency.define
+  probeDirectory := "${outputDirectory}/.doof-probes/${dependency.define}"
   suffix := if wasm then ".wasm" else if platform == "windows" then ".exe" else ""
-  return planNativeCompile(compiler, probeDirectory, probeDirectory + "/probe" + suffix, [], candidate, .Debug, platform, [], wasm, true)
+  return planNativeCompile(compiler, probeDirectory, "${probeDirectory}/probe${suffix}", [], candidate, .Debug, platform, [], wasm, true)
 }
 
 function captured(command: string, arguments: readonly string[]): Result<PkgConfigCommandResult, string> {
@@ -91,7 +91,7 @@ function captured(command: string, arguments: readonly string[]): Result<PkgConf
   execution := run(command, mutableArguments, ExecOptions {
     withStdin: false, mergeStderrIntoStdout: true, maxOutputBytes: 262144L,
   }) else error { return Success(PkgConfigCommandResult { exitCode: -1, error }) }
-  if execution.stdoutTruncated { return Failure("Optional native dependency command output was truncated: " + command) }
+  if execution.stdoutTruncated { return Failure("Optional native dependency command output was truncated: ${command}") }
   return Success(PkgConfigCommandResult {
     exitCode: execution.exitCode,
     output: BlobReader(execution.stdout).readString(long(execution.stdout.length)),
@@ -108,13 +108,13 @@ function probeDirectory(path: string): Result<none, string> {
   let end = path.length - 1
   while end > 0 && path[end] != '/' { end -= 1 }
   if end > 0 { try probeDirectory(path.substring(0, end)) }
-  _ := mkdir(path) else error { return Failure("Could not create optional dependency probe directory " + path + ": " + string(error)) }
+  _ := mkdir(path) else error { return Failure("Could not create optional dependency probe directory ${path}: ${error}") }
   return Success()
 }
 
 function discardProbeFile(path: string): Result<none, string> {
   if path == "" || !exists(path) { return Success() }
-  _ := remove(path) else error { return Failure("Could not remove optional dependency probe output " + path + ": " + string(error)) }
+  _ := remove(path) else error { return Failure("Could not remove optional dependency probe output ${path}: ${error}") }
   return Success()
 }
 
@@ -129,10 +129,10 @@ export function resolveOptionalNativeDependencies(
   program := if pkgConfigCommand == "" then configuredPkgConfigProgram() else pkgConfigCommand
   for dependency of native.optionalPkgConfigPackages {
     probeSource := optionalNativePath(buildDirectory, dependency.probeSource)
-    if !exists(probeSource) { return Failure("Optional native dependency probe source is missing: " + probeSource) }
+    if !exists(probeSource) { return Failure("Optional native dependency probe source is missing: ${probeSource}") }
     let compatibleVersion = true
     if dependency.minimumVersion != "" {
-      try version := captured(program, ["--atleast-version=" + dependency.minimumVersion, dependency.name])
+      try version := captured(program, ["--atleast-version=${dependency.minimumVersion}", dependency.name])
       compatibleVersion = version.exitCode == 0
     }
     let selected: NativeBuildPlan | none = none
@@ -141,18 +141,18 @@ export function resolveOptionalNativeDependencies(
       try libs := captured(program, ["--libs", dependency.name])
       if candidate := optionalPkgConfigInputs(native, dependency.name, cflags, libs) {
         plan := optionalNativeProbePlan(candidate, dependency, compiler, buildDirectory, platform, wasm)
-        try probeDirectory(buildDirectory + "/.doof-probes/" + dependency.define)
+        try probeDirectory("${buildDirectory}/.doof-probes/${dependency.define}")
         let passed = true
         for task of plan.compileTasks {
           // Probe plans currently have one native object and no generated units.
-          try probeDirectory(buildDirectory + "/.doof-probes/" + dependency.define + "/.doof-objects/native")
+          try probeDirectory("${buildDirectory}/.doof-probes/${dependency.define}/.doof-objects/native")
           try compilation := captured(task.compiler, task.arguments)
-          if compilation.exitCode == -1 { return Failure("Failed to run optional dependency target compiler: " + compilation.error) }
+          if compilation.exitCode == -1 { return Failure("Failed to run optional dependency target compiler: ${compilation.error}") }
           if compilation.exitCode != 0 { passed = false; break }
         }
         if passed {
           try linking := captured(plan.linker, plan.linkArguments.drainToReadonly())
-          if linking.exitCode == -1 { return Failure("Failed to run optional dependency target linker: " + linking.error) }
+          if linking.exitCode == -1 { return Failure("Failed to run optional dependency target linker: ${linking.error}") }
           passed = linking.exitCode == 0
         }
         if passed { selected = candidate }

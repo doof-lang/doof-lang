@@ -81,7 +81,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         interpolationType := checkExpression(state, interpolation, scope, none)
         if interpolationType.kind == "never" { diverges = true }
         else if !isStringInterpolatable(interpolationType) {
-          typeError(state, "Type \"" + typeName(interpolationType) + "\" cannot be used in string interpolation", interpolation.span)
+          typeError(state, "Type \"${typeName(interpolationType)}\" cannot be used in string interpolation", interpolation.span)
         }
       }
       if diverges { return finish(state, expression, neverType()) }
@@ -144,7 +144,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       retiredType := checkExpression(state, retire_.actor, scope, none)
       case retiredType {
         actor: ActorType -> { return finish(state, expression, actor.innerClass) }
-        _ -> { typeError(state, "Cannot retire non-actor type \"" + typeName(retiredType) + "\"", retire_.span); return finish(state, expression, unknownType()) }
+        _ -> { typeError(state, "Cannot retire non-actor type \"${typeName(retiredType)}\"", retire_.span); return finish(state, expression, unknownType()) }
       }
     }
     actorCreation: ActorCreationExpression -> { return checkActorCreation(state, actorCreation, scope) }
@@ -225,7 +225,7 @@ export function implicitMethod(state: CheckerState, scope: Scope, name: string, 
           if inStaticContext(scope) {
             for field of class_.fields {
               if !field.static_ && field.names.contains(name) {
-                typeError(state, "Cannot access instance field '" + name + "' from a static method", span)
+                typeError(state, "Cannot access instance field '${name}' from a static method", span)
                 return Binding { name, kind: "field", type_: unknownType(), mutable: true, span: checkerSemanticSpan(span), module: state.info!.path }
               }
             }
@@ -233,7 +233,7 @@ export function implicitMethod(state: CheckerState, scope: Scope, name: string, 
           for method of class_.methods {
             if method.name == name {
               if !method.static_ && inStaticContext(scope) {
-                typeError(state, "Cannot call instance method '" + name + "' from a static method", span)
+                typeError(state, "Cannot call instance method '${name}' from a static method", span)
                 return Binding { name, kind: "method", type_: unknownType(), mutable: false, span: checkerSemanticSpan(span), module: state.info!.path, symbol: owner.symbol }
               }
               methodType := method.resolvedType ?? checkFunction(state, method, scope, owner)

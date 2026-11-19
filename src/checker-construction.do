@@ -76,7 +76,7 @@ export function cannotInferConstruction(state: CheckerState, declaration: ClassD
   for argument of args { checkExpression(state, argument.value, scope, none) }
   let names = ""
   for i of 0..<declaration.typeParams.length { names = names + (if i > 0 then ", " else "") + declaration.typeParams[i] }
-  typeError(state, "Cannot infer type arguments for generic class '" + declaration.name + "'; provide them explicitly as " + declaration.name + "<" + names + ">", span)
+  typeError(state, "Cannot infer type arguments for generic class '${declaration.name}'; provide them explicitly as ${declaration.name}<${names}>", span)
 }
 
 function constructionArguments(properties: ObjectProperty[]): CallArgument[] {
@@ -109,7 +109,7 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
   if expression.type_ == "Success" || expression.type_ == "Failure" {
     if spread := expression.spread {
       expression.resolvedSpreadType = checkExpression(state, spread, scope, none)
-      typeError(state, expression.type_ + " construction does not support field spread", spread.span)
+      typeError(state, "${expression.type_} construction does not support field spread", spread.span)
     }
     // A surrounding Result or matching arm types the payload; otherwise the
     // payload determines a standalone arm type.
@@ -120,7 +120,7 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
       if payload := expectation.payload { valueType = payload }
     }
     if expression.args.length == 0 && valueType.kind != "none" && valueType.kind != "unknown" {
-      typeError(state, expression.type_ + " {} needs a value for " + typeName(expectation.result ?? resultArmType(expression.type_, valueType)), expression.span)
+      typeError(state, "${expression.type_} {} needs a value for ${typeName(expectation.result ?? resultArmType(expression.type_, valueType))}", expression.span)
     }
     return finish(state, expression, expectation.result ?? resultArmType(expression.type_, valueType))
   }
@@ -174,7 +174,7 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
       if spreadType := constructionSpreadFieldType(state, expression, parameter.name) { spread.push(FunctionParamType { name: parameter.name, type_: spreadType, hasDefault: false }) }
     }
     checkArguments(state, propertyArguments(expression.args), plan.signature.params, scope, expression.span,
-      "Class \"" + constructed.name + "\"", "Argument", true, true, spread, expression.spread?.span, true)
+      "Class \"${constructed.name}\"", "Argument", true, true, spread, expression.spread?.span, true)
     return finish(state, expression, plan.signature.returnType)
   }
   if resolvedClass := expression.resolvedClass { checkClassProperties(state, expression.args, scope, constructed, resolvedClass, expression.span, false, expression) }
@@ -183,18 +183,18 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
 
 export function validateConstructorVisibility(state: CheckerState, owner: ClassType, constructor: FunctionDeclaration, span: SourceSpan): none {
   if constructor.private_ && owner.symbol.module != state.info!.path {
-    typeError(state, "Constructor for \"" + owner.name + "\" is private", span)
+    typeError(state, "Constructor for \"${owner.name}\" is private", span)
   }
 }
 
 export function checkClassProperties(state: CheckerState, properties: ObjectProperty[], scope: Scope, constructed: ClassType, declaration: ClassDeclaration, span: SourceSpan, structural: bool = false, spread: ConstructExpression | none = none): none {
   let used: string[] = []
   for property of properties {
-    if used.contains(property.name) { typeError(state, "Duplicate field '" + property.name + "' in " + declaration.name + " construction", property.span) }
+    if used.contains(property.name) { typeError(state, "Duplicate field '${property.name}' in ${declaration.name} construction", property.span) }
     used.push(property.name)
     field := findClassField(declaration.fields, property.name)
     if field == none || field!.static_ || (!structural && field!.const_) {
-      typeError(state, "Unknown field '" + property.name + "' for " + declaration.name, property.span)
+      typeError(state, "Unknown field '${property.name}' for ${declaration.name}", property.span)
       checkPropertyValue(state, property, scope, none)
       continue
     }
@@ -202,7 +202,7 @@ export function checkClassProperties(state: CheckerState, properties: ObjectProp
     checkAssignableProperty(state, property, scope, expected)
     if structural && field!.const_ {
       if property.value == none || field!.defaultValue == none || !sameFixedFieldValue(property.value!, field!.defaultValue!) {
-        typeError(state, "Field '" + property.name + "' must match its literal-valued declaration", property.span)
+        typeError(state, "Field '${property.name}' must match its literal-valued declaration", property.span)
       }
     }
   }
@@ -212,12 +212,12 @@ export function checkClassProperties(state: CheckerState, properties: ObjectProp
       if used.contains(name) { continue }
       spreadType := if spread == none then none else constructionSpreadFieldType(state, spread!, name)
       if spreadType == none {
-        if field.const_ || field.defaultValue == none { typeError(state, "Missing required field '" + name + "'", span) }
+        if field.const_ || field.defaultValue == none { typeError(state, "Missing required field '${name}'", span) }
       }
       else {
         expected := memberType(state, constructed, name, span)
         if !isAssignableWithInterfaces(state.result, spreadType!, expected) {
-          typeError(state, "Cannot assign spread field " + typeName(spreadType!) + " to " + typeName(expected), spread!.spread!.span)
+          typeError(state, "Cannot assign spread field ${typeName(spreadType!)} to ${typeName(expected)}", spread!.spread!.span)
         }
       }
     }
@@ -232,7 +232,7 @@ function checkConstructionSpread(state: CheckerState, expression: ConstructExpre
     _: ClassType -> { }
     _: InterfaceType -> { }
     _: UnknownType -> { }
-    _ -> { typeError(state, "Field spread requires a class, struct, or interface value; got " + typeName(spreadType), expression.spread!.span) }
+    _ -> { typeError(state, "Field spread requires a class, struct, or interface value; got ${typeName(spreadType)}", expression.spread!.span) }
   }
 }
 
@@ -259,7 +259,7 @@ export function validateFieldArguments(state: CheckerState, plan: CheckedConstru
     argument := args[i]
     name := argument.name ?? (if i < plan.signature.params.length then plan.signature.params[i].name else "")
     if field := findClassField(plan.declaration!.fields, name) && field.private_ {
-      typeError(state, "Field '" + name + "' is private to module '" + owner.symbol.module + "'", argument.span)
+      typeError(state, "Field '${name}' is private to module '${owner.symbol.module}'", argument.span)
     }
   }
 }
@@ -304,7 +304,7 @@ export function checkPositionalLiteralConstruction(state: CheckerState, expressi
   for element of expression.elements { args.push(SuppliedArgument { name: none, value: element, span: element.span }) }
   validateFieldArguments(state, construction, class_, args)
   kind := if class_.symbol.kind == "struct" then "Struct" else "Class"
-  checkArguments(state, args, construction.signature.params, scope, expression.span, kind + " \"" + class_.name + "\"")
+  checkArguments(state, args, construction.signature.params, scope, expression.span, "${kind} \"${class_.name}\"")
   return finish(state, expression, construction.signature.returnType)
 }
 
@@ -313,7 +313,7 @@ export function checkActorCreation(state: CheckerState, actorCreation: ActorCrea
   symbol := symbolFor(state.info!, actorCreation.className)
   if symbol == none || symbol!.kind != "class" {
     for argument of actorCreation.args { checkExpression(state, argument, scope, none) }
-    typeError(state, "Actor requires a class type; \"" + actorCreation.className + "\" is not a class", actorCreation.span)
+    typeError(state, "Actor requires a class type; \"${actorCreation.className}\" is not a class", actorCreation.span)
     return finish(state, actorCreation, unknownType())
   }
   inner := classType(actorCreation.className, symbol!)
@@ -323,13 +323,13 @@ export function checkActorCreation(state: CheckerState, actorCreation: ActorCrea
   if factory := construction.factory {
     validateConstructorVisibility(state, inner, factory, actorCreation.span)
     if !sameType(construction.signature.returnType, inner) {
-      typeError(state, "Actor constructor factory for \"" + inner.name + "\" must return " + inner.name + " directly", actorCreation.span)
+      typeError(state, "Actor constructor factory for \"${inner.name}\" must return ${inner.name} directly", actorCreation.span)
     }
   }
   params := construction.signature.params
   validateFieldArguments(state, construction, inner, positionalArguments(actorCreation.args))
   checkArguments(state, positionalArguments(actorCreation.args), params, scope, actorCreation.span,
-    "Actor \"" + actorCreation.className + "\"", "Actor constructor argument")
+    "Actor \"${actorCreation.className}\"", "Actor constructor argument")
   for i of 0..<actorCreation.args.length {
     actual := actorCreation.args[i].resolvedType ?? unknownType()
     if violation := findActorBoundaryViolation(state.result, actual) {

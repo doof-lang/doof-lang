@@ -30,7 +30,7 @@ export function planDebuggerRun(app: string, descriptor: string, directory: stri
   // Execute the bundle's binary directly so the user's environment is inherited.
   // NSApplication still owns a standalone native application and Dock entry.
   return RunInvocation {
-    command: app + "/Contents/MacOS/DoofDebugger",
+    command: "${app}/Contents/MacOS/DoofDebugger",
     arguments: [descriptor], directory,
   }
 }

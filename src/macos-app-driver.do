@@ -44,7 +44,7 @@ function runRequiredCommand(command: string, arguments: string[], description: s
   result := runMacOSCommand(command, arguments)
   if result.exitCode != 0 {
     output := if result.error != "" then result.error else BlobReader(result.output).readString(long(result.output.length))
-    return Failure(description + " failed: " + output)
+    return Failure("${description} failed: ${output}")
   }
   return Success()
 }
@@ -79,13 +79,13 @@ function commandText(command: string, arguments: string[], description: string):
   result := runMacOSCommand(command, arguments)
   if result.exitCode != 0 {
     output := if result.error != "" then result.error else BlobReader(result.output).readString(long(result.output.length))
-    return Failure(description + " failed: " + output)
+    return Failure("${description} failed: ${output}")
   }
   return Success(BlobReader(result.output).readString(long(result.output.length)))
 }
 
 function resolveEmbeddedLibrary(name: string, libraryPaths: string[], buildDirectory: string): Result<string, string> {
-  readonly candidates = ["lib" + name + ".dylib", name + ".dylib", "lib" + name + ".so", name + ".so", name + ".framework"]
+  readonly candidates = ["lib${name}.dylib", name + ".dylib", "lib" + name + ".so", name + ".so", name + ".framework"]
   for libraryPath of libraryPaths {
     resolvedRoot := if libraryPath.startsWith("/") then libraryPath else outputPath(buildDirectory, libraryPath)
     for candidate of candidates {
@@ -93,7 +93,7 @@ function resolveEmbeddedLibrary(name: string, libraryPaths: string[], buildDirec
       if exists(candidatePath) { return Success(candidatePath) }
     }
   }
-  return Failure("Could not resolve embedded linked library \"" + name + "\" in configured library paths")
+  return Failure("Could not resolve embedded linked library \"${name}\" in configured library paths")
 }
 
 function firstNonemptyOutputLine(output: string): string {
@@ -121,13 +121,13 @@ function frameworkBinary(frameworkPath: string): Result<string, string> {
   name := nameWithExtension.substring(0, nameWithExtension.length - ".framework".length)
   direct := outputPath(frameworkPath, name)
   if exists(direct) { return Success(direct) }
-  versioned := outputPath(frameworkPath, "Versions/Current/" + name)
+  versioned := outputPath(frameworkPath, "Versions/Current/${name}")
   if exists(versioned) { return Success(versioned) }
-  return Failure("Could not find executable in embedded framework: " + frameworkPath)
+  return Failure("Could not find executable in embedded framework: ${frameworkPath}")
 }
 
 function frameworkReference(frameworkName: string, installId: string, bundledBinary: string, bundledRoot: string): string {
-  marker := frameworkName + "/"
+  marker := "${frameworkName}/"
   for index of 0..<(installId.length - marker.length + 1) {
     if installId.substring(index, index + marker.length) == marker {
       return "@rpath/" + frameworkName + "/" + installId.substring(index + marker.length, installId.length)
@@ -135,13 +135,13 @@ function frameworkReference(frameworkName: string, installId: string, bundledBin
   }
   prefix := if bundledRoot.endsWith("/") then bundledRoot else bundledRoot + "/"
   relative := if bundledBinary.startsWith(prefix) then bundledBinary.substring(prefix.length, bundledBinary.length) else fileName(bundledBinary)
-  return "@rpath/" + frameworkName + "/" + relative
+  return "@rpath/${frameworkName}/${relative}"
 }
 
 function planEmbeddedCode(sourcePath: string, frameworksDirectory: string): Result<EmbeddedCode, string> {
-  if !exists(sourcePath) { return Failure("Embedded library not found: " + sourcePath) }
+  if !exists(sourcePath) { return Failure("Embedded library not found: ${sourcePath}") }
   if sourcePath.endsWith(".framework") {
-    if !isDirectory(sourcePath) { return Failure("Embedded framework must be a directory: " + sourcePath) }
+    if !isDirectory(sourcePath) { return Failure("Embedded framework must be a directory: ${sourcePath}") }
     try sourceBinary := frameworkBinary(sourcePath)
     try installId := readMachOInstallId(sourceBinary)
     frameworkName := fileName(sourcePath)
@@ -156,7 +156,7 @@ function planEmbeddedCode(sourcePath: string, frameworksDirectory: string): Resu
     })
   }
   if !sourcePath.endsWith(".dylib") && !sourcePath.endsWith(".so") {
-    return Failure("Embedded library must be a .dylib, .so, or .framework: " + sourcePath)
+    return Failure("Embedded library must be a .dylib, .so, or .framework: ${sourcePath}")
   }
   try installId := readMachOInstallId(sourcePath)
   destinationName := if installId == "" then fileName(sourcePath) else fileName(installId)
@@ -165,7 +165,7 @@ function planEmbeddedCode(sourcePath: string, frameworksDirectory: string): Resu
     sourcePath,
     bundledRoot: bundledPath,
     bundledPath,
-    bundleReference: "@rpath/" + destinationName,
+    bundleReference: "@rpath/${destinationName}",
     installId,
   })
 }
@@ -203,7 +203,7 @@ function rewriteEmbeddedDependencies(codePath: string, embedded: EmbeddedCode[])
     if isSystemMachODependency(dependency) { continue }
     target := embeddedDependency(dependency, embedded)
     if target == none {
-      return Failure("Mach-O file " + codePath + " references non-system dependency " + dependency + ", which is not listed in embeddedLibraries")
+      return Failure("Mach-O file ${codePath} references non-system dependency ${dependency}, which is not listed in embeddedLibraries")
     }
     if dependency != target!.bundleReference {
       try runRequiredCommand("install_name_tool", ["-change", dependency, target!.bundleReference, codePath], "rewriting embedded library dependency")
@@ -214,7 +214,7 @@ function rewriteEmbeddedDependencies(codePath: string, embedded: EmbeddedCode[])
 
 function ensureMachORPath(codePath: string, rpath: string): Result<none, string> {
   try loadCommands := commandText("otool", ["-l", codePath], "reading Mach-O rpaths")
-  if loadCommands.contains("path " + rpath + " ") { return Success() }
+  if loadCommands.contains("path ${rpath} ") { return Success() }
   return runRequiredCommand("install_name_tool", ["-add_rpath", rpath, codePath], "adding bundled library rpath")
 }
 
@@ -237,7 +237,7 @@ function embedMacOSLibraries(
       sourcePath = resolvedSourcePath
     }
     try code := planEmbeddedCode(sourcePath, frameworksDirectory)
-    if destinations.contains(code.bundledRoot) { return Failure("Duplicate embedded library destination: " + code.bundledRoot) }
+    if destinations.contains(code.bundledRoot) { return Failure("Duplicate embedded library destination: ${code.bundledRoot}") }
     destinations.push(code.bundledRoot)
     removeTree(code.bundledRoot)
     copyPath(code.sourcePath, code.bundledRoot)
@@ -268,7 +268,7 @@ export function assembleMacOSApp(
     for entry of config.embeddedLibraries { if entry.path == library { listed = true } }
     if !listed { config.embeddedLibraries.push(MacOSEmbeddedLibrary { path: library }) }
   }
-  appPath := outputPath(buildDirectory, config.executableName + ".app")
+  appPath := outputPath(buildDirectory, "${config.executableName}.app")
   removeTree(appPath)
   contentsDirectory := outputPath(appPath, "Contents")
   macosDirectory := outputPath(contentsDirectory, "MacOS")
@@ -281,7 +281,7 @@ export function assembleMacOSApp(
   writeText(outputPath(contentsDirectory, "Info.plist"), renderMacOSInfoPlist(config))!
   writeText(outputPath(contentsDirectory, "PkgInfo"), "APPL????")!
   if config.iconPath != "" {
-    try generateMacOSIcon(config.iconPath, outputPath(resourcesDirectory, config.executableName + ".icns"), buildDirectory)
+    try generateMacOSIcon(config.iconPath, outputPath(resourcesDirectory, "${config.executableName}.icns"), buildDirectory)
   }
   let destinations: string[] = []
   for resource of config.resources {

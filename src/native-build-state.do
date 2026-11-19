@@ -37,7 +37,7 @@ export function parseNativeBuildState(source: string): NativeBuildState | none {
 }
 
 export function renderNativeBuildState(state: NativeBuildState): string {
-  return formatJsonValue(state.toSerialObject()) + "\n"
+  return "${formatJsonValue(state.toSerialObject())}\n"
 }
 
 /** Parses the portable subset of Make dependency files emitted by GCC/Clang. */
@@ -71,7 +71,7 @@ export function parseMakeDependencies(source: string): string[] {
     }
     current = current + string(char)
   }
-  if escaped { current = current + "\\" }
+  if escaped { current = "${current}\\" }
   if current != "" { appendUnique(result, current) }
   return result
 }

@@ -139,7 +139,7 @@ export class ModuleAnalyzer {
       if !resolver.failed(path) {
         diagnostics.push(Diagnostic {
           severity: "error",
-          message: "Module not found: " + path,
+          message: "Module not found: ${path}",
           span: emptySemanticSpan(),
           module: path,
         })
@@ -265,7 +265,7 @@ export class ModuleAnalyzer {
       if symbol == none { continue }
       decorateDeclarationSymbol(statement, symbol!)
       if findSymbol(info, symbol!.name) != none {
-        addError(info, "Duplicate module binding '" + symbol!.name + "'", statement.span)
+        addError(info, "Duplicate module binding '${symbol!.name}'", statement.span)
         continue
       }
       info.symbols.push(symbol!)
@@ -345,7 +345,7 @@ export class ModuleAnalyzer {
         import_: ImportDeclaration -> {
           sourcePath := resolveImportPath(info, import_.source)
           if info.path.endsWith(".test.do") && sourcePath.endsWith(".test.do") {
-            addError(info, "Test file \"" + info.path + "\" cannot import another test file \"" + sourcePath + "\"", import_.span)
+            addError(info, "Test file \"${info.path}\" cannot import another test file \"${sourcePath}\"", import_.span)
             continue
           }
           source := resolveModule(sourcePath)
@@ -355,11 +355,11 @@ export class ModuleAnalyzer {
             // A failed dependency already owns the actionable diagnostic.
             // Do not reinterpret its missing symbol table as missing exports.
             if source != none && imported == none {
-              addError(info, "Module '" + import_.source + "' does not export '" + named.name + "'", named.span)
+              addError(info, "Module '${import_.source}' does not export '${named.name}'", named.span)
             }
             localName := named.alias ?? named.name
             if hasModuleBinding(info, localName) {
-              addError(info, "Duplicate module binding '" + localName + "'", named.span)
+              addError(info, "Duplicate module binding '${localName}'", named.span)
               continue
             }
             if imported == none {
@@ -392,7 +392,7 @@ export class ModuleAnalyzer {
               if exported := findExport(sourceModule, specifier.name) {
                 info.exports.push(exportedSymbol(exported, specifier.alias ?? specifier.name))
               } else {
-                addError(info, "Module '" + source + "' does not export '" + specifier.name + "'", specifier.span)
+                addError(info, "Module '${source}' does not export '${specifier.name}'", specifier.span)
               }
             }
             continue
@@ -400,7 +400,7 @@ export class ModuleAnalyzer {
           for specifier of list.specifiers {
             if local := findSymbol(info, specifier.name) {
               if isPrivateDeclaration(info, specifier.name) {
-                addError(info, "Cannot export private declaration '" + specifier.name + "'; private declarations are file-local", specifier.span)
+                addError(info, "Cannot export private declaration '${specifier.name}'; private declarations are file-local", specifier.span)
               } else {
                 exportedName := specifier.alias ?? specifier.name
                 if findExport(info, exportedName) == none {
@@ -408,7 +408,7 @@ export class ModuleAnalyzer {
                 }
               }
             } else {
-              addError(info, "Cannot export unknown symbol '" + specifier.name + "'", specifier.span)
+              addError(info, "Cannot export unknown symbol '${specifier.name}'", specifier.span)
             }
           }
         }
@@ -484,7 +484,7 @@ export class ModuleAnalyzer {
           if symbol == none {
             addError(info, unknownTypeMessage(named.name), named.span)
           } else if !isTypeSymbol(symbol!) {
-            addError(info, "Symbol '" + named.name + "' is not a type", named.span)
+            addError(info, "Symbol '${named.name}' is not a type", named.span)
             symbol = none
           }
           named.resolvedSymbol = symbol
@@ -564,7 +564,7 @@ export class ModuleAnalyzer {
     for directive of info.mockImportDirectives {
       for mapping of directive.mappings {
         if mapping.dependency == mapping.replacement {
-          addError(info, "mock import cannot substitute \"" + mapping.dependency + "\" with itself", mapping.span)
+          addError(info, "mock import cannot substitute \"${mapping.dependency}\" with itself", mapping.span)
         }
       }
     }
@@ -642,5 +642,5 @@ function emptySemanticSpan(): SemanticSpan {
 export function unknownTypeMessage(name: string): string {
   if name == "Array" { return "Unknown type 'Array'; write arrays as T[]" }
   if name == "ReadonlyArray" { return "Unknown type 'ReadonlyArray'; write readonly arrays as readonly T[]" }
-  return "Unknown type '" + name + "'"
+  return "Unknown type '${name}'"
 }

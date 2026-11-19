@@ -58,11 +58,11 @@ class IsolationIndex {
 }
 
 function declarationKey(modulePath: string, name: string): string {
-  return modulePath + "\n" + name
+  return "${modulePath}\n${name}"
 }
 
 function spanKey(modulePath: string, start: int, end: int): string {
-  return modulePath + "\n" + string(start) + ":" + string(end)
+  return "${modulePath}\n${start}:${end}"
 }
 
 function indexIsolation(result: AnalysisResult, graph: IsolationGraph): IsolationIndex {
@@ -498,7 +498,7 @@ function reachableClasses(index: IsolationIndex, type_: ResolvedType): ClassDecl
 function collectReachableClasses(index: IsolationIndex, type_: ResolvedType, classes: ClassDeclaration[], seen: string[]): none {
   case type_ {
     class_: ClassType -> {
-      key := class_.symbol.module + ":" + typeName(class_)
+      key := "${class_.symbol.module}:${typeName(class_)}"
       if seen.contains(key) { return }
       seen.push(key)
       declaration := indexedClass(index, class_.symbol.module, class_.symbol.name)
@@ -510,7 +510,7 @@ function collectReachableClasses(index: IsolationIndex, type_: ResolvedType, cla
       }
     }
     interface_: InterfaceType -> {
-      key := interface_.symbol.module + ":" + typeName(interface_)
+      key := "${interface_.symbol.module}:${typeName(interface_)}"
       if seen.contains(key) { return }
       seen.push(key)
       for implementation of interface_.symbol.implementations {
@@ -611,7 +611,7 @@ function reasonText(reason: IsolationReason): string {
   if reason.kind == "module" { return "accesses mutable module binding \"" + reason.name + "\"" }
   if reason.kind == "static" { return "accesses mutable static field \"" + reason.name + "\"" }
   if reason.kind == "call" { return "calls non-isolated function \"" + reason.name + "\"" }
-  return "uses bodyless function \"" + reason.name + "\" without an isolated contract"
+  return "uses bodyless function \"${reason.name}\" without an isolated contract"
 }
 
 function effectsReason(index: IsolationIndex, effects: IsolationEffects): IsolationReason | none {
@@ -675,7 +675,7 @@ function validateCrossingValue(index: IsolationIndex, module: ModuleInfo, value:
   release := crossingReleaseReason(index, value.resolvedType!)
   if release == none { return }
   pushDiagnostic(diagnostics, module.path, value.span,
-    "Value passed to " + destination + " may be released there, but the destructor of class \"" + release!.className + "\" " + reasonText(release!.reason))
+    "Value passed to ${destination} may be released there, but the destructor of class \"${release!.className}\" ${reasonText(release!.reason)}")
 }
 
 function moduleExpressions(module: ModuleInfo): Expression[] {
@@ -705,8 +705,8 @@ function validateModuleIsolationEffects(index: IsolationIndex, module: ModuleInf
     if !node.declaration.isolated_ || node.reason == none { continue }
     owner := if node.owner == "" then "function \"" + node.declaration.name + "\"" else "method \"" + node.owner + "." + node.declaration.name + "\""
     message := if node.reason!.kind == "call"
-      then "Isolated " + owner + " cannot call non-isolated function \"" + node.reason!.name + "\""
-      else "Isolated " + owner + " is not isolated: " + reasonText(node.reason!)
+      then "Isolated ${owner} cannot call non-isolated function \"${node.reason!.name}\""
+      else "Isolated ${owner} is not isolated: ${reasonText(node.reason!)}"
     pushDiagnostic(diagnostics, module.path, node.reason!.span, message)
   }
 
@@ -719,12 +719,12 @@ function validateModuleIsolationEffects(index: IsolationIndex, module: ModuleInf
             for capture of asyncBlockCaptures(block) {
               if release := crossingReleaseReason(index, capture.resolvedBinding!.type_) {
                 pushDiagnostic(diagnostics, module.path, capture.span,
-                  "Async block capture \"" + capture.name + "\" may be released in the worker, but the destructor of class \"" + release.className + "\" " + reasonText(release.reason))
+                  "Async block capture \"${capture.name}\" may be released in the worker, but the destructor of class \"${release.className}\" ${reasonText(release.reason)}")
               }
             }
             if reason := probeReason(index, async_) {
               pushDiagnostic(diagnostics, module.path, reason.span,
-                "Async block is not isolated: " + reasonText(reason))
+                "Async block is not isolated: ${reasonText(reason)}")
             }
           }
           inner: Expression -> {
@@ -739,7 +739,7 @@ function validateModuleIsolationEffects(index: IsolationIndex, module: ModuleInf
               }
               if found := reason {
                 pushDiagnostic(diagnostics, module.path, found.span,
-                  "Async call is not isolated: " + reasonText(found))
+                  "Async call is not isolated: ${reasonText(found)}")
               }
             }
           }
@@ -748,20 +748,20 @@ function validateModuleIsolationEffects(index: IsolationIndex, module: ModuleInf
       call: CallExpression -> {
         if isActorMethodCall(call) {
           name := case call.callee { member: MemberExpression -> member.property, _ -> "" }
-          for argument of call.args { validateCrossingValue(index, module, argument.value, "actor method \"" + name + "\"", diagnostics) }
+          for argument of call.args { validateCrossingValue(index, module, argument.value, "actor method \"${name}\"", diagnostics) }
         }
         if isActorMethodCall(call) && call.resolvedFunction != none {
           if target := nodeForDeclaration(index, call.resolvedFunction!) && target.reason != none {
             pushDiagnostic(diagnostics, module.path, call.span,
-              "Actor method \"" + target.declaration.name + "\" is not isolated: " + reasonText(target.reason!))
+              "Actor method \"${target.declaration.name}\" is not isolated: ${reasonText(target.reason!)}")
           }
         }
       }
       actor: ActorCreationExpression -> {
-        for argument of actor.args { validateCrossingValue(index, module, argument, "Actor<" + actor.className + "> construction", diagnostics) }
+        for argument of actor.args { validateCrossingValue(index, module, argument, "Actor<${actor.className}> construction", diagnostics) }
         if reason := actorConstructionReason(index, actor) {
           pushDiagnostic(diagnostics, module.path, actor.span,
-            "Actor<" + actor.className + "> construction is not isolated: " + reasonText(reason))
+            "Actor<${actor.className}> construction is not isolated: ${reasonText(reason)}")
         }
       }
       _ -> { }

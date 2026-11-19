@@ -48,7 +48,7 @@ export function macOSPackageArchiveName(executableName: string, version: string)
     character := version.substring(index, index + 1)
     safeVersion = safeVersion + if allowed.contains(character) then character else "-"
   }
-  return executableName + "-" + safeVersion + "-macos.zip"
+  return "${executableName}-${safeVersion}-macos.zip"
 }
 
 /** Renders the generated bundle plist with app-owned custom keys appended. */
@@ -66,16 +66,16 @@ export function renderMacOSInfoPlist(config: MacOSAppConfig): string {
   body = body + plistString("CFBundleVersion", config.version)
   body = body + plistString("LSApplicationCategoryType", config.category)
   body = body + plistString("LSMinimumSystemVersion", config.minimumSystemVersion)
-  body = body + "\t<key>NSHighResolutionCapable</key>\n\t<true/>\n"
+  body = "${body}\t<key>NSHighResolutionCapable</key>\n\t<true/>\n"
   body = body + plistString("NSPrincipalClass", "NSApplication")
   if infoPlist := config.infoPlist {
     for key, value of infoPlist {
-      body = body + "\t<key>" + escapePlistText(key) + "</key>\n" + renderPlistValue(value, 1)
+      body = "${body}\t<key>${escapePlistText(key)}</key>\n${renderPlistValue(value, 1)}"
     }
   }
   return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
     "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
-    "<plist version=\"1.0\">\n<dict>\n" + body + "</dict>\n</plist>\n"
+    "<plist version=\"1.0\">\n<dict>\n${body}</dict>\n</plist>\n"
 }
 
 /** Produces stable release codesign arguments. */
@@ -103,37 +103,37 @@ export function macOSCodesignArguments(
 }
 
 function plistString(key: string, value: string): string {
-  return "\t<key>" + escapePlistText(key) + "</key>\n\t<string>" + escapePlistText(value) + "</string>\n"
+  return "\t<key>${escapePlistText(key)}</key>\n\t<string>${escapePlistText(value)}</string>\n"
 }
 
 function plistIndent(depth: int): string {
   let result = ""
-  for ignored of 0..<depth { result = result + "\t" }
+  for ignored of 0..<depth { result = "${result}\t" }
   return result
 }
 
 function renderPlistValue(value: SerialValue, depth: int): string {
   indent := plistIndent(depth)
   case value {
-    _: none -> return indent + "<string></string>\n"
+    _: none -> return "${indent}<string></string>\n"
     boolean: bool -> return indent + if boolean then "<true/>\n" else "<false/>\n"
-    number: int -> return indent + "<integer>" + string(number) + "</integer>\n"
-    number: long -> return indent + "<integer>" + string(number) + "</integer>\n"
-    number: float -> return indent + "<real>" + string(number) + "</real>\n"
-    number: double -> return indent + "<real>" + string(number) + "</real>\n"
-    text: string -> return indent + "<string>" + escapePlistText(text) + "</string>\n"
+    number: int -> return "${indent}<integer>${number}</integer>\n"
+    number: long -> return "${indent}<integer>${number}</integer>\n"
+    number: float -> return "${indent}<real>${number}</real>\n"
+    number: double -> return "${indent}<real>${number}</real>\n"
+    text: string -> return "${indent}<string>${escapePlistText(text)}</string>\n"
     array: readonly SerialValue[] -> {
-      let result = indent + "<array>\n"
+      let result = "${indent}<array>\n"
       for item of array { result = result + renderPlistValue(item, depth + 1) }
-      return result + indent + "</array>\n"
+      return "${result}${indent}</array>\n"
     }
     object: SerialObject -> {
-      let result = indent + "<dict>\n"
+      let result = "${indent}<dict>\n"
       for key, item of object {
         result = result + plistIndent(depth + 1) + "<key>" + escapePlistText(key) + "</key>\n"
         result = result + renderPlistValue(item, depth + 1)
       }
-      return result + indent + "</dict>\n"
+      return "${result}${indent}</dict>\n"
     }
   }
   panic("unhandled plist value")

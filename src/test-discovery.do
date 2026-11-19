@@ -55,7 +55,7 @@ export function discoverModuleTests(
 export function testDisplayPath(rootDirectory: string, modulePath: string): string {
   root := trimTrailingSlashes(rootDirectory.replaceAll("\\", "/"))
   module := modulePath.replaceAll("\\", "/")
-  prefix := root + "/"
+  prefix := "${root}/"
   if module.startsWith(prefix) { return module.substring(prefix.length, module.length) }
   return module
 }
@@ -68,22 +68,22 @@ function addDiscoveredTest(
   rootDirectory: string,
   usesMocks: bool,
 ): none {
-  location := modulePath + ":" + string(declaration.span.start.line) + ":" + string(declaration.span.start.column)
+  location := "${modulePath}:${declaration.span.start.line}:${declaration.span.start.column}"
   if declaration.params.length > 0 {
-    result.errors.push(location + ": error: test \"" + exportedName + "\" must not declare parameters")
+    result.errors.push("${location}: error: test \"${exportedName}\" must not declare parameters")
     return
   }
   if declaration.typeParams.length > 0 {
-    result.errors.push(location + ": error: test \"" + exportedName + "\" must not declare type parameters")
+    result.errors.push("${location}: error: test \"${exportedName}\" must not declare type parameters")
     return
   }
   if !returnsNone(declaration) {
-    result.errors.push(location + ": error: test \"" + exportedName + "\" must return none")
+    result.errors.push("${location}: error: test \"${exportedName}\" must return none")
     return
   }
   displayPath := testDisplayPath(rootDirectory, modulePath)
   result.tests.push(DiscoveredTest {
-    id: displayPath + "::" + exportedName,
+    id: "${displayPath}::${exportedName}",
     name: exportedName,
     modulePath,
     moduleDisplayPath: displayPath,

@@ -37,7 +37,7 @@ export function validateDeepReadonlyFields(result: AnalysisResult): Diagnostic[]
             violation := findViolation(result, field.resolvedType!, [], false)
             if violation == none { continue }
             name := fieldDisplayName(field)
-            pushDiagnostic(diagnostics, module.path, field.span, "Readonly field \"" + class_.name + "." + name + "\" must be deeply immutable: " + violation!.reason)
+            pushDiagnostic(diagnostics, module.path, field.span, "Readonly field \"${class_.name}.${name}\" must be deeply immutable: ${violation!.reason}")
           }
         }
         interface_: InterfaceDeclaration -> {
@@ -45,7 +45,7 @@ export function validateDeepReadonlyFields(result: AnalysisResult): Diagnostic[]
             if !field.readonly_ || field.resolvedType == none { continue }
             violation := findViolation(result, field.resolvedType!, [], false)
             if violation == none { continue }
-            pushDiagnostic(diagnostics, module.path, field.span, "Readonly field \"" + interface_.name + "." + field.name + "\" must be deeply immutable: " + violation!.reason)
+            pushDiagnostic(diagnostics, module.path, field.span, "Readonly field \"${interface_.name}.${field.name}\" must be deeply immutable: ${violation!.reason}")
           }
         }
         _ -> { }
@@ -67,7 +67,7 @@ function findViolation(result: AnalysisResult, type_: ResolvedType, seen: string
     parameter: TypeParameterType -> {
       if !unbound { return none }
       if constraint := parameter.constraint && constraint.kind != "unknown" { return findViolation(result, constraint, seen, unbound) }
-      return ActorBoundaryViolation { reason: "unbound type parameter \"" + parameter.name + "\" may hold mutable values" }
+      return ActorBoundaryViolation { reason: "unbound type parameter \"${parameter.name}\" may hold mutable values" }
     }
     _: SerialValueResolvedType -> { return none }
     // Actor and promise handles are synchronized runtime handles: actor state
@@ -77,19 +77,19 @@ function findViolation(result: AnalysisResult, type_: ResolvedType, seen: string
     _: PromiseType -> { return none }
     weak_: WeakResolvedType -> { return findViolation(result, weak_.inner, seen, unbound) }
     array: ArrayResolvedType -> {
-      if !array.readonly_ { return ActorBoundaryViolation { reason: "array type \"" + typeName(type_) + "\" is mutable" } }
+      if !array.readonly_ { return ActorBoundaryViolation { reason: "array type \"${typeName(type_)}\" is mutable" } }
       return findViolation(result, array.elementType, seen, unbound)
     }
     map: MapResolvedType -> {
-      if !map.readonly_ { return ActorBoundaryViolation { reason: "map type \"" + typeName(type_) + "\" is mutable" } }
+      if !map.readonly_ { return ActorBoundaryViolation { reason: "map type \"${typeName(type_)}\" is mutable" } }
       if keyViolation := findViolation(result, map.keyType, seen, unbound) { return keyViolation }
       return findViolation(result, map.valueType, seen, unbound)
     }
     set_: SetResolvedType -> {
-      if !set_.readonly_ { return ActorBoundaryViolation { reason: "set type \"" + typeName(type_) + "\" is mutable" } }
+      if !set_.readonly_ { return ActorBoundaryViolation { reason: "set type \"${typeName(type_)}\" is mutable" } }
       return findViolation(result, set_.elementType, seen, unbound)
     }
-    stream: StreamResolvedType -> { return ActorBoundaryViolation { reason: "stream type \"" + typeName(stream) + "\" is mutable" } }
+    stream: StreamResolvedType -> { return ActorBoundaryViolation { reason: "stream type \"${typeName(stream)}\" is mutable" } }
     result_: ResultResolvedType -> {
       if valueViolation := findViolation(result, result_.valueType, seen, unbound) { return valueViolation }
       return findViolation(result, result_.errorType, seen, unbound)
@@ -111,7 +111,7 @@ function findViolation(result: AnalysisResult, type_: ResolvedType, seen: string
     function_: FunctionType -> {
       for parameter of function_.params {
         if violation := findViolation(result, parameter.type_, seen, unbound) {
-          return ActorBoundaryViolation { reason: "callback parameter \"" + parameter.name + "\" cannot cross actor boundaries: " + violation.reason }
+          return ActorBoundaryViolation { reason: "callback parameter \"${parameter.name}\" cannot cross actor boundaries: ${violation.reason}" }
         }
       }
       return findViolation(result, function_.returnType, seen, unbound)
@@ -133,20 +133,20 @@ function findClassViolation(result: AnalysisResult, type_: ClassType, seen: stri
   // Native state is invisible to the checker, so only an explicit
   // `import isolated class` contract makes a native handle shareable.
   if declaration!.native_ && !declaration!.nativeIsolated {
-    return ActorBoundaryViolation { reason: "native class \"" + declaration!.name + "\" is not declared \"import isolated class\"" }
+    return ActorBoundaryViolation { reason: "native class \"${declaration!.name}\" is not declared \"import isolated class\"" }
   }
   for field of declaration!.fields {
     if field.static_ { continue }
     if field.let_ {
       name := fieldDisplayName(field)
-      return ActorBoundaryViolation { reason: "field \"" + name + "\" is mutable" }
+      return ActorBoundaryViolation { reason: "field \"${name}\" is mutable" }
     }
     fieldType := field.resolvedType
     if fieldType == none { continue }
     effective := substituteTypeParams(fieldType!, declaration!.typeParams, type_.typeArgs)
     if violation := findViolation(result, effective, nextSeen, unbound) {
       name := fieldDisplayName(field)
-      return ActorBoundaryViolation { reason: "field \"" + name + "\" cannot cross actor boundaries: " + violation.reason }
+      return ActorBoundaryViolation { reason: "field \"${name}\" cannot cross actor boundaries: ${violation.reason}" }
     }
   }
   // Native code may carry a type argument that no field mentions (a channel's
@@ -154,7 +154,7 @@ function findClassViolation(result: AnalysisResult, type_: ClassType, seen: stri
   for index of 0..<type_.typeArgs.length {
     if violation := findViolation(result, type_.typeArgs[index], nextSeen, unbound) {
       parameterName := if index < declaration!.typeParams.length then declaration!.typeParams[index] else typeName(type_.typeArgs[index])
-      return ActorBoundaryViolation { reason: "type argument \"" + parameterName + "\" cannot cross actor boundaries: " + violation.reason }
+      return ActorBoundaryViolation { reason: "type argument \"${parameterName}\" cannot cross actor boundaries: ${violation.reason}" }
     }
   }
   return none
@@ -169,18 +169,18 @@ function findInterfaceViolation(result: AnalysisResult, type_: InterfaceType, se
   declaration := findInterfaceDeclaration(result, type_.symbol.module, type_.symbol.name)
   if declaration == none { return none }
   for field of declaration!.fields {
-    if field.let_ { return ActorBoundaryViolation { reason: "field \"" + field.name + "\" is mutable" } }
+    if field.let_ { return ActorBoundaryViolation { reason: "field \"${field.name}\" is mutable" } }
     if field.resolvedType == none { continue }
     effective := substituteTypeParams(field.resolvedType!, declaration!.typeParams, type_.typeArgs)
     if violation := findViolation(result, effective, nextSeen, unbound) {
-      return ActorBoundaryViolation { reason: "field \"" + field.name + "\" cannot cross actor boundaries: " + violation.reason }
+      return ActorBoundaryViolation { reason: "field \"${field.name}\" cannot cross actor boundaries: ${violation.reason}" }
     }
   }
   if symbol := declaration!.resolvedSymbol {
     for implementation of symbol.implementations {
       if violation := findClassViolation(result, implementationType(result, type_, implementation), nextSeen, true) {
         return ActorBoundaryViolation {
-          reason: "implementation \"" + implementation.name + "\" cannot cross actor boundaries: " + violation.reason,
+          reason: "implementation \"${implementation.name}\" cannot cross actor boundaries: ${violation.reason}",
         }
       }
     }

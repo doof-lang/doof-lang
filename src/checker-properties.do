@@ -14,7 +14,7 @@ export function checkPropertyValue(state: CheckerState, property: ObjectProperty
   if value := property.value { actual = checkExpression(state, value, scope, expected) }
   else {
     binding := lookup(scope, property.name)
-    if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span) }
+    if binding == none { typeError(state, "Unknown shorthand property '${property.name}'", property.span) }
     else { property.resolvedBinding = binding; actual = binding!.type_ }
   }
   property.resolvedType = actual
@@ -24,7 +24,7 @@ export function checkPropertyValue(state: CheckerState, property: ObjectProperty
 export function checkAssignableProperty(state: CheckerState, property: ObjectProperty, scope: Scope, expected: ResolvedType | none): ResolvedType {
   actual := checkPropertyValue(state, property, scope, expected)
   if expectedType := expected && !isAssignableWithInterfaces(state.result, actual, expectedType) {
-    typeError(state, "Cannot assign " + displayTypeName(actual) + " to " + displayTypeName(expectedType), property.span)
+    typeError(state, "Cannot assign ${displayTypeName(actual)} to ${displayTypeName(expectedType)}", property.span)
   }
   return actual
 }

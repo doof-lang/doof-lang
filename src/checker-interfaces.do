@@ -417,7 +417,7 @@ function resolvedClassFieldType(result: AnalysisResult, field: ClassField, symbo
 }
 
 function concreteInterfacePairKey(class_: ClassType, interface_: InterfaceType): string {
-  return class_.symbol.module + "::" + typeName(class_) + "->" + interface_.symbol.module + "::" + typeName(interface_)
+  return "${class_.symbol.module}::${typeName(class_)}->${interface_.symbol.module}::${typeName(interface_)}"
 }
 
 export function findClassField(fields: ClassField[], name: string): ClassField | none {
@@ -432,6 +432,6 @@ export function findClassMethod(methods: FunctionDeclaration[], name: string, st
 
 export function classModuleFor(result: AnalysisResult, symbol: Symbol): ModuleInfo {
   module := findModule(result, symbol.module)
-  if module == none { panic("Missing module for symbol " + symbol.name) }
+  if module == none { panic("Missing module for symbol ${symbol.name}") }
   return module!
 }

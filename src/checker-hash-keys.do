@@ -34,7 +34,7 @@ export function hashKeyDiagnostic(result: AnalysisResult, type_: ResolvedType, r
   detail := if blocker! == "" then "" else " (" + blocker! + ")"
   shown := if generic == none then typeName(type_) else typeName(generic!)
   condition := if bindings == "" then "" else " when " + bindings
-  return role + " type \"" + shown + "\" is not supported" + condition + detail + "; " + HASH_KEY_RULE
+  return "${role} type \"${shown}\" is not supported${condition}${detail}; ${HASH_KEY_RULE}"
 }
 
 // "" marks the type itself as unsupported; other text names the nested part.
@@ -74,8 +74,8 @@ function nested(part: ResolvedType, blocker: string): string {
 // Classes key by identity. Structs key by the fields their equality compares.
 function structBlocker(result: AnalysisResult, class_: ClassType, visited: string[]): string | none {
   if class_.symbol.kind != "struct" { return none }
-  if class_.symbol.native_ { return "native struct \"" + typeName(class_) + "\" has no generated hash" }
-  key := class_.symbol.module + ":" + class_.symbol.name
+  if class_.symbol.native_ { return "native struct \"${typeName(class_)}\" has no generated hash" }
+  key := "${class_.symbol.module}:${class_.symbol.name}"
   for item of visited { if item == key { return none } }
   visited.push(key)
   declaration := declarationFor(result, class_.symbol)

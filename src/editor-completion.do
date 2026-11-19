@@ -135,7 +135,7 @@ export function contextualCompletion(index: EditorIndex, module: string, offset:
         binding := lookup(scope, tokenValue(tokens[position - 1], prefix)) else { return false }
         case binding.type_ {
           fn: FunctionType -> {
-            for parameter of fn.params { uniquePush(items, EditorItem { label: parameter.name, detail: editorTypeName(parameter.type_), insertText: parameter.name + ": ", kind: "parameter", module, start: offset, end: offset }) }
+            for parameter of fn.params { uniquePush(items, EditorItem { label: parameter.name, detail: editorTypeName(parameter.type_), insertText: "${parameter.name}: ", kind: "parameter", module, start: offset, end: offset }) }
             return false
           }
           _ -> { return false }
@@ -162,6 +162,6 @@ export function autoImportCompletions(index: EditorIndex, module: string, offset
     for item of items { if item.label == candidate.label && item.importModule == "" { visible = true } }
     if visible { continue }
     specifier := autoImportSpecifier(module, candidate.module)
-    items.push(EditorItem { label: candidate.label, documentation: candidate.documentation, kind: candidate.kind, detail: "Auto import from " + specifier, importModule: candidate.module, module, start: offset, end: offset })
+    items.push(EditorItem { label: candidate.label, documentation: candidate.documentation, kind: candidate.kind, detail: "Auto import from ${specifier}", importModule: candidate.module, module, start: offset, end: offset })
   }
 }

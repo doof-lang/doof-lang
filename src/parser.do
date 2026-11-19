@@ -191,7 +191,7 @@ export class Parser {
   }
 
   expectContextual(word: string): none {
-    if !matchContextual(word) { fail("Expected '" + word + "' before '" + currentText() + "'") }
+    if !matchContextual(word) { fail("Expected '${word}' before '${currentText()}'") }
   }
 
   match(kind: TokenType): bool {
@@ -227,7 +227,7 @@ export class Parser {
     errorLine = location.line
     errorColumn = location.column
     errorOffset = location.offset
-    panic("Parse error at " + string(location.line) + ":" + string(location.column) + ": " + message)
+    panic("Parse error at ${location.line}:${location.column}: ${message}")
   }
 
   private expectedLabel(kind: TokenType): string {

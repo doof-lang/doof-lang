@@ -42,7 +42,7 @@ export function iosPackageArchiveName(executableName: string, version: string): 
     character := version.substring(index, index + 1)
     safeVersion = safeVersion + if allowed.contains(character) then character else "-"
   }
-  return executableName + "-" + safeVersion + "-ios.ipa"
+  return "${executableName}-${safeVersion}-ios.ipa"
 }
 
 /** Resolves a profile App ID allowlist entry to the exact entitlement claimed by an app signature. */
@@ -61,10 +61,10 @@ export function iosExactApplicationIdentifier(
   if !matches {
     return Failure(
       "Provisioning profile application-identifier \"" + profileApplicationIdentifier +
-      "\" does not match bundle id \"" + bundleId + "\"",
+      "\" does not match bundle id \"${bundleId}\"",
     )
   }
-  return Success(prefix + "." + bundleId)
+  return Success("${prefix}.${bundleId}")
 }
 
 export function iosTargetTriple(minimumDeploymentTarget: string, destination: string, architecture: string): Result<string, string> {
@@ -72,9 +72,9 @@ export function iosTargetTriple(minimumDeploymentTarget: string, destination: st
   if destination != "simulator" { return Failure("Unknown iOS destination: " + destination) }
   if architecture == "arm64" { return Success("arm64-apple-ios" + minimumDeploymentTarget + "-simulator") }
   if architecture == "x86_64" || architecture == "x64" {
-    return Success("x86_64-apple-ios" + minimumDeploymentTarget + "-simulator")
+    return Success("x86_64-apple-ios${minimumDeploymentTarget}-simulator")
   }
-  return Failure("Unsupported macOS host architecture for iOS simulator builds: " + architecture)
+  return Failure("Unsupported macOS host architecture for iOS simulator builds: ${architecture}")
 }
 
 export function iosCodesignArguments(targetPath: string, identity: string, entitlementsPath: string = ""): string[] {
@@ -108,17 +108,17 @@ export function renderIOSInfoPlist(config: IOSAppConfig): string {
   body += "\t<key>UIApplicationSceneManifest</key>\n\t<dict>\n\t\t<key>UIApplicationSupportsMultipleScenes</key>\n\t\t<false/>\n\t</dict>\n"
   if infoPlist := config.infoPlist {
     for key, value of infoPlist {
-      body += "\t<key>" + escapePlistText(key) + "</key>\n" + renderPlistValue(value, 1)
+      body += "\t<key>${escapePlistText(key)}</key>\n${renderPlistValue(value, 1)}"
     }
   }
   return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
     "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
-    "<plist version=\"1.0\">\n<dict>\n" + body + "</dict>\n</plist>\n"
+    "<plist version=\"1.0\">\n<dict>\n${body}</dict>\n</plist>\n"
 }
 
 /** Renders the UIKit-owned main that invokes the emitted Doof C entrypoint. */
 export function renderIOSMainSource(executableName: string): string {
-  delegateName := objectiveCIdentifier(executableName) + "AppDelegate"
+  delegateName := "${objectiveCIdentifier(executableName)}AppDelegate"
   return "#import <UIKit/UIKit.h>\n#include <thread>\n\n" +
     "extern \"C\" int doof_entry_main(int argc, char** argv);\n\n" +
     "@interface " + delegateName + " : UIResponder <UIApplicationDelegate>\n" +
@@ -165,14 +165,14 @@ export function renderIOSIconSetContents(): string {
 
 function objectiveCIdentifier(value: string): string {
   readonly first = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_"
-  readonly rest = first + "0123456789"
+  readonly rest = "${first}0123456789"
   let result = ""
   for index of 0..<value.length {
     character := value.substring(index, index + 1)
     result += if rest.contains(character) then character else "_"
   }
   if result == "" { return "DoofApp" }
-  return if first.contains(result.substring(0, 1)) then result else "Doof_" + result
+  return if first.contains(result.substring(0, 1)) then result else "Doof_${result}"
 }
 
 function escapeObjectiveCString(value: string): string {
@@ -180,7 +180,7 @@ function escapeObjectiveCString(value: string): string {
 }
 
 function plistString(key: string, value: string): string {
-  return "\t<key>" + escapePlistText(key) + "</key>\n\t<string>" + escapePlistText(value) + "</string>\n"
+  return "\t<key>${escapePlistText(key)}</key>\n\t<string>${escapePlistText(value)}</string>\n"
 }
 
 function plistIndent(depth: int): string {
@@ -192,25 +192,25 @@ function plistIndent(depth: int): string {
 function renderPlistValue(value: SerialValue, depth: int): string {
   indent := plistIndent(depth)
   case value {
-    _: none -> return indent + "<string></string>\n"
+    _: none -> return "${indent}<string></string>\n"
     boolean: bool -> return indent + if boolean then "<true/>\n" else "<false/>\n"
-    number: int -> return indent + "<integer>" + string(number) + "</integer>\n"
-    number: long -> return indent + "<integer>" + string(number) + "</integer>\n"
-    number: float -> return indent + "<real>" + string(number) + "</real>\n"
-    number: double -> return indent + "<real>" + string(number) + "</real>\n"
-    text: string -> return indent + "<string>" + escapePlistText(text) + "</string>\n"
+    number: int -> return "${indent}<integer>${number}</integer>\n"
+    number: long -> return "${indent}<integer>${number}</integer>\n"
+    number: float -> return "${indent}<real>${number}</real>\n"
+    number: double -> return "${indent}<real>${number}</real>\n"
+    text: string -> return "${indent}<string>${escapePlistText(text)}</string>\n"
     array: readonly SerialValue[] -> {
-      let result = indent + "<array>\n"
+      let result = "${indent}<array>\n"
       for item of array { result += renderPlistValue(item, depth + 1) }
-      return result + indent + "</array>\n"
+      return "${result}${indent}</array>\n"
     }
     object: SerialObject -> {
-      let result = indent + "<dict>\n"
+      let result = "${indent}<dict>\n"
       for key, item of object {
         result += plistIndent(depth + 1) + "<key>" + escapePlistText(key) + "</key>\n"
         result += renderPlistValue(item, depth + 1)
       }
-      return result + indent + "</dict>\n"
+      return "${result}${indent}</dict>\n"
     }
   }
   panic("unhandled plist value")

@@ -96,14 +96,14 @@ export function vendorBuildFingerprint(
   compilerIdentity: string,
   scriptContent: string,
 ): string {
-  let value = "schema=" + string(VENDOR_BUILD_SCHEMA) + "\npackage=" + build.packageName + "\nkey=" + build.key
+  let value = "schema=${VENDOR_BUILD_SCHEMA}\npackage=${build.packageName}\nkey=${build.key}"
   // Parallelism changes how long a build takes, not what it produces.
   for name of sortedKeys(environment) {
     if name != "DOOF_JOBS" { value += "\n" + name + "=" + environment.get(name)! }
   }
-  value += "\ncompiler=" + compilerIdentity + "\nscript=" + sha256HexString(scriptContent)
-  for library of build.staticLibraries { value += "\nstatic=" + library }
-  for library of build.bundleLibraries { value += "\nbundle=" + library }
+  value += "\ncompiler=${compilerIdentity}\nscript=${sha256HexString(scriptContent)}"
+  for library of build.staticLibraries { value += "\nstatic=${library}" }
+  for library of build.bundleLibraries { value += "\nbundle=${library}" }
   return sha256HexString(value)
 }
 
@@ -114,14 +114,14 @@ export function vendorBuildPrefix(packageName: string): string {
 
 /** Output-relative directory of one fingerprinted vendor build. */
 export function vendorBuildDirectory(packageName: string, fingerprint: string): string {
-  return vendorBuildRoot + "/" + vendorBuildPrefix(packageName) + fingerprint.substring(0, 16)
+  return "${vendorBuildRoot}/${vendorBuildPrefix(packageName)}${fingerprint.substring(0, 16)}"
 }
 
 /** Lists declared lib/ outputs absent from a finished build directory listing. */
 export function missingVendorOutputs(build: NativeVendorBuild, present: (relativePath: string): bool): string[] {
   let missing: string[] = []
-  for library of build.staticLibraries { if !present("lib/" + library) { missing.push("lib/" + library) } }
-  for library of build.bundleLibraries { if !present("lib/" + library) { missing.push("lib/" + library) } }
+  for library of build.staticLibraries { if !present("lib/${library}") { missing.push("lib/" + library) } }
+  for library of build.bundleLibraries { if !present("lib/${library}") { missing.push("lib/" + library) } }
   return missing
 }
 

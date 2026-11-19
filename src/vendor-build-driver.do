@@ -40,20 +40,20 @@ export function prepareVendorBuilds(
   for build of native.vendorBuilds {
     sourceDirectory := joinPath(outputDirectory, build.directory)
     if !isDirectory(sourceDirectory) {
-      return Failure("Vendor directory for " + build.packageName + " is missing: " + sourceDirectory)
+      return Failure("Vendor directory for ${build.packageName} is missing: ${sourceDirectory}")
     }
     scriptPath := joinPath(sourceDirectory, scriptName)
     hasScript := exists(scriptPath)
     let scriptContent = ""
     if hasScript {
-      content := readText(scriptPath) else { return Failure("Could not read " + scriptPath) }
+      content := readText(scriptPath) else { return Failure("Could not read ${scriptPath}") }
       scriptContent = content
     }
     fingerprint := vendorBuildFingerprint(build, environment, compilerIdentity, scriptContent)
     relativeDirectory := vendorBuildDirectory(build.packageName, fingerprint)
     buildDirectory := joinPath(outputDirectory, relativeDirectory)
     if !receiptMatches(joinPath(buildDirectory, vendorBuildReceiptName), fingerprint) {
-      if reportProgress { println("Building vendored " + build.packageName) }
+      if reportProgress { println("Building vendored ${build.packageName}") }
       try runVendorBuild(build, sourceDirectory, buildDirectory, scriptName, hasScript, environment, platform)
       receipt := VendorBuildReceipt {
         schemaVersion: 1,
@@ -65,18 +65,18 @@ export function prepareVendorBuilds(
         environment,
       }
       _ := writeText(joinPath(buildDirectory, vendorBuildReceiptName), formatJsonValue(receipt.toSerialObject())) else {
-        return Failure("Could not record the vendor build for " + build.packageName)
+        return Failure("Could not record the vendor build for ${build.packageName}")
       }
     }
     try removeSiblingBuilds(outputDirectory, build.packageName, relativeDirectory)
     if isDirectory(joinPath(buildDirectory, "include")) {
-      addUnique(native.includePaths, relativeDirectory + "/include")
+      addUnique(native.includePaths, "${relativeDirectory}/include")
     }
     for library of build.staticLibraries {
-      addUnique(native.linkInputs, joinPath(buildDirectory, "lib/" + library))
+      addUnique(native.linkInputs, joinPath(buildDirectory, "lib/${library}"))
     }
     for library of build.bundleLibraries {
-      path := joinPath(buildDirectory, "lib/" + library)
+      path := joinPath(buildDirectory, "lib/${library}")
       addUnique(native.linkInputs, path)
       addUnique(native.bundledLibraries, path)
     }
@@ -104,7 +104,7 @@ function runVendorBuild(
       cwd: buildDirectory, env: environment.cloneReadonly(), withStdin: false,
       mergeStderrIntoStdout: true, maxOutputBytes: MAX_VENDOR_OUTPUT_BYTES,
     }) else error {
-      return Failure("Could not run " + scriptName + " for " + build.packageName + ": " + error)
+      return Failure("Could not run ${scriptName} for ${build.packageName}: ${error}")
     }
     output = BlobReader(result.stdout).readString(long(result.stdout.length)).trim()
     if result.exitCode != 0 {
@@ -116,7 +116,7 @@ function runVendorBuild(
   }
   missing := missingVendorOutputs(build, (relativePath: string): bool => exists(joinPath(buildDirectory, relativePath)))
   if missing.length > 0 {
-    let message = "Vendor build for " + build.packageName + " did not produce the outputs declared in build.native.vendor: "
+    let message = "Vendor build for ${build.packageName} did not produce the outputs declared in build.native.vendor: "
     for index of 0..<missing.length { message += (if index == 0 then "" else ", ") + missing[index] }
     if !hasScript { message += " (the package has no vendor/" + scriptName + ")" }
     return Failure(if output == "" then message else message + "\n" + output)
@@ -138,9 +138,9 @@ function removeSiblingBuilds(outputDirectory: string, packageName: string, curre
   root := joinPath(outputDirectory, vendorBuildRoot)
   if !isDirectory(root) { return Success() }
   prefix := vendorBuildPrefix(packageName)
-  entries := readDir(root) else { return Failure("Could not list " + root) }
+  entries := readDir(root) else { return Failure("Could not list ${root}") }
   for entry of entries {
-    relative := vendorBuildRoot + "/" + entry.name
+    relative := "${vendorBuildRoot}/${entry.name}"
     if entry.name.startsWith(prefix) && relative != current { try removeTree(joinPath(root, entry.name)) }
   }
   return Success()
@@ -149,24 +149,24 @@ function removeSiblingBuilds(outputDirectory: string, packageName: string, curre
 function copyTree(sourcePath: string, destinationPath: string): Result<none, string> {
   if isDirectory(sourcePath) {
     try ensureDirectory(destinationPath)
-    entries := readDir(sourcePath) else { return Failure("Could not list " + sourcePath) }
+    entries := readDir(sourcePath) else { return Failure("Could not list ${sourcePath}") }
     for entry of entries {
       try copyTree(joinPath(sourcePath, entry.name), joinPath(destinationPath, entry.name))
     }
     return Success()
   }
-  _ := copy(sourcePath, destinationPath) else { return Failure("Could not copy " + sourcePath) }
-  _ := copyPermissions(sourcePath, destinationPath) else { return Failure("Could not copy permissions for " + sourcePath) }
+  _ := copy(sourcePath, destinationPath) else { return Failure("Could not copy ${sourcePath}") }
+  _ := copyPermissions(sourcePath, destinationPath) else { return Failure("Could not copy permissions for ${sourcePath}") }
   return Success()
 }
 
 function removeTree(path: string): Result<none, string> {
   if !exists(path) { return Success() }
   if isDirectory(path) {
-    entries := readDir(path) else { return Failure("Could not list " + path) }
+    entries := readDir(path) else { return Failure("Could not list ${path}") }
     for entry of entries { try removeTree(joinPath(path, entry.name)) }
   }
-  _ := remove(path) else { return Failure("Could not remove " + path) }
+  _ := remove(path) else { return Failure("Could not remove ${path}") }
   return Success()
 }
 
@@ -174,7 +174,7 @@ function ensureDirectory(path: string): Result<none, string> {
   if path == "" || exists(path) { return Success() }
   parent := parentPath(path)
   if parent != path { try ensureDirectory(parent) }
-  _ := mkdir(path) else { return Failure("Could not create " + path) }
+  _ := mkdir(path) else { return Failure("Could not create ${path}") }
   return Success()
 }
 

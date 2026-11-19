@@ -11,7 +11,7 @@ export function pathType(state: CheckerState, left: ResolvedType, right: Resolve
   if expectedType := expected && expectedType.kind != "unknown" {
     for actual of [left, right] {
       if !isAssignableWithInterfaces(state.result, actual, expectedType) {
-        typeError(state, "Cannot use " + typeName(actual) + " in expression expecting " + typeName(expectedType), span)
+        typeError(state, "Cannot use ${typeName(actual)} in expression expecting ${typeName(expectedType)}", span)
       }
     }
     return expectedType
@@ -25,7 +25,7 @@ export function pathType(state: CheckerState, left: ResolvedType, right: Resolve
   rightValue := presentType(right)
   if isAssignableWithInterfaces(state.result, leftValue, rightValue) { return unionType([right, absenceType(left)]) }
   if isAssignableWithInterfaces(state.result, rightValue, leftValue) { return unionType([left, absenceType(right)]) }
-  typeError(state, "Cannot infer a common type for " + typeName(left) + " and " + typeName(right) + "; provide an explicit type annotation (only T | none unions are inferred)", span)
+  typeError(state, "Cannot infer a common type for ${typeName(left)} and ${typeName(right)}; provide an explicit type annotation (only T | none unions are inferred)", span)
   return left
 }
 

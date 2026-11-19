@@ -110,21 +110,21 @@ export function copyBundleResource(
     if preserveSourcePath { destinationDirectory = relativeGlobBase(destination) }
     if exists(baseDirectory) { collectResourceFiles(baseDirectory, baseDirectory, sourcePath, files) }
   } else if isDirectory(sourcePath) {
-    collectResourceFiles(sourcePath, sourcePath, sourcePath + "/**", files)
+    collectResourceFiles(sourcePath, sourcePath, "${sourcePath}/**", files)
     baseDirectory = sourcePath
   } else if exists(sourcePath) {
     files.push(sourcePath)
     baseDirectory = dirname(sourcePath)
     if preserveSourcePath { destinationDirectory = relativeParent(destination) }
   }
-  if files.length == 0 { return Failure("No files matched resource pattern: " + sourcePath) }
+  if files.length == 0 { return Failure("No files matched resource pattern: ${sourcePath}") }
   prefix := if baseDirectory.endsWith("/") then baseDirectory else baseDirectory + "/"
   destinationRoot := if destinationDirectory == "" then bundleRoot else outputPath(bundleRoot, destinationDirectory)
   for file of files {
     relative := if file.startsWith(prefix) then file.substring(prefix.length, file.length) else basename(file)
     destinationPath := outputPath(destinationRoot, relative)
     if destinations.contains(destinationPath) {
-      return Failure("Duplicate " + platformName + " app resource destination: " + destinationPath)
+      return Failure("Duplicate ${platformName} app resource destination: ${destinationPath}")
     }
     destinations.push(destinationPath)
     copyPath(file, destinationPath)

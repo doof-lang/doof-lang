@@ -42,7 +42,7 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
     parameter.resolvedType = parameterType
     params.push(FunctionParamType { name: parameter.name, type_: parameterType, hasDefault: parameter.defaultValue != none })
     if parameter.name != "_" && !declare(lambdaScope, Binding { name: parameter.name, kind: "parameter", type_: parameterType, mutable: false, span: checkerSemanticSpan(parameter.span), module: state.info!.path }) {
-      typeError(state, "Binding '" + parameter.name + "' is already declared in this scope", parameter.span)
+      typeError(state, "Binding '${parameter.name}' is already declared in this scope", parameter.span)
     }
   }
   let returnType = expectedFunction?.returnType ?? unknownType()
@@ -75,14 +75,14 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
         for observation of inference.returns {
           observation.statement.resolvedExpectedType = returnType
           if observation.statement.value == none && returnType.kind != "none" && returnType.kind != "unknown" {
-            typeError(state, "Expected a return value of type " + displayTypeName(returnType), observation.statement.span)
+            typeError(state, "Expected a return value of type ${displayTypeName(returnType)}", observation.statement.span)
           } else if !isAssignableWithInterfaces(state.result, observation.type_, returnType) {
-            typeError(state, "Cannot return " + displayTypeName(observation.type_) + " from lambda returning " + displayTypeName(returnType), observation.statement.span)
+            typeError(state, "Cannot return ${displayTypeName(observation.type_)} from lambda returning ${displayTypeName(returnType)}", observation.statement.span)
           }
         }
       }
       if completes && returnType.kind != "none" && returnType.kind != "unknown" {
-        typeError(state, "Lambda may complete without returning " + displayTypeName(returnType), expression.span)
+        typeError(state, "Lambda may complete without returning ${displayTypeName(returnType)}", expression.span)
       }
     }
     expressionBody: Expression -> {
@@ -96,7 +96,7 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
         // discarded, except a Result, which must still be handled.
         if bodyType.kind == "result" && expressionBody.kind != "assignment-expression" { typeError(state, "Result value must be handled", expressionBody.span) }
       } else if !isAssignableWithInterfaces(state.result, bodyType, returnType) {
-        typeError(state, "Cannot return " + displayTypeName(bodyType) + " from lambda returning " + displayTypeName(returnType), expressionBody.span)
+        typeError(state, "Cannot return ${displayTypeName(bodyType)} from lambda returning ${displayTypeName(returnType)}", expressionBody.span)
       }
     }
   }

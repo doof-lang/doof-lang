@@ -40,7 +40,7 @@ export function frontendConfigurationFingerprint(
   return sha256HexString(
     "doof-frontend-cache-4:" + string(FRONTEND_SEMANTIC_ABI) + "\n" + compilerIdentity + "\n" + entry + "\n" + entryMode + "\n" + target + "\n" +
       stdlibRoot + "\n" + nativePlatform + "\n" + stdlibTarget + "\n" +
-      configuredStdlibBundleFingerprint() + "\n" + manifestSource,
+      "${configuredStdlibBundleFingerprint()}\n${manifestSource}",
   )
 }
 
@@ -147,7 +147,7 @@ function addFrontendFileInput(inputs: FrontendFileInput[], path: string): none {
 
 export function writeFrontendState(path: string, state: FrontendCacheState): none {
   ensureOutputDirectory(parentPath(path))
-  temporaryPath := path + ".tmp"
+  temporaryPath := "${path}.tmp"
   writeText(temporaryPath, renderFrontendCacheState(state))!
   rename(temporaryPath, path)!
 }

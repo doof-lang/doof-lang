@@ -25,7 +25,7 @@ export function observeOpenEnvironmentArguments(environment: Map<string, string>
   let arguments: string[] = []
   for name, value of environment {
     arguments.push("--env")
-    arguments.push(name + "=" + value)
+    arguments.push("${name}=${value}")
   }
   return arguments
 }

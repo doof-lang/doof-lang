@@ -26,27 +26,27 @@ export function validateStatement(statement: Statement, module: string, diagnost
     let_: LetDeclaration -> { validateValue(let_, let_.resolvedType, let_.type_, module, diagnostics); validateExpression(let_.value, module, diagnostics) }
     fn: FunctionDeclaration -> { validateFunction(fn, module, diagnostics) }
     class_: ClassDeclaration -> {
-      if class_.resolvedSymbol == none { addValidationError(module, class_.span, "Class '" + class_.name + "' has no resolved symbol", diagnostics) }
+      if class_.resolvedSymbol == none { addValidationError(module, class_.span, "Class '${class_.name}' has no resolved symbol", diagnostics) }
       validateTypeParameterConstraints(class_.typeParamConstraints, module, diagnostics)
       for implementation of class_.implements_ { validateTypeAnnotation(implementation, module, diagnostics) }
       for field of class_.fields {
         if type_ := field.type_ { validateTypeAnnotation(type_, module, diagnostics) }
-        validateResolved(field.resolvedType, field.span, module, "field " + class_.name, diagnostics)
+        validateResolved(field.resolvedType, field.span, module, "field ${class_.name}", diagnostics)
         if defaultValue := field.defaultValue { validateExpression(defaultValue, module, diagnostics) }
       }
       for method of class_.methods { validateFunction(method, module, diagnostics) }
     }
     interface_: InterfaceDeclaration -> {
-      if interface_.resolvedSymbol == none { addValidationError(module, interface_.span, "Interface '" + interface_.name + "' has no resolved symbol", diagnostics) }
+      if interface_.resolvedSymbol == none { addValidationError(module, interface_.span, "Interface '${interface_.name}' has no resolved symbol", diagnostics) }
       validateTypeParameterConstraints(interface_.typeParamConstraints, module, diagnostics)
       for field of interface_.fields {
         validateTypeAnnotation(field.type_, module, diagnostics)
-        validateResolved(field.resolvedType, field.span, module, "interface field " + interface_.name, diagnostics)
+        validateResolved(field.resolvedType, field.span, module, "interface field ${interface_.name}", diagnostics)
       }
       for method of interface_.methods { validateFunction(method, module, diagnostics) }
       for field of interface_.staticFields {
         validateTypeAnnotation(field.type_, module, diagnostics)
-        validateResolved(field.resolvedType, field.span, module, "interface static field " + interface_.name, diagnostics)
+        validateResolved(field.resolvedType, field.span, module, "interface static field ${interface_.name}", diagnostics)
       }
       for method of interface_.staticMethods { validateFunction(method, module, diagnostics) }
     }
@@ -54,16 +54,16 @@ export function validateStatement(statement: Statement, module: string, diagnost
       for variant of enum_.variants {
         if value := variant.value { validateExpression(value, module, diagnostics) }
         if enum_.backingKind == "string" {
-          if variant.resolvedStringValue == none { addValidationError(module, variant.span, "Enum variant '" + enum_.name + "." + variant.name + "' has no resolved string backing value", diagnostics) }
+          if variant.resolvedStringValue == none { addValidationError(module, variant.span, "Enum variant '${enum_.name}.${variant.name}' has no resolved string backing value", diagnostics) }
         } else if variant.resolvedIntValue == none {
-          addValidationError(module, variant.span, "Enum variant '" + enum_.name + "." + variant.name + "' has no resolved integer backing value", diagnostics)
+          addValidationError(module, variant.span, "Enum variant '${enum_.name}.${variant.name}' has no resolved integer backing value", diagnostics)
         }
       }
     }
     alias: TypeAliasDeclaration -> {
       validateTypeParameterConstraints(alias.typeParamConstraints, module, diagnostics)
       validateTypeAnnotation(alias.type_, module, diagnostics)
-      validateResolved(alias.resolvedType, alias.span, module, "type alias " + alias.name, diagnostics)
+      validateResolved(alias.resolvedType, alias.span, module, "type alias ${alias.name}", diagnostics)
     }
     if_: IfStatement -> {
       validateExpression(if_.condition, module, diagnostics); validateBlock(if_.body, module, diagnostics)
@@ -92,7 +92,7 @@ export function validateStatement(statement: Statement, module: string, diagnost
     with_: WithStatement -> {
       for binding of with_.bindings {
         if type_ := binding.type_ { validateTypeAnnotation(type_, module, diagnostics) }
-        validateResolved(binding.resolvedType, binding.span, module, "with binding " + binding.name, diagnostics)
+        validateResolved(binding.resolvedType, binding.span, module, "with binding ${binding.name}", diagnostics)
         validateExpression(binding.value, module, diagnostics)
       }
       validateBlock(with_.body, module, diagnostics)
@@ -114,12 +114,12 @@ export function validateValue(statement: Statement, resolvedType: ResolvedType |
 }
 
 export function validateFunction(fn: FunctionDeclaration, module: string, diagnostics: Diagnostic[]): none {
-  validateResolved(fn.resolvedType, fn.span, module, "function " + fn.name, diagnostics)
+  validateResolved(fn.resolvedType, fn.span, module, "function ${fn.name}", diagnostics)
   validateTypeParameterConstraints(fn.typeParamConstraints, module, diagnostics)
   if returnType := fn.returnType { validateTypeAnnotation(returnType, module, diagnostics) }
   for parameter of fn.params {
     if type_ := parameter.type_ { validateTypeAnnotation(type_, module, diagnostics) }
-    validateResolved(parameter.resolvedType, parameter.span, module, "parameter " + parameter.name, diagnostics)
+    validateResolved(parameter.resolvedType, parameter.span, module, "parameter ${parameter.name}", diagnostics)
     if defaultValue := parameter.defaultValue { validateExpression(defaultValue, module, diagnostics) }
   }
   case fn.body {
@@ -158,7 +158,7 @@ export function validatePattern(pattern: CasePattern, module: string, diagnostic
 }
 
 export function validateExpression(expression: Expression, module: string, diagnostics: Diagnostic[]): none {
-  validateResolved(expression.resolvedType, expression.span, module, "expression " + expression.kind, diagnostics)
+  validateResolved(expression.resolvedType, expression.span, module, "expression ${expression.kind}", diagnostics)
   case expression {
     string_: StringLiteral -> { for interpolation of string_.interpolations { validateExpression(interpolation, module, diagnostics) } }
     binary: BinaryExpression -> { validateExpression(binary.left, module, diagnostics); validateExpression(binary.right, module, diagnostics) }
@@ -167,7 +167,7 @@ export function validateExpression(expression: Expression, module: string, diagn
     member: MemberExpression -> {
       if member.resolvedMember == none {
         if resolvedType := member.resolvedType && resolvedType.kind != "never" {
-          addValidationError(module, member.span, "Member '" + member.property + "' has no checked member selection", diagnostics)
+          addValidationError(module, member.span, "Member '${member.property}' has no checked member selection", diagnostics)
         }
       } else {
         validateResolved(member.resolvedMember!.type_, member.span, module, "member selection", diagnostics)
@@ -247,7 +247,7 @@ export function validateExpression(expression: Expression, module: string, diagn
     catch_: CatchExpression -> { validateBlock(catch_.body, module, diagnostics) }
     binding: BindingCondition -> {
       if type_ := binding.type_ { validateTypeAnnotation(type_, module, diagnostics) }
-      validateResolved(binding.resolvedBindingType, binding.span, module, "binding condition " + binding.name, diagnostics)
+      validateResolved(binding.resolvedBindingType, binding.span, module, "binding condition ${binding.name}", diagnostics)
       validateExpression(binding.value, module, diagnostics)
     }
     construct: ConstructExpression -> {
@@ -257,21 +257,21 @@ export function validateExpression(expression: Expression, module: string, diagn
       }
       if construct.type_ != "Success" && construct.type_ != "Failure" {
         validateResolved(construct.resolvedConstructedType, construct.span, module, "constructed type", diagnostics)
-        if construct.resolvedClass == none { addValidationError(module, construct.span, "Construction of '" + construct.type_ + "' has no resolved class", diagnostics) }
+        if construct.resolvedClass == none { addValidationError(module, construct.span, "Construction of '${construct.type_}' has no resolved class", diagnostics) }
         validateConstructionPlan(construct.resolvedConstruction, construct.span, module, diagnostics)
         if resolvedConstruction := construct.resolvedConstruction && resolvedConstruction.factory != construct.resolvedConstructor {
-          addValidationError(module, construct.span, "Construction of '" + construct.type_ + "' has no resolved constructor consistent with its checked plan", diagnostics)
+          addValidationError(module, construct.span, "Construction of '${construct.type_}' has no resolved constructor consistent with its checked plan", diagnostics)
         }
       }
       if resolvedConstructor := construct.resolvedConstructor {
-        validateResolved(resolvedConstructor.resolvedType, construct.span, module, "constructor " + construct.type_, diagnostics)
+        validateResolved(resolvedConstructor.resolvedType, construct.span, module, "constructor ${construct.type_}", diagnostics)
       }
       for argument of construct.typeArgs { validateTypeAnnotation(argument, module, diagnostics) }
       for property of construct.args {
         validateResolved(property.resolvedType, property.span, module, "constructor property", diagnostics)
         if value := property.value { validateExpression(value, module, diagnostics) }
         else if construct.type_ != "Success" && construct.type_ != "Failure" && property.resolvedBinding == none {
-          addValidationError(module, property.span, "Constructor shorthand property '" + property.name + "' has no resolved binding", diagnostics)
+          addValidationError(module, property.span, "Constructor shorthand property '${property.name}' has no resolved binding", diagnostics)
         }
       }
     }
@@ -289,8 +289,8 @@ export function validateExpression(expression: Expression, module: string, diagn
     }
     as_: AsExpression -> { validateExpression(as_.expression, module, diagnostics); validateTypeAnnotation(as_.targetType, module, diagnostics) }
     identifier: Identifier -> {
-      if identifier.resolvedBinding == none { addValidationError(module, identifier.span, "Identifier '" + identifier.name + "' has no resolved binding", diagnostics) }
-      else { validateResolved(identifier.resolvedBinding!.type_, identifier.span, module, "binding " + identifier.name, diagnostics) }
+      if identifier.resolvedBinding == none { addValidationError(module, identifier.span, "Identifier '${identifier.name}' has no resolved binding", diagnostics) }
+      else { validateResolved(identifier.resolvedBinding!.type_, identifier.span, module, "binding ${identifier.name}", diagnostics) }
     }
     _ -> { }
   }
@@ -332,31 +332,31 @@ export function validateTypeAnnotation(annotation: TypeAnnotation, module: strin
 }
 
 export function validateResolved(resolvedType: ResolvedType | none, span: SourceSpan, module: string, owner: string, diagnostics: Diagnostic[]): none {
-  if resolvedType == none { addValidationError(module, span, "Missing resolved type for " + owner, diagnostics); return }
+  if resolvedType == none { addValidationError(module, span, "Missing resolved type for ${owner}", diagnostics); return }
   case resolvedType! {
-    _: UnknownType -> { addValidationError(module, span, "Unknown resolved type for " + owner, diagnostics) }
-    class_: ClassType -> { for argument of class_.typeArgs { validateResolved(argument, span, module, owner + " type argument", diagnostics) } }
-    array: ArrayResolvedType -> { validateResolved(array.elementType, span, module, owner + " element", diagnostics) }
-    map: MapResolvedType -> { validateResolved(map.keyType, span, module, owner + " key", diagnostics); validateResolved(map.valueType, span, module, owner + " value", diagnostics) }
-    set_: SetResolvedType -> { validateResolved(set_.elementType, span, module, owner + " element", diagnostics) }
-    stream: StreamResolvedType -> { validateResolved(stream.elementType, span, module, owner + " element", diagnostics) }
-    result: ResultResolvedType -> { validateResolved(result.valueType, span, module, owner + " success", diagnostics); validateResolved(result.errorType, span, module, owner + " error", diagnostics) }
-    success: SuccessResolvedType -> { validateResolved(success.valueType, span, module, owner + " success", diagnostics) }
-    failure: FailureResolvedType -> { validateResolved(failure.errorType, span, module, owner + " error", diagnostics) }
-    actor: ActorType -> { validateResolved(actor.innerClass, span, module, owner + " actor state", diagnostics) }
-    promise: PromiseType -> { validateResolved(promise.valueType, span, module, owner + " promise value", diagnostics) }
-    weak_: WeakResolvedType -> { validateResolved(weak_.inner, span, module, owner + " weak target", diagnostics) }
-    tuple: TupleResolvedType -> { for item of tuple.elements { validateResolved(item, span, module, owner + " tuple element", diagnostics) } }
+    _: UnknownType -> { addValidationError(module, span, "Unknown resolved type for ${owner}", diagnostics) }
+    class_: ClassType -> { for argument of class_.typeArgs { validateResolved(argument, span, module, "${owner} type argument", diagnostics) } }
+    array: ArrayResolvedType -> { validateResolved(array.elementType, span, module, "${owner} element", diagnostics) }
+    map: MapResolvedType -> { validateResolved(map.keyType, span, module, "${owner} key", diagnostics); validateResolved(map.valueType, span, module, owner + " value", diagnostics) }
+    set_: SetResolvedType -> { validateResolved(set_.elementType, span, module, "${owner} element", diagnostics) }
+    stream: StreamResolvedType -> { validateResolved(stream.elementType, span, module, "${owner} element", diagnostics) }
+    result: ResultResolvedType -> { validateResolved(result.valueType, span, module, "${owner} success", diagnostics); validateResolved(result.errorType, span, module, owner + " error", diagnostics) }
+    success: SuccessResolvedType -> { validateResolved(success.valueType, span, module, "${owner} success", diagnostics) }
+    failure: FailureResolvedType -> { validateResolved(failure.errorType, span, module, "${owner} error", diagnostics) }
+    actor: ActorType -> { validateResolved(actor.innerClass, span, module, "${owner} actor state", diagnostics) }
+    promise: PromiseType -> { validateResolved(promise.valueType, span, module, "${owner} promise value", diagnostics) }
+    weak_: WeakResolvedType -> { validateResolved(weak_.inner, span, module, "${owner} weak target", diagnostics) }
+    tuple: TupleResolvedType -> { for item of tuple.elements { validateResolved(item, span, module, "${owner} tuple element", diagnostics) } }
     union_: UnionResolvedType -> {
       if conflict := unionMutabilityConflict(union_) { addValidationError(module, span, conflict, diagnostics) }
-      if union_.types.length == 0 { addValidationError(module, span, "Empty resolved union for " + owner, diagnostics) }
-      for member of union_.types { validateResolved(member, span, module, owner + " union member", diagnostics) }
+      if union_.types.length == 0 { addValidationError(module, span, "Empty resolved union for ${owner}", diagnostics) }
+      for member of union_.types { validateResolved(member, span, module, "${owner} union member", diagnostics) }
     }
     function_: FunctionType -> {
-      for parameter of function_.params { validateResolved(parameter.type_, span, module, owner + " parameter", diagnostics) }
-      validateResolved(function_.returnType, span, module, owner + " return", diagnostics)
+      for parameter of function_.params { validateResolved(parameter.type_, span, module, "${owner} parameter", diagnostics) }
+      validateResolved(function_.returnType, span, module, "${owner} return", diagnostics)
     }
-    parameter: TypeParameterType -> { if parameter.constraint != none { validateResolved(parameter.constraint, span, module, owner + " constraint", diagnostics) } }
+    parameter: TypeParameterType -> { if parameter.constraint != none { validateResolved(parameter.constraint, span, module, "${owner} constraint", diagnostics) } }
     _ -> { }
   }
 }

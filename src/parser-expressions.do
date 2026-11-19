@@ -50,7 +50,7 @@ export function parseCondition(parser: Parser): Expression {
   if hasBinding {
     if parser.check(TokenType.PipePipe) || parser.check(TokenType.QuestionQuestion) {
       operator := parser.text(parser.current())
-      parser.fail("A binding clause cannot appear under \"" + operator + "\"; parenthesize the initializer if the operator belongs to it, or bind the value before the condition")
+      parser.fail("A binding clause cannot appear under \"${operator}\"; parenthesize the initializer if the operator belongs to it, or bind the value before the condition")
     }
     if isAssignmentOperator(parser.current().kind) {
       parser.fail("A binding condition cannot be assigned to")
@@ -463,7 +463,7 @@ function parseTagCall(parser: Parser): Expression {
   let callee: Expression = Identifier { kind: "identifier", name: firstName, span: parser.span(calleeStart) }
   while parser.match(TokenType.Dot) {
     memberName := parser.text(parser.expect(TokenType.Identifier, "Expected member name in tag"))
-    closingName = closingName + "." + memberName
+    closingName = "${closingName}.${memberName}"
     callee = MemberExpression { kind: "member-expression", object: callee, property: memberName, optional: false, force: false, span: SourceSpan { start: calleeStart, end: parser.previousEnd() } }
   }
 
@@ -474,7 +474,7 @@ function parseTagCall(parser: Parser): Expression {
   while !parser.check(TokenType.Greater) && !parser.check(TokenType.Slash) && !parser.atEnd() {
     attributeStart := parser.location()
     name := parser.text(parser.expect(TokenType.Identifier, "Expected tag attribute name"))
-    if attributeNames.contains(name) { parser.fail("Duplicate tag attribute '" + name + "'") }
+    if attributeNames.contains(name) { parser.fail("Duplicate tag attribute '${name}'") }
     attributeNames.push(name)
     let value: Expression = NoneLiteral { kind: "none-literal", span: parser.locationSpan() }
     if parser.check(TokenType.Arrow) {
@@ -486,7 +486,7 @@ function parseTagCall(parser: Parser): Expression {
       parser.inTagAttribute = previousInTagAttribute
       parser.tagAttributeDelimiterDepth = previousTagAttributeDelimiterDepth
     } else {
-      parser.expect(TokenType.Equal, "Expected '=' or '=>' after tag attribute '" + name + "'")
+      parser.expect(TokenType.Equal, "Expected '=' or '=>' after tag attribute '${name}'")
       value = parseTagAttributeValue(parser, name)
     }
     args.push(CallArgument { name, value, span: parser.span(attributeStart) })
@@ -513,7 +513,7 @@ function parseTagCall(parser: Parser): Expression {
       parser.fail("Expected tag text, child expression, nested tag, or closing tag")
     }
   }
-  if parser.atEnd() { parser.fail("Unterminated tag '<" + closingName + ">'") }
+  if parser.atEnd() { parser.fail("Unterminated tag '<${closingName}>'") }
   parser.expect(TokenType.Less)
   parser.expect(TokenType.Slash)
   closeStart := parser.location()
@@ -521,7 +521,7 @@ function parseTagCall(parser: Parser): Expression {
   while parser.match(TokenType.Dot) {
     actualClosingName = actualClosingName + "." + parser.text(parser.expect(TokenType.Identifier, "Expected member name in closing tag"))
   }
-  if actualClosingName != closingName { parser.fail("Closing tag '</" + actualClosingName + ">' does not match '<" + closingName + ">' ") }
+  if actualClosingName != closingName { parser.fail("Closing tag '</${actualClosingName}>' does not match '<${closingName}>' ") }
   parser.expect(TokenType.Greater, "Expected '>' after closing tag")
 
   if children.length > 0 {
@@ -535,7 +535,7 @@ function parseTagCall(parser: Parser): Expression {
 function parseTagAttributeValue(parser: Parser, name: string): Expression {
   if parser.match(TokenType.LeftBrace) {
     value := parser.parseExpression()
-    parser.expect(TokenType.RightBrace, "Expected '}' after tag attribute '" + name + "'")
+    parser.expect(TokenType.RightBrace, "Expected '}' after tag attribute '${name}'")
     return value
   }
   kind := parser.current().kind
@@ -544,7 +544,7 @@ function parseTagAttributeValue(parser: Parser, name: string): Expression {
     return parseUnary(parser)
   }
   if startsDotShorthand(parser) { return parseDotShorthand(parser) }
-  parser.fail("Tag attribute '" + name + "' requires a scalar literal, dot shorthand, or '{expression}'")
+  parser.fail("Tag attribute '${name}' requires a scalar literal, dot shorthand, or '{expression}'")
   return NoneLiteral { kind: "none-literal", span: parser.locationSpan() }
 }
 
@@ -599,7 +599,7 @@ function parseStringLiteral(parser: Parser): Expression {
     value = value + raw
     interpolations.push(parser.parseExpression())
     parts.push("<expression>")
-    value = value + "<expression>"
+    value = "${value}<expression>"
     if !parser.check(TokenType.TemplateLiteralMiddle) { break }
     segment = parser.advance()
   }

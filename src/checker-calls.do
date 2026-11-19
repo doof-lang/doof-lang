@@ -40,7 +40,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           union_: UnionResolvedType -> { supported = isStringConvertibleUnion(union_) }
           _ -> { }
         }
-        if !supported { typeError(state, "Argument 1 has type " + typeName(actual) + "; expected a primitive, enum, or union of them", expression.args[0].span) }
+        if !supported { typeError(state, "Argument 1 has type ${typeName(actual)}; expected a primitive, enum, or union of them", expression.args[0].span) }
         fn := functionType([param("value", actual)], primitive("string"))
         identifier.resolvedType = fn
         identifier.resolvedBinding = Binding { name: "string", kind: "builtin", type_: fn, mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
@@ -54,7 +54,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         accepted := numericCastInputs(identifier.name)
         actual := checkExpression(state, expression.args[0].value, scope, none)
         if !isNumericCastInput(actual, accepted) {
-          typeError(state, "Argument 1 has type " + typeName(actual) + "; expected " + typeName(accepted), expression.args[0].span)
+          typeError(state, "Argument 1 has type ${typeName(actual)}; expected ${typeName(accepted)}", expression.args[0].span)
         }
         fn := functionType([param("value", actual)], target)
         identifier.resolvedType = fn
@@ -71,11 +71,11 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           if payload := expectation.payload && !isAssignableWithInterfaces(state.result, valueType, payload) {
             channel := if identifier.name == "Success" then "success" else "failure"
             owner := expectation.result ?? resultArmType(identifier.name, payload)
-            typeError(state, "Cannot use " + typeName(valueType) + " as the " + channel + " value of " + typeName(owner), expression.args[0].span)
+            typeError(state, "Cannot use ${typeName(valueType)} as the ${channel} value of ${typeName(owner)}", expression.args[0].span)
           }
           if payload := expectation.payload { valueType = payload }
         } else if valueType.kind != "none" && valueType.kind != "unknown" {
-          typeError(state, identifier.name + "() needs a value for " + typeName(expectation.result ?? resultArmType(identifier.name, valueType)), expression.span)
+          typeError(state, "${identifier.name}() needs a value for ${typeName(expectation.result ?? resultArmType(identifier.name, valueType))}", expression.span)
         }
         produced: ResolvedType := expectation.result ?? resultArmType(identifier.name, valueType)
         callee := functionType([param("value", valueType)], produced)
@@ -189,14 +189,14 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
       constructorParams := construction.signature.params
       validateFieldArguments(state, construction, effectiveClass, callArguments(expression.args))
       kind := if effectiveClass.symbol.kind == "struct" then "Struct" else "Class"
-      checkArguments(state, callArguments(expression.args), constructorParams, scope, expression.span, kind + " \"" + effectiveClass.name + "\"")
+      checkArguments(state, callArguments(expression.args), constructorParams, scope, expression.span, "${kind} \"${effectiveClass.name}\"")
       return finish(state, expression, construction.signature.returnType)
     }
     _: UnknownType -> {
       for argument of expression.args { checkExpression(state, argument.value, scope, none) }
       return finish(state, expression, unknownType())
     }
-    _ -> { typeError(state, "Expression of type " + typeName(calleeType) + " is not callable", expression.span); return finish(state, expression, unknownType()) }
+    _ -> { typeError(state, "Expression of type ${typeName(calleeType)} is not callable", expression.span); return finish(state, expression, unknownType()) }
   }
   return finish(state, expression, unknownType())
 }
@@ -336,7 +336,7 @@ function instantiateGenericStaticCall(state: CheckerState, expression: CallExpre
   if inferred == none {
     let names = ""
     for i of 0..<owner.typeParams.length { names = names + (if i > 0 then ", " else "") + owner.typeParams[i] }
-    typeError(state, "Cannot infer type arguments for generic class '" + owner.name + "' from this call to static method '" + member.property + "'; its arguments must determine " + names + ", or write " + owner.name + "<" + names + ">." + member.property + "(...)", expression.span)
+    typeError(state, "Cannot infer type arguments for generic class '${owner.name}' from this call to static method '${member.property}'; its arguments must determine ${names}, or write ${owner.name}<${names}>.${member.property}(...)", expression.span)
     return none
   }
   classArgs := inferred!.slice(0, owner.typeParams.length)
@@ -437,14 +437,14 @@ export function validateActorMethodBoundary(state: CheckerState, expression: Cal
   for parameter of method.params {
     if violation := findActorBoundaryViolation(state.result, parameter.type_) {
       typeError(state, 
-        "Actor method parameter \"" + parameter.name + "\" of type \"" + typeName(parameter.type_) + "\" cannot cross actor boundary for \"" + typeName(actor!) + "\": " + violation.reason,
+        "Actor method parameter \"${parameter.name}\" of type \"${typeName(parameter.type_)}\" cannot cross actor boundary for \"${typeName(actor!)}\": ${violation.reason}",
         expression.span,
       )
     }
   }
   if returnViolation := findActorBoundaryViolation(state.result, method.returnType) {
     typeError(state, 
-      "Actor method return type \"" + typeName(method.returnType) + "\" cannot cross actor boundary for \"" + typeName(actor!) + "\": " + returnViolation.reason,
+      "Actor method return type \"${typeName(method.returnType)}\" cannot cross actor boundary for \"${typeName(actor!)}\": ${returnViolation.reason}",
       expression.span,
     )
   }
@@ -456,7 +456,7 @@ export { checkLambda } from "./checker-lambdas"
 function checkPrintlnArguments(state: CheckerState, expression: CallExpression): none {
   for argument of expression.args {
     if actual := argument.value.resolvedType && !isStringInterpolatable(actual) {
-      typeError(state, "Type \"" + typeName(actual) + "\" cannot be passed to println", argument.value.span)
+      typeError(state, "Type \"${typeName(actual)}\" cannot be passed to println", argument.value.span)
     }
   }
 }

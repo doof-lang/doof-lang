@@ -366,10 +366,10 @@ export function valueSymbolFor(info: ModuleInfo, name: string): Symbol | none {
 export function valueUseDiagnostic(info: ModuleInfo, name: string): string {
   for imported of info.imports {
     if imported.localName != name { continue }
-    if imported.typeOnly { return "Type-only import '" + name + "' cannot be used as a value" }
-    if symbol := imported.symbol && !isValueSymbol(symbol) { return "Type '" + name + "' cannot be used as a value" }
+    if imported.typeOnly { return "Type-only import '${name}' cannot be used as a value" }
+    if symbol := imported.symbol && !isValueSymbol(symbol) { return "Type '${name}' cannot be used as a value" }
   }
-  for symbol of info.symbols { if symbol.name == name && !isValueSymbol(symbol) { return "Type '" + name + "' cannot be used as a value" } }
+  for symbol of info.symbols { if symbol.name == name && !isValueSymbol(symbol) { return "Type '${name}' cannot be used as a value" } }
   return ""
 }
 

@@ -48,7 +48,7 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
     layers := absenceLayers(left)
     if layers.length == 0 {
       if left.kind == "unknown" { return finish(state, expression, unknownType()) }
-      typeError(state, "Operator '??' requires a nullable or Result left operand, got " + typeName(left), expression.left.span)
+      typeError(state, "Operator '??' requires a nullable or Result left operand, got ${typeName(left)}", expression.left.span)
       return finish(state, expression, pathType(state, unknownType(), right, expected, expression.span))
     }
     // Every absent layer falls back: 'x ?? y' is 'x? ?? y' when x has more
@@ -70,14 +70,14 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
       return finish(state, expression, primitive("bool"))
     }
     if left.kind != "none" && right.kind != "none" && !typesOverlap(state, left, right) {
-      typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), expression.span)
+      typeError(state, "Operator '${operator}' is not defined for ${typeName(left)} and ${typeName(right)}", expression.span)
     } else if left.kind != "none" && right.kind != "none" {
       expression.resolvedComparisonType = comparisonType(state, left, right)
     }
     return finish(state, expression, primitive("bool"))
   }
   if operator == "<" || operator == "<=" || operator == ">" || operator == ">=" {
-    if !orderedTypes(state, left, right) { typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), expression.span) }
+    if !orderedTypes(state, left, right) { typeError(state, "Operator '${operator}' is not defined for ${typeName(left)} and ${typeName(right)}", expression.span) }
     return finish(state, expression, primitive("bool"))
   }
   if operator == "+" && typeName(left) == "string" && (typeName(right) == "string" || typeName(right) == "char" || typeName(right) == "unknown") { return finish(state, expression, primitive("string")) }
@@ -86,15 +86,15 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
     validateNumericOperator(state, operator, left, right, expression.span)
     return finish(state, expression, numericOperationType(left, right, operator))
   }
-  typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), expression.span)
+  typeError(state, "Operator '${operator}' is not defined for ${typeName(left)} and ${typeName(right)}", expression.span)
   return finish(state, expression, unknownType())
 }
 
 function validateNoneComparison(state: CheckerState, operator: string, left: ResolvedType, right: ResolvedType, span: SourceSpan): none {
   if left.kind == "none" && !admitsNone(right) {
-    typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), span)
+    typeError(state, "Operator '${operator}' is not defined for ${typeName(left)} and ${typeName(right)}", span)
   } else if right.kind == "none" && !admitsNone(left) {
-    typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), span)
+    typeError(state, "Operator '${operator}' is not defined for ${typeName(left)} and ${typeName(right)}", span)
   }
 }
 
@@ -126,12 +126,12 @@ function validateRangeOperand(state: CheckerState, operator: string, side: strin
   case operand {
     primitive_: PrimitiveType -> {
       if primitive_.name != "byte" && primitive_.name != "int" && primitive_.name != "long" {
-        typeError(state, "Range operator \"" + operator + "\" requires integer bounds, got " + side + " bound of type \"" + typeName(operand) + "\"", span)
+        typeError(state, "Range operator \"${operator}\" requires integer bounds, got ${side} bound of type \"${typeName(operand)}\"", span)
       } else if primitive_.name == "long" {
-        typeError(state, "Range operator \"" + operator + "\" currently requires int-compatible bounds, got " + side + " bound of type \"long\"", span)
+        typeError(state, "Range operator \"${operator}\" currently requires int-compatible bounds, got ${side} bound of type \"long\"", span)
       }
     }
-    _ -> { typeError(state, "Range operator \"" + operator + "\" requires integer bounds, got " + side + " bound of type \"" + typeName(operand) + "\"", span) }
+    _ -> { typeError(state, "Range operator \"${operator}\" requires integer bounds, got ${side} bound of type \"${typeName(operand)}\"", span) }
   }
 }
 
@@ -154,7 +154,7 @@ export function checkUnary(state: CheckerState, expression: UnaryExpression, sco
     // The prefix forms were replaced by postfix '!' and '?'; recover with the
     // postfix type so later diagnostics stay meaningful.
     postfix := expression.operator.substring(3, 4)
-    typeError(state, "'" + expression.operator + " value' was removed; write 'value" + postfix + "'", expression.span)
+    typeError(state, "'${expression.operator} value' was removed; write 'value${postfix}'", expression.span)
     if !canBeAbsent(value) { return finish(state, expression, unknownType()) }
     return finish(state, expression, if postfix == "!" then presentType(value) else optionalType(value))
   }
@@ -162,7 +162,7 @@ export function checkUnary(state: CheckerState, expression: UnaryExpression, sco
     // Every absent layer (an outer none, a Failure, a none success value)
     // panics under '!' and becomes none under '?'.
     if !canBeAbsent(value) && value.kind != "none" {
-      typeError(state, "Postfix '" + expression.operator + "' requires a nullable or Result operand, got " + typeName(value), expression.span)
+      typeError(state, "Postfix '${expression.operator}' requires a nullable or Result operand, got ${typeName(value)}", expression.span)
       return finish(state, expression, unknownType())
     }
     if expression.operator == "!" {
@@ -170,7 +170,7 @@ export function checkUnary(state: CheckerState, expression: UnaryExpression, sco
       return finish(state, expression, presentType(value))
     }
     if !hasPresentValue(value) && hasFailureLayer(value) {
-      typeError(state, "Postfix '?' requires a Result with a success value, got " + typeName(value), expression.span)
+      typeError(state, "Postfix '?' requires a Result with a success value, got ${typeName(value)}", expression.span)
       return finish(state, expression, unknownType())
     }
     if value.kind == "none" { return finish(state, expression, value) }
@@ -178,7 +178,7 @@ export function checkUnary(state: CheckerState, expression: UnaryExpression, sco
   }
   if expression.operator == "!" { requireBool(state, value, expression.span); return finish(state, expression, primitive("bool")) }
   if expression.operator == "+" || expression.operator == "-" || expression.operator == "~" {
-    if !isNumericOperand(value) { typeError(state, "Unary '" + expression.operator + "' requires a numeric operand", expression.span) }
+    if !isNumericOperand(value) { typeError(state, "Unary '${expression.operator}' requires a numeric operand", expression.span) }
     else {
       if expression.operator == "~" && !isIntegerOperand(value) { typeError(state, "Unary '~' requires an integer operand", expression.span) }
       return finish(state, expression, numericOperationType(value, value))
@@ -196,7 +196,7 @@ export function checkAs(state: CheckerState, expression: AsExpression, scope: Sc
   case sourceType {
     result: ResultResolvedType -> {
       if !isValidAsNarrow(state, result.valueType, targetType) {
-        typeError(state, "Cannot narrow \"" + typeName(sourceType) + "\" to \"" + typeName(targetType) + "\" with \"as\"", expression.span)
+        typeError(state, "Cannot narrow \"${typeName(sourceType)}\" to \"${typeName(targetType)}\" with \"as\"", expression.span)
         return finish(state, expression, unknownType())
       }
       return finish(state, expression, resultType(targetType, unionType([result.errorType, primitive("string")])))
@@ -204,7 +204,7 @@ export function checkAs(state: CheckerState, expression: AsExpression, scope: Sc
     _ -> { }
   }
   if !isValidAsNarrow(state, sourceType, targetType) {
-    typeError(state, "Cannot narrow \"" + typeName(sourceType) + "\" to \"" + typeName(targetType) + "\" with \"as\"", expression.span)
+    typeError(state, "Cannot narrow \"${typeName(sourceType)}\" to \"${typeName(targetType)}\" with \"as\"", expression.span)
     return finish(state, expression, unknownType())
   }
   return finish(state, expression, resultType(targetType, primitive("string")))
@@ -276,14 +276,14 @@ export function binaryOperatorType(state: CheckerState, operator: string, left: 
     validateNumericOperator(state, operator, left, right, span)
     return numericOperationType(left, right, operator)
   }
-  typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), span)
+  typeError(state, "Operator '${operator}' is not defined for ${typeName(left)} and ${typeName(right)}", span)
   return unknownType()
 }
 
 function validateNumericOperator(state: CheckerState, operator: string, left: ResolvedType, right: ResolvedType, span: SourceSpan): none {
   if numericOperatorAllowed(operator, left, right) { return }
   if operator == "/" { typeError(state, "Operator '/' requires at least one floating-point operand for every allowed type", span) }
-  else { typeError(state, "Operator '" + operator + "' requires integer operands, got " + typeName(left) + " and " + typeName(right), span) }
+  else { typeError(state, "Operator '${operator}' requires integer operands, got ${typeName(left)} and ${typeName(right)}", span) }
 }
 
 

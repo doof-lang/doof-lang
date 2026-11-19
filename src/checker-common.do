@@ -14,7 +14,7 @@ export function typeError(state: CheckerState, message: string, span: SourceSpan
 export function deprecatedNoneAlias(state: CheckerState, spelling: string, span: SourceSpan, module: string = ""): none {
   state.diagnostics.push(Diagnostic {
     severity: "warning",
-    message: "'" + spelling + "' is deprecated; replace it with 'none'",
+    message: "'${spelling}' is deprecated; replace it with 'none'",
     span: checkerSemanticSpan(span),
     module: if module == "" then state.info!.path else module,
     replacement: "none",
@@ -33,7 +33,7 @@ export function deprecatedClassMethodFunction(state: CheckerState, fn: FunctionD
   if fn.legacyMethodFunctionSpan == none { return }
   state.diagnostics.push(Diagnostic {
     severity: "warning",
-    message: "'function' on class methods is deprecated; declare '" + fn.name + "(...)' without the keyword",
+    message: "'function' on class methods is deprecated; declare '${fn.name}(...)' without the keyword",
     span: checkerSemanticSpan(fn.legacyMethodFunctionSpan!),
     module: state.info!.path,
     replacement: fn.name,
@@ -52,20 +52,20 @@ export function deprecatedConstField(state: CheckerState, field: ClassField): no
   if field.legacyConstSpan == none || field.names.length == 0 { return }
   state.diagnostics.push(Diagnostic {
     severity: "warning",
-    message: "'const' on class fields is deprecated; declare a literal-valued field such as '" + field.names[0] + ": <literal>' instead",
+    message: "'const' on class fields is deprecated; declare a literal-valued field such as '${field.names[0]}: <literal>' instead",
     span: checkerSemanticSpan(field.legacyConstSpan!),
     module: state.info!.path,
   })
 }
 export function validateAssignmentBinding(state: CheckerState, binding: Binding, span: SourceSpan): none {
   if binding.kind != "field" {
-    if !binding.mutable { typeError(state, "Cannot assign to immutable binding '" + binding.name + "'", span) }
+    if !binding.mutable { typeError(state, "Cannot assign to immutable binding '${binding.name}'", span) }
     return
   }
   if binding.mutable { return }
   let suffix = ""
   if binding.fieldMode == "implicit" { suffix = "; declare it with 'let' to allow reassignment" }
-  typeError(state, "Cannot assign to immutable field '" + binding.fieldOwner + "." + binding.name + "'" + suffix, span)
+  typeError(state, "Cannot assign to immutable field '${binding.fieldOwner}.${binding.name}'${suffix}", span)
 }
 export function requireBool(state: CheckerState, resolvedType: ResolvedType, span: SourceSpan): none {
   case resolvedType {

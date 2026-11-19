@@ -75,7 +75,7 @@ function checkBindingClause(state: CheckerState, clause: BindingCondition, check
   let bindingType: ResolvedType = unknownType()
   if valueType.kind != "unknown" && valueType.kind != "never" {
     if !canBeAbsent(valueType) {
-      typeError(state, "Binding condition requires a nullable or Result value; \"" + clauseSubjectName(clause) + "\" has type \"" + displayTypeName(valueType) + "\"", clause.value.span)
+      typeError(state, "Binding condition requires a nullable or Result value; \"${clauseSubjectName(clause)}\" has type \"${displayTypeName(valueType)}\"", clause.value.span)
     } else {
       present := presentType(valueType)
       // `_ := save()` tests success of a Result<none, E> without binding.
@@ -89,14 +89,14 @@ function checkBindingClause(state: CheckerState, clause: BindingCondition, check
   if type_ := clause.type_ {
     annotated := resolveType(state, type_, state.info!, checked.scope)
     if bindingType.kind != "unknown" && annotated.kind != "unknown" && !isAssignableWithInterfaces(state.result, bindingType, annotated) {
-      typeError(state, "Cannot assign " + displayTypeName(bindingType) + " to " + displayTypeName(annotated), clause.span)
+      typeError(state, "Cannot assign ${displayTypeName(bindingType)} to ${displayTypeName(annotated)}", clause.span)
     }
     bindingType = annotated
   }
   clause.resolvedBindingType = bindingType
   if clause.name == "_" { return }
   if !declare(checked.scope, Binding { name: clause.name, kind: "immutable-binding", type_: bindingType, mutable: false, span: checkerSemanticSpan(clause.span), module: state.info!.path }) {
-    typeError(state, "Binding '" + clause.name + "' is already declared in this condition", clause.span)
+    typeError(state, "Binding '${clause.name}' is already declared in this condition", clause.span)
   }
   checked.boundNames.push(clause.name)
 }
@@ -131,7 +131,7 @@ export function declareElseFailure(state: CheckerState, statement: IfStatement, 
     if subjectType.kind != "unknown" {
       captured := absenceErrorType(subjectType)
       if captured == none {
-        typeError(state, "Failure capture requires a Result binding clause; \"" + displayTypeName(subjectType) + "\" can only be absent as none", span)
+        typeError(state, "Failure capture requires a Result binding clause; \"${displayTypeName(subjectType)}\" can only be absent as none", span)
       } else {
         failureType = captured!
       }
@@ -147,7 +147,7 @@ export function unboundConditionBindingMessage(scope: Scope, name: string): stri
   let current: Scope | none = scope
   while current != none {
     if current!.unboundConditionNames.contains(name) {
-      return "\"" + name + "\" is not in scope here; it is bound only when its condition holds"
+      return "\"${name}\" is not in scope here; it is bound only when its condition holds"
     }
     current = current!.parent
   }

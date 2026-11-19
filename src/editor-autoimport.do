@@ -74,12 +74,12 @@ export function autoImportEdits(index: EditorIndex, module: string, target: stri
       mergeOffset = lastNamed
     }
   }
-  if mergeOffset >= 0 { return EditorResponse { edits: [EditorEdit { module, start: mergeOffset, end: mergeOffset, text: ", " + name }] } }
+  if mergeOffset >= 0 { return EditorResponse { edits: [EditorEdit { module, start: mergeOffset, end: mergeOffset, text: ", ${name}" }] } }
   let offset = 0
   if source.startsWith("#!") { offset = source.indexOf("\n") + 1; if offset == 0 { return EditorResponse { error: "Complete the shebang line before adding an import." } } }
   specifier := autoImportSpecifier(module, target).replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")
   newline := if source.contains("\r\n") then "\r\n" else "\n"
-  return EditorResponse { edits: [EditorEdit { module, start: offset, end: offset, text: "import { " + name + " } from \"" + specifier + "\"" + newline }] }
+  return EditorResponse { edits: [EditorEdit { module, start: offset, end: offset, text: "import { ${name} } from \"${specifier}\"${newline}" }] }
 }
 
 export function autoImportSpecifier(module: string, target: string): string {

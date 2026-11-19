@@ -122,7 +122,7 @@ export function parseCli(args: string[]): CliParseResult {
 
   command := args[0]
   if command != "build" && command != "run" && command != "observe" && command != "debug" && command != "profile" && command != "package" && command != "emit" && command != "check" && command != "test" {
-    return CliParseResult { request: none, error: "unknown command '" + command + "'" }
+    return CliParseResult { request: none, error: "unknown command '${command}'" }
   }
   request := CliRequest { command, entry: if args.length < 2 then "." else args[1] }
   let index = if args.length < 2 then 1 else 2
@@ -143,7 +143,7 @@ export function parseCli(args: string[]): CliParseResult {
       return CliParseResult { request: none, help: true }
     }
     if argument == "-o" || argument == "--output-directory" {
-      if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for " + argument } }
+      if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for ${argument}" } }
       request.outputDirectory = args[index + 1]
       index = index + 2
       continue
@@ -158,7 +158,7 @@ export function parseCli(args: string[]): CliParseResult {
       if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for --target" } }
       value := args[index + 1]
       if value != "macos-app" && value != "ios-app" && value != "wasm" {
-        return CliParseResult { request: none, error: "invalid value for --target: " + value }
+        return CliParseResult { request: none, error: "invalid value for --target: ${value}" }
       }
       request.targetOverride = value
       index = index + 2
@@ -168,7 +168,7 @@ export function parseCli(args: string[]): CliParseResult {
       if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for --native-platform" } }
       value := args[index + 1]
       if value != "macos" && value != "linux" && value != "windows" {
-        return CliParseResult { request: none, error: "invalid value for --native-platform: " + value }
+        return CliParseResult { request: none, error: "invalid value for --native-platform: ${value}" }
       }
       request.nativePlatformOverride = value
       index = index + 2
@@ -184,7 +184,7 @@ export function parseCli(args: string[]): CliParseResult {
       if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for --macos-signing" } }
       value := args[index + 1]
       if value != "developer-id" && value != "ad-hoc" {
-        return CliParseResult { request: none, error: "invalid value for --macos-signing: " + value }
+        return CliParseResult { request: none, error: "invalid value for --macos-signing: ${value}" }
       }
       request.macosSigning = value
       index = index + 2
@@ -211,7 +211,7 @@ export function parseCli(args: string[]): CliParseResult {
       if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for --ios-destination" } }
       value := args[index + 1]
       if value != "simulator" && value != "device" {
-        return CliParseResult { request: none, error: "invalid value for --ios-destination: " + value }
+        return CliParseResult { request: none, error: "invalid value for --ios-destination: ${value}" }
       }
       request.iosDestination = value
       index += 2
@@ -317,7 +317,7 @@ export function parseCli(args: string[]): CliParseResult {
       index += 2
       continue
     }
-    return CliParseResult { request: none, error: "unknown option '" + argument + "'" }
+    return CliParseResult { request: none, error: "unknown option '${argument}'" }
   }
 
   if request.jsonOutput && (command != "test" || !request.listOnly) { return CliParseResult { request: none, error: "--json requires test --list" } }

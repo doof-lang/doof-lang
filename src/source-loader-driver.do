@@ -23,7 +23,7 @@ readonly vendorOnlyInStandardPackagesMessage = "build.native.vendor is only allo
 
 function driverWithExtension(path: string): string {
   if path.endsWith(".do") { return path }
-  return path + ".do"
+  return "${path}.do"
 }
 
 function driverLogicalPath(path: string): string {
@@ -33,7 +33,7 @@ function driverLogicalPath(path: string): string {
   if withExtension.startsWith("/") {
     return withExtension
   }
-  return "/" + withExtension
+  return "/${withExtension}"
 }
 
 function driverSourceSuffix(path: string): string {
@@ -90,7 +90,7 @@ function driverSourceDiskPath(
 ): string {
   for root of localRoots {
     if logicalPath == root.logicalPrefix { return root.diskRoot }
-    prefix := root.logicalPrefix + "/"
+    prefix := "${root.logicalPrefix}/"
     if logicalPath.startsWith(prefix) {
       return joinPath(root.diskRoot, logicalPath.substring(prefix.length, logicalPath.length))
     }
@@ -131,7 +131,7 @@ function configuredDriverSource(logicalPath: string): Result<SourceFile | none, 
 
 function acquiredPackageForLoadedSource(logicalPath: string, state: DriverSourceState): ModuleAcquisition | none {
   for root of state.localRoots {
-    if logicalPath == root.logicalPrefix || logicalPath.startsWith(root.logicalPrefix + "/") { return none }
+    if logicalPath == root.logicalPrefix || logicalPath.startsWith("${root.logicalPrefix}/") { return none }
   }
   return acquiredPackageForModule(logicalPath, state.acquisitions)
 }
@@ -178,7 +178,7 @@ function registerReachedPackage(acquisition: ModuleAcquisition): Result<none, Di
   if manifest.name != expectedName {
     return Failure(driverDiagnostic(
       manifestPath,
-      "Package " + acquisition.logicalPrefix + " must declare name \"" + expectedName + "\", got \"" + manifest.name + "\"",
+      "Package ${acquisition.logicalPrefix} must declare name \"${expectedName}\", got \"${manifest.name}\"",
     ))
   }
   if manifest.nativeBuild.vendorBuilds.length > 0 && !acquisition.logicalPrefix.startsWith("/std/") {
@@ -199,7 +199,7 @@ export function stdlibPackageNameForLogicalPath(logicalPath: string): string {
   slash := remainder.indexOf("/")
   let shortName = if slash < 0 then remainder else remainder.substring(0, slash)
   if shortName.endsWith(".do") { shortName = shortName.substring(0, shortName.length - 3) }
-  return "std/" + shortName
+  return "std/${shortName}"
 }
 
 function ensureStdPackageAcquisition(logicalPath: string): Result<none, string> {
@@ -207,23 +207,23 @@ function ensureStdPackageAcquisition(logicalPath: string): Result<none, string> 
   packageName := stdlibPackageNameForLogicalPath(logicalPath)
   provider := configuredDriverSourceState.stdlibBundle
   if provider == none {
-    return Failure("Bundled standard library is unavailable while resolving " + packageName)
+    return Failure("Bundled standard library is unavailable while resolving ${packageName}")
   }
   target := configuredDriverSourceState.stdlibTarget
   materialized := materializeStdlibBundlePackage(
     provider!, packageName, configuredDriverSourceState.packageAcquisitionRoot, stdlibBundleTargetKey(target), target,
-  ) else error { return Failure("Could not materialize " + packageName + " from the bundled standard library: " + error) }
-  acquisition := ModuleAcquisition { logicalPrefix: "/" + packageName, diskRoot: materialized.rootDirectory }
+  ) else error { return Failure("Could not materialize ${packageName} from the bundled standard library: ${error}") }
+  acquisition := ModuleAcquisition { logicalPrefix: "/${packageName}", diskRoot: materialized.rootDirectory }
   configuredDriverSourceState.acquisitions.push(acquisition)
   return Success()
 }
 
 /** Makes an implicitly required standard package part of the reached graph. */
 export function ensureStdPackageReached(packageName: string): Result<none, string> {
-  logicalPath := "/" + packageName + "/index.do"
+  logicalPath := "/${packageName}/index.do"
   try ensureStdPackageAcquisition(logicalPath)
   acquisition := acquiredPackageForModule(logicalPath, configuredDriverSourceState.acquisitions)
-  if acquisition == none { return Failure("Could not resolve required standard package " + packageName) }
+  if acquisition == none { return Failure("Could not resolve required standard package ${packageName}") }
   _ := registerReachedPackage(acquisition!) else error { return Failure(error.message) }
   return Success()
 }
@@ -281,13 +281,13 @@ export function sourceLoaderForRequest(
     acquisitions.push(acquisition)
   } else {
     bundleResourcePath := resourcePath("doof-stdlib.tar") else error {
-      return Failure("Could not locate bundled standard library doof-stdlib.tar: " + error)
+      return Failure("Could not locate bundled standard library doof-stdlib.tar: ${error}")
     }
     if !exists(bundleResourcePath) {
-      return Failure("Bundled standard library is missing: " + bundleResourcePath)
+      return Failure("Bundled standard library is missing: ${bundleResourcePath}")
     }
     opened := openStdlibBundle(bundleResourcePath) else error {
-      return Failure("Could not open bundled standard library " + bundleResourcePath + ": " + error)
+      return Failure("Could not open bundled standard library ${bundleResourcePath}: ${error}")
     }
     stdlibBundle = opened
   }
@@ -320,12 +320,12 @@ function configureDeclaredDependencies(
 ): Result<none, string> {
   for requested of manifest.dependencies {
     if requested.name.startsWith("std/") { continue }
-    logicalPrefix := "/" + requested.name
+    logicalPrefix := "/${requested.name}"
     let diskRoot = absolute(requested.path)!
     for existing of acquisitions {
       if existing.logicalPrefix == logicalPrefix {
         if existing.diskRoot != diskRoot {
-          return Failure("Package import prefix " + logicalPrefix + " resolves to multiple packages")
+          return Failure("Package import prefix ${logicalPrefix} resolves to multiple packages")
         }
         diskRoot = ""
       }
@@ -335,7 +335,7 @@ function configureDeclaredDependencies(
     acquisitions.push(acquisition)
     dependencyManifestPath := acquiredManifestPath(acquisition)
     dependencySource := readText(dependencyManifestPath) else {
-      return Failure("Could not read dependency manifest " + dependencyManifestPath)
+      return Failure("Could not read dependency manifest ${dependencyManifestPath}")
     }
     try dependencyManifest := parseDependencyManifestForTarget(
       dependencySource,
@@ -346,7 +346,7 @@ function configureDeclaredDependencies(
     )
     if dependencyManifest.name == "" { return Failure("Dependency package must declare a name: " + dependencyManifestPath) }
     if dependencyManifest.nativeBuild.vendorBuilds.length > 0 {
-      return Failure(vendorOnlyInStandardPackagesMessage + ": " + dependencyManifestPath)
+      return Failure("${vendorOnlyInStandardPackagesMessage}: ${dependencyManifestPath}")
     }
     try configureDeclaredDependencies(dependencyManifest, rootManifest, nativePlatform, acquisitions)
   }
@@ -363,7 +363,7 @@ function driverLogicalPrefix(path: string): string {
   sourceSuffix := driverSourceSuffix(absolutePath)
   if sourceSuffix != absolutePath { return sourceSuffix }
   if absolutePath.startsWith("/") { return absolutePath }
-  return "/" + absolutePath
+  return "/${absolutePath}"
 }
 
 export function driverRootLogicalPrefix(packageName: string, rootDirectory: string): string {
@@ -379,7 +379,7 @@ export function driverRootLogicalPath(path: string, rootDirectory: string, packa
   if absolutePath == absoluteRoot { return prefix }
   rootPrefix := if absoluteRoot.endsWith("/") then absoluteRoot else absoluteRoot + "/"
   if absolutePath.startsWith(rootPrefix) {
-    return prefix + "/" + absolutePath.substring(rootPrefix.length, absolutePath.length)
+    return "${prefix}/${absolutePath.substring(rootPrefix.length, absolutePath.length)}"
   }
   return driverLogicalPath(absolutePath)
 }

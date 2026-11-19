@@ -885,7 +885,7 @@ export class Lexer {
       return
     }
 
-    diagnostic("Unexpected character: '" + string(ch) + "'", line, column)
+    diagnostic("Unexpected character: '${ch}'", line, column)
     advance()
   }
 }

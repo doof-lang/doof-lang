@@ -176,7 +176,7 @@ export function mixedWeakUnionMessage(type_: ResolvedType): string | none {
         }
       }
       if !mixed { return none }
-      return "Union \"" + typeName(type_) + "\" mixes weak and strong references; 'weak' qualifies the whole union, as in \"" + typeName(weakType(unionType(inner))) + "\""
+      return "Union \"${typeName(type_)}\" mixes weak and strong references; 'weak' qualifies the whole union, as in \"${typeName(weakType(unionType(inner)))}\""
     }
     _ -> { return none }
   }
@@ -414,44 +414,44 @@ export function typeName(resolvedType: ResolvedType): string {
     primitive_: PrimitiveType -> { return primitive_.name }
     class_: ClassType -> {
       if class_.typeArgs.length == 0 { return class_.name }
-      let result = class_.name + "<"
+      let result = "${class_.name}<"
       for i of 0..<class_.typeArgs.length {
-        if i > 0 { result = result + ", " }
+        if i > 0 { result = "${result}, " }
         result = result + typeName(class_.typeArgs[i])
       }
-      return result + ">"
+      return "${result}>"
     }
     enum_: EnumType -> { return enum_.name }
     interface_: InterfaceType -> {
       if interface_.typeArgs.length == 0 { return interface_.name }
-      let result = interface_.name + "<"
+      let result = "${interface_.name}<"
       for i of 0..<interface_.typeArgs.length {
-        if i > 0 { result = result + ", " }
+        if i > 0 { result = "${result}, " }
         result = result + typeName(interface_.typeArgs[i])
       }
-      return result + ">"
+      return "${result}>"
     }
     function_: FunctionType -> { return "function" }
     array: ArrayResolvedType -> { return (if array.readonly_ then "readonly " else "") + groupedTypeName(array.elementType) + "[]" }
     map: MapResolvedType -> { return (if map.readonly_ then "readonly " else "") + "Map<" + typeName(map.keyType) + ", " + typeName(map.valueType) + ">" }
     set: SetResolvedType -> { return (if set.readonly_ then "ReadonlySet" else "Set") + "<" + typeName(set.elementType) + ">" }
-    stream: StreamResolvedType -> { return "Stream<" + typeName(stream.elementType) + ">" }
+    stream: StreamResolvedType -> { return "Stream<${typeName(stream.elementType)}>" }
     _: RangeResolvedType -> { return "Range" }
     _: SerialValueResolvedType -> { return "SerialValue" }
-    result: ResultResolvedType -> { return "Result<" + typeName(result.valueType) + ", " + typeName(result.errorType) + ">" }
-    success: SuccessResolvedType -> { return "Success<" + typeName(success.valueType) + ">" }
-    failure: FailureResolvedType -> { return "Failure<" + typeName(failure.errorType) + ">" }
+    result: ResultResolvedType -> { return "Result<${typeName(result.valueType)}, ${typeName(result.errorType)}>" }
+    success: SuccessResolvedType -> { return "Success<${typeName(success.valueType)}>" }
+    failure: FailureResolvedType -> { return "Failure<${typeName(failure.errorType)}>" }
     weak_: WeakResolvedType -> {
       // A bare collection under `weak` is ambiguous source; spell the parsed form.
       if hasCollectionArm(weak_.inner) { return "weak (" + typeName(weak_.inner) + ")" }
-      return "weak " + typeName(weak_.inner)
+      return "weak ${typeName(weak_.inner)}"
     }
-    actor: ActorType -> { return "Actor<" + typeName(actor.innerClass) + ">" }
-    promise: PromiseType -> { return "Promise<" + typeName(promise.valueType) + ">" }
+    actor: ActorType -> { return "Actor<${typeName(actor.innerClass)}>" }
+    promise: PromiseType -> { return "Promise<${typeName(promise.valueType)}>" }
     tuple: TupleResolvedType -> {
       let result = "("
       for i of 0..<tuple.elements.length {
-        if i > 0 { result = result + ", " }
+        if i > 0 { result = "${result}, " }
         result = result + typeName(tuple.elements[i])
       }
       return result + ")"
@@ -459,7 +459,7 @@ export function typeName(resolvedType: ResolvedType): string {
     union: UnionResolvedType -> {
       let result = ""
       for i of 0..<union.types.length {
-        if i > 0 { result = result + " | " }
+        if i > 0 { result = "${result} | " }
         result = result + groupedUnionArmName(union.types[i])
       }
       return result
@@ -468,8 +468,8 @@ export function typeName(resolvedType: ResolvedType): string {
     _: NeverType -> { return "never" }
     _: UnknownType -> { return "unknown" }
     parameter: TypeParameterType -> { return parameter.name }
-    metadata: ClassMetadataResolvedType -> { return "ClassMetadata<" + typeName(metadata.classType) + ">" }
-    reflection: MethodReflectionResolvedType -> { return "MethodReflection<" + typeName(reflection.classType) + ">" }
+    metadata: ClassMetadataResolvedType -> { return "ClassMetadata<${typeName(metadata.classType)}>" }
+    reflection: MethodReflectionResolvedType -> { return "MethodReflection<${typeName(reflection.classType)}>" }
   }
   return "unknown"
 }
@@ -513,8 +513,8 @@ export function displayTypeName(resolvedType: ResolvedType): string {
     function_: FunctionType -> {
       let result = "("
       for i of 0..<function_.params.length {
-        if i > 0 { result = result + ", " }
-        result = result + function_.params[i].name + ": " + displayTypeName(function_.params[i].type_)
+        if i > 0 { result = "${result}, " }
+        result = "${result}${function_.params[i].name}: ${displayTypeName(function_.params[i].type_)}"
       }
       return result + "): " + displayTypeName(function_.returnType)
     }
