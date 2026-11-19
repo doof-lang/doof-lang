@@ -29,10 +29,10 @@ export function emitExpressionReturn(expression: Expression, context: EmitContex
     return emitExpression(expression, context) + "; doof::panic(\"never function returned\");"
   }
   value := emitExpression(expression, context, expected)
-  if expected != none && specializeEmitType(expected!, context).kind == "never" {
+  if expectedType := expected && specializeEmitType(expectedType, context).kind == "never" {
     return value + "; doof::panic(\"never function returned\");"
   }
-  if expected != none && carrierOf(specializeEmitType(expected!, context), .Return).kind == .Void {
+  if expectedType := expected && carrierOf(specializeEmitType(expectedType, context), .Return).kind == .Void {
     return "return static_cast<void>(" + value + ");"
   }
   return "return " + value + ";"
@@ -70,18 +70,16 @@ export function variantVisitValue(value: string, resolvedType: ResolvedType): st
 // member through doof::variant_member so every alternative compiles. Calls use
 // doof::variant_receiver, which copies an immutable struct arm.
 export function variantMember(visited: string, resolvedType: ResolvedType | none, call: bool = false): string {
-  if resolvedType != none {
-    case resolvedType! {
-      union_: UnionResolvedType -> {
-        for member of union_.types {
-          case member {
-            class_: ClassType -> { if class_.symbol.kind == "struct" { return (if call then "doof::variant_receiver(" else "doof::variant_member(") + visited + ")." } }
-            _ -> { }
-          }
+  case resolvedType {
+    union_: UnionResolvedType -> {
+      for member of union_.types {
+        case member {
+          class_: ClassType -> { if class_.symbol.kind == "struct" { return (if call then "doof::variant_receiver(" else "doof::variant_member(") + visited + ")." } }
+          _ -> { }
         }
       }
-      _ -> { }
     }
+    _ -> { }
   }
   return visited + "->"
 }

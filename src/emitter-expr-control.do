@@ -52,8 +52,8 @@ export function emitIfExpression(expression: IfExpression, context: EmitContext,
     let resultType = specializeEmitType(expression.resolvedType!, context)
     // Union equality ignores arm order, but C++ variant identity does not.
     // Preserve the contextual carrier when it denotes the same Doof type.
-    if expected != none && sameType(resultType, specializeEmitType(expected!, context)) {
-      resultType = specializeEmitType(expected!, context)
+    if expectedType := expected && sameType(resultType, specializeEmitType(expectedType, context)) {
+      resultType = specializeEmitType(expectedType, context)
     }
     if hasBindingClause(expression.condition) { return emitIfExpressionWithBindings(expression, resultType, context) }
     return "[&]() -> " + emitContextType(resultType, context) + " { if (" + emitCondition(expression.condition, context) + ") { return " + emitExpression(expression.then_, context, resultType) + "; } return " + emitExpression(expression.else_, context, resultType) + "; }()"
@@ -62,9 +62,8 @@ export function emitIfExpression(expression: IfExpression, context: EmitContext,
 }
 
 export function emitYieldBlockExpression(expression: YieldBlockExpression, context: EmitContext, expected: ResolvedType | none): string {
-  checkedResultType := if expected == none then expression.resolvedType else expected
-  if checkedResultType == none { panic("Yield block has no resolved result type") }
-  resultType := specializeEmitType(checkedResultType!, context)
+  checkedResultType := (expected ?? expression.resolvedType) else { panic("Yield block has no resolved result type") }
+  resultType := specializeEmitType(checkedResultType, context)
   body := emitValueYieldBlock(expression.body, 1, resultType, false, context)
   return "[&]() -> " + emitContextType(resultType, context) + " {\n" + body + "}()"
 }
@@ -88,11 +87,8 @@ export function emitCatchExpression(expression: CatchExpression, context: EmitCo
 }
 
 export function emitCaseExpression(expression: CaseExpression, context: EmitContext, expected: ResolvedType | none): string {
-  let checkedResultType: ResolvedType | none = none
-  if expected != none { checkedResultType = expected! }
-  else if expression.resolvedType != none { checkedResultType = expression.resolvedType! }
-  if checkedResultType == none { panic("Case expression has no resolved result type") }
-  resultType := specializeEmitType(checkedResultType!, context)
+  checkedResultType := (expected ?? expression.resolvedType) else { panic("Case expression has no resolved result type") }
+  resultType := specializeEmitType(checkedResultType, context)
   let output = "[&]() -> " + emitContextType(resultType, context) + " {\n"
   subjectResult := expression.resolvedSubjectType else { panic("Case expression has no checked subject type") }
   storageType := expression.subject.resolvedType else { panic("Case expression subject has no resolved type") }

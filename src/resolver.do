@@ -25,9 +25,9 @@ export class ModuleResolver {
     loadedPaths.push(path)
     // A missing source is none; a Failure is a load error.
     loaded := loader(path) else diagnostic {
-      if diagnostic != none {
+      if failure := diagnostic {
         failedPaths.push(path)
-        diagnostics.push(diagnostic!)
+        diagnostics.push(failure)
       }
       return none
     }

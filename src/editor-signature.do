@@ -51,10 +51,10 @@ export function editorSignature(index: EditorIndex, module: string, offset: int,
     if call.callee.span.end.offset > offset || call.span.end.offset < offset { continue }
     if best == none || call.span.end.offset - call.span.start.offset < best!.span.end.offset - best!.span.start.offset { best = call }
   }
-  if best != none && best!.callee.resolvedType != none {
+  if bestCall := best && calleeType := bestCall.callee.resolvedType {
     let active = 0
-    for argument of best!.args { if argument.span.end.offset < offset { active += 1 } }
-    return signatureResponse(best!.callee.resolvedType!, module, offset, active)
+    for argument of bestCall.args { if argument.span.end.offset < offset { active += 1 } }
+    return signatureResponse(calleeType, module, offset, active)
   }
   return EditorResponse {}
 }

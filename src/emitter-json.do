@@ -193,17 +193,17 @@ function emitJsonFieldRead(field: ClassField, name: string, context: EmitContext
   value := "_field_" + safeName
   typeText := emitContextType(type_, context)
   let result = ""
-  if field.defaultValue != none {
+  if defaultExpression := field.defaultValue {
     result = result + "    std::optional<" + typeText + "> " + value + ";\n"
     result = result + "    if (auto " + iterator + " = _object->find(\"" + name + "\"); " + iterator + " != _object->end()) {\n"
     result = result + emitJsonValidation(iterator + "->second", type_, name, context, failureType, 2)
     read := emitJsonRead(iterator + "->second", type_, context)
     result = result + "        " + value + " = doof::serial_decode_at(\"Field \\\"" + name + "\\\"\", [&]() { return " + read + "; });\n"
     result = result + "    } else {\n"
-    let defaultValue = emitExpression(field.defaultValue!, context, type_)
+    let defaultValue = emitExpression(defaultExpression, context, type_)
     // A nullable `null` default must engage optional<optional<T>> with an
     // empty inner optional rather than disengaging the outer presence marker.
-    case field.defaultValue! {
+    case defaultExpression {
       _: NoneLiteral -> { defaultValue = typeText + "{" + defaultValue + "}" }
       _ -> {}
     }
@@ -240,7 +240,7 @@ export function emitJsonTypeCheck(json: string, type_: ResolvedType, context: Em
     _: ClassType -> { return "doof::serial_is_object(" + json + ")" }
     _: InterfaceType -> { return "doof::serial_is_object(" + json + ")" }
     enum_: EnumType -> {
-      if context != none && enumBackingKind(enum_, context!) == "string" { return "doof::serial_is_string(" + json + ")" }
+      if emitContext := context && enumBackingKind(enum_, emitContext) == "string" { return "doof::serial_is_string(" + json + ")" }
       return "doof::serial_fits_int(" + json + ")"
     }
     _: ArrayResolvedType -> { return "doof::serial_is_array(" + json + ")" }
@@ -429,7 +429,7 @@ export function jsonTypeName(type_: ResolvedType, context: EmitContext | none = 
     _: ClassType -> { return "object" }
     _: InterfaceType -> { return "object" }
     enum_: EnumType -> {
-      if context != none && enumBackingKind(enum_, context!) == "string" { return "string" }
+      if emitContext := context && enumBackingKind(enum_, emitContext) == "string" { return "string" }
       return "integer"
     }
     _: ArrayResolvedType -> { return "array" }

@@ -125,9 +125,9 @@ function compileInternal(
     reusableModules, emissionConfigurationFingerprint, physicalSourcePaths, timings, names, emissionConfiguration,
   )
   timings.finish("compiler.emission", emissionStart)
-  if wasmEmission != none {
-    emission.wasmSupportSource = wasmEmission!.source
-    emission.wasmExportNames = wasmEmission!.exportNames
+  if wasm := wasmEmission {
+    emission.wasmSupportSource = wasm.source
+    emission.wasmExportNames = wasm.exportNames
   }
   return Compilation { emission, diagnostics, sourceFiles: frontend.sourceFiles, resolutionProbes: frontend.resolutionProbes }
 }

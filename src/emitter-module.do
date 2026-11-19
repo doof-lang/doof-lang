@@ -179,7 +179,7 @@ class CxxModuleEmitter {
       context.coverageEnabled = true
       context.coverageModuleId = coverageModuleId
     }
-    if instantiations != none { configureInstantiationRegistry(context, instantiations!) }
+    if instantiationPlan := instantiations { configureInstantiationRegistry(context, instantiationPlan) }
     context.typeLowering = TypeLoweringSession { graph: TypeLoweringGraph { registry: context.cppTypes, identities } }
     context.scriptEntry = (entryMode == "executable" || entryMode == "ios-app") && hasScriptStatements([program])
     timings.finish("header.root-context", contextStart)
@@ -191,7 +191,7 @@ class CxxModuleEmitter {
     key := projectedHeaderKey(view.path, view.program, worldviewInterfaceKeys, view.forwardClassNames)
     cached := headerPlans.get(key)
     timings.finish("header.cache-lookup-copy", lookupStart)
-    if cached != none { return cached! }
+    if plan := cached { return plan }
     contextStart := timings.start()
     sectionContext := createEmitContextForModule(view.program, view.path, declarations)
     sectionContext.names = names
@@ -201,12 +201,12 @@ class CxxModuleEmitter {
     sectionContext.moduleSurfaces = moduleSurfaces
     sectionContext.jsonEligibility = jsonEligibility
     sectionContext.metricsClassLifecycle = configuration.metricsClassLifecycle
-    if instantiations != none { configureInstantiationRegistry(sectionContext, instantiations!) }
-    if typeLowering != none {
+    if instantiationPlan := instantiations { configureInstantiationRegistry(sectionContext, instantiationPlan) }
+    if loweringGraph := typeLowering {
       let session = headerTypeSessions.get(view.path)?
       if session == none {
         sessionStart := timings.start()
-        session = TypeLoweringSession { graph: typeLowering! }
+        session = TypeLoweringSession { graph: loweringGraph }
         headerTypeSessions.set(view.path, session!)
         timings.finish("header.type-session", sessionStart)
       }
@@ -232,8 +232,8 @@ class CxxModuleEmitter {
     }
     timings.finish("header.declarations", declarationsStart)
     concreteStart := timings.start()
-    if instantiations != none {
-      addConcreteHeaderDeclarations(sectionPlan, sectionContext, instantiations!, view.program, worldviewInterfaceKeys)
+    if instantiationPlan := instantiations {
+      addConcreteHeaderDeclarations(sectionPlan, sectionContext, instantiationPlan, view.program, worldviewInterfaceKeys)
     }
     timings.finish("header.concrete-declarations", concreteStart)
     cacheStart := timings.start()
@@ -267,10 +267,10 @@ class CxxModuleEmitter {
     sourceBuilder.append(generatedLineDirective())
     sourceBuilder.append(emitModuleInitializer(programs, context, instantiations, !context.scriptEntry))
     if context.scriptEntry { sourceBuilder.append(emitScriptRunner(programs, context, instantiations)) }
-    if instantiations != none {
-      sourceBuilder.append(emitConcreteClassDefinitions(context, instantiations!))
-      sourceBuilder.append(emitConcreteMethodDefinitions(context, instantiations!))
-      sourceBuilder.append(emitConcreteFunctions(context, instantiations!))
+    if instantiationPlan := instantiations {
+      sourceBuilder.append(emitConcreteClassDefinitions(context, instantiationPlan))
+      sourceBuilder.append(emitConcreteMethodDefinitions(context, instantiationPlan))
+      sourceBuilder.append(emitConcreteFunctions(context, instantiationPlan))
     }
     sourceBuilder.append("}\n")
     nativeMethods := emitNativeClassMethods(programs, context)
@@ -695,7 +695,7 @@ function sortedCoverageLines(lines: int[]): int[] {
     for line of lines {
       if line > last && (candidate == none || line < candidate!) { candidate = line }
     }
-    if candidate != none { result.push(candidate!); last = candidate! }
+    if found := candidate { result.push(found); last = found }
   }
   return result
 }

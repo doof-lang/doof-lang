@@ -217,8 +217,7 @@ function executeNativePlan(
   let truncationReported = false
   let pchChanged = false
 
-  if plan.precompiledHeaderTask != none {
-    pchTask := plan.precompiledHeaderTask!
+  if pchTask := plan.precompiledHeaderTask {
     ensureDirectory(parentDirectory(pchTask.outputPath))
     pchFingerprint := taskFingerprint(pchTask, identities)
     pchPrevious := indexedNativeTaskState(previousTasks, pchTask.id)
@@ -293,8 +292,8 @@ function executeNativePlan(
   if compileExitCode != 0 { println("error: native object compiler exited with code " + string(compileExitCode)); return compileExitCode }
 
   let objectPaths: string[] = []
-  if plan.precompiledHeaderTask != none {
-    for path of plan.precompiledHeaderTask!.auxiliaryOutputPaths { objectPaths.push(path) }
+  if pchTask := plan.precompiledHeaderTask {
+    for path of pchTask.auxiliaryOutputPaths { objectPaths.push(path) }
   }
   for index of 0..<plan.compileTasks.length {
     task := plan.compileTasks[index]
@@ -527,10 +526,10 @@ function collectManagedOutputsIndexed(
   for nativeCopy of project.nativeCopies {
     collectManagedNativeCopyOutputs(outputs, indexed, nativeCopy.sourcePath, joinOutput(outputDirectory, nativeCopy.relativePath))
   }
-  if plan.precompiledHeaderTask != none {
-    appendManagedOutput(outputs, indexed, plan.precompiledHeaderTask!.outputPath)
-    if plan.precompiledHeaderTask!.dependencyFilePath != "" { appendManagedOutput(outputs, indexed, plan.precompiledHeaderTask!.dependencyFilePath) }
-    for path of plan.precompiledHeaderTask!.auxiliaryOutputPaths { appendManagedOutput(outputs, indexed, path) }
+  if pchTask := plan.precompiledHeaderTask {
+    appendManagedOutput(outputs, indexed, pchTask.outputPath)
+    if pchTask.dependencyFilePath != "" { appendManagedOutput(outputs, indexed, pchTask.dependencyFilePath) }
+    for path of pchTask.auxiliaryOutputPaths { appendManagedOutput(outputs, indexed, path) }
   }
   for task of plan.compileTasks {
     appendManagedOutput(outputs, indexed, task.outputPath)

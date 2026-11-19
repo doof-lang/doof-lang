@@ -167,8 +167,8 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     else none
   timings.finish("command.cache-lookup", cacheStart)
   compilerStart := timings.start()
-  if cachedGraph != none {
-    result = Compilation { emission: cachedGraph!, diagnostics: [] }
+  if graph := cachedGraph {
+    result = Compilation { emission: graph, diagnostics: [] }
     reusedFrontend = true
   } else {
     result = if request.command == "check"

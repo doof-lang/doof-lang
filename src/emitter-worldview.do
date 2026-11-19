@@ -92,8 +92,8 @@ export function planWorldview(
   // through every field's concrete type, so select those definitions before
   // projecting the owner header rather than leaving a forward declaration in
   // the generated translation unit.
-  if instantiations != none {
-    collectGeneratedJsonDependencies(root!.program, rootPath, instantiations!, index)
+  if instantiationPlan := instantiations {
+    collectGeneratedJsonDependencies(root!.program, rootPath, instantiationPlan, index)
   }
   // The root header owns all of its declarations, including every native
   // declaration it exposes. Seed each opaque native-header surface even though
@@ -111,18 +111,18 @@ export function planWorldview(
     }
   }
 
-  if instantiations != none {
+  if instantiationPlan := instantiations {
     // Generic bodies are emitted in their defining module. Their concrete
     // arguments can come from callers with no import edge back to that module.
-    for function_ of instantiations!.functions {
+    for function_ of instantiationPlan.functions {
       if function_.modulePath != rootPath { continue }
       for argument of function_.substitution.arguments { collectArgumentDependencies(argument, rootPath, index) }
     }
-    for class_ of instantiations!.classes {
+    for class_ of instantiationPlan.classes {
       if class_.modulePath != rootPath { continue }
       for argument of class_.substitution.arguments { collectArgumentDependencies(argument, rootPath, index) }
     }
-    for method of instantiations!.methods {
+    for method of instantiationPlan.methods {
       if method.modulePath != rootPath { continue }
       for argument of method.substitution.arguments { collectArgumentDependencies(argument, rootPath, index) }
     }
@@ -137,13 +137,13 @@ export function planWorldview(
     let changed = true
     while changed {
       changed = false
-      for function_ of instantiations!.functions {
+      for function_ of instantiationPlan.functions {
         if expanded.has(function_.key) || !declarationInWorldview(index, rootPath, function_.modulePath, function_.declaration.name) { continue }
         expanded.add(function_.key)
         changed = true
         collectSubstitutedDependencies(function_.declaration.resolvedType, function_.substitution, rootPath, index)
       }
-      for class_ of instantiations!.classes {
+      for class_ of instantiationPlan.classes {
         if expanded.has(class_.key) || !declarationInWorldview(index, rootPath, class_.modulePath, class_.declaration.name) { continue }
         expanded.add(class_.key)
         changed = true
@@ -151,19 +151,19 @@ export function planWorldview(
           collectSubstitutedDependencies(field.resolvedType, class_.substitution, rootPath, index)
         }
       }
-      for method of instantiations!.methods {
+      for method of instantiationPlan.methods {
         if expanded.has(method.key) || !declarationInWorldview(index, rootPath, method.modulePath, method.owner.name) { continue }
         expanded.add(method.key)
         changed = true
         collectSubstitutedDependencies(method.declaration.resolvedType, method.substitution, rootPath, index)
       }
-      for interface_ of instantiations!.interfaces {
+      for interface_ of instantiationPlan.interfaces {
         if implementorsFor.has(interface_.key) || !index.interfaceKeySet.has(interface_.key) { continue }
         implementorsFor.add(interface_.key)
         changed = true
         for implementation of interface_.implementations {
           let name = implementation.typeName
-          for class_ of instantiations!.classes {
+          for class_ of instantiationPlan.classes {
             if class_.modulePath == implementation.modulePath && class_.emittedName == implementation.typeName {
               name = class_.declaration.name
               break

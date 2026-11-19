@@ -70,45 +70,35 @@ export function emitArray(expression: ArrayLiteral, context: EmitContext, expect
 }
 
 export function emitObject(expression: ObjectLiteral, context: EmitContext, expected: ResolvedType | none): string {
-  if expression.resolvedType != none {
-    case expression.resolvedType! {
-      class_: ClassType -> { return emitClassObject(expression, context, class_) }
-      _ -> { }
-    }
+  case expression.resolvedType {
+    class_: ClassType -> { return emitClassObject(expression, context, class_) }
+    _ -> { }
   }
-  if expected != none {
-    case expected! {
-      result: ResultResolvedType -> {
-        value := findProperty(expression.properties, "value")
-        error := findProperty(expression.properties, "error")
-        if value != none {
-          emitted := emitPropertyValue(value!, context, result.valueType)
-          return "doof::Success<" + emitContextReturnType(result.valueType, context) + ">{ " + emitted + " }"
-        }
-        if error != none {
-          emitted := emitPropertyValue(error!, context, result.errorType)
-          return "doof::Failure<" + emitContextReturnType(result.errorType, context) + ">{ " + emitted + " }"
-        }
+  case expected {
+    result: ResultResolvedType -> {
+      if value := findProperty(expression.properties, "value") {
+        emitted := emitPropertyValue(value, context, result.valueType)
+        return "doof::Success<" + emitContextReturnType(result.valueType, context) + ">{ " + emitted + " }"
       }
-      class_: ClassType -> { return emitClassObject(expression, context, class_) }
-      _ -> { }
+      if error := findProperty(expression.properties, "error") {
+        emitted := emitPropertyValue(error, context, result.errorType)
+        return "doof::Failure<" + emitContextReturnType(result.errorType, context) + ">{ " + emitted + " }"
+      }
     }
+    class_: ClassType -> { return emitClassObject(expression, context, class_) }
+    _ -> { }
   }
-  if expected != none {
-    case expected! {
-      map: MapResolvedType -> { return emitMapObject(expression, context, map) }
-      _: UnionResolvedType -> {
-        // A nullable map context is checked as the map itself; the caller
-        // converts the constructed map into the union carrier.
-        if expression.resolvedType != none {
-          case expression.resolvedType! {
-            map: MapResolvedType -> { return emitMapObject(expression, context, map) }
-            _ -> { }
-          }
-        }
+  case expected {
+    map: MapResolvedType -> { return emitMapObject(expression, context, map) }
+    _: UnionResolvedType -> {
+      // A nullable map context is checked as the map itself; the caller
+      // converts the constructed map into the union carrier.
+      case expression.resolvedType {
+        map: MapResolvedType -> { return emitMapObject(expression, context, map) }
+        _ -> { }
       }
-      _ -> { }
     }
+    _ -> { }
   }
   let values = ""
   let first = true

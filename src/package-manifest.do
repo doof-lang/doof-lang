@@ -217,7 +217,7 @@ function parseManifestNativeBuild(
     try appendNativeFragment(result, platformValue, manifestPath, rootDirectory, "build.native." + platformKey)
   }
   try vendor := parseNativeVendorBuild(native, platformKey, manifestPath, rootDirectory)
-  if vendor != none { result.vendorBuilds.push(vendor!) }
+  if vendorBuild := vendor { result.vendorBuilds.push(vendorBuild) }
   return Success(result)
 }
 
@@ -248,7 +248,7 @@ function parseNativeVendorBuild(
     try appendVendorLibraryNames(platformOnly.bundleLibraries, platformVendor!, "bundle", manifestPath, platformField)
     return Success(platformOnly)
   }
-  if platformVendor != none && manifestJsonHas(platformVendor!, "key") {
+  if platformConfig := platformVendor && manifestJsonHas(platformConfig, "key") {
     return Failure("Invalid doof.json at " + manifestPath + ": " + platformField + ".key is not allowed; declare build.native.vendor.key once")
   }
   try base := manifestObject(manifestJsonField(native, "vendor"), manifestPath, "build.native.vendor")
@@ -256,8 +256,8 @@ function parseNativeVendorBuild(
   vendor := NativeVendorBuild { key, directory: manifestJoinPath(rootDirectory, "vendor") }
   for field of ["static", "bundle"] {
     target := if field == "static" then vendor.staticLibraries else vendor.bundleLibraries
-    if platformVendor != none && manifestJsonHas(platformVendor!, field) {
-      try appendVendorLibraryNames(target, platformVendor!, field, manifestPath, platformField)
+    if platformConfig := platformVendor && manifestJsonHas(platformConfig, field) {
+      try appendVendorLibraryNames(target, platformConfig, field, manifestPath, platformField)
     } else {
       try appendVendorLibraryNames(target, base, field, manifestPath, "build.native.vendor")
     }
@@ -407,8 +407,8 @@ function parseMacOSApp(
     resourceField = "build.resources"
   }
   let resources: MacOSAppResource[] = []
-  if resourceValue != none {
-    try parsedResources := parseResourceArray(resourceValue!, manifestPath, rootDirectory, resourceField)
+  if resourceJson := resourceValue {
+    try parsedResources := parseResourceArray(resourceJson, manifestPath, rootDirectory, resourceField)
     for resource of parsedResources {
       resources.push(MacOSAppResource {
         sourcePath: resource.sourcePath, destination: resource.destination, preserveSourcePath: resource.preserveSourcePath,
@@ -530,8 +530,8 @@ function parseIOSApp(
     resourceField = "build.resources"
   }
   let resources: IOSAppResource[] = []
-  if resourceValue != none {
-    try parsedResources := parseResourceArray(resourceValue!, manifestPath, rootDirectory, resourceField)
+  if resourceJson := resourceValue {
+    try parsedResources := parseResourceArray(resourceJson, manifestPath, rootDirectory, resourceField)
     for resource of parsedResources {
       resources.push(IOSAppResource {
         sourcePath: resource.sourcePath, destination: resource.destination, preserveSourcePath: resource.preserveSourcePath,

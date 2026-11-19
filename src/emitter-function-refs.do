@@ -34,7 +34,7 @@ export function emitIdentifierValue(identifier: Identifier, emitted: string, con
   if identifier.resolvedBinding == none { return value }
   binding := identifier.resolvedBinding!
   // A generic reference names its concrete instantiation instead.
-  if identifier.resolvedGenericReference != none { value = concreteReferenceName(identifier, identifier.resolvedGenericReference!, context) }
+  if reference := identifier.resolvedGenericReference { value = concreteReferenceName(identifier, reference, context) }
   signature := referenceSignature(identifier.resolvedType, expected, context)
   if signature == none { return value }
   callbackType := emitContextType(signature!, context)
@@ -65,8 +65,8 @@ export function emitMemberValue(member: MemberExpression, value: string, context
   callbackType := emitContextType(signature!, context)
   let method = cppIdentifier(member.property)
   let staticValue = value
-  if member.resolvedGenericReference != none {
-    method = concreteReferenceName(member, member.resolvedGenericReference!, context)
+  if reference := member.resolvedGenericReference {
+    method = concreteReferenceName(member, reference, context)
     staticValue = value.substring(0, value.length - cppIdentifier(member.property).length) + method
   }
   if !selected.instance { return callbackType + "(" + staticValue + ")" }
@@ -134,8 +134,8 @@ function boundCallback(callbackType: string, receiver: string, returnType: strin
 // needs no further callback-to-callback conversion.
 function referenceSignature(type_: ResolvedType | none, expected: ResolvedType | none, context: EmitContext): FunctionType | none {
   if type_ == none { return none }
-  if expected != none {
-    case specializeEmitType(expected!, context) {
+  if expectedType := expected {
+    case specializeEmitType(expectedType, context) {
       target: FunctionType -> { if target.typeParams.length == 0 { return target } }
       _ -> { }
     }

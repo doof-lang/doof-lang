@@ -154,23 +154,18 @@ function emitDestructuringValue(statement: DestructuringStatement, source: strin
   }
 
   let positionalFields: string[] = []
-  if sourceType != none { case sourceType! {
-    class_: ClassType -> { positionalFields = classFieldNames(class_, context) }
-    _ -> { }
-  } }
+  if class_ := sourceType as ClassType { positionalFields = classFieldNames(class_, context) }
   for i of 0..<statement.bindings.length {
     name := statement.bindings[i]
     if name != "_" {
       let value = "std::get<" + string(i) + ">(" + temporaryName + ")"
-      if sourceType != none {
-        case sourceType! {
-          _: ArrayResolvedType -> { value = "doof::array_at(" + temporaryName + ", " + string(i) + ", " + quote(context.modulePath) + ", " + string(statement.span.start.line) + ")" }
-          _: TupleResolvedType -> { }
-          class_: ClassType -> {
-            if i < positionalFields.length { value = emitDestructuredField(temporaryName, positionalFields[i], class_, context) }
-          }
-          _ -> { }
+      case sourceType {
+        _: ArrayResolvedType -> { value = "doof::array_at(" + temporaryName + ", " + string(i) + ", " + quote(context.modulePath) + ", " + string(statement.span.start.line) + ")" }
+        _: TupleResolvedType -> { }
+        class_: ClassType -> {
+          if i < positionalFields.length { value = emitDestructuredField(temporaryName, positionalFields[i], class_, context) }
         }
+        _ -> { }
       }
       if statement.kind.endsWith("-assignment") {
         result = result + ind + emitAssignmentTarget(name, context) + " = " + value + ";\n"
@@ -193,7 +188,7 @@ function emitDestructuredLocal(ind: string, name: string, value: string, binding
 }
 
 function emitDestructuredField(source: string, field: string, sourceType: ResolvedType | none, context: EmitContext): string {
-  if sourceType != none { case sourceType! {
+  case sourceType {
     class_: ClassType -> {
       accessor := if class_.symbol.kind == "struct" then "." else "->"
       return source + accessor + cppIdentifier(field)
@@ -203,7 +198,7 @@ function emitDestructuredField(source: string, field: string, sourceType: Resolv
       return emitVariantFieldRead(source, interface_, field, interfaceFieldType(interface_, field, context), context)
     }
     _ -> { }
-  } }
+  }
   return source + "." + cppIdentifier(field)
 }
 
@@ -300,16 +295,14 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
       output = output + ind + "if (doof::is_failure(" + temporaryName + ")) { "
       errorType := value.resolvedType
       let hasErrorValue = true
-      if errorType != none {
-        case errorType! {
-          result: ResultResolvedType -> { if result.errorType.kind == "none" { hasErrorValue = false } }
-          _ -> { }
-        }
+      case errorType {
+        result: ResultResolvedType -> { if result.errorType.kind == "none" { hasErrorValue = false } }
+        _ -> { }
       }
       if hasErrorValue {
         let promoted = "doof::failure_error(" + temporaryName + ")"
-        if context.catchResultType != none {
-          promoted = "doof::variant_promote<" + emitContextType(context.catchResultType!, context) + ">(" + promoted + ")"
+        if catchType := context.catchResultType {
+          promoted = "doof::variant_promote<" + emitContextType(catchType, context) + ">(" + promoted + ")"
         }
         output = output + context.catchVarName + " = " + promoted + "; "
       }
@@ -472,7 +465,7 @@ function emitCaseContinuationGuard(statement: CaseStatement, ind: string): strin
 function emitReturn(statement: ReturnStatement, context: EmitContext): string {
   if statement.value == none { return "return;\n" }
   expected := statement.resolvedExpectedType
-  if expected != none && carrierOf(specializeEmitType(expected!, context), .Return).kind == .Void && statement.value!.kind == "none-literal" { return "return;\n" }
+  if expectedType := expected && carrierOf(specializeEmitType(expectedType, context), .Return).kind == .Void && statement.value!.kind == "none-literal" { return "return;\n" }
   return emitExpressionReturn(statement.value!, context, expected) + "\n"
 }
 
@@ -625,7 +618,7 @@ function emitFor(statement: ForStatement, level: int, context: EmitContext): str
     if init.endsWith(";") { init = init.substring(0, init.length - 1) }
   }
   let condition = "true"
-  if statement.condition != none { condition = emitCondition(statement.condition!, context) }
+  if loopCondition := statement.condition { condition = emitCondition(loopCondition, context) }
   let update = ""
   for i of 0..<statement.update.length {
     if i > 0 { update = update + ", " }
@@ -674,9 +667,9 @@ function emitLabeledLoopBody(body: Block, level: int, loopId: int, context: Emit
 /** Emits a loop's `then` clause, reached only by normal completion, followed by its break target. */
 function loopCompletion(then_: Block | none, loopId: int, level: int, context: EmitContext): string {
   let result = ""
-  if then_ != none {
+  if thenBlock := then_ {
     ind := indent(level)
-    result = ind + "{\n" + emitBlock(then_!, level + 1, context) + ind + "}\n"
+    result = ind + "{\n" + emitBlock(thenBlock, level + 1, context) + ind + "}\n"
   }
   return result + labeledBreakTarget(loopId, level)
 }
@@ -718,10 +711,10 @@ export function enclosedInParentheses(value: string): bool {
   let escaped = false
   for i of 0..<value.length {
     c := value.charAt(i)
-    if openQuote != none {
+    if quoteChar := openQuote {
       if escaped { escaped = false }
       else if c == '\\' { escaped = true }
-      else if c == openQuote! { openQuote = none }
+      else if c == quoteChar { openQuote = none }
     }
     else if c == '"' || c == '\'' { openQuote = c }
     else if c == '(' { depth = depth + 1 }

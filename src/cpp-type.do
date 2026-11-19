@@ -83,9 +83,9 @@ export function isReferenceVariant(type_: CppType): bool {
 
 export function renderCppType(type_: CppType, namespace: string = "", aliases: Map<int, string> = {}, rendered: Map<int, string> | none = none): string {
   if aliases.has(type_.id) { return aliases.get(type_.id)! }
-  if rendered != none && rendered!.has(type_.id) { return rendered!.get(type_.id)! }
+  if cache := rendered && cache.has(type_.id) { return cache.get(type_.id)! }
   value := renderCanonicalCppType(type_, namespace, aliases, rendered)
-  if rendered != none { rendered!.set(type_.id, value) }
+  rendered?.set(type_.id, value)
   return value
 }
 

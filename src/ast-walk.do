@@ -30,11 +30,11 @@ export function isTypeParameterName(expression: Expression): bool {
 // recover statement-level semantics (such as a for-of iterable) that the
 // flattened expression list loses.
 export function collectStatementExpressions(statement: Statement, result: Expression[], statements: Statement[] | none = none): none {
-  if statements != none { statements!.push(statement) }
+  statements?.push(statement)
   case statement {
     value: ConstDeclaration -> { result.push(value.value) }
     value: ReadonlyDeclaration -> { result.push(value.value) }
-    value: ImmutableBinding -> { result.push(value.value); if value.else_ != none { collectBlockExpressions(value.else_!, result, statements) } }
+    value: ImmutableBinding -> { result.push(value.value); if else_ := value.else_ { collectBlockExpressions(else_, result, statements) } }
     value: LetDeclaration -> { result.push(value.value) }
     expression: ExpressionStatement -> { result.push(expression.expression) }
     return_: ReturnStatement -> { if value := return_.value { result.push(value) } }

@@ -144,7 +144,7 @@ function sortedTestFiles(values: string[]): string[] {
     for value of values {
       if (result.length == 0 || value > last) && (candidate == none || value < candidate!) { candidate = value }
     }
-    if candidate != none { result.push(candidate!); last = candidate! }
+    if found := candidate { result.push(found); last = found }
   }
   return result
 }
@@ -157,7 +157,7 @@ function sortedDiscoveredTests(values: DiscoveredTest[]): DiscoveredTest[] {
     for value of values {
       if (result.length == 0 || value.id > last) && (candidate == none || value.id < candidate!.id) { candidate = value }
     }
-    if candidate != none { result.push(candidate!); last = candidate!.id }
+    if found := candidate { result.push(found); last = found.id }
   }
   return result
 }
@@ -353,9 +353,9 @@ export function testRequest(request: CliRequest): int {
     cachePath := frontendCachePath(outputDirectory, "emission")
     previous := readFrontendState(cachePath)
     cacheAllowed := !request.coverage && frontendEmissionCacheSupported(project.target)
-    cached := if cacheAllowed && previous != none && frontendStateMatches(previous, configuration, loader)
-      then cachedModuleGraph(previous!, outputDirectory) else none
-    result := if cached != none then Compilation { emission: cached!, diagnostics: [] }
+    cached := if cacheAllowed && prior := previous && frontendStateMatches(prior, configuration, loader)
+      then cachedModuleGraph(prior, outputDirectory) else none
+    result := if graph := cached then Compilation { emission: graph, diagnostics: [] }
       else compileWithLoader([], entry, loader, namespaceMappings, "executable", request.coverage)
     if cached != none { println("REUSE frontend " + group.outputName) }
     if result.diagnostics.length > 0 { printDiagnostics(result.diagnostics) }

@@ -95,8 +95,8 @@ export function frontendStateForCompilation(
   for manifestPath of reachedPackageManifestPaths() {
     addFrontendFileInput(state.fileInputs, manifestPath)
   }
-  if result.emission != none {
-    for module of result.emission!.modules {
+  if emission := result.emission {
+    for module of emission.modules {
       state.modules.push(FrontendModuleOutput {
         modulePath: module.modulePath, headerName: module.headerName, sourceName: module.sourceName,
         fingerprint: module.fingerprint,

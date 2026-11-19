@@ -139,7 +139,7 @@ export function collectDependencyType(
   type_: ResolvedType,
   index: DependencyBuilder,
 ): none {
-  if index.identities != none { index.identities!.prepare(type_) }
+  index.identities?.prepare(type_)
   case type_ {
     class_: ClassType -> {
       forwardOnly := class_.symbol.kind == "class" && !class_.symbol.native_ && class_.typeArgs.length == 0
@@ -189,7 +189,7 @@ export function collectDependencyType(
 // Operations that inspect or construct a type need complete definitions for
 // every nominal alternative the generated C++ operation can visit.
 export function collectCompleteDependencyType(type_: ResolvedType, index: DependencyBuilder): none {
-  if index.identities != none { index.identities!.prepare(type_) }
+  index.identities?.prepare(type_)
   case type_ {
     class_: ClassType -> {
       recordSymbol(class_.symbol, index)

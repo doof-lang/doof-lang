@@ -413,7 +413,7 @@ function emitEnumDeclaration(declaration: EnumDeclaration, context: EmitContext)
     variant := declaration.variants[i]
     result = result + emitDescriptionComment(variant.description, "    ") + "    " + variant.name
     if declaration.backingKind == "string" { result = result + " = " + string(i) }
-    else if variant.resolvedIntValue != none { result = result + " = " + string(variant.resolvedIntValue!) }
+    else if intValue := variant.resolvedIntValue { result = result + " = " + string(intValue) }
     if i + 1 < declaration.variants.length { result = result + "," }
     result = result + "\n"
   }

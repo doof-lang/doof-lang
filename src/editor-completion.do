@@ -28,7 +28,7 @@ export function scopeCompletions(index: EditorIndex, scope: Scope, offset: int, 
     if binding.span.start.offset > offset && (binding.kind == "let" || binding.kind == "immutable-binding" || binding.kind == "const" || binding.kind == "readonly") { continue }
     uniquePush(items, bindingItem(index, binding))
   }
-  if scope.parent != none { scopeCompletions(index, scope.parent!, offset, items) }
+  if parent := scope.parent { scopeCompletions(index, parent, offset, items) }
 }
 
 function declarationMemberNames(statement: Statement, names: string[]): none {
@@ -157,7 +157,7 @@ export function autoImportCompletions(index: EditorIndex, module: string, offset
   scope := editorScopeAt(index, module, offset)
   for candidate of index.exportCandidates {
     if candidate.module == module || !candidate.label.toLowerCase().startsWith(typed) { continue }
-    if scope != none && lookup(scope!, candidate.label) != none { continue }
+    if activeScope := scope && lookup(activeScope, candidate.label) != none { continue }
     let visible = false
     for item of items { if item.label == candidate.label && item.importModule == "" { visible = true } }
     if visible { continue }

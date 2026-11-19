@@ -243,15 +243,14 @@ function emitAssignmentTarget(target: Expression, context: EmitContext): string 
       }
     }
     member: MemberExpression -> {
-      let objectType = decoratedExpressionType(member.object)
-      if objectType != none { objectType = specializeEmitType(objectType!, context) }
-      if objectType != none && isVariantCarrier(objectType!) {
+      objectType := if decorated := decoratedExpressionType(member.object) then specializeEmitType(decorated, context) else none
+      if carrier := objectType && isVariantCarrier(carrier) {
         object := emitExpression(member.object, context)
-        if empty := implementationlessInterface(objectType, context) && member.resolvedType != none {
+        if empty := implementationlessInterface(carrier, context) && fieldType := member.resolvedType {
           // An assignment target needs an lvalue of the field's type.
-          return "(static_cast<void>(" + object + "), doof::no_implementations<" + emitContextType(member.resolvedType!, context) + "&>(" + quote(empty.name) + "))"
+          return "(static_cast<void>(" + object + "), doof::no_implementations<" + emitContextType(fieldType, context) + "&>(" + quote(empty.name) + "))"
         }
-        return "std::visit([](auto&& _obj) -> decltype(auto) { return (" + variantMember("_obj", objectType) + cppIdentifier(member.property) + "); }, " + variantVisitValue(object, objectType!) + ")"
+        return "std::visit([](auto&& _obj) -> decltype(auto) { return (" + variantMember("_obj", carrier) + cppIdentifier(member.property) + "); }, " + variantVisitValue(object, carrier) + ")"
       }
     }
     _ -> { }
@@ -427,13 +426,11 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
   if expression.resolvedOptionalReceiver != none && expression.resolvedOptionalValue != none { return emitOptionalMember(expression, context) }
   object := emitExpression(expression.object, context)
   let objectType = decoratedExpressionType(expression.object)
-  if objectType != none {
-    case objectType! {
-      _: WeakResolvedType -> {
-        if expression.optional || expression.force { return emitWeakFieldAccess(expression, object, context) }
-      }
-      _ -> { }
+  case objectType {
+    _: WeakResolvedType -> {
+      if expression.optional || expression.force { return emitWeakFieldAccess(expression, object, context) }
     }
+    _ -> { }
   }
   case expression.object {
     this_: ThisExpression -> {
@@ -449,61 +446,57 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
     _ -> { }
   }
   let staticObjectType = decoratedExpressionType(expression.object)
-  if staticObjectType != none {
-    case staticObjectType! {
-      parameter: TypeParameterType -> {
-        specialized := specializeEmitType(parameter, context)
-        if parameter.constraintName == "Reflectable" && expression.property == "metadata" { return "doof::metadata_for_type<" + emitType(specialized, context.modulePath, context.names) + ">()" }
-        if isTypeParameterName(expression.object) && expression.property == "fromSerialValue" {
-          case specialized {
-            concrete: ClassType -> { return emitContextClassInnerType(concrete, context) + "::fromSerialValue" }
-            enum_: EnumType -> { return emitContextType(enum_, context) + "_fromSerialValue" }
-            interface_: InterfaceType -> { return emitContextType(interface_, context) + "_fromSerialValue" }
-            unresolved: TypeParameterType -> { return cppIdentifier(unresolved.name) + "::element_type::fromSerialValue" }
-            _ -> { }
-          }
-        }
-        // `T.name` through an interface bound's static members lowers to the
-        // concrete argument's own static member.
-        if isTypeParameterName(expression.object) {
-          case specialized {
-            concrete: ClassType -> { return emitContextClassInnerType(concrete, context) + "::" + (if concrete.symbol.native_ then expression.property else cppIdentifier(expression.property)) }
-            _ -> { }
-          }
+  case staticObjectType {
+    parameter: TypeParameterType -> {
+      specialized := specializeEmitType(parameter, context)
+      if parameter.constraintName == "Reflectable" && expression.property == "metadata" { return "doof::metadata_for_type<" + emitType(specialized, context.modulePath, context.names) + ">()" }
+      if isTypeParameterName(expression.object) && expression.property == "fromSerialValue" {
+        case specialized {
+          concrete: ClassType -> { return emitContextClassInnerType(concrete, context) + "::fromSerialValue" }
+          enum_: EnumType -> { return emitContextType(enum_, context) + "_fromSerialValue" }
+          interface_: InterfaceType -> { return emitContextType(interface_, context) + "_fromSerialValue" }
+          unresolved: TypeParameterType -> { return cppIdentifier(unresolved.name) + "::element_type::fromSerialValue" }
+          _ -> { }
         }
       }
-      class_: ClassType -> {
-        if resolvedStaticOwner := expression.resolvedStaticOwner {
-          owner := resolvedStaticOwner
-          // A generic class is monomorphized, so its statics live on the
-          // instantiation the checker inferred for this receiver.
-          if resolvedStaticReceiver := expression.resolvedStaticReceiver && !owner.native_ {
-            return emitContextClassInnerType(resolvedStaticReceiver, context) + "::" + (if expression.property == "metadata" then "_metadata" else cppIdentifier(expression.property))
-          }
-          let ownerName = owner.name
-          if owner.native_ {
-            ownerName = "::" + (if owner.nativeCppName == "" then owner.name else owner.nativeCppName)
-          } else if resolvedSymbol := owner.resolvedSymbol && resolvedSymbol.module != context.modulePath && context.modulePath != "" {
-            ownerName = "::" + exprModuleNamespaceFor(resolvedSymbol.module, context.names) + "::" + owner.name
-          }
-          return ownerName + "::" + (if expression.property == "metadata" then "_metadata" else if owner.native_ then expression.property else cppIdentifier(expression.property))
+      // `T.name` through an interface bound's static members lowers to the
+      // concrete argument's own static member.
+      if isTypeParameterName(expression.object) {
+        case specialized {
+          concrete: ClassType -> { return emitContextClassInnerType(concrete, context) + "::" + (if concrete.symbol.native_ then expression.property else cppIdentifier(expression.property)) }
+          _ -> { }
         }
       }
-      _ -> { }
     }
+    class_: ClassType -> {
+      if resolvedStaticOwner := expression.resolvedStaticOwner {
+        owner := resolvedStaticOwner
+        // A generic class is monomorphized, so its statics live on the
+        // instantiation the checker inferred for this receiver.
+        if resolvedStaticReceiver := expression.resolvedStaticReceiver && !owner.native_ {
+          return emitContextClassInnerType(resolvedStaticReceiver, context) + "::" + (if expression.property == "metadata" then "_metadata" else cppIdentifier(expression.property))
+        }
+        let ownerName = owner.name
+        if owner.native_ {
+          ownerName = "::" + (if owner.nativeCppName == "" then owner.name else owner.nativeCppName)
+        } else if resolvedSymbol := owner.resolvedSymbol && resolvedSymbol.module != context.modulePath && context.modulePath != "" {
+          ownerName = "::" + exprModuleNamespaceFor(resolvedSymbol.module, context.names) + "::" + owner.name
+        }
+        return ownerName + "::" + (if expression.property == "metadata" then "_metadata" else if owner.native_ then expression.property else cppIdentifier(expression.property))
+      }
+    }
+    _ -> { }
   }
   if staticObjectType != none { staticObjectType = specializeEmitType(staticObjectType!, context) }
   // Nominal fields and methods take precedence over builtin and aggregate
   // pseudo-members. This keeps ordinary members named length, kind,
   // resolvedType, span, push, or value from being rewritten as accessors.
-  if staticObjectType != none {
-    case staticObjectType! {
-      class_: ClassType -> {
-        memberName := if class_.symbol.native_ then expression.property else cppIdentifier(expression.property)
-        return object + (if class_.symbol.kind == "struct" then "." else "->") + memberName
-      }
-      _ -> { }
+  case staticObjectType {
+    class_: ClassType -> {
+      memberName := if class_.symbol.native_ then expression.property else cppIdentifier(expression.property)
+      return object + (if class_.symbol.kind == "struct" then "." else "->") + memberName
     }
+    _ -> { }
   }
   let callableMember = false
   if resolvedType := expression.resolvedType {
@@ -518,39 +511,37 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
   }
   if expression.property == "push" { return object + "->push_back" }
   objectType = staticObjectType
-  if objectType != none {
-    case objectType! {
-      function_: FunctionType -> { return object + "." + cppIdentifier(expression.property) }
-      _: PromiseType -> { return object + "." + cppIdentifier(expression.property) }
-      interface_: InterfaceType -> { return emitVariantFieldRead(object, interface_, expression.property, none, context) }
-      stream: StreamResolvedType -> { return emitVariantFieldRead(object, stream, expression.property, none, context) }
-      _: ArrayResolvedType -> { if expression.property == "length" { return "static_cast<int32_t>((" + object + ")->size())" } }
-      _: MapResolvedType -> { if expression.property == "size" { return object + "->size()" } }
-      _: SetResolvedType -> { if expression.property == "size" { return object + "->size()" } }
-      tuple: TupleResolvedType -> {
-        for i of 0..<tuple.elements.length {
-          if expression.property == "_" + string(i + 1) { return "std::get<" + string(i) + ">(" + object + ")" }
-        }
+  case objectType {
+    function_: FunctionType -> { return object + "." + cppIdentifier(expression.property) }
+    _: PromiseType -> { return object + "." + cppIdentifier(expression.property) }
+    interface_: InterfaceType -> { return emitVariantFieldRead(object, interface_, expression.property, none, context) }
+    stream: StreamResolvedType -> { return emitVariantFieldRead(object, stream, expression.property, none, context) }
+    _: ArrayResolvedType -> { if expression.property == "length" { return "static_cast<int32_t>((" + object + ")->size())" } }
+    _: MapResolvedType -> { if expression.property == "size" { return object + "->size()" } }
+    _: SetResolvedType -> { if expression.property == "size" { return object + "->size()" } }
+    tuple: TupleResolvedType -> {
+      for i of 0..<tuple.elements.length {
+        if expression.property == "_" + string(i + 1) { return "std::get<" + string(i) + ">(" + object + ")" }
       }
-      _: RangeResolvedType -> {
-        if expression.property == "lowerBound" || expression.property == "upperBound" { return object + "." + expression.property }
-      }
-      primitive: PrimitiveType -> {
-        if primitive.name == "string" && expression.property == "length" { return "static_cast<int32_t>(" + object + ".size())" }
-        if primitive.name == "string" && expression.property == "toLowerCase" { return "doof::string_toLowerCase" }
-        if primitive.name == "string" && expression.property == "toUpperCase" { return "doof::string_toUpperCase" }
-      }
-      _: SuccessResolvedType -> { if expression.property == "value" { return object + ".value" } }
-      _: FailureResolvedType -> { if expression.property == "error" { return object + ".error" } }
-      _: ClassMetadataResolvedType -> { return object + "." + cppIdentifier(expression.property) }
-      _: MethodReflectionResolvedType -> { return object + "." + cppIdentifier(expression.property) }
-      enum_: EnumType -> {
-        if expression.property == "value" { return emitType(enum_, context.modulePath, context.names) + "_value(" + object + ")" }
-        if expression.property == "name" { return emitType(enum_, context.modulePath, context.names) + "_name(" + object + ")" }
-        return object + "::" + cppIdentifier(expression.property)
-      }
-      _ -> { }
     }
+    _: RangeResolvedType -> {
+      if expression.property == "lowerBound" || expression.property == "upperBound" { return object + "." + expression.property }
+    }
+    primitive: PrimitiveType -> {
+      if primitive.name == "string" && expression.property == "length" { return "static_cast<int32_t>(" + object + ".size())" }
+      if primitive.name == "string" && expression.property == "toLowerCase" { return "doof::string_toLowerCase" }
+      if primitive.name == "string" && expression.property == "toUpperCase" { return "doof::string_toUpperCase" }
+    }
+    _: SuccessResolvedType -> { if expression.property == "value" { return object + ".value" } }
+    _: FailureResolvedType -> { if expression.property == "error" { return object + ".error" } }
+    _: ClassMetadataResolvedType -> { return object + "." + cppIdentifier(expression.property) }
+    _: MethodReflectionResolvedType -> { return object + "." + cppIdentifier(expression.property) }
+    enum_: EnumType -> {
+      if expression.property == "value" { return emitType(enum_, context.modulePath, context.names) + "_value(" + object + ")" }
+      if expression.property == "name" { return emitType(enum_, context.modulePath, context.names) + "_name(" + object + ")" }
+      return object + "::" + cppIdentifier(expression.property)
+    }
+    _ -> { }
   }
   return object + "->" + cppIdentifier(expression.property)
 }
@@ -584,24 +575,20 @@ export function emitIndex(expression: IndexExpression, context: EmitContext): st
   objectType := decoratedExpressionType(expression.object)
   // Map keys convert to the key representation, e.g. a member into a union key.
   let indexTarget: ResolvedType | none = none
-  if objectType != none {
-    case objectType! {
-      map: MapResolvedType -> { indexTarget = map.keyType }
-      _ -> { }
-    }
+  case objectType {
+    map: MapResolvedType -> { indexTarget = map.keyType }
+    _ -> { }
   }
   index := emitExpression(expression.index, context, indexTarget)
   sourcePath := quote(moduleDiagnosticPath(context.modulePath, true, context.names))
   sourceLine := string(expression.span.start.line)
-  if objectType != none {
-    case objectType! {
-      _: ArrayResolvedType -> { return "doof::array_at(" + object + ", " + index + ", " + sourcePath + ", " + sourceLine + ")" }
-      _: MapResolvedType -> { return "doof::map_at(" + object + ", " + index + ", " + sourcePath + ", " + sourceLine + ")" }
-      primitive: PrimitiveType -> {
-        if primitive.name == "string" { return "doof::string_at(" + object + ", " + index + ", " + sourcePath + ", " + sourceLine + ")" }
-      }
-      _ -> { }
+  case objectType {
+    _: ArrayResolvedType -> { return "doof::array_at(" + object + ", " + index + ", " + sourcePath + ", " + sourceLine + ")" }
+    _: MapResolvedType -> { return "doof::map_at(" + object + ", " + index + ", " + sourcePath + ", " + sourceLine + ")" }
+    primitive: PrimitiveType -> {
+      if primitive.name == "string" { return "doof::string_at(" + object + ", " + index + ", " + sourcePath + ", " + sourceLine + ")" }
     }
+    _ -> { }
   }
   return object + "[" + index + "]"
 }

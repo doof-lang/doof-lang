@@ -72,7 +72,7 @@ function parseTypeMember(parser: Parser, weakOperandStart: AstLocation | none): 
     }
   }
   if readonlyPrefix { parser.fail("Unexpected readonly type modifier; expected an array, Map<K, V>, or Set<T> type") }
-  if weakOperandStart != none && (arraySuffix || !parenthesized) { rejectBareWeakCollection(parser, result, weakOperandStart!, memberStart) }
+  if weakStart := weakOperandStart && (arraySuffix || !parenthesized) { rejectBareWeakCollection(parser, result, weakStart, memberStart) }
   return result
 }
 

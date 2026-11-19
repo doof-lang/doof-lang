@@ -33,18 +33,18 @@ export function lowerContextCppReturnType(resolvedType: ResolvedType, context: E
 function lowerContextPosition(resolvedType: ResolvedType, context: EmitContext, return_: bool): CppType {
   session := context.typeLowering
   let id = -1
-  if session != none {
-    session!.select(context.substitution)
-    id = session!.graph.identities.identify(resolvedType)
+  if lowering := session {
+    lowering.select(context.substitution)
+    id = lowering.graph.identities.identify(resolvedType)
     if id >= 0 {
-      if cached := (if return_ then session!.returns.get(id)? else session!.values.get(id)?) { return cached }
+      if cached := (if return_ then lowering.returns.get(id)? else lowering.values.get(id)?) { return cached }
     }
   }
   specialized := lowerRegisteredTypes(specializeEmitType(resolvedType, context), context)
   result := if return_ && carrierOf(specialized, .Return).kind == .Void then context.cppTypes.atom("void")
-    else lowerCppType(specialized, context.cppTypes, if session != none then session!.graph else none)
-  if session != none && id >= 0 {
-    if return_ { session!.returns.set(id, result) } else { session!.values.set(id, result) }
+    else lowerCppType(specialized, context.cppTypes, session?.graph)
+  if lowering := session && id >= 0 {
+    if return_ { lowering.returns.set(id, result) } else { lowering.values.set(id, result) }
   }
   return result
 }

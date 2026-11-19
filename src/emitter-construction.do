@@ -56,7 +56,7 @@ function emitConstructionValue(inputs: ConstructionInputs, name: string, index: 
   if construct := inputs.construct && hasSpreadField(construct, name) {
     return emitConstructionSpreadField(construct, inputs.spreadName, name, context)
   }
-  if defaultValue != none { return emitOwnerDefaultExpression(defaultValue!, context, expected, inputs.span, owner, ownerTypeParams) }
+  if defaultExpression := defaultValue { return emitOwnerDefaultExpression(defaultExpression, context, expected, inputs.span, owner, ownerTypeParams) }
   panic(missingMessage)
 }
 
@@ -98,8 +98,7 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
       failure: FailureResolvedType -> { payload = failure.errorType }
       _ -> { }
     }
-    if payload != none {
-      valueType := payload!
+    if valueType := payload {
       propertyName := if expression.type_ == "Success" then "value" else "error"
       property := findProperty(expression.args, propertyName)
       payloadType := emitContextReturnType(valueType, context)

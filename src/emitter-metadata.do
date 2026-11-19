@@ -177,9 +177,9 @@ function emitTypeSchemaEntries(type_: ResolvedType, context: EmitContext): strin
       let values: string[] = []
       declaration := indexedEnum(context.declarations, enum_.symbol.module, enum_.name)
       let backingKind = "int"
-      if declaration != none {
-        backingKind = declaration!.backingKind
-        for variant of declaration!.variants {
+      if enumDeclaration := declaration {
+        backingKind = enumDeclaration.backingKind
+        for variant of enumDeclaration.variants {
           if backingKind == "string" { values.push(jsonString(variant.resolvedStringValue ?? "")) }
           else { values.push(jsonInt(variant.resolvedIntValue ?? 0)) }
         }

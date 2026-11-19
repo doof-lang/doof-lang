@@ -89,14 +89,14 @@ function emitCallableDefinition(fn: FunctionDeclaration, context: EmitContext, n
   case fn.body {
     expression: Expression -> {
       result = result + emitExpressionCoverageMark(expression, context)
-      if returnType != none && returnType!.kind == "never" { result = result + "    " + emitExpression(expression, context, returnType) + ";\n" }
+      if declaredReturn := returnType && declaredReturn.kind == "never" { result = result + "    " + emitExpression(expression, context, returnType) + ";\n" }
       else { result = result + "    " + emitExpressionReturn(expression, context, returnType) + "\n" }
     }
     block: Block -> {
       result = result + emitBlock(block, 1, context)
     }
   }
-  if returnType != none && returnType!.kind == "never" { result = result + "    doof::panic(\"never function returned\");\n" }
+  if declaredReturn := returnType && declaredReturn.kind == "never" { result = result + "    doof::panic(\"never function returned\");\n" }
   context.currentReturnErrorType = previousReturnErrorType
   context.currentFunctionName = previousFunctionName
   context.capturedMutables = previousCapturedMutables

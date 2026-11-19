@@ -54,13 +54,13 @@ export function applyOptionalNativeSelection(
       return Failure("Optional native capability define \"" + define + "\" is already declared; give each optional dependency a unique define and do not set it manually")
     }
   }
-  if selected != none {
-    for supplied of selected!.defines {
+  if pkgConfig := selected {
+    for supplied of pkgConfig.defines {
       if supplied == define || supplied.startsWith(define + "=") {
         return Failure("pkg-config must not supply the optional capability define \"" + define + "\"")
       }
     }
-    appendInputs(native, selected!)
+    appendInputs(native, pkgConfig)
   }
   native.defines.push(define + if selected == none then "=0" else "=1")
   return Success()

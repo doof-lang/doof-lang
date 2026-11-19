@@ -190,10 +190,10 @@ export function canGenerateJsonSerialization(
   cache: JsonEligibilityCache | none = none,
 ): bool {
   key := jsonOwnerKey(owner)
-  if cache != none && cache!.serialization.has(key) { return cache!.serialization.get(key)! }
+  if memo := cache && memo.serialization.has(key) { return memo.serialization.get(key)! }
   let visited: string[] = []
   result := canGenerateJsonSerializationInner(owner, programs, visited)
-  if cache != none { cache!.serialization.set(key, result) }
+  if memo := cache { memo.serialization.set(key, result) }
   return result
 }
 
@@ -213,10 +213,10 @@ export function canGenerateJsonDeserialization(
   cache: JsonEligibilityCache | none = none,
 ): bool {
   key := jsonOwnerKey(owner)
-  if cache != none && cache!.deserialization.has(key) { return cache!.deserialization.get(key)! }
+  if memo := cache && memo.deserialization.has(key) { return memo.deserialization.get(key)! }
   let visited: string[] = []
   result := canGenerateJsonDeserializationInner(owner, programs, visited)
-  if cache != none { cache!.deserialization.set(key, result) }
+  if memo := cache { memo.deserialization.set(key, result) }
   return result
 }
 
@@ -448,10 +448,9 @@ function isGeneratedJsonSerializationAnnotation(annotation: TypeAnnotation, prog
       if resolvedSymbol := named.resolvedSymbol && resolvedSymbol.kind == "interface" {
         return named.typeArgs.length == 0 && interfaceTypeSerializable(resolvedSymbol, 0, programs, visited, true)
       }
-      if named.resolvedSymbol != none && (named.resolvedSymbol!.kind == "class" || named.resolvedSymbol!.kind == "struct") {
-        declaration := findJsonClassDeclaration(programs, named.resolvedSymbol!)
-        if declaration == none { return programs.length == 0 }
-        return canGenerateJsonSerializationInner(declaration!, programs, visited)
+      if symbol := named.resolvedSymbol && (symbol.kind == "class" || symbol.kind == "struct") {
+        declaration := findJsonClassDeclaration(programs, symbol) else { return programs.length == 0 }
+        return canGenerateJsonSerializationInner(declaration, programs, visited)
       }
     }
     array: ArrayType -> {

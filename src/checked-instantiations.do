@@ -194,14 +194,14 @@ function collectStatement(statement: Statement, modulePath: string, analysis: An
         }
       }
     }
-    while_: WhileStatement -> { collectExpression(while_.condition, modulePath, analysis, plan, names, arguments); collectBlock(while_.body, modulePath, analysis, plan, names, arguments); if while_.then_ != none { collectBlock(while_.then_!, modulePath, analysis, plan, names, arguments) } }
+    while_: WhileStatement -> { collectExpression(while_.condition, modulePath, analysis, plan, names, arguments); collectBlock(while_.body, modulePath, analysis, plan, names, arguments); if then_ := while_.then_ { collectBlock(then_, modulePath, analysis, plan, names, arguments) } }
     for_: ForStatement -> {
       for init of for_.init { collectStatement(init, modulePath, analysis, plan, names, arguments) }
       if condition := for_.condition { collectExpression(condition, modulePath, analysis, plan, names, arguments) }
       for update of for_.update { collectExpression(update, modulePath, analysis, plan, names, arguments) }
-      collectBlock(for_.body, modulePath, analysis, plan, names, arguments); if for_.then_ != none { collectBlock(for_.then_!, modulePath, analysis, plan, names, arguments) }
+      collectBlock(for_.body, modulePath, analysis, plan, names, arguments); if then_ := for_.then_ { collectBlock(then_, modulePath, analysis, plan, names, arguments) }
     }
-    forOf: ForOfStatement -> { collectExpression(forOf.iterable, modulePath, analysis, plan, names, arguments); collectBlock(forOf.body, modulePath, analysis, plan, names, arguments); if forOf.then_ != none { collectBlock(forOf.then_!, modulePath, analysis, plan, names, arguments) } }
+    forOf: ForOfStatement -> { collectExpression(forOf.iterable, modulePath, analysis, plan, names, arguments); collectBlock(forOf.body, modulePath, analysis, plan, names, arguments); if then_ := forOf.then_ { collectBlock(then_, modulePath, analysis, plan, names, arguments) } }
     with_: WithStatement -> {
       for binding of with_.bindings { collectExpression(binding.value, modulePath, analysis, plan, names, arguments) }
       collectBlock(with_.body, modulePath, analysis, plan, names, arguments)
@@ -232,14 +232,12 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
       collectExpression(member.object, modulePath, analysis, plan, names, arguments)
       if resolvedStaticReceiver := member.resolvedStaticReceiver { collectType(specialize(resolvedStaticReceiver, names, arguments), analysis, plan) }
       collectJsonMemberDemand(member, modulePath, analysis, plan, names, arguments)
-      if member.resolvedGenericReference != none {
-        reference := member.resolvedGenericReference!
+      if reference := member.resolvedGenericReference {
         collectGenericTarget(member, reference.function_, reference.modulePath, reference.typeArgs, analysis, plan, names, arguments)
       }
     }
     identifier: Identifier -> {
-      if identifier.resolvedGenericReference != none {
-        reference := identifier.resolvedGenericReference!
+      if reference := identifier.resolvedGenericReference {
         collectGenericTarget(identifier, reference.function_, reference.modulePath, reference.typeArgs, analysis, plan, names, arguments)
       }
     }
@@ -551,7 +549,7 @@ export function collectJsonDemand(keys: string[], type_: ResolvedType, analysis:
 }
 
 function collectOptionalType(type_: ResolvedType | none, names: string[], arguments: ResolvedType[], analysis: AnalysisResult, plan: CheckedInstantiations): none {
-  if type_ != none { collectType(specialize(type_!, names, arguments), analysis, plan) }
+  if resolvedType := type_ { collectType(specialize(resolvedType, names, arguments), analysis, plan) }
 }
 
 function collectType(type_: ResolvedType, analysis: AnalysisResult, plan: CheckedInstantiations): none {

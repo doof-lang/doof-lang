@@ -31,7 +31,7 @@ export function renderDeclaration(declaration: CppDeclaration, namespace: string
   result := StringBuilder()
   for part of declaration.parts {
     if type_ := part.type_ {
-      result.append(if registry != none && aliases.size == 0 then registry!.render(type_, namespace) else renderCppType(type_, namespace, aliases, rendered))
+      result.append(if typeRegistry := registry && aliases.size == 0 then typeRegistry.render(type_, namespace) else renderCppType(type_, namespace, aliases, rendered))
     }
     else { result.append(part.text) }
   }

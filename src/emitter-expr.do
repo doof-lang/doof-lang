@@ -83,8 +83,8 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
   // The none literal branch already constructs the checked target carrier.
   if expression.kind == "none-literal" { return value }
   value = emitJsonValuePromotion(expression, value, sourceType, targetType)
-  if sourceType != none {
-    return emitCarrierConversion(value, sourceType!, targetType ?? sourceType!, context, sourcePosition)
+  if fromType := sourceType {
+    return emitCarrierConversion(value, fromType, targetType ?? fromType, context, sourcePosition)
   }
   return value
 }

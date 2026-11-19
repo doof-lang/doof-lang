@@ -22,11 +22,9 @@ export function emitAsyncExpression(expression: AsyncExpression, context: EmitCo
         call: CallExpression -> {
           case call.callee {
             member: MemberExpression -> {
-              if member.object.resolvedType != none {
-                case member.object.resolvedType! {
-                  actor: ActorType -> { return emitActorMethodCall(call, member, actor, true, context) }
-                  _ -> { }
-                }
+              case member.object.resolvedType {
+                actor: ActorType -> { return emitActorMethodCall(call, member, actor, true, context) }
+                _ -> { }
               }
             }
             _ -> { }
@@ -191,7 +189,7 @@ function actorParameterIndex(expression: CallExpression, argumentIndex: int): in
 
 function actorArgumentType(expression: CallExpression, methodType: FunctionType | none, argumentIndex: int): ResolvedType | none {
   index := actorParameterIndex(expression, argumentIndex)
-  if methodType != none && index < methodType!.params.length { return methodType!.params[index].type_ }
+  if signature := methodType && index < signature.params.length { return signature.params[index].type_ }
   if resolvedFunction := expression.resolvedFunction && index < resolvedFunction.params.length {
     return resolvedFunction.params[index].resolvedType
   }
@@ -201,8 +199,7 @@ function actorArgumentType(expression: CallExpression, methodType: FunctionType 
 /** Message-side argument list over the caller-side argument temporaries. */
 function emitActorMethodArguments(expression: CallExpression, methodType: FunctionType | none, temporaries: string[], context: EmitContext): string {
   let result = ""
-  if expression.resolvedFunction != none {
-    declaration := expression.resolvedFunction!
+  if declaration := expression.resolvedFunction {
     for i of 0..<declaration.params.length {
       parameter := declaration.params[i]
       let argumentIndex = expression.args.length
@@ -214,7 +211,7 @@ function emitActorMethodArguments(expression: CallExpression, methodType: Functi
         result = result + temporaries[argumentIndex]
       } else if defaultValue := parameter.defaultValue {
         let expected: ResolvedType | none = parameter.resolvedType
-        if methodType != none && i < methodType!.params.length { expected = methodType!.params[i].type_ }
+        if signature := methodType && i < signature.params.length { expected = signature.params[i].type_ }
         if result != "" { result = result + ", " }
         previous := context.sourceLocationSpanOverride
         context.sourceLocationSpanOverride = SourceLocationSpanOverride { span: expression.span }

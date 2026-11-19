@@ -25,13 +25,11 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   case expression.callee {
     member: MemberExpression -> {
       if member.resolvedOptionalReceiver != none && expression.resolvedOptionalValue != none { return emitOptionalCall(expression, member, context) }
-      if member.object.resolvedType != none {
-        case member.object.resolvedType! {
-          _: WeakResolvedType -> {
-            if member.optional || member.force { return emitWeakMemberCall(expression, member, context) }
-          }
-          _ -> { }
+      case member.object.resolvedType {
+        _: WeakResolvedType -> {
+          if member.optional || member.force { return emitWeakMemberCall(expression, member, context) }
         }
+        _ -> { }
       }
     }
     _ -> { }
@@ -66,9 +64,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
         // An expected Result fixes the payload; otherwise the checked Result or
         // standalone arm type does.
         let resultType: ResolvedType | none = expression.resolvedType
-        if expected != none {
-          case expected! { _: ResultResolvedType -> { resultType = expected! } _ -> { } }
-        }
+        if expectedResult := expected as ResultResolvedType { resultType = expectedResult }
         if resultType == none { panic(identifier.name + " has no checked Result or arm type") }
         let payload: ResolvedType | none = none
         case resultType! {
@@ -77,8 +73,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
           failure: FailureResolvedType -> { payload = failure.errorType }
           _ -> { }
         }
-        if payload != none {
-          valueType := payload!
+        if valueType := payload {
           if expression.args.length == 0 { return "doof::" + identifier.name + "<" + emitContextReturnType(valueType, context) + ">{}" }
           value := emitExpression(expression.args[0].value, context, valueType)
           payloadType := emitContextReturnType(valueType, context)
@@ -93,21 +88,19 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   }
   case expression.callee {
     member: MemberExpression -> {
-      if member.object.resolvedType != none {
-        case member.object.resolvedType! {
-          actor: ActorType -> { return emitSyncActorCall(expression, member, actor, context) }
-          resultType: ResultResolvedType -> {
-            if member.property == "isSuccess" { return "doof::is_success(" + emitExpression(member.object, context) + ")" }
-            if member.property == "isFailure" { return "doof::is_failure(" + emitExpression(member.object, context) + ")" }
-            if member.property == "unwrapOr" && expression.args.length == 1 {
-              temporaryName := context.temporary("_result_unwrap_")
-              object := emitExpression(member.object, context)
-              fallback := emitExpression(expression.args[0].value, context, resultType.valueType)
-              return "[&]() -> " + emitContextType(resultType.valueType, context) + " { auto " + temporaryName + " = " + object + "; if (doof::is_failure(" + temporaryName + ")) return " + fallback + "; return std::move(doof::success_value(" + temporaryName + ")); }()"
-            }
+      case member.object.resolvedType {
+        actor: ActorType -> { return emitSyncActorCall(expression, member, actor, context) }
+        resultType: ResultResolvedType -> {
+          if member.property == "isSuccess" { return "doof::is_success(" + emitExpression(member.object, context) + ")" }
+          if member.property == "isFailure" { return "doof::is_failure(" + emitExpression(member.object, context) + ")" }
+          if member.property == "unwrapOr" && expression.args.length == 1 {
+            temporaryName := context.temporary("_result_unwrap_")
+            object := emitExpression(member.object, context)
+            fallback := emitExpression(expression.args[0].value, context, resultType.valueType)
+            return "[&]() -> " + emitContextType(resultType.valueType, context) + " { auto " + temporaryName + " = " + object + "; if (doof::is_failure(" + temporaryName + ")) return " + fallback + "; return std::move(doof::success_value(" + temporaryName + ")); }()"
           }
-          _ -> { }
         }
+        _ -> { }
       }
     }
     _ -> { }
@@ -115,16 +108,11 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   if construction := emitClassCall(expression, context) { return construction }
   case expression.callee {
     member: MemberExpression -> {
-      let arrayObjectType = decoratedExpressionType(member.object)
-      if arrayObjectType != none {
-        arrayObjectType = specializeEmitType(arrayObjectType!, context)
-      }
+      arrayObjectType := if decorated := decoratedExpressionType(member.object) then specializeEmitType(decorated, context) else none
       let nominalReceiver = false
-      if arrayObjectType != none {
-        case arrayObjectType! {
-          _: ClassType -> { nominalReceiver = true }
-          _ -> { }
-        }
+      case arrayObjectType {
+        _: ClassType -> { nominalReceiver = true }
+        _ -> { }
       }
       if member.resolvedJsonAlias != none { return emitInterfaceJsonCall(member, expression, context) }
       // `T.fromSerialValue(json)` on a type parameter has no static owner; supply
@@ -139,68 +127,64 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
         return emitCalleeExpression(expression.callee, context) + "(" + args + ")"
       }
       if member.property == "length" {
-        if arrayObjectType != none {
-          case arrayObjectType! {
-            class_: ClassType -> { return emitExpression(member.object, context) + (if class_.symbol.kind == "struct" then "." else "->") + "length()" }
-            _ -> { }
-          }
-        }
-      }
-      if arrayObjectType != none {
-        case arrayObjectType! {
-          _: InterfaceType -> {
-            if member.property == "fromSerialValue" && expression.resolvedFunction == none && !member.resolvedCallableField { return emitInterfaceJsonCall(member, expression, context) }
-            return emitVariantMemberCall(member, expression, context)
-          }
-          _: StreamResolvedType -> { return emitInterfaceCall(member, expression, context) }
-          union_: UnionResolvedType -> { if usesVariantRepresentation(union_) { return emitVariantMemberCall(member, expression, context) } }
-          array: ArrayResolvedType -> {
-            if lowered := emitArrayMethodCall(member, expression, array, context) { return lowered }
-          }
-          map: MapResolvedType -> {
-            if member.property == "has" {
-              temporary := context.temporary("_map_has_")
-              return "[&]() -> bool { auto " + temporary + " = " + emitExpression(member.object, context) + "; return " + temporary + "->find(" + emitExpression(expression.args[0].value, context, map.keyType) + ") != " + temporary + "->end(); }()"
-            }
-            if member.property == "set" { return "doof::map_set<" + emitContextType(map.keyType, context) + ", " + emitContextType(map.valueType, context) + ">(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context, map.keyType) + ", " + emitExpression(expression.args[1].value, context, map.valueType) + ", \"\", 0)" }
-            if member.property == "delete" { return emitExpression(member.object, context) + "->erase(" + emitExpression(expression.args[0].value, context, map.keyType) + ")" }
-            if member.property == "get" && expression.args.length > 0 { return "doof::map_get(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context, map.keyType) + ", \"\", 0)" }
-            if member.property == "keys" { return "doof::map_keys(" + emitExpression(member.object, context) + ", \"\", 0)" }
-            if member.property == "values" { return "doof::map_values(" + emitExpression(member.object, context) + ", \"\", 0)" }
-            if member.property == "buildReadonly" || member.property == "drainToReadonly" { return "doof::map_drainToReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
-            if member.property == "cloneReadonly" { return "doof::map_cloneReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
-            if member.property == "cloneMutable" { return "doof::map_cloneMutable(" + emitExpression(member.object, context) + ", \"\", 0)" }
-          }
-          set_: SetResolvedType -> {
-            if member.property == "has" { return "(" + emitExpression(member.object, context) + "->count(" + emitExpression(expression.args[0].value, context, set_.elementType) + ") > 0)" }
-            if member.property == "add" { return emitExpression(member.object, context) + "->insert(" + emitExpression(expression.args[0].value, context, set_.elementType) + ")" }
-            if member.property == "delete" { return emitExpression(member.object, context) + "->erase(" + emitExpression(expression.args[0].value, context, set_.elementType) + ")" }
-            if member.property == "values" { return "doof::set_values(" + emitExpression(member.object, context) + ", \"\", 0)" }
-            if member.property == "buildReadonly" || member.property == "drainToReadonly" { return "doof::set_drainToReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
-            if member.property == "cloneReadonly" { return "doof::set_cloneReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
-            if member.property == "cloneMutable" { return "doof::set_cloneMutable(" + emitExpression(member.object, context) + ", \"\", 0)" }
-          }
-          enum_: EnumType -> {
-            if member.property == "fromName" || member.property == "fromValue" {
-              args := if expression.args.length == 0 then "" else emitExpression(expression.args[0].value, context)
-              return emitContextType(enum_, context) + "_" + member.property + "(" + args + ")"
-            }
-            if member.property == "values" { return emitContextType(enum_, context) + "_values()" }
-            if member.property == "toSerialValue" {
-              return emitContextType(enum_, context) + "_toSerialValue(" + emitExpression(member.object, context) + ")"
-            }
-            if member.property == "fromSerialValue" {
-              let args = ""
-              for i of 0..<expression.args.length {
-                if i > 0 { args = args + ", " }
-                args = args + emitExpression(expression.args[i].value, context)
-              }
-              if expression.args.length == 1 { args = args + ", false" }
-              return emitContextType(enum_, context) + "_fromSerialValue(" + args + ")"
-            }
-          }
+        case arrayObjectType {
+          class_: ClassType -> { return emitExpression(member.object, context) + (if class_.symbol.kind == "struct" then "." else "->") + "length()" }
           _ -> { }
         }
+      }
+      case arrayObjectType {
+        _: InterfaceType -> {
+          if member.property == "fromSerialValue" && expression.resolvedFunction == none && !member.resolvedCallableField { return emitInterfaceJsonCall(member, expression, context) }
+          return emitVariantMemberCall(member, expression, context)
+        }
+        _: StreamResolvedType -> { return emitInterfaceCall(member, expression, context) }
+        union_: UnionResolvedType -> { if usesVariantRepresentation(union_) { return emitVariantMemberCall(member, expression, context) } }
+        array: ArrayResolvedType -> {
+          if lowered := emitArrayMethodCall(member, expression, array, context) { return lowered }
+        }
+        map: MapResolvedType -> {
+          if member.property == "has" {
+            temporary := context.temporary("_map_has_")
+            return "[&]() -> bool { auto " + temporary + " = " + emitExpression(member.object, context) + "; return " + temporary + "->find(" + emitExpression(expression.args[0].value, context, map.keyType) + ") != " + temporary + "->end(); }()"
+          }
+          if member.property == "set" { return "doof::map_set<" + emitContextType(map.keyType, context) + ", " + emitContextType(map.valueType, context) + ">(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context, map.keyType) + ", " + emitExpression(expression.args[1].value, context, map.valueType) + ", \"\", 0)" }
+          if member.property == "delete" { return emitExpression(member.object, context) + "->erase(" + emitExpression(expression.args[0].value, context, map.keyType) + ")" }
+          if member.property == "get" && expression.args.length > 0 { return "doof::map_get(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context, map.keyType) + ", \"\", 0)" }
+          if member.property == "keys" { return "doof::map_keys(" + emitExpression(member.object, context) + ", \"\", 0)" }
+          if member.property == "values" { return "doof::map_values(" + emitExpression(member.object, context) + ", \"\", 0)" }
+          if member.property == "buildReadonly" || member.property == "drainToReadonly" { return "doof::map_drainToReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
+          if member.property == "cloneReadonly" { return "doof::map_cloneReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
+          if member.property == "cloneMutable" { return "doof::map_cloneMutable(" + emitExpression(member.object, context) + ", \"\", 0)" }
+        }
+        set_: SetResolvedType -> {
+          if member.property == "has" { return "(" + emitExpression(member.object, context) + "->count(" + emitExpression(expression.args[0].value, context, set_.elementType) + ") > 0)" }
+          if member.property == "add" { return emitExpression(member.object, context) + "->insert(" + emitExpression(expression.args[0].value, context, set_.elementType) + ")" }
+          if member.property == "delete" { return emitExpression(member.object, context) + "->erase(" + emitExpression(expression.args[0].value, context, set_.elementType) + ")" }
+          if member.property == "values" { return "doof::set_values(" + emitExpression(member.object, context) + ", \"\", 0)" }
+          if member.property == "buildReadonly" || member.property == "drainToReadonly" { return "doof::set_drainToReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
+          if member.property == "cloneReadonly" { return "doof::set_cloneReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
+          if member.property == "cloneMutable" { return "doof::set_cloneMutable(" + emitExpression(member.object, context) + ", \"\", 0)" }
+        }
+        enum_: EnumType -> {
+          if member.property == "fromName" || member.property == "fromValue" {
+            args := if expression.args.length == 0 then "" else emitExpression(expression.args[0].value, context)
+            return emitContextType(enum_, context) + "_" + member.property + "(" + args + ")"
+          }
+          if member.property == "values" { return emitContextType(enum_, context) + "_values()" }
+          if member.property == "toSerialValue" {
+            return emitContextType(enum_, context) + "_toSerialValue(" + emitExpression(member.object, context) + ")"
+          }
+          if member.property == "fromSerialValue" {
+            let args = ""
+            for i of 0..<expression.args.length {
+              if i > 0 { args = args + ", " }
+              args = args + emitExpression(expression.args[i].value, context)
+            }
+            if expression.args.length == 1 { args = args + ", false" }
+            return emitContextType(enum_, context) + "_fromSerialValue(" + args + ")"
+          }
+        }
+        _ -> { }
       }
       if !nominalReceiver && member.property == "startsWith" { return emitBuiltinCall("doof::string_startsWith", member.object, expression, context) }
       if !nominalReceiver && member.property == "endsWith" { return emitBuiltinCall("doof::string_endsWith", member.object, expression, context) }
@@ -215,15 +199,13 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       if !nominalReceiver && member.property == "contains" { return emitBuiltinCall("doof::string_contains", member.object, expression, context) }
       if !nominalReceiver && member.property == "indexOf" { return emitBuiltinCall("doof::string_indexOf", member.object, expression, context) }
       objectType := decoratedExpressionType(member.object)
-      if objectType != none {
-        case objectType! {
-          _: ArrayResolvedType -> {
-            if member.property == "slice" && expression.args.length == 2 {
-              return "doof::array_slice(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", " + emitExpression(expression.args[1].value, context) + ", \"\", 0)"
-            }
+      case objectType {
+        _: ArrayResolvedType -> {
+          if member.property == "slice" && expression.args.length == 2 {
+            return "doof::array_slice(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", " + emitExpression(expression.args[1].value, context) + ", \"\", 0)"
           }
-          _ -> { }
         }
+        _ -> { }
       }
       if !nominalReceiver && member.property == "trim" && expression.args.length == 0 { return "doof::string_trim(" + emitExpression(member.object, context) + ")" }
       if !nominalReceiver && member.property == "trimStart" && expression.args.length == 0 { return "doof::string_trimStart(" + emitExpression(member.object, context) + ")" }
@@ -291,8 +273,8 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   }
   let concreteGenericArgs: ResolvedType[] = []
   for argument of expression.resolvedGenericTypeArgs { concreteGenericArgs.push(specializeEmitType(argument, context)) }
-  if functionType != none && concreteGenericArgs.length > 0 {
-    substituted := substituteTypeParams(functionType!, functionType!.typeParams, concreteGenericArgs)
+  if genericType := functionType && concreteGenericArgs.length > 0 {
+    substituted := substituteTypeParams(genericType, genericType.typeParams, concreteGenericArgs)
     case substituted {
       specialized: FunctionType -> { functionType = specialized }
       _ -> { }
@@ -300,8 +282,8 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   }
   functionDeclaration := expression.resolvedFunction
   let usesConcreteInstantiation = false
-  if functionDeclaration != none && functionDeclaration!.typeParams.length > 0 {
-    if concrete := concreteGenericTarget(expression.callee, functionDeclaration!, expression.resolvedFunctionModule, concreteGenericArgs, context) {
+  if genericDeclaration := functionDeclaration && genericDeclaration.typeParams.length > 0 {
+    if concrete := concreteGenericTarget(expression.callee, genericDeclaration, expression.resolvedFunctionModule, concreteGenericArgs, context) {
       usesConcreteInstantiation = true
       if !concrete.method { callee = concrete.name }
       else {

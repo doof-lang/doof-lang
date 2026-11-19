@@ -33,20 +33,20 @@ export function emitCallArguments(expression: CallExpression, context: EmitConte
   named := hasNamedArguments(expression.args)
   declaration := expression.resolvedFunction
   let count = expression.args.length
-  if declaration != none { count = declaration!.params.length }
+  if function_ := declaration { count = function_.params.length }
   else if named && signature != none { count = signature!.params.length }
   for i of 0..<count {
     let name = ""
     let expected: ResolvedType | none = none
     let defaultValue: Expression | none = none
-    if declaration != none && i < declaration!.params.length {
-      parameter := declaration!.params[i]
+    if function_ := declaration && i < function_.params.length {
+      parameter := function_.params[i]
       name = parameter.name
       expected = parameter.resolvedType
       defaultValue = parameter.defaultValue
     }
-    if signature != none && i < signature!.params.length {
-      parameter := signature!.params[i]
+    if signatureType := signature && i < signatureType.params.length {
+      parameter := signatureType.params[i]
       if declaration == none { name = parameter.name }
       expected = optionalExpectedType(parameter.type_)
     }
@@ -54,7 +54,7 @@ export function emitCallArguments(expression: CallExpression, context: EmitConte
     argument := if named then callArgumentNamed(expression.args, name) else if i < expression.args.length then expression.args[i] else none
     if argument != none || defaultValue != none {
       if result != "" { result = result + ", " }
-      if argument != none { result = result + emitExpression(argument!.value, context, expected) }
+      if present := argument { result = result + emitExpression(present.value, context, expected) }
       else { result = result + emitCallDefault(expression, defaultValue!, expected, context) }
     }
   }
@@ -67,10 +67,10 @@ function emitCallDefault(call: CallExpression, value: Expression, expected: Reso
   previous := context.substitution
   let names: string[] = []
   let arguments: ResolvedType[] = []
-  if previous != none {
-    for i of 0..<previous!.names.length {
-      names.push(previous!.names[i])
-      arguments.push(previous!.arguments[i])
+  if substitution := previous {
+    for i of 0..<substitution.names.length {
+      names.push(substitution.names[i])
+      arguments.push(substitution.arguments[i])
     }
   }
   // Member checking retained the effective owner, including weak receivers and

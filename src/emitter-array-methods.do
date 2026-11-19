@@ -32,7 +32,7 @@ function runtimeCall(helper: string, member: MemberExpression, expression: CallE
   let result = "doof::" + helper + "(" + emitExpression(member.object, context)
   for i of 0..<expression.args.length {
     let expected: ResolvedType | none = none
-    if signature != none && i < signature!.params.length { expected = signature!.params[i].type_ }
+    if signatureType := signature && i < signatureType.params.length { expected = signatureType.params[i].type_ }
     result = result + ", " + emitArgument(expression.args[i].value, expected, context)
   }
   return result + ", \"\", 0)"

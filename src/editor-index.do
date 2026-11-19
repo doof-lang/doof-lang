@@ -105,7 +105,7 @@ function addScope(index: EditorIndex, scope: Scope): none {
   scope.editorIndexed = true
   index.visitedScopes.push(scope)
   for binding of scope.bindings { addBinding(index, binding) }
-  if scope.parent != none { addScope(index, scope.parent!) }
+  if parent := scope.parent { addScope(index, parent) }
 }
 
 function occurrence(index: EditorIndex, binding: Binding, module: string, start: int, end: int, shorthand: bool = false): EditorItem {
@@ -151,8 +151,8 @@ export function createEditorIndex(frontend: FrontendResult, modules: string[] = 
               if indexed.binding == none || indexed.item.module != module.path || indexed.item.label != specifier.name { continue }
               token := nameItem(index, module.path, specifier.name, specifier.span.start.offset, specifier.span.end.offset)
               index.occurrences.push(occurrence(index, indexed.binding!, module.path, token.start, token.end))
-              if specifier.alias != none {
-                alias := nameItem(index, module.path, specifier.alias!, specifier.span.start.offset, specifier.span.end.offset, "export-alias")
+              if aliasName := specifier.alias {
+                alias := nameItem(index, module.path, aliasName, specifier.span.start.offset, specifier.span.end.offset, "export-alias")
                 target := indexed.item
                 index.occurrences.push(EditorItem { label: alias.label, kind: "export-alias", module: module.path, start: alias.start, end: alias.end, identity: target.identity, renameIdentity: itemIdentity(alias), definitionModule: target.definitionModule, definitionStart: target.definitionStart, definitionEnd: target.definitionEnd, declaration: true })
               }
@@ -189,11 +189,11 @@ export function createEditorIndex(frontend: FrontendResult, modules: string[] = 
             target = nameItem(index, resolvedMember.modulePath, fn.name, fn.span.start.offset, fn.span.end.offset, "method")
           }
           if target == none && member.resolvedMember != none { target = fieldTarget(index, member.resolvedMember!.owner, member.property) }
-          if target != none {
+          if targetItem := target {
             index.occurrences.push(EditorItem {
-              label: member.property, detail: if member.resolvedType == none then "" else editorTypeName(member.resolvedType!), kind: target!.kind,
+              label: member.property, detail: if memberType := member.resolvedType then editorTypeName(memberType) else "", kind: targetItem.kind,
               module: module.path, start: member.span.end.offset - member.property.length, end: member.span.end.offset,
-              identity: itemIdentity(target!), definitionModule: target!.module, definitionStart: target!.start, definitionEnd: target!.end,
+              identity: itemIdentity(targetItem), definitionModule: targetItem.module, definitionStart: targetItem.start, definitionEnd: targetItem.end,
             })
           }
         }
@@ -319,8 +319,8 @@ function addReexport(index: EditorIndex, module: ModuleInfo, list: ExportList): 
       token := nameItem(index, module.path, specifier.name, specifier.span.start.offset, specifier.span.end.offset, "export-source")
       upstream := exportAliasItem(index, sourceModule, specifier.name)
       index.occurrences.push(EditorItem { label: specifier.name, kind: "export-source", module: module.path, start: token.start, end: token.end, identity: itemIdentity(target), renameIdentity: if upstream == none then itemIdentity(target) else itemIdentity(upstream!), definitionModule: target.module, definitionStart: target.start, definitionEnd: target.end })
-      if specifier.alias != none {
-        alias := nameItem(index, module.path, specifier.alias!, specifier.span.start.offset, specifier.span.end.offset, "export-alias")
+      if aliasName := specifier.alias {
+        alias := nameItem(index, module.path, aliasName, specifier.span.start.offset, specifier.span.end.offset, "export-alias")
         index.occurrences.push(EditorItem { label: alias.label, kind: "export-alias", module: module.path, start: alias.start, end: alias.end, identity: itemIdentity(target), renameIdentity: itemIdentity(alias), definitionModule: target.module, definitionStart: target.start, definitionEnd: target.end, declaration: true })
       }
     }

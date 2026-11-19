@@ -17,11 +17,9 @@ import { addUnique } from "./string-lists"
 
 export function emitLambdaExpression(expression: LambdaExpression, context: EmitContext, expected: ResolvedType | none = none): string {
   let functionType = lambdaFunctionType(expression)
-  if expected != none {
-    case expected! {
-      expectedFunction: FunctionType -> { functionType = expectedFunction }
-      _ -> { }
-    }
+  case expected {
+    expectedFunction: FunctionType -> { functionType = expectedFunction }
+    _ -> { }
   }
   let params = ""
   for i of 0..<expression.params.length {
