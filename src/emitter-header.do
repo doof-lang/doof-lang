@@ -50,8 +50,8 @@ function collectNativeModuleTypeAliases(modulePath: string, namespace: string, p
       }
     }
     for imported of surface.imports {
-      if imported.symbol != none && isNativeAliasType(imported.symbol!) && !surfaceSymbolIsGeneric(context, imported.symbol!) {
-        addNativeSymbolAlias(imported.symbol!, namespace, plan, context)
+      if symbol := imported.symbol && isNativeAliasType(symbol) && !surfaceSymbolIsGeneric(context, symbol) {
+        addNativeSymbolAlias(symbol, namespace, plan, context)
       }
     }
     return
@@ -91,8 +91,8 @@ function collect(statement: Statement, plan: HeaderPlanBuilder, context: EmitCon
     interface_: InterfaceDeclaration -> {
       reserveHeaderNamespaceName(plan, interface_.name)
       if interface_.typeParams.length == 0 {
-        if interface_.resolvedSymbol != none {
-          for implementation of interface_.resolvedSymbol!.implementations {
+        if resolvedSymbol := interface_.resolvedSymbol {
+          for implementation of resolvedSymbol.implementations {
             if implementation.native_ { addNativeClassForwardDeclaration(implementation, plan) }
           }
         }
@@ -108,9 +108,9 @@ function collect(statement: Statement, plan: HeaderPlanBuilder, context: EmitCon
       reserveHeaderNamespaceName(plan, alias.name)
       if alias.typeParams.length == 0 {
         emitted := emitTypeAlias(alias, context)
-        if alias.resolvedType != none && !typeNeedsCompleteNominalDefinition(alias.resolvedType!) {
+        if resolvedType := alias.resolvedType && !typeNeedsCompleteNominalDefinition(resolvedType) {
           plan.earlyTypeAliases.push(emitted)
-          type_ := lowerContextCppType(alias.resolvedType!, context)
+          type_ := lowerContextCppType(resolvedType, context)
           if isReferenceVariant(type_) {
             plan.preferredTypeAliasNames.push(alias.name)
             plan.preferredTypeAliasTypes.push(type_)
@@ -154,7 +154,7 @@ function collect(statement: Statement, plan: HeaderPlanBuilder, context: EmitCon
         if fn.nativeHeader != "" { addUnique(plan.nativeIncludes, moduleNativeHeaderPath(context.modulePath, fn.nativeHeader, context.names)) }
         namespace := nativeNamespace(fn.nativeCppName)
         addUnique(plan.nativeNamespaces, namespace)
-        if fn.resolvedType != none { collectNativeTypeAliases(fn.resolvedType!, namespace, plan, context) }
+        if resolvedType := fn.resolvedType { collectNativeTypeAliases(resolvedType, namespace, plan, context) }
         return
       }
       if fn.name == "main" {

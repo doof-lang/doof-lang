@@ -144,10 +144,10 @@ export function methodInstantiationKey(ownerKey: string, name: string, typeArgs:
 
 function collectFunctionBody(fn: FunctionDeclaration, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
   for parameter of fn.params {
-    if parameter.resolvedType != none { collectType(specialize(parameter.resolvedType!, names, arguments), analysis, plan); validateSpecializedHashKeys(parameter.resolvedType!, names, arguments, parameter.span, modulePath, analysis, plan) }
-    if parameter.defaultValue != none { collectExpression(parameter.defaultValue!, modulePath, analysis, plan, names, arguments) }
+    if resolvedType := parameter.resolvedType { collectType(specialize(resolvedType, names, arguments), analysis, plan); validateSpecializedHashKeys(resolvedType, names, arguments, parameter.span, modulePath, analysis, plan) }
+    if defaultValue := parameter.defaultValue { collectExpression(defaultValue, modulePath, analysis, plan, names, arguments) }
   }
-  if fn.resolvedType != none { collectType(specialize(fn.resolvedType!, names, arguments), analysis, plan) }
+  if resolvedType := fn.resolvedType { collectType(specialize(resolvedType, names, arguments), analysis, plan) }
   case fn.body {
     block: Block -> { for statement of block.statements { collectStatement(statement, modulePath, analysis, plan, names, arguments) } }
     expression: Expression -> { collectExpression(expression, modulePath, analysis, plan, names, arguments) }
@@ -156,15 +156,15 @@ function collectFunctionBody(fn: FunctionDeclaration, modulePath: string, analys
 
 function collectClassBody(class_: ClassDeclaration, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
   for field of class_.fields {
-    if field.resolvedType != none { collectType(specialize(field.resolvedType!, names, arguments), analysis, plan); validateSpecializedHashKeys(field.resolvedType!, names, arguments, field.span, modulePath, analysis, plan) }
-    if field.defaultValue != none { collectExpression(field.defaultValue!, modulePath, analysis, plan, names, arguments) }
+    if resolvedType := field.resolvedType { collectType(specialize(resolvedType, names, arguments), analysis, plan); validateSpecializedHashKeys(resolvedType, names, arguments, field.span, modulePath, analysis, plan) }
+    if defaultValue := field.defaultValue { collectExpression(defaultValue, modulePath, analysis, plan, names, arguments) }
   }
   for method of class_.methods {
     // Non-generic methods are part of every concrete class body. Generic
     // methods are discovered from their concrete call sites.
     if method.typeParams.length == 0 { collectFunctionBody(method, modulePath, analysis, plan, names, arguments) }
   }
-  if class_.destructor_ != none { collectBlock(class_.destructor_!, modulePath, analysis, plan, names, arguments) }
+  if destructor_ := class_.destructor_ { collectBlock(destructor_, modulePath, analysis, plan, names, arguments) }
 }
 
 function collectStatement(statement: Statement, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
@@ -174,7 +174,7 @@ function collectStatement(statement: Statement, modulePath: string, analysis: An
     binding: ImmutableBinding -> {
       collectOptionalType(binding.resolvedType, names, arguments, analysis, plan)
       collectExpression(binding.value, modulePath, analysis, plan, names, arguments)
-      if binding.else_ != none { collectBlock(binding.else_!, modulePath, analysis, plan, names, arguments) }
+      if else_ := binding.else_ { collectBlock(else_, modulePath, analysis, plan, names, arguments) }
     }
     let_: LetDeclaration -> { collectOptionalType(let_.resolvedType, names, arguments, analysis, plan); collectExpression(let_.value, modulePath, analysis, plan, names, arguments) }
     fn: FunctionDeclaration -> { if fn.typeParams.length == 0 { collectFunctionBody(fn, modulePath, analysis, plan, names, arguments) } }
@@ -182,7 +182,7 @@ function collectStatement(statement: Statement, modulePath: string, analysis: An
     if_: IfStatement -> {
       collectExpression(if_.condition, modulePath, analysis, plan, names, arguments); collectBlock(if_.body, modulePath, analysis, plan, names, arguments)
       for branch of if_.elseIfs { collectExpression(branch.condition, modulePath, analysis, plan, names, arguments); collectBlock(branch.body, modulePath, analysis, plan, names, arguments) }
-      if if_.else_ != none { collectBlock(if_.else_!, modulePath, analysis, plan, names, arguments) }
+      if else_ := if_.else_ { collectBlock(else_, modulePath, analysis, plan, names, arguments) }
     }
     case_: CaseStatement -> {
       collectExpression(case_.subject, modulePath, analysis, plan, names, arguments)
@@ -197,7 +197,7 @@ function collectStatement(statement: Statement, modulePath: string, analysis: An
     while_: WhileStatement -> { collectExpression(while_.condition, modulePath, analysis, plan, names, arguments); collectBlock(while_.body, modulePath, analysis, plan, names, arguments); if while_.then_ != none { collectBlock(while_.then_!, modulePath, analysis, plan, names, arguments) } }
     for_: ForStatement -> {
       for init of for_.init { collectStatement(init, modulePath, analysis, plan, names, arguments) }
-      if for_.condition != none { collectExpression(for_.condition!, modulePath, analysis, plan, names, arguments) }
+      if condition := for_.condition { collectExpression(condition, modulePath, analysis, plan, names, arguments) }
       for update of for_.update { collectExpression(update, modulePath, analysis, plan, names, arguments) }
       collectBlock(for_.body, modulePath, analysis, plan, names, arguments); if for_.then_ != none { collectBlock(for_.then_!, modulePath, analysis, plan, names, arguments) }
     }
@@ -222,7 +222,7 @@ function collectBlock(block: Block, modulePath: string, analysis: AnalysisResult
 }
 
 function collectExpression(expression: Expression, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
-  if expression.resolvedType != none { collectType(specialize(expression.resolvedType!, names, arguments), analysis, plan) }
+  if resolvedType := expression.resolvedType { collectType(specialize(resolvedType, names, arguments), analysis, plan) }
   case expression {
     string_: StringLiteral -> { for interpolation of string_.interpolations { collectExpression(interpolation, modulePath, analysis, plan, names, arguments) } }
     binary: BinaryExpression -> { collectExpression(binary.left, modulePath, analysis, plan, names, arguments); collectExpression(binary.right, modulePath, analysis, plan, names, arguments) }
@@ -230,7 +230,7 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
     assignment: AssignmentExpression -> { collectExpression(assignment.target, modulePath, analysis, plan, names, arguments); collectExpression(assignment.value, modulePath, analysis, plan, names, arguments) }
     member: MemberExpression -> {
       collectExpression(member.object, modulePath, analysis, plan, names, arguments)
-      if member.resolvedStaticReceiver != none { collectType(specialize(member.resolvedStaticReceiver!, names, arguments), analysis, plan) }
+      if resolvedStaticReceiver := member.resolvedStaticReceiver { collectType(specialize(resolvedStaticReceiver, names, arguments), analysis, plan) }
       collectJsonMemberDemand(member, modulePath, analysis, plan, names, arguments)
       if member.resolvedGenericReference != none {
         reference := member.resolvedGenericReference!
@@ -247,15 +247,15 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
     call: CallExpression -> {
       collectExpression(call.callee, modulePath, analysis, plan, names, arguments)
       for argument of call.args { collectExpression(argument.value, modulePath, analysis, plan, names, arguments) }
-      if call.resolvedFunction != none { collectGenericTarget(call.callee, call.resolvedFunction!, call.resolvedFunctionModule, call.resolvedGenericTypeArgs, analysis, plan, names, arguments) }
+      if resolvedFunction := call.resolvedFunction { collectGenericTarget(call.callee, resolvedFunction, call.resolvedFunctionModule, call.resolvedGenericTypeArgs, analysis, plan, names, arguments) }
     }
     array: ArrayLiteral -> { validateSpecializedLiteral(array, names, arguments, modulePath, analysis, plan); for item of array.elements { collectExpression(item, modulePath, analysis, plan, names, arguments) } }
     object: ObjectLiteral -> {
       validateSpecializedLiteral(object, names, arguments, modulePath, analysis, plan)
-      if object.spread != none { collectExpression(object.spread!, modulePath, analysis, plan, names, arguments) }
+      if spread := object.spread { collectExpression(spread, modulePath, analysis, plan, names, arguments) }
       for property of object.properties {
-        if property.key != none { collectExpression(property.key!, modulePath, analysis, plan, names, arguments) }
-        if property.value != none { collectExpression(property.value!, modulePath, analysis, plan, names, arguments) }
+        if key := property.key { collectExpression(key, modulePath, analysis, plan, names, arguments) }
+        if value := property.value { collectExpression(value, modulePath, analysis, plan, names, arguments) }
       }
     }
     tuple: TupleLiteral -> { for item of tuple.elements { collectExpression(item, modulePath, analysis, plan, names, arguments) } }
@@ -278,7 +278,7 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
       }
     }
     construct: ConstructExpression -> {
-      if construct.spread != none { collectExpression(construct.spread!, modulePath, analysis, plan, names, arguments) }
+      if spread := construct.spread { collectExpression(spread, modulePath, analysis, plan, names, arguments) }
       for property of construct.args { if property.value != none { collectExpression(property.value!, modulePath, analysis, plan, names, arguments) } }
     }
     async_: AsyncExpression -> {
@@ -310,8 +310,8 @@ function collectGenericTarget(callee: Expression, function_: FunctionDeclaration
     let recordedMethod = false
     case callee {
       identifier: Identifier -> {
-        if identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "method" && identifier.resolvedBinding!.symbol != none {
-          symbol := identifier.resolvedBinding!.symbol!
+        if resolvedBinding := identifier.resolvedBinding && resolvedBinding.kind == "method" && resolvedBinding.symbol != none {
+          symbol := resolvedBinding.symbol!
           if owner := findClassDeclaration(analysis, symbol.module, symbol.name) && function_.typeParams.length > 0 {
             let ownerArgs: ResolvedType[] = []
             for typeParam of owner.typeParams {
@@ -348,8 +348,8 @@ function collectPattern(pattern: CasePattern, modulePath: string, analysis: Anal
     type_: TypePattern -> { collectOptionalType(type_.resolvedType, names, arguments, analysis, plan) }
     value: ValuePattern -> { collectExpression(value.value, modulePath, analysis, plan, names, arguments) }
     range: RangePattern -> {
-      if range.start != none { collectExpression(range.start!, modulePath, analysis, plan, names, arguments) }
-      if range.end != none { collectExpression(range.end!, modulePath, analysis, plan, names, arguments) }
+      if start := range.start { collectExpression(start, modulePath, analysis, plan, names, arguments) }
+      if end := range.end { collectExpression(end, modulePath, analysis, plan, names, arguments) }
     }
     _ -> { }
   }
@@ -375,8 +375,8 @@ function collectJsonMemberDemand(member: MemberExpression, modulePath: string, a
       for method of owner!.methods {
         if method.private_ || method.static_ { continue }
         for parameter of method.params {
-          if parameter.resolvedType != none {
-            addJsonDeserializationDemand(plan, specialize(parameter.resolvedType!, names, arguments), analysis)
+          if resolvedType := parameter.resolvedType {
+            addJsonDeserializationDemand(plan, specialize(resolvedType, names, arguments), analysis)
           }
         }
         if method.resolvedType == none { continue }

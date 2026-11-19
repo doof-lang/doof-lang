@@ -56,12 +56,12 @@ function emitMethodReflection(owner: ClassDeclaration, method: FunctionDeclarati
     type_ := parameter.resolvedType!
     safeName := cppIdentifier(parameter.name)
     iterator := "_it_" + safeName
-    if parameter.defaultValue != none {
+    if defaultValue := parameter.defaultValue {
       result = result + "                " + emitContextType(type_, context) + " " + safeName + ";\n"
       result = result + "                if (auto " + iterator + " = _p->find(\"" + escapeCpp(parameter.name) + "\"); " + iterator + " != _p->end()) {\n"
       result = result + emitParameterValidation(parameter.name, iterator + "->second", type_, context, "                    ")
       result = result + "                    " + safeName + " = " + emitJsonRead(iterator + "->second", type_, context) + ";\n"
-      result = result + "                } else { " + safeName + " = " + emitExpression(parameter.defaultValue!, context, type_) + "; }\n"
+      result = result + "                } else { " + safeName + " = " + emitExpression(defaultValue, context, type_) + "; }\n"
     } else {
       result = result + "                auto " + iterator + " = _p->find(\"" + escapeCpp(parameter.name) + "\");\n"
       result = result + "                if (" + iterator + " == _p->end()) { return " + metadataFailure(400, "std::string(\"Missing required parameter \\\"" + escapeCpp(parameter.name) + "\\\"\")") + "; }\n"

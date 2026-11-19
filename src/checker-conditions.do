@@ -86,8 +86,8 @@ function checkBindingClause(state: CheckerState, clause: BindingCondition, check
       }
     }
   }
-  if clause.type_ != none {
-    annotated := resolveType(state, clause.type_!, state.info!, checked.scope)
+  if type_ := clause.type_ {
+    annotated := resolveType(state, type_, state.info!, checked.scope)
     if bindingType.kind != "unknown" && annotated.kind != "unknown" && !isAssignableWithInterfaces(state.result, bindingType, annotated) {
       typeError(state, "Cannot assign " + displayTypeName(bindingType) + " to " + displayTypeName(annotated), clause.span)
     }

@@ -21,7 +21,7 @@ export function validateStatement(statement: Statement, module: string, diagnost
     binding: ImmutableBinding -> {
       validateValue(binding, binding.resolvedType, binding.type_, module, diagnostics)
       validateExpression(binding.value, module, diagnostics)
-      if binding.else_ != none { validateBlock(binding.else_!, module, diagnostics) }
+      if else_ := binding.else_ { validateBlock(else_, module, diagnostics) }
     }
     let_: LetDeclaration -> { validateValue(let_, let_.resolvedType, let_.type_, module, diagnostics); validateExpression(let_.value, module, diagnostics) }
     fn: FunctionDeclaration -> { validateFunction(fn, module, diagnostics) }
@@ -30,9 +30,9 @@ export function validateStatement(statement: Statement, module: string, diagnost
       validateTypeParameterConstraints(class_.typeParamConstraints, module, diagnostics)
       for implementation of class_.implements_ { validateTypeAnnotation(implementation, module, diagnostics) }
       for field of class_.fields {
-        if field.type_ != none { validateTypeAnnotation(field.type_!, module, diagnostics) }
+        if type_ := field.type_ { validateTypeAnnotation(type_, module, diagnostics) }
         validateResolved(field.resolvedType, field.span, module, "field " + class_.name, diagnostics)
-        if field.defaultValue != none { validateExpression(field.defaultValue!, module, diagnostics) }
+        if defaultValue := field.defaultValue { validateExpression(defaultValue, module, diagnostics) }
       }
       for method of class_.methods { validateFunction(method, module, diagnostics) }
     }
@@ -52,7 +52,7 @@ export function validateStatement(statement: Statement, module: string, diagnost
     }
     enum_: EnumDeclaration -> {
       for variant of enum_.variants {
-        if variant.value != none { validateExpression(variant.value!, module, diagnostics) }
+        if value := variant.value { validateExpression(value, module, diagnostics) }
         if enum_.backingKind == "string" {
           if variant.resolvedStringValue == none { addValidationError(module, variant.span, "Enum variant '" + enum_.name + "." + variant.name + "' has no resolved string backing value", diagnostics) }
         } else if variant.resolvedIntValue == none {
@@ -68,7 +68,7 @@ export function validateStatement(statement: Statement, module: string, diagnost
     if_: IfStatement -> {
       validateExpression(if_.condition, module, diagnostics); validateBlock(if_.body, module, diagnostics)
       for branch of if_.elseIfs { validateExpression(branch.condition, module, diagnostics); validateBlock(branch.body, module, diagnostics) }
-      if if_.else_ != none { validateBlock(if_.else_!, module, diagnostics) }
+      if else_ := if_.else_ { validateBlock(else_, module, diagnostics) }
     }
     case_: CaseStatement -> {
       if case_.resolvedCompletes == none { addValidationError(module, case_.span, "Case statement has no resolved control-flow completion", diagnostics) }
@@ -84,14 +84,14 @@ export function validateStatement(statement: Statement, module: string, diagnost
     while_: WhileStatement -> { validateExpression(while_.condition, module, diagnostics); validateBlock(while_.body, module, diagnostics); if while_.then_ != none { validateBlock(while_.then_!, module, diagnostics) } }
     for_: ForStatement -> {
       for init of for_.init { validateStatement(init, module, diagnostics) }
-      if for_.condition != none { validateExpression(for_.condition!, module, diagnostics) }
+      if condition := for_.condition { validateExpression(condition, module, diagnostics) }
       for update of for_.update { validateExpression(update, module, diagnostics) }
       validateBlock(for_.body, module, diagnostics); if for_.then_ != none { validateBlock(for_.then_!, module, diagnostics) }
     }
     forOf: ForOfStatement -> { validateExpression(forOf.iterable, module, diagnostics); validateBlock(forOf.body, module, diagnostics); if forOf.then_ != none { validateBlock(forOf.then_!, module, diagnostics) } }
     with_: WithStatement -> {
       for binding of with_.bindings {
-        if binding.type_ != none { validateTypeAnnotation(binding.type_!, module, diagnostics) }
+        if type_ := binding.type_ { validateTypeAnnotation(type_, module, diagnostics) }
         validateResolved(binding.resolvedType, binding.span, module, "with binding " + binding.name, diagnostics)
         validateExpression(binding.value, module, diagnostics)
       }
@@ -116,11 +116,11 @@ export function validateValue(statement: Statement, resolvedType: ResolvedType |
 export function validateFunction(fn: FunctionDeclaration, module: string, diagnostics: Diagnostic[]): none {
   validateResolved(fn.resolvedType, fn.span, module, "function " + fn.name, diagnostics)
   validateTypeParameterConstraints(fn.typeParamConstraints, module, diagnostics)
-  if fn.returnType != none { validateTypeAnnotation(fn.returnType!, module, diagnostics) }
+  if returnType := fn.returnType { validateTypeAnnotation(returnType, module, diagnostics) }
   for parameter of fn.params {
-    if parameter.type_ != none { validateTypeAnnotation(parameter.type_!, module, diagnostics) }
+    if type_ := parameter.type_ { validateTypeAnnotation(type_, module, diagnostics) }
     validateResolved(parameter.resolvedType, parameter.span, module, "parameter " + parameter.name, diagnostics)
-    if parameter.defaultValue != none { validateExpression(parameter.defaultValue!, module, diagnostics) }
+    if defaultValue := parameter.defaultValue { validateExpression(defaultValue, module, diagnostics) }
   }
   case fn.body {
     block: Block -> { validateBlock(block, module, diagnostics) }
@@ -150,8 +150,8 @@ export function validatePattern(pattern: CasePattern, module: string, diagnostic
     type_: TypePattern -> { validateTypeAnnotation(type_.type_, module, diagnostics); validateResolved(type_.resolvedType, type_.span, module, "case pattern", diagnostics) }
     value: ValuePattern -> { validateExpression(value.value, module, diagnostics) }
     range: RangePattern -> {
-      if range.start != none { validateExpression(range.start!, module, diagnostics) }
-      if range.end != none { validateExpression(range.end!, module, diagnostics) }
+      if start := range.start { validateExpression(start, module, diagnostics) }
+      if end := range.end { validateExpression(end, module, diagnostics) }
     }
     _: WildcardPattern -> { }
   }
@@ -166,7 +166,7 @@ export function validateExpression(expression: Expression, module: string, diagn
     assignment: AssignmentExpression -> { validateExpression(assignment.target, module, diagnostics); validateExpression(assignment.value, module, diagnostics) }
     member: MemberExpression -> {
       if member.resolvedMember == none {
-        if member.resolvedType != none && member.resolvedType!.kind != "never" {
+        if resolvedType := member.resolvedType && resolvedType.kind != "never" {
           addValidationError(module, member.span, "Member '" + member.property + "' has no checked member selection", diagnostics)
         }
       } else {
@@ -185,7 +185,7 @@ export function validateExpression(expression: Expression, module: string, diagn
       }
       case call.callee {
         member: MemberExpression -> {
-          if member.resolvedMember != none && call.resolvedFunction != member.resolvedMember!.function_ {
+          if resolvedMember := member.resolvedMember && call.resolvedFunction != resolvedMember.function_ {
             addValidationError(module, call.span, "Call target does not match checked member selection", diagnostics)
           }
         }
@@ -201,14 +201,14 @@ export function validateExpression(expression: Expression, module: string, diagn
     array: ArrayLiteral -> { for item of array.elements { validateExpression(item, module, diagnostics) } }
     object: ObjectLiteral -> {
       if object.resolvedClass != none { validateConstructionPlan(object.resolvedConstruction, object.span, module, diagnostics) }
-      if object.spread != none { validateExpression(object.spread!, module, diagnostics) }
+      if spread := object.spread { validateExpression(spread, module, diagnostics) }
       for property of object.properties {
         validateResolved(property.resolvedType, property.span, module, "object property", diagnostics)
-        if property.key != none { validateExpression(property.key!, module, diagnostics) }
-        if property.value != none { validateExpression(property.value!, module, diagnostics) }
+        if key := property.key { validateExpression(key, module, diagnostics) }
+        if value := property.value { validateExpression(value, module, diagnostics) }
       }
-      if object.resolvedType != none {
-        case object.resolvedType! {
+      if resolvedType := object.resolvedType {
+        case resolvedType {
           _: ClassType -> {
             if object.resolvedClass == none { addValidationError(module, object.span, "Class object literal has no resolved class", diagnostics) }
           }
@@ -221,11 +221,11 @@ export function validateExpression(expression: Expression, module: string, diagn
       for item of tuple.elements { validateExpression(item, module, diagnostics) }
     }
     lambda: LambdaExpression -> {
-      if lambda.returnType != none { validateTypeAnnotation(lambda.returnType!, module, diagnostics) }
+      if returnType := lambda.returnType { validateTypeAnnotation(returnType, module, diagnostics) }
       for parameter of lambda.params {
-        if parameter.type_ != none { validateTypeAnnotation(parameter.type_!, module, diagnostics) }
+        if type_ := parameter.type_ { validateTypeAnnotation(type_, module, diagnostics) }
         validateResolved(parameter.resolvedType, parameter.span, module, "lambda parameter", diagnostics)
-        if parameter.defaultValue != none { validateExpression(parameter.defaultValue!, module, diagnostics) }
+        if defaultValue := parameter.defaultValue { validateExpression(defaultValue, module, diagnostics) }
       }
       case lambda.body {
         block: Block -> { validateBlock(block, module, diagnostics) }
@@ -246,30 +246,30 @@ export function validateExpression(expression: Expression, module: string, diagn
     yieldBlock: YieldBlockExpression -> { validateBlock(yieldBlock.body, module, diagnostics) }
     catch_: CatchExpression -> { validateBlock(catch_.body, module, diagnostics) }
     binding: BindingCondition -> {
-      if binding.type_ != none { validateTypeAnnotation(binding.type_!, module, diagnostics) }
+      if type_ := binding.type_ { validateTypeAnnotation(type_, module, diagnostics) }
       validateResolved(binding.resolvedBindingType, binding.span, module, "binding condition " + binding.name, diagnostics)
       validateExpression(binding.value, module, diagnostics)
     }
     construct: ConstructExpression -> {
-      if construct.spread != none {
-        validateExpression(construct.spread!, module, diagnostics)
-        validateResolved(construct.resolvedSpreadType, construct.spread!.span, module, "construction spread", diagnostics)
+      if spread := construct.spread {
+        validateExpression(spread, module, diagnostics)
+        validateResolved(construct.resolvedSpreadType, spread.span, module, "construction spread", diagnostics)
       }
       if construct.type_ != "Success" && construct.type_ != "Failure" {
         validateResolved(construct.resolvedConstructedType, construct.span, module, "constructed type", diagnostics)
         if construct.resolvedClass == none { addValidationError(module, construct.span, "Construction of '" + construct.type_ + "' has no resolved class", diagnostics) }
         validateConstructionPlan(construct.resolvedConstruction, construct.span, module, diagnostics)
-        if construct.resolvedConstruction != none && construct.resolvedConstruction!.factory != construct.resolvedConstructor {
+        if resolvedConstruction := construct.resolvedConstruction && resolvedConstruction.factory != construct.resolvedConstructor {
           addValidationError(module, construct.span, "Construction of '" + construct.type_ + "' has no resolved constructor consistent with its checked plan", diagnostics)
         }
       }
-      if construct.resolvedConstructor != none {
-        validateResolved(construct.resolvedConstructor!.resolvedType, construct.span, module, "constructor " + construct.type_, diagnostics)
+      if resolvedConstructor := construct.resolvedConstructor {
+        validateResolved(resolvedConstructor.resolvedType, construct.span, module, "constructor " + construct.type_, diagnostics)
       }
       for argument of construct.typeArgs { validateTypeAnnotation(argument, module, diagnostics) }
       for property of construct.args {
         validateResolved(property.resolvedType, property.span, module, "constructor property", diagnostics)
-        if property.value != none { validateExpression(property.value!, module, diagnostics) }
+        if value := property.value { validateExpression(value, module, diagnostics) }
         else if construct.type_ != "Success" && construct.type_ != "Failure" && property.resolvedBinding == none {
           addValidationError(module, property.span, "Constructor shorthand property '" + property.name + "' has no resolved binding", diagnostics)
         }
@@ -284,7 +284,7 @@ export function validateExpression(expression: Expression, module: string, diagn
     retire_: RetireExpression -> { validateExpression(retire_.actor, module, diagnostics) }
     actor: ActorCreationExpression -> {
       validateConstructionPlan(actor.resolvedConstruction, actor.span, module, diagnostics)
-      if actor.resolvedConstructor != none { validateResolved(actor.resolvedConstructor!.resolvedType, actor.span, module, "actor constructor", diagnostics) }
+      if resolvedConstructor := actor.resolvedConstructor { validateResolved(resolvedConstructor.resolvedType, actor.span, module, "actor constructor", diagnostics) }
       for argument of actor.args { validateExpression(argument, module, diagnostics) }
     }
     as_: AsExpression -> { validateExpression(as_.expression, module, diagnostics); validateTypeAnnotation(as_.targetType, module, diagnostics) }

@@ -142,8 +142,8 @@ export function scanCapturedMutablesInExpression(body: Expression): string[] {
 }
 
 function lambdaFunctionType(expression: LambdaExpression): FunctionType {
-  if expression.resolvedType != none {
-    case expression.resolvedType! {
+  if resolvedType := expression.resolvedType {
+    case resolvedType {
       function_: FunctionType -> { return function_ }
       _ -> { }
     }

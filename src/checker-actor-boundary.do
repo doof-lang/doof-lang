@@ -66,7 +66,7 @@ function findViolation(result: AnalysisResult, type_: ResolvedType, seen: string
     _: UnknownType -> { return none }
     parameter: TypeParameterType -> {
       if !unbound { return none }
-      if parameter.constraint != none && parameter.constraint!.kind != "unknown" { return findViolation(result, parameter.constraint!, seen, unbound) }
+      if constraint := parameter.constraint && constraint.kind != "unknown" { return findViolation(result, constraint, seen, unbound) }
       return ActorBoundaryViolation { reason: "unbound type parameter \"" + parameter.name + "\" may hold mutable values" }
     }
     _: SerialValueResolvedType -> { return none }

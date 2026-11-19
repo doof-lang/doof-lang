@@ -84,7 +84,7 @@ export function emitStatement(statement: Statement, level: int = 1, context: Emi
       return sourceMark + coverageMark + ind + target + " = " + emitExpression(assignment.value, context, assignment.resolvedType) + ";\n"
     }
     break_: BreakStatement -> {
-      if break_.label != none { return sourceMark + coverageMark + ind + "goto " + loopTarget(context, break_.label!, true) + ";\n" }
+      if label := break_.label { return sourceMark + coverageMark + ind + "goto " + loopTarget(context, label, true) + ";\n" }
       innermost := context.loopUnlabeledBreakTargets.length - 1
       if innermost >= 0 && context.loopUnlabeledBreakTargets[innermost] != "" {
         return sourceMark + coverageMark + ind + "goto " + context.loopUnlabeledBreakTargets[innermost] + ";\n"
@@ -92,7 +92,7 @@ export function emitStatement(statement: Statement, level: int = 1, context: Emi
       return sourceMark + coverageMark + ind + "break;\n"
     }
     continue_: ContinueStatement -> {
-      if continue_.label != none { return sourceMark + coverageMark + ind + "goto " + loopTarget(context, continue_.label!, false) + ";\n" }
+      if label := continue_.label { return sourceMark + coverageMark + ind + "goto " + loopTarget(context, label, false) + ";\n" }
       return sourceMark + coverageMark + ind + "continue;\n"
     }
     block: Block -> { return emitBlock(block, level, context) }
@@ -232,8 +232,8 @@ function emitBindingElse(binding: ImmutableBinding, level: int, context: EmitCon
     // made the value absent.
     let output = ind + "auto " + temporaryName + " = " + emitExpression(binding.value, context) + ";\n"
     output = output + ind + "if (" + emitAbsentTest(temporaryName, layers, context) + ") {\n"
-    if binding.failureName != none && binding.failureName! != "_" {
-      output = output + indent(level + 1) + "const auto " + cppIdentifier(binding.failureName!) + " = " + emitAbsentError(temporaryName, layers, absenceErrorType(specializeEmitType(binding.value.resolvedType!, context))!, context) + ";\n"
+    if failureName := binding.failureName && failureName != "_" {
+      output = output + indent(level + 1) + "const auto " + cppIdentifier(failureName) + " = " + emitAbsentError(temporaryName, layers, absenceErrorType(specializeEmitType(binding.value.resolvedType!, context))!, context) + ";\n"
     } else if binding.failureName == none && binding.name != "_" {
       output = output + indent(level + 1) + "const auto& " + cppIdentifier(binding.name) + " = " + temporaryName + ";\n"
     }
@@ -242,14 +242,14 @@ function emitBindingElse(binding: ImmutableBinding, level: int, context: EmitCon
     if binding.name == "_" { return output }
     return output + emitExtractedLocal(ind, binding.name, binding.resolvedType!, emitPresentValue(temporaryName, layers, context), true, true)
   }
-  if binding.value.resolvedType != none && isSingleOptional(binding.value.resolvedType!) {
+  if resolvedType := binding.value.resolvedType && isSingleOptional(resolvedType) {
     let output = ind + "auto " + temporaryName + " = " + emitExpression(binding.value, context) + ";\n"
     output = output + ind + "if (doof::is_null(" + temporaryName + ")) {\n"
     if binding.failureName == none && binding.name != "_" { output = output + indent(level + 1) + "const auto& " + cppIdentifier(binding.name) + " = " + temporaryName + ";\n" }
     output = output + emitBlock(binding.else_!, level + 1, context)
     output = output + ind + "}\n"
     if binding.name == "_" { return output }
-    sourceType := specializeEmitType(binding.value.resolvedType!, context)
+    sourceType := specializeEmitType(resolvedType, context)
     narrowedType := specializeEmitType(binding.resolvedType!, context)
     // Removing none from a variant with one remaining arm yields that arm,
     // not the one-arm variant returned by the general runtime helper.
@@ -260,8 +260,8 @@ function emitBindingElse(binding: ImmutableBinding, level: int, context: EmitCon
   }
   let output = ind + "auto " + temporaryName + " = " + emitExpression(binding.value, context) + ";\n"
   output = output + ind + "if (doof::is_failure(" + temporaryName + ")) {\n"
-  if binding.failureName != none && binding.failureName! != "_" {
-    output = output + indent(level + 1) + "const auto " + cppIdentifier(binding.failureName!) + " = doof::failure_error(" + temporaryName + ");\n"
+  if failureName := binding.failureName && failureName != "_" {
+    output = output + indent(level + 1) + "const auto " + cppIdentifier(failureName) + " = doof::failure_error(" + temporaryName + ");\n"
   } else if binding.name != "_" {
     output = output + indent(level + 1) + "const auto& " + cppIdentifier(binding.name) + " = " + temporaryName + ";\n"
   }
@@ -393,7 +393,7 @@ function resultValueType(expression: Expression): ResolvedType | none => express
 
 function emitTryDestructuring(statement: DestructuringStatement, temporaryName: string, level: int, context: EmitContext): string {
   let successType: ResolvedType | none = none
-  if statement.value.resolvedType != none { case statement.value.resolvedType! {
+  if resolvedType := statement.value.resolvedType { case resolvedType {
     result: ResultResolvedType -> { successType = result.valueType }
     _ -> { }
   } }
@@ -485,8 +485,8 @@ function emitIf(statement: IfStatement, level: int, context: EmitContext): strin
     result = result + " else if (" + emitCondition(branch.condition, context) + ") {\n"
     result = result + emitBlock(branch.body, level + 1, context) + ind + "}"
   }
-  if statement.else_ != none {
-    result = result + " else {\n" + emitBlock(statement.else_!, level + 1, context) + ind + "}"
+  if else_ := statement.else_ {
+    result = result + " else {\n" + emitBlock(else_, level + 1, context) + ind + "}"
   }
   return result + "\n"
 }
@@ -541,8 +541,8 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
   // Own the iterable by value: a reference would dangle for members reached
   // through a temporary (`make()->items`) or a variable the body reassigns.
   iterableBinding := ind + "const auto " + iterableName + " = " + iterable + ";\n"
-  if statement.iterable.resolvedType != none {
-    case statement.iterable.resolvedType! {
+  if resolvedType := statement.iterable.resolvedType {
+    case resolvedType {
       _: RangeResolvedType -> {
         return iterableBinding + ind + "for (const auto& " + name + " : " + iterableName + ") {\n" +
           body + ind + "}\n" + breakTarget

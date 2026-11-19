@@ -19,8 +19,8 @@ export function hasNamedArguments(args: CallArgument[]): bool {
 
 export function emitDispatchCallArguments(expression: CallExpression, context: EmitContext): string {
   let signature: FunctionType | none = none
-  if expression.callee.resolvedType != none {
-    case specializeEmitType(expression.callee.resolvedType!, context) {
+  if resolvedType := expression.callee.resolvedType {
+    case specializeEmitType(resolvedType, context) {
       fn: FunctionType -> { signature = fn }
       _ -> { }
     }
@@ -77,8 +77,8 @@ function emitCallDefault(call: CallExpression, value: Expression, expected: Reso
   // interface contracts. Defaults belong to that owner's declaration scope.
   case call.callee {
     member: MemberExpression -> {
-      if member.resolvedMember != none && member.resolvedMember!.owner != none {
-        owner := specializeEmitType(member.resolvedMember!.owner!, context)
+      if resolvedMember := member.resolvedMember && resolvedMember.owner != none {
+        owner := specializeEmitType(resolvedMember.owner!, context)
         let ownerNames: string[] = []
         let ownerArguments: ResolvedType[] = []
         case owner {

@@ -151,14 +151,14 @@ function integerPatternsExhaustive(arms: CasePattern[][], minimum: long, maximum
       case pattern {
         range: RangePattern -> {
           let lower = minimum
-          if range.start != none {
-            resolvedLower := integerPatternValue(range.start!)
+          if start := range.start {
+            resolvedLower := integerPatternValue(start)
             if resolvedLower == none { continue }
             lower = resolvedLower!
           }
           let upper = maximum
-          if range.end != none {
-            resolvedUpper := integerPatternValue(range.end!)
+          if end := range.end {
+            resolvedUpper := integerPatternValue(end)
             if resolvedUpper == none { continue }
             upper = resolvedUpper!
             if !range.inclusive {
@@ -355,8 +355,8 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
         // reported once per pattern rather than once per bound.
         if subjectType.kind != "unknown" && !isIntegerOperand(subjectType) {
           typeError(state, "Range patterns require an integer subject (byte, int, or long); got \"" + typeName(subjectType) + "\"", range.span)
-          if range.start != none { checkExpression(state, range.start!, scope, none) }
-          if range.end != none { checkExpression(state, range.end!, scope, none) }
+          if start := range.start { checkExpression(state, start, scope, none) }
+          if end := range.end { checkExpression(state, end, scope, none) }
         } else {
           validateCaseRangeBound(state, range.start, subjectType, scope, range.span)
           validateCaseRangeBound(state, range.end, subjectType, scope, range.span)

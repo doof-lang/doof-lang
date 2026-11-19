@@ -110,8 +110,8 @@ export function checkMember(state: CheckerState, member: MemberExpression, scope
     typeError(state, "Type \"" + typeName(objectType) + "\" has no member \"" + member.property + "\"", member.span)
   }
   member.resolvedStaticOwner = selected.staticOwner
-  if member.resolvedStaticOwner != none && !isNamedStaticReceiver(member.object) {
-    typeError(state, "Static member '" + member.property + "' must be accessed through its class: use '" + member.resolvedStaticOwner!.name + "." + member.property + "'", member.span)
+  if resolvedStaticOwner := member.resolvedStaticOwner && !isNamedStaticReceiver(member.object) {
+    typeError(state, "Static member '" + member.property + "' must be accessed through its class: use '" + resolvedStaticOwner.name + "." + member.property + "'", member.span)
   }
   if member.resolvedStaticOwner == none && isNamedStaticReceiver(member.object) && selected.instance {
     typeError(state, "Instance member '" + member.property + "' cannot be accessed through a class", member.span)

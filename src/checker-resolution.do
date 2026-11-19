@@ -30,14 +30,14 @@ export function resolveMember(state: CheckerState, object: ResolvedType, propert
 export function resolveCalleeTarget(state: CheckerState, callee: Expression, calleeType: ResolvedType): CheckedMember {
   case callee {
     member: MemberExpression -> {
-      if member.resolvedMember != none { return member.resolvedMember! }
+      if resolvedMember := member.resolvedMember { return resolvedMember }
     }
     dot: DotShorthand -> {
-      if dot.resolvedMember != none { return dot.resolvedMember! }
+      if resolvedMember := dot.resolvedMember { return resolvedMember }
     }
     identifier: Identifier -> {
-      if identifier.resolvedBinding != none && identifier.resolvedBinding!.symbol != none {
-        symbol := identifier.resolvedBinding!.symbol!
+      if resolvedBinding := identifier.resolvedBinding && resolvedBinding.symbol != none {
+        symbol := resolvedBinding.symbol!
         if target := declarationFor(state.result, symbol) {
           case target {
             fn: FunctionDeclaration -> { return CheckedMember { type_: calleeType, function_: fn, modulePath: symbol.module } }
@@ -450,7 +450,7 @@ function validateClassMetadata(state: CheckerState, declaration: ClassDeclaratio
   for method of declaration.methods {
     if method.private_ || method.static_ { continue }
     for parameter of method.params {
-      if parameter.resolvedType != none && !isGeneratedJsonType(parameter.resolvedType!, programs) {
+      if resolvedType := parameter.resolvedType && !isGeneratedJsonType(resolvedType, programs) {
         typeError(state, "Parameter \"" + parameter.name + "\" of method \"" + method.name + "\" is not JSON-serializable", parameter.span)
         valid = false
       }

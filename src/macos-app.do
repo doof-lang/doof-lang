@@ -68,8 +68,8 @@ export function renderMacOSInfoPlist(config: MacOSAppConfig): string {
   body = body + plistString("LSMinimumSystemVersion", config.minimumSystemVersion)
   body = body + "\t<key>NSHighResolutionCapable</key>\n\t<true/>\n"
   body = body + plistString("NSPrincipalClass", "NSApplication")
-  if config.infoPlist != none {
-    for key, value of config.infoPlist! {
+  if infoPlist := config.infoPlist {
+    for key, value of infoPlist {
       body = body + "\t<key>" + escapePlistText(key) + "</key>\n" + renderPlistValue(value, 1)
     }
   }

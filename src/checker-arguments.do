@@ -95,7 +95,7 @@ export function checkArguments(
 }
 
 function checkArgumentValue(state: CheckerState, argument: SuppliedArgument, scope: Scope, expected: ResolvedType | none): ResolvedType {
-  if argument.property != none { return checkPropertyValue(state, argument.property!, scope, expected) }
+  if property := argument.property { return checkPropertyValue(state, property, scope, expected) }
   return checkExpression(state, argument.value!, scope, expected)
 }
 

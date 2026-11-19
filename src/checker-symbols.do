@@ -95,7 +95,7 @@ export function blockContainsLoopExit(block: Block): bool {
       if_: IfStatement -> {
         if blockContainsLoopExit(if_.body) { return true }
         for branch of if_.elseIfs { if blockContainsLoopExit(branch.body) { return true } }
-        if if_.else_ != none && blockContainsLoopExit(if_.else_!) { return true }
+        if else_ := if_.else_ && blockContainsLoopExit(else_) { return true }
       }
       case_: CaseStatement -> {
         for arm of case_.arms {
@@ -163,8 +163,8 @@ export function symbolType(symbol: Symbol, info: ModuleInfo, result: AnalysisRes
   if declaration == none { return unknownType() }
   case declaration! {
     fn: FunctionDeclaration -> {
-      if fn.resolvedType != none {
-        case fn.resolvedType! {
+      if resolvedType := fn.resolvedType {
+        case resolvedType {
           resolved: FunctionType -> { return resolved }
           _ -> { }
         }
@@ -367,7 +367,7 @@ export function valueUseDiagnostic(info: ModuleInfo, name: string): string {
   for imported of info.imports {
     if imported.localName != name { continue }
     if imported.typeOnly { return "Type-only import '" + name + "' cannot be used as a value" }
-    if imported.symbol != none && !isValueSymbol(imported.symbol!) { return "Type '" + name + "' cannot be used as a value" }
+    if symbol := imported.symbol && !isValueSymbol(symbol) { return "Type '" + name + "' cannot be used as a value" }
   }
   for symbol of info.symbols { if symbol.name == name && !isValueSymbol(symbol) { return "Type '" + name + "' cannot be used as a value" } }
   return ""

@@ -14,7 +14,7 @@ import { emitContextReturnType, specializeEmitType } from "./emitter-types"
 
 /** Shorthand and expanded fields share binding-aware contextual emission. */
 export function emitPropertyValue(property: ObjectProperty, context: EmitContext, expected: ResolvedType | none = none): string {
-  if property.value != none { return emitExpression(property.value!, context, expected) }
+  if value := property.value { return emitExpression(value, context, expected) }
   return emitExpression(Identifier {
     kind: "identifier", name: property.name, span: property.span,
     resolvedType: property.resolvedType, resolvedBinding: property.resolvedBinding,
@@ -41,7 +41,7 @@ export function emitExpressionReturn(expression: Expression, context: EmitContex
 export function decoratedExpressionType(expression: Expression): ResolvedType | none {
   case expression {
     identifier: Identifier -> {
-      if identifier.resolvedBinding != none { return identifier.resolvedBinding!.type_ }
+      if resolvedBinding := identifier.resolvedBinding { return resolvedBinding.type_ }
     }
     _ -> { }
   }

@@ -53,8 +53,8 @@ function emitConstructionValue(inputs: ConstructionInputs, name: string, index: 
     return emitPropertyValue(property, context, expected)
   }
   if argument := (if inputs.named then callArgumentNamed(inputs.args, name) else if index < inputs.args.length then inputs.args[index] else none) { return emitExpression(argument.value, context, expected) }
-  if inputs.construct != none && hasSpreadField(inputs.construct!, name) {
-    return emitConstructionSpreadField(inputs.construct!, inputs.spreadName, name, context)
+  if construct := inputs.construct && hasSpreadField(construct, name) {
+    return emitConstructionSpreadField(construct, inputs.spreadName, name, context)
   }
   if defaultValue != none { return emitOwnerDefaultExpression(defaultValue!, context, expected, inputs.span, owner, ownerTypeParams) }
   panic(missingMessage)

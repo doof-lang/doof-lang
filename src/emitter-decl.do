@@ -221,8 +221,8 @@ export function planClassDeclaration(decl: ClassDeclaration, context: EmitContex
       result.text("    " + (if field.static_ then "static " else if field.const_ && !decl.struct_ then "const " else ""))
       result.type_(fieldType)
       result.text(" " + cppIdentifier(name))
-      if field.defaultValue != none && !field.static_ && field.const_ {
-        defaultText := emitExpression(field.defaultValue!, context, effectiveType)
+      if defaultValue := field.defaultValue && !field.static_ && field.const_ {
+        defaultText := emitExpression(defaultValue, context, effectiveType)
         result.text(" = " + defaultText)
       }
       result.text(";\n")

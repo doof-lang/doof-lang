@@ -68,12 +68,12 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         let valueType: ResolvedType = expectation.payload ?? noneType()
         if expression.args.length > 0 {
           valueType = checkExpression(state, expression.args[0].value, scope, expectation.payload)
-          if expectation.payload != none && !isAssignableWithInterfaces(state.result, valueType, expectation.payload!) {
+          if payload := expectation.payload && !isAssignableWithInterfaces(state.result, valueType, payload) {
             channel := if identifier.name == "Success" then "success" else "failure"
-            owner := expectation.result ?? resultArmType(identifier.name, expectation.payload!)
+            owner := expectation.result ?? resultArmType(identifier.name, payload)
             typeError(state, "Cannot use " + typeName(valueType) + " as the " + channel + " value of " + typeName(owner), expression.args[0].span)
           }
-          if expectation.payload != none { valueType = expectation.payload! }
+          if payload := expectation.payload { valueType = payload }
         } else if valueType.kind != "none" && valueType.kind != "unknown" {
           typeError(state, identifier.name + "() needs a value for " + typeName(expectation.result ?? resultArmType(identifier.name, valueType)), expression.span)
         }
@@ -185,7 +185,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
       expression.resolvedConstruction = construction
       expression.resolvedClass = construction.declaration
       expression.resolvedConstructor = construction.factory
-      if construction.factory != none { validateConstructorVisibility(state, effectiveClass, construction.factory!, expression.span) }
+      if factory := construction.factory { validateConstructorVisibility(state, effectiveClass, factory, expression.span) }
       constructorParams := construction.signature.params
       validateFieldArguments(state, construction, effectiveClass, callArguments(expression.args))
       kind := if effectiveClass.symbol.kind == "struct" then "Struct" else "Class"
@@ -278,11 +278,11 @@ function adaptArrayCallbackArity(state: CheckerState, expression: CallExpression
 function checkedMemberCallReturnType(expression: CallExpression, returnType: ResolvedType): ResolvedType {
   case expression.callee {
     member: MemberExpression -> {
-      if member.object.resolvedType != none && member.optional {
+      if resolvedType := member.object.resolvedType && member.optional {
         // A Result receiver was already lowered to '(r?)', so every '?.' call
         // short-circuits to none; a Result-returning method keeps its Failure.
         let absentReceiver = false
-        case member.object.resolvedType! {
+        case resolvedType {
           _: WeakResolvedType -> { absentReceiver = true }
           union_: UnionResolvedType -> { for arm of union_.types { if arm.kind == "none" { absentReceiver = true } } }
           _ -> { }
@@ -376,7 +376,7 @@ function genericStaticOwner(callee: Expression): ClassDeclaration | none {
 
 function callArgumentsDiverge(expression: CallExpression): bool {
   for argument of expression.args {
-    if argument.value.resolvedType != none && argument.value.resolvedType!.kind == "never" { return true }
+    if resolvedType := argument.value.resolvedType && resolvedType.kind == "never" { return true }
   }
   return false
 }
@@ -390,7 +390,7 @@ export function applyTypeArgumentConstraints(state: CheckerState, declaration: F
   case callee {
     member: MemberExpression -> { receiver = memberReceiverType(member) }
     identifier: Identifier -> {
-      if identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "method" {
+      if resolvedBinding := identifier.resolvedBinding && resolvedBinding.kind == "method" {
         let current: Scope | none = scope
         while current != none {
           if current!.thisType != none && current!.thisType!.kind == "class" { receiver = current!.thisType; break }
@@ -424,8 +424,8 @@ export function validateActorMethodBoundary(state: CheckerState, expression: Cal
   let actor: ActorType | none = none
   case expression.callee {
     member: MemberExpression -> {
-      if member.object.resolvedType != none {
-        case member.object.resolvedType! {
+      if resolvedType := member.object.resolvedType {
+        case resolvedType {
           actorType_: ActorType -> { actor = actorType_ }
           _ -> { }
         }

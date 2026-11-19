@@ -106,8 +106,8 @@ export function renderIOSInfoPlist(config: IOSAppConfig): string {
   body += "\t<key>UIDeviceFamily</key>\n\t<array>\n\t\t<integer>1</integer>\n\t\t<integer>2</integer>\n\t</array>\n"
   body += plistString("UILaunchStoryboardName", "")
   body += "\t<key>UIApplicationSceneManifest</key>\n\t<dict>\n\t\t<key>UIApplicationSupportsMultipleScenes</key>\n\t\t<false/>\n\t</dict>\n"
-  if config.infoPlist != none {
-    for key, value of config.infoPlist! {
+  if infoPlist := config.infoPlist {
+    for key, value of infoPlist {
       body += "\t<key>" + escapePlistText(key) + "</key>\n" + renderPlistValue(value, 1)
     }
   }

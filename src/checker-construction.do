@@ -108,9 +108,9 @@ export function insideConstructorFactory(scope: Scope, class_: ClassType): bool 
 
 export function checkConstruct(state: CheckerState, expression: ConstructExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   if expression.type_ == "Success" || expression.type_ == "Failure" {
-    if expression.spread != none {
-      expression.resolvedSpreadType = checkExpression(state, expression.spread!, scope, none)
-      typeError(state, expression.type_ + " construction does not support field spread", expression.spread!.span)
+    if spread := expression.spread {
+      expression.resolvedSpreadType = checkExpression(state, spread, scope, none)
+      typeError(state, expression.type_ + " construction does not support field spread", spread.span)
     }
     // A surrounding Result or matching arm types the payload; otherwise the
     // payload determines a standalone arm type.
@@ -118,7 +118,7 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
     let valueType: ResolvedType = expectation.payload ?? noneType()
     for property of expression.args {
       valueType = checkAssignableProperty(state, property, scope, expectation.payload)
-      if expectation.payload != none { valueType = expectation.payload! }
+      if payload := expectation.payload { valueType = payload }
     }
     if expression.args.length == 0 && valueType.kind != "none" && valueType.kind != "unknown" {
       typeError(state, expression.type_ + " {} needs a value for " + typeName(expectation.result ?? resultArmType(expression.type_, valueType)), expression.span)
@@ -158,8 +158,8 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
     }
     for argument of inferred! { resolvedTypeArgs.push(argument) }
   }
-  if expression.resolvedClass != none {
-    validateTypeArgumentConstraints(state, expression.resolvedClass!.typeParams, expression.resolvedClass!.typeParamConstraints, resolvedTypeArgs, expression.span, classModuleFor(state.result, symbol!), scope)
+  if resolvedClass := expression.resolvedClass {
+    validateTypeArgumentConstraints(state, resolvedClass.typeParams, resolvedClass.typeParamConstraints, resolvedTypeArgs, expression.span, classModuleFor(state.result, symbol!), scope)
   }
   constructed := classType(expression.type_, symbol!, resolvedTypeArgs)
   expression.resolvedConstructedType = constructed
@@ -300,7 +300,7 @@ export function checkPositionalLiteralConstruction(state: CheckerState, expressi
   construction := resolveConstructor(state, class_, !insideConstructorFactory(scope, class_))
   expression.resolvedConstruction = construction
   expression.resolvedClass = construction.declaration
-  if construction.factory != none { validateConstructorVisibility(state, class_, construction.factory!, expression.span) }
+  if factory := construction.factory { validateConstructorVisibility(state, class_, factory, expression.span) }
   let args: SuppliedArgument[] = []
   for element of expression.elements { args.push(SuppliedArgument { name: none, value: element, span: element.span }) }
   validateFieldArguments(state, construction, class_, args)
@@ -321,8 +321,8 @@ export function checkActorCreation(state: CheckerState, actorCreation: ActorCrea
   construction := resolveConstructor(state, inner)
   actorCreation.resolvedConstruction = construction
   actorCreation.resolvedConstructor = construction.factory
-  if construction.factory != none {
-    validateConstructorVisibility(state, inner, construction.factory!, actorCreation.span)
+  if factory := construction.factory {
+    validateConstructorVisibility(state, inner, factory, actorCreation.span)
     if !sameType(construction.signature.returnType, inner) {
       typeError(state, "Actor constructor factory for \"" + inner.name + "\" must return " + inner.name + " directly", actorCreation.span)
     }

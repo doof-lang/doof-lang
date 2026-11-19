@@ -35,7 +35,7 @@ export function editorSignature(index: EditorIndex, module: string, offset: int,
             location := AstLocation { line: 1, column: 1, offset }
             state := CheckerState { result: index.frontend.analysis, info, moduleScope: scope }
             member := resolveMember(state, receiver.type_, name, SourceSpan { start: location, end: location })
-            if member.type_ != none { return signatureResponse(member.type_!, module, offset, active) }
+            if type_ := member.type_ { return signatureResponse(type_, module, offset, active) }
           }
           binding := lookup(scope, name) else { break }
           return signatureResponse(binding.type_, module, offset, active)

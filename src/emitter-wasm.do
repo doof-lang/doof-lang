@@ -66,7 +66,7 @@ export function emitWasmSupport(result: AnalysisResult, entry: string, instantia
 
 function addWasmJsonDemands(fn: FunctionDeclaration, analysis: AnalysisResult, plan: InstantiationPlan): none {
   for parameter of fn.params {
-    if parameter.resolvedType != none { addJsonDeserializationDemand(plan, parameter.resolvedType!, analysis) }
+    if resolvedType := parameter.resolvedType { addJsonDeserializationDemand(plan, resolvedType, analysis) }
   }
   if fn.resolvedType == none { return }
   case fn.resolvedType! {
@@ -225,8 +225,8 @@ function emitParameter(parameter: Parameter, context: EmitContext): string {
   name := cppIdentifier(parameter.name)
   iterator := "__it_" + name
   let source = "        auto " + iterator + " = __params->find(\"" + parameter.name + "\");\n"
-  if parameter.defaultValue != none {
-    source = source + "        " + emitContextType(type_, context) + " " + name + ";\n        if (" + iterator + " == __params->end()) { " + name + " = " + emitExpression(parameter.defaultValue!, context, type_) + "; } else {\n"
+  if defaultValue := parameter.defaultValue {
+    source = source + "        " + emitContextType(type_, context) + " " + name + ";\n        if (" + iterator + " == __params->end()) { " + name + " = " + emitExpression(defaultValue, context, type_) + "; } else {\n"
     source = source + "            if (!(" + emitJsonTypeCheck(iterator + "->second", type_, context) + ")) return __doof_wasm_failure_message(400, \"Parameter " + parameter.name + " expected " + jsonTypeName(type_, context) + "\");\n"
     return source + "            " + name + " = " + emitJsonRead(iterator + "->second", type_, context) + ";\n        }\n"
   }

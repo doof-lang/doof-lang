@@ -43,22 +43,22 @@ export function collectStatementExpressions(statement: Statement, result: Expres
       result.push(if_.condition)
       collectBlockExpressions(if_.body, result, statements)
       for branch of if_.elseIfs { result.push(branch.condition); collectBlockExpressions(branch.body, result, statements) }
-      if if_.else_ != none { collectBlockExpressions(if_.else_!, result, statements) }
+      if else_ := if_.else_ { collectBlockExpressions(else_, result, statements) }
     }
     while_: WhileStatement -> {
       result.push(while_.condition); collectBlockExpressions(while_.body, result, statements)
-      if while_.then_ != none { collectBlockExpressions(while_.then_!, result, statements) }
+      if then_ := while_.then_ { collectBlockExpressions(then_, result, statements) }
     }
     for_: ForStatement -> {
       for init of for_.init { collectStatementExpressions(init, result, statements) }
-      if for_.condition != none { result.push(for_.condition!) }
+      if condition := for_.condition { result.push(condition) }
       for update of for_.update { result.push(update) }
       collectBlockExpressions(for_.body, result, statements)
-      if for_.then_ != none { collectBlockExpressions(for_.then_!, result, statements) }
+      if then_ := for_.then_ { collectBlockExpressions(then_, result, statements) }
     }
     forOf: ForOfStatement -> {
       result.push(forOf.iterable); collectBlockExpressions(forOf.body, result, statements)
-      if forOf.then_ != none { collectBlockExpressions(forOf.then_!, result, statements) }
+      if then_ := forOf.then_ { collectBlockExpressions(then_, result, statements) }
     }
     with_: WithStatement -> {
       for binding of with_.bindings { result.push(binding.value) }
@@ -71,8 +71,8 @@ export function collectStatementExpressions(statement: Statement, result: Expres
           case pattern {
             value: ValuePattern -> { result.push(value.value) }
             range: RangePattern -> {
-              if range.start != none { result.push(range.start!) }
-              if range.end != none { result.push(range.end!) }
+              if start := range.start { result.push(start) }
+              if end := range.end { result.push(end) }
             }
             _ -> { }
           }
@@ -115,10 +115,10 @@ export function collectNestedExpressions(expression: Expression, result: Express
     call: CallExpression -> { result.push(call.callee); for argument of call.args { result.push(argument.value) } }
     array: ArrayLiteral -> { for element of array.elements { result.push(element) } }
     object: ObjectLiteral -> {
-      if object.spread != none { result.push(object.spread!) }
+      if spread := object.spread { result.push(spread) }
       for property of object.properties {
-        if property.key != none { result.push(property.key!) }
-        if property.value != none { result.push(property.value!) }
+        if key := property.key { result.push(key) }
+        if value := property.value { result.push(value) }
       }
     }
     tuple: TupleLiteral -> { for element of tuple.elements { result.push(element) } }
@@ -136,8 +136,8 @@ export function collectNestedExpressions(expression: Expression, result: Express
           case pattern {
             value: ValuePattern -> { result.push(value.value) }
             range: RangePattern -> {
-              if range.start != none { result.push(range.start!) }
-              if range.end != none { result.push(range.end!) }
+              if start := range.start { result.push(start) }
+              if end := range.end { result.push(end) }
             }
             _ -> { }
           }
@@ -160,7 +160,7 @@ export function collectNestedExpressions(expression: Expression, result: Express
     retire_: RetireExpression -> { result.push(retire_.actor) }
     actor: ActorCreationExpression -> { for argument of actor.args { result.push(argument) } }
     construct: ConstructExpression -> {
-      if construct.spread != none { result.push(construct.spread!) }
+      if spread := construct.spread { result.push(spread) }
       for property of construct.args { if property.value != none { result.push(property.value!) } }
     }
     as_: AsExpression -> { result.push(as_.expression) }
@@ -193,7 +193,7 @@ export function releaseCheckedReferences(statements: Statement[]): none {
       class_: ClassDeclaration -> {
         for method of class_.methods { releaseFunctionBody(method, pending, expressions) }
         for field of class_.fields { if field.defaultValue != none { expressions.push(field.defaultValue!) } }
-        if class_.destructor_ != none { for inner of class_.destructor_!.statements { pending.push(inner) } }
+        if destructor_ := class_.destructor_ { for inner of destructor_.statements { pending.push(inner) } }
       }
       interface_: InterfaceDeclaration -> {
         for method of interface_.methods { releaseFunctionBody(method, pending, expressions) }

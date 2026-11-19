@@ -30,8 +30,8 @@ export function textDeclaration(value: string): CppDeclaration {
 export function renderDeclaration(declaration: CppDeclaration, namespace: string = "", aliases: Map<int, string> = {}, registry: CppTypeRegistry | none = none, rendered: Map<int, string> | none = none): string {
   result := StringBuilder()
   for part of declaration.parts {
-    if part.type_ != none {
-      result.append(if registry != none && aliases.size == 0 then registry!.render(part.type_!, namespace) else renderCppType(part.type_!, namespace, aliases, rendered))
+    if type_ := part.type_ {
+      result.append(if registry != none && aliases.size == 0 then registry!.render(type_, namespace) else renderCppType(type_, namespace, aliases, rendered))
     }
     else { result.append(part.text) }
   }

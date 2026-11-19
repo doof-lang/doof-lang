@@ -347,8 +347,8 @@ function nullableJsonMemberUnchecked(union_: UnionResolvedType): ResolvedType | 
 // the field, then defer to the resolved semantic type thereafter.
 function isGeneratedJsonDeserializationField(field: ClassField, programs: Program[], visited: string[]): bool {
   if field.weak_ { return false }
-  if field.resolvedType != none { return isGeneratedJsonType(field.resolvedType!, programs, visited) }
-  if field.type_ != none { return isGeneratedJsonDeserializationAnnotation(field.type_!, programs, visited) }
+  if resolvedType := field.resolvedType { return isGeneratedJsonType(resolvedType, programs, visited) }
+  if type_ := field.type_ { return isGeneratedJsonDeserializationAnnotation(type_, programs, visited) }
   if field.defaultValue == none { return false }
   case field.defaultValue! {
     _: IntLiteral -> { return true }
@@ -365,13 +365,13 @@ function isGeneratedJsonDeserializationField(field: ClassField, programs: Progra
 
 function isGeneratedJsonSerializationField(field: ClassField, programs: Program[], visited: string[]): bool {
   if field.weak_ { return false }
-  if field.resolvedType != none { return isGeneratedJsonSerializationType(field.resolvedType!, programs, visited) }
-  if field.type_ != none { return isGeneratedJsonSerializationAnnotation(field.type_!, programs, visited) }
+  if resolvedType := field.resolvedType { return isGeneratedJsonSerializationType(resolvedType, programs, visited) }
+  if type_ := field.type_ { return isGeneratedJsonSerializationAnnotation(type_, programs, visited) }
   return isGeneratedJsonDeserializationField(field, programs, visited)
 }
 
 function isGeneratedJsonDeserializationAnnotation(annotation: TypeAnnotation, programs: Program[], visited: string[]): bool {
-  if annotation.resolvedType != none { return isGeneratedJsonType(annotation.resolvedType!, programs, visited) }
+  if resolvedType := annotation.resolvedType { return isGeneratedJsonType(resolvedType, programs, visited) }
   case annotation {
     named: NamedType -> {
       if named.name == "byte" || named.name == "int" || named.name == "long" ||
@@ -425,7 +425,7 @@ function isGeneratedJsonDeserializationAnnotation(annotation: TypeAnnotation, pr
 }
 
 function isGeneratedJsonSerializationAnnotation(annotation: TypeAnnotation, programs: Program[], visited: string[]): bool {
-  if annotation.resolvedType != none { return isGeneratedJsonSerializationType(annotation.resolvedType!, programs, visited) }
+  if resolvedType := annotation.resolvedType { return isGeneratedJsonSerializationType(resolvedType, programs, visited) }
   case annotation {
     union_: UnionType -> {
       if jsonUnion := jsonUnionAnnotationType(union_, programs) { return isGeneratedJsonSerializationType(jsonUnion, programs, visited) }
@@ -445,8 +445,8 @@ function isGeneratedJsonSerializationAnnotation(annotation: TypeAnnotation, prog
           _ -> { return false }
         }
       }
-      if named.resolvedSymbol != none && named.resolvedSymbol!.kind == "interface" {
-        return named.typeArgs.length == 0 && interfaceTypeSerializable(named.resolvedSymbol!, 0, programs, visited, true)
+      if resolvedSymbol := named.resolvedSymbol && resolvedSymbol.kind == "interface" {
+        return named.typeArgs.length == 0 && interfaceTypeSerializable(resolvedSymbol, 0, programs, visited, true)
       }
       if named.resolvedSymbol != none && (named.resolvedSymbol!.kind == "class" || named.resolvedSymbol!.kind == "struct") {
         declaration := findJsonClassDeclaration(programs, named.resolvedSymbol!)

@@ -375,8 +375,8 @@ function collectNativeHeaderClosure(
       // surface is the nominal imports/exports of their defining module, so
       // project those declarations completely before including the header.
       for imported of module.imports {
-        if imported.symbol != none && isNominalSurfaceSymbol(imported.symbol!) {
-          collectSymbol(imported.symbol!, rootPath, index, true)
+        if symbol := imported.symbol && isNominalSurfaceSymbol(symbol) {
+          collectSymbol(symbol, rootPath, index, true)
         }
       }
       for exported of module.exports {

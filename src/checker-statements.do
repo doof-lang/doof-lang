@@ -104,7 +104,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
       conditionType := condition.type_
       loopScope := createLoopScope(state, condition.scope, while_.label, while_.span)
       checkBlock(state, while_.body, loopScope, true)
-      if while_.then_ != none { checkBlock(state, while_.then_!, scope) }
+      if then_ := while_.then_ { checkBlock(state, then_, scope) }
       if conditionType.kind == "never" { return false }
       case while_.condition {
         literal: BoolLiteral -> {
@@ -125,7 +125,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
       for update of for_.update { checkExpression(state, update, headerScope, none) }
       loopScope := createLoopScope(state, headerScope, for_.label, for_.span)
       checkBlock(state, for_.body, loopScope, true)
-      if for_.then_ != none { checkBlock(state, for_.then_!, scope) }
+      if then_ := for_.then_ { checkBlock(state, then_, scope) }
       return true
     }
     forOf: ForOfStatement -> {
@@ -162,7 +162,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
       }
       loopScope := createLoopScope(state, bodyScope, forOf.label, forOf.span)
       checkBlock(state, forOf.body, loopScope, true)
-      if forOf.then_ != none { checkBlock(state, forOf.then_!, scope) }
+      if then_ := forOf.then_ { checkBlock(state, then_, scope) }
       return true
     }
     with_: WithStatement -> {
@@ -234,14 +234,14 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
     }
     try_: TryStatement -> { return checkTry(state, try_, scope) }
     continue_: ContinueStatement -> {
-      if continue_.label != none {
-        if !hasActiveLoopLabel(scope, continue_.label!) { typeError(state, "Unknown loop label '" + continue_.label! + "'", continue_.span) }
+      if label := continue_.label {
+        if !hasActiveLoopLabel(scope, label) { typeError(state, "Unknown loop label '" + label + "'", continue_.span) }
       } else if !inLoop { typeError(state, "Continue is only valid inside a loop", continue_.span) }
       return false
     }
     break_: BreakStatement -> {
-      if break_.label != none {
-        if !hasActiveLoopLabel(scope, break_.label!) { typeError(state, "Unknown loop label '" + break_.label! + "'", break_.span) }
+      if label := break_.label {
+        if !hasActiveLoopLabel(scope, label) { typeError(state, "Unknown loop label '" + label + "'", break_.span) }
       } else if !inLoop { typeError(state, "Break is only valid inside a loop", break_.span) }
       return false
     }
@@ -396,10 +396,10 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
     parameter := fn.params[index]
     parameterType := parameterTypes[index].type_
     parameter.resolvedType = parameterType
-    if parameter.defaultValue != none {
-      defaultType := checkCallerDefault(state, parameter.defaultValue!, scope, parameterType)
+    if defaultValue := parameter.defaultValue {
+      defaultType := checkCallerDefault(state, defaultValue, scope, parameterType)
       if !isAssignableWithInterfaces(state.result, defaultType, parameterType) {
-        typeError(state, "Cannot use default value of type " + typeName(defaultType) + " for parameter '" + parameter.name + "' of type " + typeName(parameterType), parameter.defaultValue!.span)
+        typeError(state, "Cannot use default value of type " + typeName(defaultType) + " for parameter '" + parameter.name + "' of type " + typeName(parameterType), defaultValue.span)
       }
     }
     if !declareShadowing(scope, Binding { name: parameter.name, kind: "parameter", type_: parameterType, mutable: false, span: checkerSemanticSpan(parameter.span), module: state.info!.path }) {
@@ -427,7 +427,7 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
   }
   if fn.returnType != none { decorateAnnotationWithResolved(fn.returnType!, returnType) }
   for parameter of fn.params {
-    if parameter.type_ != none && parameter.resolvedType != none { decorateAnnotationWithResolved(parameter.type_!, parameter.resolvedType!) }
+    if type_ := parameter.type_ && parameter.resolvedType != none { decorateAnnotationWithResolved(type_, parameter.resolvedType!) }
   }
   return functionValue
 }
@@ -448,10 +448,10 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
       if generatedMemberName(fieldName) { typeError(state, "Member name \"" + fieldName + "\" is reserved for compiler-generated reflection and JSON support", field.span) }
     }
     let fieldType = unknownType()
-    if field.type_ != none {
-      fieldType = resolveType(state, field.type_!, state.info!, classScope)
-    } else if field.defaultValue != none {
-      fieldType = checkCallerDefault(state, field.defaultValue!, classScope, none)
+    if type_ := field.type_ {
+      fieldType = resolveType(state, type_, state.info!, classScope)
+    } else if defaultValue := field.defaultValue {
+      fieldType = checkCallerDefault(state, defaultValue, classScope, none)
     }
     validateEnumLiteralField(state, field, fieldType)
     if field.readonly_ || field.const_ { fieldType = applyDeepReadonly(fieldType) }
@@ -464,10 +464,10 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
       name := fieldDisplayName(field)
       typeError(state, "Struct field \"" + name + "\" cannot be weak", field.span)
     }
-    if field.defaultValue != none && field.type_ != none {
-      defaultType := checkCallerDefault(state, field.defaultValue!, classScope, fieldType)
+    if defaultValue := field.defaultValue && field.type_ != none {
+      defaultType := checkCallerDefault(state, defaultValue, classScope, fieldType)
       if !isAssignableWithInterfaces(state.result, defaultType, fieldType) {
-        typeError(state, "Cannot use default value of type " + typeName(defaultType) + " for field of type " + typeName(fieldType), field.defaultValue!.span)
+        typeError(state, "Cannot use default value of type " + typeName(defaultType) + " for field of type " + typeName(fieldType), defaultValue.span)
       }
     }
   }
@@ -480,9 +480,9 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
   }
   streamElement := classStreamElementType(class_)
   if streamElement != none { symbol!.streamElementTypes.push(streamElement!) }
-  if class_.destructor_ != none {
+  if destructor_ := class_.destructor_ {
     if class_.struct_ {
-      typeError(state, "Struct \"" + class_.name + "\" cannot declare a destructor", class_.destructor_!.span)
+      typeError(state, "Struct \"" + class_.name + "\" cannot declare a destructor", destructor_.span)
     } else {
       destructorScope := Scope {
         parent: classScope,
@@ -492,7 +492,7 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
       }
       addClassFields(state, destructorScope, owner)
       addClassMethods(state, destructorScope, owner)
-      checkBlock(state, class_.destructor_!, destructorScope)
+      checkBlock(state, destructor_, destructorScope)
     }
   }
   for interfaceRef of class_.implements_ {
@@ -706,7 +706,7 @@ function validateTypeParameterShadowing(state: CheckerState, names: string[], ou
 export function checkEnum(state: CheckerState, enum_: EnumDeclaration, scope: Scope): none {
   let stringBacked = false
   for variant of enum_.variants {
-    if variant.value != none && literalStringValue(variant.value!) != none { stringBacked = true }
+    if value := variant.value && literalStringValue(value) != none { stringBacked = true }
   }
   enum_.backingKind = if stringBacked then "string" else "int"
   owner := "enum \"" + enum_.name + "\""
@@ -795,14 +795,14 @@ function validateEnumLiteralField(state: CheckerState, field: ClassField, fieldT
 export function checkReturn(state: CheckerState, statement: ReturnStatement, scope: Scope): bool {
   if valueYieldScope(scope) != none {
     typeError(state, "'return' cannot be used inside a value-producing block; use 'yield' to produce the block value", statement.span)
-    if statement.value != none { checkExpression(state, statement.value!, scope, none) }
+    if value := statement.value { checkExpression(state, value, scope, none) }
     return false
   }
   target := returnScope(scope)
   if target == none { typeError(state, "Return is only valid inside a function", statement.span); return false }
   if target!.trailingLambda {
     typeError(state, "'return' cannot be used inside a trailing lambda; use an explicit lambda instead", statement.span)
-    if statement.value != none { checkExpression(state, statement.value!, scope, none) }
+    if value := statement.value { checkExpression(state, value, scope, none) }
     return false
   }
   returnType := target!.returnType!

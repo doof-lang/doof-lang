@@ -296,7 +296,7 @@ function receiverMethods(index: IsolationIndex, receiver: ResolvedType, property
     }
     union_: UnionResolvedType -> { for member of union_.types { receiverMethods(index, member, property, targets) } }
     parameter: TypeParameterType -> {
-      if parameter.constraint != none { receiverMethods(index, parameter.constraint!, property, targets) }
+      if constraint := parameter.constraint { receiverMethods(index, constraint, property, targets) }
     }
     stream: StreamResolvedType -> {
       for class_ of streamClasses(index, stream) {
@@ -334,16 +334,16 @@ function iterationMethods(index: IsolationIndex, iterable: ResolvedType): Functi
 }
 
 function callDeclarations(index: IsolationIndex, call: CallExpression): FunctionDeclaration[] {
-  if call.resolvedFunction != none { return [call.resolvedFunction!] }
+  if resolvedFunction := call.resolvedFunction { return [resolvedFunction] }
   let targets: FunctionDeclaration[] = []
-  if call.resolvedConstructor != none { targets.push(call.resolvedConstructor!) }
+  if resolvedConstructor := call.resolvedConstructor { targets.push(resolvedConstructor) }
   case call.callee {
     member: MemberExpression -> {
-      if member.object.resolvedType != none && member.resolvedStaticOwner == none {
-        case member.object.resolvedType! {
+      if resolvedType := member.object.resolvedType && member.resolvedStaticOwner == none {
+        case resolvedType {
           // Actor calls run in the actor's domain and are validated separately.
           _: ActorType -> { }
-          _ -> { receiverMethods(index, member.object.resolvedType!, member.property, targets) }
+          _ -> { receiverMethods(index, resolvedType, member.property, targets) }
         }
       }
     }
@@ -536,11 +536,11 @@ function collectReachableClasses(index: IsolationIndex, type_: ResolvedType, cla
     failure: FailureResolvedType -> { collectReachableClasses(index, failure.errorType, classes, seen) }
     stream: StreamResolvedType -> {
       for class_ of streamClasses(index, stream) {
-        if class_.resolvedSymbol != none { collectReachableClasses(index, classType(class_.name, class_.resolvedSymbol!), classes, seen) }
+        if resolvedSymbol := class_.resolvedSymbol { collectReachableClasses(index, classType(class_.name, resolvedSymbol), classes, seen) }
       }
     }
     parameter: TypeParameterType -> {
-      if parameter.constraint != none { collectReachableClasses(index, parameter.constraint!, classes, seen) }
+      if constraint := parameter.constraint { collectReachableClasses(index, constraint, classes, seen) }
     }
     // Actor state stays behind messages; weak references never release their
     // target; a promise's value is created in the domain that completes it.
@@ -693,7 +693,7 @@ function moduleExpressions(module: ModuleInfo): Expression[] {
         for method of class_.methods {
           for expression of functionExpressionRoots(method) { roots.push(expression) }
         }
-        if class_.destructor_ != none { collectBlockExpressions(class_.destructor_!, roots) }
+        if destructor_ := class_.destructor_ { collectBlockExpressions(destructor_, roots) }
       }
       _ -> { collectStatementExpressions(statement, roots) }
     }

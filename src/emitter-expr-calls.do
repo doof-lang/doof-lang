@@ -277,14 +277,14 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   if expression.callee.kind == "identifier" {
     case expression.callee {
       identifier: Identifier -> {
-        if identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "builtin" && isBuiltinName(identifier.name) { callee = builtinName(identifier.name) }
+        if resolvedBinding := identifier.resolvedBinding && resolvedBinding.kind == "builtin" && isBuiltinName(identifier.name) { callee = builtinName(identifier.name) }
       }
       _ -> { }
     }
   }
   let functionType: FunctionType | none = none
-  if expression.callee.resolvedType != none {
-    case expression.callee.resolvedType! {
+  if resolvedType := expression.callee.resolvedType {
+    case resolvedType {
       resolved: FunctionType -> { functionType = resolved }
       _ -> { }
     }
@@ -346,8 +346,8 @@ function emitWeakMemberCall(expression: CallExpression, member: MemberExpression
   temporary := names.value
   object := emitExpression(member.object, context)
   let originalReturn: ResolvedType | none = none
-  if member.resolvedType != none {
-    case member.resolvedType! { function_: FunctionType -> { originalReturn = function_.returnType } _ -> { } }
+  if resolvedType := member.resolvedType {
+    case resolvedType { function_: FunctionType -> { originalReturn = function_.returnType } _ -> { } }
   }
   arguments := emitDispatchCallArguments(expression, context)
   let call = temporary + "->" + cppIdentifier(member.property) + "(" + arguments + ")"
@@ -447,9 +447,9 @@ export function concreteGenericTarget(reference: Expression, declaration: Functi
   let concreteMethodName = ""
   case reference {
     identifier: Identifier -> {
-      if identifier.resolvedBinding != none {
-        if identifier.resolvedBinding!.kind == "method" && identifier.resolvedBinding!.symbol != none {
-          symbol := identifier.resolvedBinding!.symbol!
+      if resolvedBinding := identifier.resolvedBinding {
+        if resolvedBinding.kind == "method" && resolvedBinding.symbol != none {
+          symbol := resolvedBinding.symbol!
           let ownerArgs: ResolvedType[] = []
           for typeParam of symbol.typeParams {
             ownerArgs.push(specializeEmitType(TypeParameterType { name: typeParam }, context))
@@ -457,8 +457,8 @@ export function concreteGenericTarget(reference: Expression, declaration: Functi
           ownerKey := classInstantiationKey(symbol.module, symbol.name, ownerArgs)
           methodKey := methodInstantiationKey(ownerKey, declaration.name, concreteArgs)
           concreteMethodName = concreteMethodNameFor(context, methodKey)
-        } else if identifier.resolvedBinding!.symbol != none { targetModule = identifier.resolvedBinding!.symbol!.module }
-        else if identifier.resolvedBinding!.module != "" { targetModule = identifier.resolvedBinding!.module }
+        } else if symbol := resolvedBinding.symbol { targetModule = symbol.module }
+        else if resolvedBinding.module != "" { targetModule = resolvedBinding.module }
       }
     }
     member: MemberExpression -> {

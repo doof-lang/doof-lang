@@ -68,11 +68,11 @@ function validateField(state: CheckerState, owner: ClassDeclaration, field: Clas
     )
     return
   }
-  if field.resolvedType != none && !supportsDirectStorage(field.resolvedType!) {
+  if resolvedType := field.resolvedType && !supportsDirectStorage(resolvedType) {
     typeError(
       state,
       "Static field initializer for '" + owner.name + "." + field.names[0] + "' has type " +
-        typeName(field.resolvedType!) + ", which cannot use direct default-constructed assignable storage",
+        typeName(resolvedType) + ", which cannot use direct default-constructed assignable storage",
       field.defaultValue!.span,
     )
   }
@@ -103,14 +103,14 @@ function literalTree(state: CheckerState, expression: Expression): bool {
       return literalPositionalClassDefaults(state, tuple.resolvedClass!, tuple.elements.length)
     }
     object: ObjectLiteral -> {
-      if object.spread != none && !literalTree(state, object.spread!) { return false }
+      if spread := object.spread && !literalTree(state, spread) { return false }
       for property of object.properties { if !literalProperty(state, property) { return false } }
-      if object.resolvedClass != none && !literalClassDefaults(state, object.resolvedClass!, object.properties) { return false }
+      if resolvedClass := object.resolvedClass && !literalClassDefaults(state, resolvedClass, object.properties) { return false }
       return object.resolvedClass == none || !object.resolvedClass!.native_
     }
     construct: ConstructExpression -> {
       if construct.resolvedClass == none || construct.resolvedClass!.native_ || construct.resolvedConstructor != none { return false }
-      if construct.spread != none && !literalTree(state, construct.spread!) { return false }
+      if spread := construct.spread && !literalTree(state, spread) { return false }
       for argument of construct.args { if !literalProperty(state, argument) { return false } }
       return literalClassDefaults(state, construct.resolvedClass!, construct.args)
     }
@@ -194,7 +194,7 @@ function numericLiteral(expression: Expression): bool {
 }
 
 function literalProperty(state: CheckerState, property: ObjectProperty): bool {
-  if property.key != none && !literalTree(state, property.key!) { return false }
+  if key := property.key && !literalTree(state, key) { return false }
   if property.value == none { return false }
   return literalTree(state, property.value!)
 }
@@ -204,7 +204,7 @@ function literalPositionalClassDefaults(state: CheckerState, class_: ClassDeclar
   for field of class_.fields {
     if field.static_ { continue }
     if field.const_ {
-      if field.defaultValue != none && !literalTree(state, field.defaultValue!) { return false }
+      if defaultValue := field.defaultValue && !literalTree(state, defaultValue) { return false }
       continue
     }
     for name of field.names {
@@ -223,10 +223,10 @@ function literalClassDefaults(state: CheckerState, class_: ClassDeclaration, sup
     for name of field.names {
       if suppliedProperty(supplied, name) { continue }
       if field.const_ {
-        if field.defaultValue != none && !literalTree(state, field.defaultValue!) { return false }
+        if defaultValue := field.defaultValue && !literalTree(state, defaultValue) { return false }
         continue
       }
-      if field.defaultValue != none && !literalTree(state, field.defaultValue!) { return false }
+      if defaultValue := field.defaultValue && !literalTree(state, defaultValue) { return false }
     }
   }
   return true

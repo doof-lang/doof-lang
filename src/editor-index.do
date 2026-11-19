@@ -62,7 +62,7 @@ export function bindingItem(index: EditorIndex, binding: Binding): EditorItem {
   if index.bindingItems.has(key) { return index.bindingItems.get(key)! }
   local := nameItem(index, binding.module, binding.name, binding.span.start.offset, binding.span.end.offset, binding.kind)
   let target = local
-  if binding.symbol != none { target = symbolItem(index, binding.symbol!) }
+  if symbol := binding.symbol { target = symbolItem(index, symbol) }
   let renameIdentity = itemIdentity(target)
   if binding.kind == "import" {
     if info := editorModule(index, binding.module) {
@@ -75,7 +75,7 @@ export function bindingItem(index: EditorIndex, binding: Binding): EditorItem {
         import_ := statement as ImportDeclaration else { continue }
         for specifier of import_.specifiers {
           named := specifier as NamedImport else { continue }
-          if named.alias != none && named.alias! == binding.name { renameIdentity = itemIdentity(local) }
+          if alias := named.alias && alias == binding.name { renameIdentity = itemIdentity(local) }
         }
       }
     }
@@ -178,15 +178,15 @@ export function createEditorIndex(frontend: FrontendResult, modules: string[] = 
     for expression of module.editorExpressions {
       case expression {
         identifier: Identifier -> {
-          if identifier.resolvedBinding != none {
-            index.occurrences.push(occurrence(index, identifier.resolvedBinding!, module.path, identifier.span.start.offset, identifier.span.end.offset))
+          if resolvedBinding := identifier.resolvedBinding {
+            index.occurrences.push(occurrence(index, resolvedBinding, module.path, identifier.span.start.offset, identifier.span.end.offset))
           }
         }
         member: MemberExpression -> {
           let target: EditorItem | none = none
-          if member.resolvedMember != none && member.resolvedMember!.function_ != none {
-            fn := member.resolvedMember!.function_!
-            target = nameItem(index, member.resolvedMember!.modulePath, fn.name, fn.span.start.offset, fn.span.end.offset, "method")
+          if resolvedMember := member.resolvedMember && resolvedMember.function_ != none {
+            fn := resolvedMember.function_!
+            target = nameItem(index, resolvedMember.modulePath, fn.name, fn.span.start.offset, fn.span.end.offset, "method")
           }
           if target == none && member.resolvedMember != none { target = fieldTarget(index, member.resolvedMember!.owner, member.property) }
           if target != none {
@@ -220,8 +220,8 @@ export function createEditorIndex(frontend: FrontendResult, modules: string[] = 
     for annotation of module.editorAnnotations {
       case annotation {
         named: NamedType -> {
-          if named.resolvedSymbol != none {
-            target := symbolItem(index, named.resolvedSymbol!)
+          if resolvedSymbol := named.resolvedSymbol {
+            target := symbolItem(index, resolvedSymbol)
             token := nameItem(index, module.path, named.name, named.span.start.offset, named.span.end.offset, "type")
             index.occurrences.push(EditorItem { label: named.name, detail: if named.resolvedType == none then "" else editorTypeName(named.resolvedType!), kind: "type", module: module.path, start: token.start, end: token.end, identity: itemIdentity(target), definitionModule: target.module, definitionStart: target.start, definitionEnd: target.end })
           }
@@ -290,7 +290,7 @@ function exportAliasItem(index: EditorIndex, module: string, name: string): Edit
   for statement of info.program.statements {
     list := statement as ExportList else { continue }
     for specifier of list.specifiers {
-      if specifier.alias != none && specifier.alias! == name { return nameItem(index, module, name, specifier.span.start.offset, specifier.span.end.offset, "export-alias") }
+      if alias := specifier.alias && alias == name { return nameItem(index, module, name, specifier.span.start.offset, specifier.span.end.offset, "export-alias") }
     }
   }
   return none

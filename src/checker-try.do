@@ -105,8 +105,8 @@ function validatePropagation(state: CheckerState, scope: Scope, errorType: Resol
       typeError(state, "'try' cannot be used inside a value-producing block; handle the Result outside the block", span)
       return
     }
-    if target.returnType != none {
-      case target.returnType! {
+    if returnType := target.returnType {
+      case returnType {
         result: ResultResolvedType -> {
           if !isAssignableWithInterfaces(state.result, errorType, result.errorType) {
             typeError(state, "Cannot propagate error " + typeName(errorType) + " from function returning " + typeName(result), span)

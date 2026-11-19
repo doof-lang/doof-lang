@@ -273,10 +273,10 @@ function isVariantCarrier(resolvedType: ResolvedType): bool {
 }
 
 export function emitIdentifier(expression: Identifier, context: EmitContext): string {
-  if expression.resolvedBinding != none && expression.resolvedBinding!.kind == "script-global" {
+  if resolvedBinding := expression.resolvedBinding && resolvedBinding.kind == "script-global" {
     return "__doof_script_get_" + cppIdentifier(expression.name) + "()"
   }
-  if expression.resolvedBinding != none && expression.resolvedBinding!.kind == "field" && !expression.resolvedBinding!.staticField && !context.currentFunctionStatic {
+  if resolvedBinding := expression.resolvedBinding && resolvedBinding.kind == "field" && !resolvedBinding.staticField && !context.currentFunctionStatic {
     return "this->" + cppIdentifier(expression.name)
   }
   // Only an import binding (or an unresolved synthesized identifier) names an
@@ -291,8 +291,8 @@ export function emitIdentifier(expression: Identifier, context: EmitContext): st
       }
     }
   }
-  if expression.resolvedBinding != none && expression.resolvedBinding!.symbol != none {
-    symbol := expression.resolvedBinding!.symbol!
+  if resolvedBinding := expression.resolvedBinding && resolvedBinding.symbol != none {
+    symbol := resolvedBinding.symbol!
     if symbol.native_ {
       return "::" + (if symbol.nativeCppName == "" then symbol.name else symbol.nativeCppName)
     }
@@ -300,7 +300,7 @@ export function emitIdentifier(expression: Identifier, context: EmitContext): st
       return "::" + exprModuleNamespaceFor(symbol.module, context.names) + "::" + cppIdentifier(emittedSymbolName(symbol))
     }
   }
-  if expression.resolvedBinding != none && expression.resolvedBinding!.mutable && isCapturedMutable(context, expression.name) {
+  if resolvedBinding := expression.resolvedBinding && resolvedBinding.mutable && isCapturedMutable(context, expression.name) {
     return "(*" + cppIdentifier(expression.name) + ")"
   }
   return cppIdentifier(expression.name)
@@ -438,8 +438,8 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
   case expression.object {
     this_: ThisExpression -> {
       let nativeOwner = false
-      if this_.resolvedType != none {
-        case this_.resolvedType! {
+      if resolvedType := this_.resolvedType {
+        case resolvedType {
           class_: ClassType -> { nativeOwner = class_.symbol.native_ }
           _ -> { }
         }
@@ -473,18 +473,18 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
         }
       }
       class_: ClassType -> {
-        if expression.resolvedStaticOwner != none {
-          owner := expression.resolvedStaticOwner!
+        if resolvedStaticOwner := expression.resolvedStaticOwner {
+          owner := resolvedStaticOwner
           // A generic class is monomorphized, so its statics live on the
           // instantiation the checker inferred for this receiver.
-          if expression.resolvedStaticReceiver != none && !owner.native_ {
-            return emitContextClassInnerType(expression.resolvedStaticReceiver!, context) + "::" + (if expression.property == "metadata" then "_metadata" else cppIdentifier(expression.property))
+          if resolvedStaticReceiver := expression.resolvedStaticReceiver && !owner.native_ {
+            return emitContextClassInnerType(resolvedStaticReceiver, context) + "::" + (if expression.property == "metadata" then "_metadata" else cppIdentifier(expression.property))
           }
           let ownerName = owner.name
           if owner.native_ {
             ownerName = "::" + (if owner.nativeCppName == "" then owner.name else owner.nativeCppName)
-          } else if owner.resolvedSymbol != none && owner.resolvedSymbol!.module != context.modulePath && context.modulePath != "" {
-            ownerName = "::" + exprModuleNamespaceFor(owner.resolvedSymbol!.module, context.names) + "::" + owner.name
+          } else if resolvedSymbol := owner.resolvedSymbol && resolvedSymbol.module != context.modulePath && context.modulePath != "" {
+            ownerName = "::" + exprModuleNamespaceFor(resolvedSymbol.module, context.names) + "::" + owner.name
           }
           return ownerName + "::" + (if expression.property == "metadata" then "_metadata" else if owner.native_ then expression.property else cppIdentifier(expression.property))
         }
@@ -506,8 +506,8 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
     }
   }
   let callableMember = false
-  if expression.resolvedType != none {
-    case expression.resolvedType! {
+  if resolvedType := expression.resolvedType {
+    case resolvedType {
       _: FunctionType -> { callableMember = true }
       _ -> { }
     }

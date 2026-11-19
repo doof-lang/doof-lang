@@ -36,8 +36,8 @@ export function emitIfExpression(expression: IfExpression, context: EmitContext,
   // An explicit lambda result type gives each branch the checked contextual
   // conversion independently.
   let contextualBranches = false
-  if expression.resolvedType != none {
-    resultType := specializeEmitType(expression.resolvedType!, context)
+  if resolvedType := expression.resolvedType {
+    resultType := specializeEmitType(resolvedType, context)
     contextualBranches = hasNoneMember(resultType) || usesVariantRepresentation(resultType)
     case resultType {
       _: SerialValueResolvedType -> { contextualBranches = true }

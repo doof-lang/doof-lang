@@ -140,8 +140,8 @@ export function emitTuple(expression: TupleLiteral, context: EmitContext): strin
   // Elements convert to the checked element types, which may be wider than
   // each element's own type (a union or nullable slot).
   let tuple: TupleResolvedType | none = none
-  if expression.resolvedType != none {
-    case expression.resolvedType! { checked: TupleResolvedType -> { tuple = checked } _ -> { } }
+  if resolvedType := expression.resolvedType {
+    case resolvedType { checked: TupleResolvedType -> { tuple = checked } _ -> { } }
   }
   let values = ""
   for i of 0..<expression.elements.length {

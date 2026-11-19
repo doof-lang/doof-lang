@@ -49,8 +49,8 @@ export function nativeBuildOutputName(projectName: string, nativePlatform: strin
 
 function projectExecutableName(project: ProjectSpec, nativePlatform: string): string {
   if project.target == "wasm" { return nativeBuildOutputName(project.name, "") + ".wasm" }
-  if project.macosApp != none { return project.macosApp!.executableName }
-  if project.iosApp != none { return project.iosApp!.executableName }
+  if macosApp := project.macosApp { return macosApp.executableName }
+  if iosApp := project.iosApp { return iosApp.executableName }
   return nativeBuildOutputName(project.name, nativePlatform)
 }
 
@@ -225,8 +225,8 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     writeFrontendState(emissionCachePath, nextEmissionState)
   }
   timings.finish("command.materialization-cache", materializationStart)
-  if project.iosApp != none {
-    _ := configureIOSNativeBuild(outputDirectory, project.iosApp!, iosDestination, emission.nativeBuild) else error {
+  if iosApp := project.iosApp {
+    _ := configureIOSNativeBuild(outputDirectory, iosApp, iosDestination, emission.nativeBuild) else error {
       println("error: " + error)
       return 1
     }

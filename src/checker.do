@@ -219,10 +219,10 @@ function prepareClassFieldTypes(state: CheckerState): none {
               if field.resolvedType != none { continue }
               diagnosticCount := state.diagnostics.length
               let fieldType = unknownType()
-              if field.type_ != none {
-                fieldType = resolveType(state, field.type_!, module, classScope)
-              } else if field.defaultValue != none {
-                fieldType = checkCallerDefault(state, field.defaultValue!, classScope, none)
+              if type_ := field.type_ {
+                fieldType = resolveType(state, type_, module, classScope)
+              } else if defaultValue := field.defaultValue {
+                fieldType = checkCallerDefault(state, defaultValue, classScope, none)
               }
               discardDiagnosticsSince(state, diagnosticCount)
               if fieldType.kind == "unknown" { continue }

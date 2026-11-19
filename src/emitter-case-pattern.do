@@ -43,11 +43,11 @@ export function emitCasePattern(pattern: CasePattern, subjectType: ResolvedType,
 
 function emitRangePatternCondition(pattern: RangePattern, subject: string, context: EmitContext): string {
   let condition = ""
-  if pattern.start != none { condition = subject + " >= " + emitExpression(pattern.start!, context) }
-  if pattern.end != none {
+  if start := pattern.start { condition = subject + " >= " + emitExpression(start, context) }
+  if end := pattern.end {
     operator := if pattern.inclusive then " <= " else " < "
     if condition != "" { condition = condition + " && " }
-    condition = condition + subject + operator + emitExpression(pattern.end!, context)
+    condition = condition + subject + operator + emitExpression(end, context)
   }
   return condition
 }

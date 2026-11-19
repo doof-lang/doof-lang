@@ -65,7 +65,7 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
               propertyKeyType := if property.key == none then primitive("string") else checkExpression(state, property.key!, scope, none)
               keyType = joinTypes(keyType, propertyKeyType)
               let propertyType = unknownType()
-              if property.value != none { propertyType = checkExpression(state, property.value!, scope, none) }
+              if value := property.value { propertyType = checkExpression(state, value, scope, none) }
               else {
                 binding := lookup(scope, property.name)
                 if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span) }
@@ -199,8 +199,8 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
       }
       map: MapResolvedType -> {
         for property of expression.properties {
-          if property.key != none {
-            actualKey := checkExpression(state, property.key!, scope, map.keyType)
+          if key := property.key {
+            actualKey := checkExpression(state, key, scope, map.keyType)
             if !isAssignableWithInterfaces(state.result, actualKey, map.keyType) { typeError(state, "Cannot assign " + typeName(actualKey) + " to map key type " + typeName(map.keyType), property.span) }
           } else if !sameType(map.keyType, primitive("string")) {
             typeError(state, "Cannot assign string to map key type " + typeName(map.keyType), property.span)
@@ -333,9 +333,9 @@ function objectShapeMatchesClass(state: CheckerState, expression: ObjectLiteral,
 }
 
 function decorateUnresolvedObject(state: CheckerState, expression: ObjectLiteral, scope: Scope): none {
-  if expression.spread != none { checkExpression(state, expression.spread!, scope, none) }
+  if spread := expression.spread { checkExpression(state, spread, scope, none) }
   for property of expression.properties {
-    if property.key != none { checkExpression(state, property.key!, scope, none) }
+    if key := property.key { checkExpression(state, key, scope, none) }
     checkPropertyValue(state, property, scope, none)
   }
 }

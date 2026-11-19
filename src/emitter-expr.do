@@ -66,8 +66,8 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
     dot: DotShorthand -> { value = emitDotShorthand(dot, context) }
     this_: ThisExpression -> {
       let structThis = false
-      if this_.resolvedType != none {
-        case this_.resolvedType! {
+      if resolvedType := this_.resolvedType {
+        case resolvedType {
           class_: ClassType -> { structThis = class_.symbol.kind == "struct" }
           _ -> { }
         }

@@ -134,8 +134,8 @@ export function emitSyncActorCall(expression: CallExpression, member: MemberExpr
 function emitActorMethodCall(expression: CallExpression, member: MemberExpression, actor: ActorType, async_: bool, context: EmitContext): string {
   className := emitClassInnerType(actor.innerClass, context.modulePath, context.names)
   let methodType: FunctionType | none = none
-  if member.resolvedType != none {
-    case member.resolvedType! {
+  if resolvedType := member.resolvedType {
+    case resolvedType {
       function_: FunctionType -> { methodType = function_ }
       _ -> { }
     }
@@ -192,8 +192,8 @@ function actorParameterIndex(expression: CallExpression, argumentIndex: int): in
 function actorArgumentType(expression: CallExpression, methodType: FunctionType | none, argumentIndex: int): ResolvedType | none {
   index := actorParameterIndex(expression, argumentIndex)
   if methodType != none && index < methodType!.params.length { return methodType!.params[index].type_ }
-  if expression.resolvedFunction != none && index < expression.resolvedFunction!.params.length {
-    return expression.resolvedFunction!.params[index].resolvedType
+  if resolvedFunction := expression.resolvedFunction && index < resolvedFunction.params.length {
+    return resolvedFunction.params[index].resolvedType
   }
   return none
 }
@@ -212,13 +212,13 @@ function emitActorMethodArguments(expression: CallExpression, methodType: Functi
       if argumentIndex < expression.args.length {
         if result != "" { result = result + ", " }
         result = result + temporaries[argumentIndex]
-      } else if parameter.defaultValue != none {
+      } else if defaultValue := parameter.defaultValue {
         let expected: ResolvedType | none = parameter.resolvedType
         if methodType != none && i < methodType!.params.length { expected = methodType!.params[i].type_ }
         if result != "" { result = result + ", " }
         previous := context.sourceLocationSpanOverride
         context.sourceLocationSpanOverride = SourceLocationSpanOverride { span: expression.span }
-        result = result + emitExpression(parameter.defaultValue!, context, expected)
+        result = result + emitExpression(defaultValue, context, expected)
         context.sourceLocationSpanOverride = previous
       }
     }

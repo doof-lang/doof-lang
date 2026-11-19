@@ -733,7 +733,7 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
       }
       // The constraint widens what T accepts, but T itself must still reach
       // union targets such as `T | none` through the member search below.
-      if parameter.constraint != none && isAssignable(parameter.constraint!, target) { return true }
+      if constraint := parameter.constraint && isAssignable(constraint, target) { return true }
     }
     _: UnknownType -> { return true }
     valueUnion: UnionResolvedType -> {
@@ -1008,7 +1008,7 @@ export function isStringInterpolatable(type_: ResolvedType): bool {
       return true
     }
     parameter: TypeParameterType -> {
-      if parameter.constraint != none { return isStringInterpolatable(parameter.constraint!) }
+      if constraint := parameter.constraint { return isStringInterpolatable(constraint) }
       return false
     }
     _ -> { return false }
@@ -1045,6 +1045,6 @@ export function typeFromAnnotation(annotation: TypeAnnotation): ResolvedType {
  * class, so its statics belong to the instantiation decorated on the receiver.
  */
 export function memberReceiverType(member: MemberExpression): ResolvedType | none {
-  if member.resolvedStaticReceiver != none { return member.resolvedStaticReceiver! }
+  if resolvedStaticReceiver := member.resolvedStaticReceiver { return resolvedStaticReceiver }
   return member.object.resolvedType
 }

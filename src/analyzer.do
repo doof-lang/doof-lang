@@ -209,8 +209,8 @@ export class ModuleAnalyzer {
             queueModuleParse(sourcePath, info.mockRootPath, scheduled, pending)
           }
           list: ExportList -> {
-            if list.source != none {
-              sourcePath := resolveImportPath(info, list.source!)
+            if source := list.source {
+              sourcePath := resolveImportPath(info, source)
               queueModuleParse(sourcePath, info.mockRootPath, scheduled, pending)
             }
           }
@@ -467,7 +467,7 @@ export class ModuleAnalyzer {
     for parameter of fn.typeParams { typeParams.push(parameter) }
     visitTypeParameterConstraints(fn.typeParamConstraints, info, typeParams)
     for parameter of fn.params { if parameter.type_ != none { visitType(parameter.type_!, info, typeParams) } }
-    if fn.returnType != none { visitType(fn.returnType!, info, typeParams) }
+    if returnType := fn.returnType { visitType(returnType, info, typeParams) }
   }
 
   private visitTypeParameterConstraints(constraints: TypeParameterConstraint[], info: ModuleInfo, typeParams: string[]): none {

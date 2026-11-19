@@ -11,7 +11,7 @@ import { isAssignableWithInterfaces } from "./checker-interfaces"
 
 export function checkPropertyValue(state: CheckerState, property: ObjectProperty, scope: Scope, expected: ResolvedType | none): ResolvedType {
   let actual: ResolvedType = unknownType()
-  if property.value != none { actual = checkExpression(state, property.value!, scope, expected) }
+  if value := property.value { actual = checkExpression(state, value, scope, expected) }
   else {
     binding := lookup(scope, property.name)
     if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span) }
