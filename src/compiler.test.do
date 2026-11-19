@@ -265,11 +265,7 @@ export function testValidatesIsolationOnceAfterCheckingImportedGraph(): none {
   ], "/main.do")
 
   Assert.equal(result.emission, none)
-  let found = false
-  for diagnostic of result.diagnostics {
-    if diagnostic.message.contains("Actor method \"run\" is not isolated") && diagnostic.message.contains("non-isolated function \"mutate\"") { found = true }
-  }
-  Assert.equal(found, true)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("Actor method \"run\" is not isolated") && it.message.contains("non-isolated function \"mutate\"")))
 }
 
 export function testEmitsRenamedImportedClassFromSymbolIdentity(): none {

@@ -42,9 +42,7 @@ export function satisfiesNumericConstraint(value: ResolvedType, constraint: Reso
   if !isNumericOperand(value) { return false }
   allowed := alternatives(constraint)
   for candidate of alternatives(value) {
-    let found = false
-    for member of allowed { if sameType(candidate, member) { found = true } }
-    if !found { return false }
+    if !allowed.some(=> sameType(candidate, it)) { return false }
   }
   return true
 }

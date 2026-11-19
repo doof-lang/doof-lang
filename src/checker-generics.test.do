@@ -20,10 +20,8 @@ export function testInterfaceBoundForwarding(): none {
 
 export function testInterfaceBoundForwardingMismatch(): none {
   result := checked("interface Reader<V> { read(): V }\nclass IntReader { read(): int => 7 }\nfunction keep<T: Reader<int>>(value: T): T => value\nfunction invalid<U: Reader<string>>(value: U): U => keep(value)")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("does not satisfy constraint") { found = true } }
   for diagnostic of result.diagnostics { println(diagnostic.message) }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("does not satisfy constraint")))
 }
 
 
@@ -32,9 +30,7 @@ export function testInterfaceBoundPreservesIsolationEffects(): none {
     "shared := [0]\ninterface Job { run(): none }\nclass Unsafe { run(): none { shared.push(1) } }\n" +
     "isolated function execute<T: Job>(job: T): none { job.run() }\nfunction main(): none {}",
   }], "/main.do")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("isolated") { found = true } }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("isolated")))
 }
 
 export function testCheckerConsolidationFieldInferenceSkipsConstants(): none {
@@ -69,7 +65,5 @@ function main(): int => (best([P { v: 3 }, P { v: 9 }]) ?? P { v: 0 }).v + (only
 
 export function testConstrainedTypeParameterStillRejectsUnrelatedTarget(): none {
   result := checked("interface HasScore { score(): int }\nfunction bad<T: HasScore>(item: T): int | none => item")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("Cannot return T") { found = true } }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("Cannot return T")))
 }

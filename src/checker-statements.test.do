@@ -60,10 +60,8 @@ export function testInterfaceBoundParameterOrder(): none {
 
 export function testInterfaceBoundCycle(): none {
   result := checked("function invalid<T: U, U: T>(value: T): T => value")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("Cyclic constraint") { found = true } }
   for diagnostic of result.diagnostics { println(diagnostic.message) }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("Cyclic constraint")))
 }
 
 export function testInterfaceBoundDeclarationOrder(): none {
@@ -75,25 +73,19 @@ export function testInterfaceBoundDeclarationOrder(): none {
 
 export function testInterfaceBoundConstrainedInterfaceAndAlias(): none {
   result := checked("interface Reader<V> { read(): V }\nclass R { read(): int => 1 }\ninterface Holder<T: Reader<int>> { item: T }\ntype Wrapped<T: Reader<int>> = Holder<T>\nfunction bad(value: Wrapped<string>): none {}")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("does not satisfy constraint") { found = true } }
   for diagnostic of result.diagnostics { println(diagnostic.message) }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("does not satisfy constraint")))
 }
 
 export function testInterfaceBoundAliasUnconstrainedForward(): none {
   result := checked("interface Reader<V> { read(): V }\nclass Box<T: Reader<int>> { value: T }\ntype Bad<T> = Box<T>")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("does not satisfy constraint") { found = true } }
   for diagnostic of result.diagnostics { println(diagnostic.message) }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("does not satisfy constraint")))
 }
 
 export function testInterfaceBoundAliasCycle(): none {
   result := checked("type Same<V> = V\nfunction invalid<T: Same<U>, U: T>(value: T): T => value")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("Cyclic constraint") { found = true } }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("Cyclic constraint")))
 }
 
 export function testCheckerReviewWithCompletion(): none {

@@ -283,8 +283,7 @@ function findInterfaceAsyncViolation(result: AnalysisResult, type_: InterfaceTyp
 }
 
 function appended(values: string[], value: string): string[] {
-  let result: string[] = []
-  for item of values { result.push(item) }
+  result := values.cloneMutable()
   result.push(value)
   return result
 }

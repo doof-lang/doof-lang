@@ -13,10 +13,8 @@ function checked(source: string): CheckResult {
 
 export function testInterfaceBoundTypeReceiver(): none {
   result := checked("interface Reader<V> { read(): V }\nclass IntReader { read(): int => 7 }\nfunction invalid<T: Reader<int>>(value: T): int => T.read()")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("Instance member") { found = true } }
   for diagnostic of result.diagnostics { println(diagnostic.message) }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("Instance member")))
 }
 
 export function testInterfaceBoundReservedNames(): none {

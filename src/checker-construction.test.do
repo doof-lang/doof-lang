@@ -127,9 +127,7 @@ export function testCheckerConsolidationActorConstructorDefaults(): none {
 
 export function testSecondConsolidationActorFactoryMustReturnDirectOwner(): none {
   messages := constructionErrors("class Worker { value: int\nstatic constructor(value: int): Result<Worker, string> => Success { value: Worker { value } } }\nfunction make(): none { worker := Actor<Worker>(3) }")
-  let found = false
-  for message of messages { if message.contains("must return Worker directly") { found = true } }
-  Assert.isTrue(found)
+  Assert.isTrue(messages.some(=> it.contains("must return Worker directly")))
 }
 
 export function testActorCreationRequiresAClassAndCrossableArguments(): none {
@@ -137,10 +135,8 @@ export function testActorCreationRequiresAClassAndCrossableArguments(): none {
   Assert.equal(notClass.length, 1)
   Assert.stringContains(notClass[0], "Actor requires a class type; \"Shape\" is not a class")
   crossing := constructionErrors("class Box { let value: int }\nclass Worker { box: Box }\nfunction make(box: Box): none { worker := Actor<Worker>(box) }")
-  let found = false
-  for message of crossing { if message.contains("Actor constructor argument 1 of type \"Box\" cannot cross actor boundary") { found = true } }
   for message of crossing { println(message) }
-  Assert.isTrue(found)
+  Assert.isTrue(crossing.some(=> it.contains("Actor constructor argument 1 of type \"Box\" cannot cross actor boundary")))
 }
 
 export function testPositionalLiteralsConstructClassesOverEnclosingTypeParameters(): none {

@@ -188,9 +188,7 @@ function mergeCoverageGroup(
     }
     if groupIndex < groupHits.length {
       for line of groupHits[groupIndex] {
-        let found = false
-        for existing of allHits[targetIndex] { if existing == line { found = true } }
-        if !found { allHits[targetIndex].push(line) }
+        if !allHits[targetIndex].contains(line) { allHits[targetIndex].push(line) }
       }
     }
   }

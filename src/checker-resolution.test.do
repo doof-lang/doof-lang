@@ -101,18 +101,14 @@ export function testPayloadlessResultArmsHaveNoPayloadMember(): none {
 
 export function testInterfaceBoundMissingMember(): none {
   result := checked("interface Reader<V> { read(): V }\nclass IntReader { read(): int => 7 }\nfunction readOne<T: Reader<int>>(reader: T): int => reader.missing()")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("has no member") { found = true } }
   for diagnostic of result.diagnostics { println(diagnostic.message) }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("has no member")))
 }
 
 export function testInterfaceBoundWrongArgument(): none {
   result := checked("interface Reader<V> { read(): V }\nclass IntReader { read(): int => 7 }\nclass Wrong { read(): string => \"bad\" }\nfunction keep<T: Reader<int>>(value: T): T => value\nfunction main(): none { keep(Wrong {}) }")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("does not satisfy constraint") { found = true } }
   for diagnostic of result.diagnostics { println(diagnostic.message) }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("does not satisfy constraint")))
   Assert.equal(result.diagnostics.length, 1)
   Assert.equal(result.diagnostics[0].span.start.line, 5)
   Assert.equal(result.diagnostics[0].module, "/main.do")
@@ -127,34 +123,26 @@ export function testInterfaceBoundDependentArguments(): none {
 
 export function testInterfaceBoundReadonlyArray(): none {
   result := checked("interface View { readonly values: int[] }\nclass Value { readonly values: int[] = [1] }\nfunction bad<T: View>(value: T): none { value.values.push(2) }")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("readonly") { found = true } }
   for diagnostic of result.diagnostics { println(diagnostic.message) }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("readonly")))
 }
 
 export function testInterfaceBoundDoesNotGrantReflectionIntrinsic(): none {
   result := checked("interface Reader<V> { read(): V }\nfunction bad<T: Reader<int>>(value: T): none { T.metadata }")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("has no member") { found = true } }
   for diagnostic of result.diagnostics { println(diagnostic.message) }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("has no member")))
 }
 
 export function testInterfaceBoundNoConstraintOnlyInference(): none {
   result := checked("interface Reader<V> { read(): V }\nclass IntReader { read(): int => 1 }\nfunction read<V, T: Reader<V>>(value: T): V => value.read()\nfunction main(): none { read(IntReader {}) }")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("infer") { found = true } }
   for diagnostic of result.diagnostics { println(diagnostic.message) }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("infer")))
 }
 
 export function testInterfaceBoundDeclarationOrderSignature(): none {
   result := checked("function wrong<T: Reader<int>>(value: T): string => value.read()\ninterface Reader<V> { read(): V }")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("Cannot return") { found = true } }
   for diagnostic of result.diagnostics { println(diagnostic.message) }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("Cannot return")))
 }
 
 export function testCheckerReviewExactNumericBounds(): none {
@@ -164,9 +152,7 @@ export function testCheckerReviewExactNumericBounds(): none {
   Assert.equal(valid.diagnostics.length, 0)
   for suffix of ["function bad(): int => add(1, 2)", "function bad(a: float | double): float | double => add(a, a)"] {
     invalid := checked(prefix + suffix)
-    let found = false
-    for diagnostic of invalid.diagnostics { if diagnostic.message.contains("does not satisfy constraint") { found = true } }
-    Assert.isTrue(found)
+    Assert.isTrue(invalid.diagnostics.some(=> it.message.contains("does not satisfy constraint")))
   }
 }
 
@@ -191,9 +177,7 @@ export function testCheckerConsolidationMemberContractDefaults(): none {
 export function testSecondConsolidationRecursiveAliasDiagnostic(): none {
   result := compile([SourceFile { path: "/main.do", source: "type First = Second\ntype Second = First\nfunction use(value: First): none {}" }], "/main.do")
   Assert.isTrue(hasErrorDiagnostics(result.diagnostics))
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("Cyclic type alias") { found = true } }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("Cyclic type alias")))
 }
 
 export function testActorFieldAccessReadsRejected(): none {
@@ -222,9 +206,7 @@ export function testActorFieldAccessUnionAndCallableRejected(): none {
     "class State { callback: (): int = => 9 }\nfunction bad(actor: Actor<State>): int => actor.callback()",
   ] {
     result := compile([SourceFile { path: "/main.do", source }], "/main.do")
-    let found = false
-    for diagnostic of result.diagnostics { if diagnostic.message.contains("Cannot access actor field") { found = true } }
-    Assert.isTrue(found)
+    Assert.isTrue(result.diagnostics.some(=> it.message.contains("Cannot access actor field")))
     Assert.equal(result.emission, none)
   }
 }

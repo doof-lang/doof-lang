@@ -14,9 +14,7 @@ function checked(source: string): CheckResult {
 export function testCheckerReviewNonassignableMembers(): none {
   for source of ["function bad(): none { xs := [1]\nxs.length = 2 }", "function bad(): none { s := \"x\"\ns.length += 1 }", "class Value { read(): int => 1 }\nfunction bad(): none { value := Value {}\nvalue.read = (): int => 2 }"] {
     result := checked(source)
-    let found = false
-    for diagnostic of result.diagnostics { if diagnostic.message.contains("not an assignable field") { found = true } }
-    Assert.isTrue(found)
+    Assert.isTrue(result.diagnostics.some(=> it.message.contains("not an assignable field")))
   }
   valid := checked("class Value { let count: int\nlet callback: (): int }\nfunction good(): none { value := Value { count: 1, callback: (): int => 1 }\nvalue.count += 1\nvalue.callback = (): int => 2 }")
   Assert.equal(valid.diagnostics.length, 0)
@@ -24,10 +22,8 @@ export function testCheckerReviewNonassignableMembers(): none {
 
 export function testInterfaceBoundImmutableField(): none {
   result := checked("interface View { value: int }\nclass Counter { let value: int }\nfunction update<T: View>(value: T): none { value.value = 1 }")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("immutable") { found = true } }
   for diagnostic of result.diagnostics { println(diagnostic.message) }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("immutable")))
 }
 
 export function testInterfaceBoundMutableField(): none {

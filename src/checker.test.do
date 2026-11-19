@@ -614,11 +614,7 @@ export class Second { readonly value = answer() }` },
   sources[3] = SourceFile { path: "/functions.do", source: `export function answer(): string => "seven"` }
   invalid := checkedSources(sources, "/main.do")
   Assert.isTrue(invalid.diagnostics.length > 0)
-  let found = false
-  for diagnostic of invalid.diagnostics {
-    if diagnostic.message.contains("Cannot return string from function returning int") && diagnostic.module == "/main.do" { found = true }
-  }
-  Assert.isTrue(found)
+  Assert.isTrue(invalid.diagnostics.some(=> it.message.contains("Cannot return string from function returning int") && it.module == "/main.do"))
 }
 
 export function testWarnsForLegacyNoneAliasesWithReplacementAndExactSpans(): none {
@@ -1649,11 +1645,7 @@ export function testRejectsActorMethodsThatTransitivelyAccessImportedMutableStat
     SourceFile { path: "/state.do", source: "values := [0]\nexport function mutate(): void { values.push(1) }" },
   ], "/main.do")
   Assert.equal(result.diagnostics.length > 0, true)
-  let found = false
-  for diagnostic of result.diagnostics {
-    if diagnostic.message.contains("Actor method \"run\" is not isolated") && diagnostic.message.contains("non-isolated function \"mutate\"") { found = true }
-  }
-  Assert.equal(found, true)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("Actor method \"run\" is not isolated") && it.message.contains("non-isolated function \"mutate\"")))
 }
 
 export function testAllowsActorLocalMutationAndRecursiveIsolatedCalls(): none {
@@ -1684,9 +1676,7 @@ export function testReadonlyInterfaceFieldsRequireReadonlyImplementations(): non
 export function testRejectsMutableStaticStateReachedFromActorMethods(): none {
   result := checked("class Globals { static let count: int = 0 }\nclass Worker { function run(): void { Globals.count = Globals.count + 1 } }\nfunction main(): void { worker := Actor<Worker>()\nworker.run() }")
   Assert.equal(result.diagnostics.length > 0, true)
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("mutable static field \"Globals.count\"") { found = true } }
-  Assert.equal(found, true)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("mutable static field \"Globals.count\"")))
 }
 
 export function testAllowsStableStaticValuesButRejectsMutableStaticInteriorsInActorMethods(): none {
@@ -1695,15 +1685,11 @@ export function testAllowsStableStaticValuesButRejectsMutableStaticInteriorsInAc
 
   mutableInterior := checked("class Globals { static values: int[] = [] }\nclass Worker { function read(): int => Globals.values.length }\nfunction main(): none { worker := Actor<Worker>()\nworker.read() }")
   Assert.equal(mutableInterior.diagnostics.length > 0, true)
-  let found = false
-  for diagnostic of mutableInterior.diagnostics { if diagnostic.message.contains("mutable static field \"Globals.values\"") { found = true } }
-  Assert.equal(found, true)
+  Assert.isTrue(mutableInterior.diagnostics.some(=> it.message.contains("mutable static field \"Globals.values\"")))
 
   implicitMutableInterior := checked("class Worker { static values: int[] = []\nfunction read(): int => values.length }\nfunction main(): none { worker := Actor<Worker>()\nworker.read() }")
   Assert.equal(implicitMutableInterior.diagnostics.length > 0, true)
-  found = false
-  for diagnostic of implicitMutableInterior.diagnostics { if diagnostic.message.contains("mutable static field \"Worker.values\"") { found = true } }
-  Assert.equal(found, true)
+  Assert.isTrue(implicitMutableInterior.diagnostics.some(=> it.message.contains("mutable static field \"Worker.values\"")))
 }
 
 export function testPropagatesIsolationThroughInterfaceDispatch(): none {
@@ -1727,31 +1713,19 @@ export function testPropagatesIsolationThroughInterfaceDispatch(): none {
   Assert.equal(workerFound, true)
   result := CheckResult { diagnostics }
   Assert.equal(result.diagnostics.length > 0, true)
-  let found = false
-  for diagnostic of result.diagnostics {
-    if diagnostic.message.contains("Actor method \"execute\" is not isolated") && diagnostic.message.contains("non-isolated function \"run\"") { found = true }
-  }
-  Assert.equal(found, true)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("Actor method \"execute\" is not isolated") && it.message.contains("non-isolated function \"run\"")))
 }
 
 export function testRejectsMutableImplementationsWidenedToBoundaryInterfaces(): none {
   result := checked("interface Payload { readonly id: int }\nclass MutablePayload implements Payload { readonly id: int\nlet value: int }\nclass Worker { function accept(payload: Payload): void {} }\nfunction main(): void { worker := Actor<Worker>()\npayload: Payload := MutablePayload { id: 1, value: 2 }\nworker.accept(payload) }")
   Assert.equal(result.diagnostics.length > 0, true)
-  let found = false
-  for diagnostic of result.diagnostics {
-    if diagnostic.message.contains("implementation \"MutablePayload\"") && diagnostic.message.contains("field \"value\" is mutable") { found = true }
-  }
-  Assert.equal(found, true)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("implementation \"MutablePayload\"") && it.message.contains("field \"value\" is mutable")))
 }
 
 export function testRequiresActorConstructorFactoriesToBeIsolated(): none {
   result := checked("shared := [0]\nclass Worker { values: int[]\nstatic constructor(): Worker => Worker { values: shared } }\nfunction main(): void { worker := Actor<Worker>() }")
   Assert.equal(result.diagnostics.length > 0, true)
-  let found = false
-  for diagnostic of result.diagnostics {
-    if diagnostic.message.contains("Actor<Worker> construction is not isolated") && diagnostic.message.contains("non-isolated function \"constructor\"") { found = true }
-  }
-  Assert.equal(found, true)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("Actor<Worker> construction is not isolated") && it.message.contains("non-isolated function \"constructor\"")))
 }
 
 export function testRejectsFallibleActorConstructorFactories(): none {

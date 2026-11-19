@@ -11,9 +11,7 @@ export function testEditorAutoImportIncludesStdlibAndRechecksInsertedImport(): n
   index := createEditorIndex(analyzeEditor(sources, "/main.do"))
   offset := source.indexOf("clamp") + 3
   completion := queryEditor(index, "completion", "/main.do", offset, source.substring(0, offset))
-  let found = false
-  for item of completion.items { if item.label == "clamp" && item.importModule == "/std/math/index.do" { found = true } }
-  Assert.isTrue(found)
+  Assert.isTrue(completion.items.some(=> it.label == "clamp" && it.importModule == "/std/math/index.do"))
   result := autoImportEdits(index, "/main.do", "/std/math/index.do", "clamp", source)
   Assert.equal(result.edits.length, 1)
   Assert.equal(result.edits[0].text, "import { clamp } from \"std/math\"\n")

@@ -13,9 +13,8 @@ export function testEditorIndexFocusKeepsImportedMemberCompletionAndDefinition()
   index := createEditorIndex(frontend, ["/main.do"])
   for occurrence of index.occurrences { EditorAssert.equal(occurrence.module, "/main.do") }
   result := queryEditor(index, "completion", "/main.do", source.indexOf("tool.ru") + 7, source.substring(0, source.indexOf("tool.ru") + 7))
-  let found = false
-  for item of result.items { if item.label == "run" { found = true; EditorAssert.stringContains(item.detail, "string") } }
-  EditorAssert.isTrue(found)
+  run := result.items.find(=> it.label == "run") else { panic("missing completion \"run\"") }
+  EditorAssert.stringContains(run.detail, "string")
   definition := queryEditor(index, "definition", "/main.do", source.indexOf("Tool") + 1)
   EditorAssert.equal(definition.items.length, 1)
   EditorAssert.equal(definition.items[0].definitionModule, "/dep.do")

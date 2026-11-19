@@ -140,11 +140,7 @@ export function testRejectsEqualityAcrossNominalStructTypes(): none {
     "function main(): bool => Left { value: 1 } == Right { value: 1 }",
   }], "/main.do")
   Assert.isTrue(hasErrorDiagnostics(result.diagnostics))
-  let found = false
-  for diagnostic of result.diagnostics {
-    if diagnostic.message.contains("Operator '==' is not defined for Left and Right") { found = true }
-  }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("Operator '==' is not defined for Left and Right")))
 }
 
 export function testNoneCarrierMethodDiscardsUnitReturn(): none {

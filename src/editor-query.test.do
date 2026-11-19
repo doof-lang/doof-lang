@@ -27,7 +27,6 @@ export function testEditorCompletionRecoversTrailingDot(): none {
   source := "function main(): none {\n  name := \"Doof\"\n  name.\n}"
   index := createEditorIndex(analyzeWithLoader([SourceFile { path: "/main.do", source }], "/main.do", noSourceLoader, "executable", PhaseTimings {}, true, true))
   result := queryEditor(index, "completion", "/main.do", source.indexOf("name.") + 5)
-  let found = false
-  for item of result.items { if item.label == "substring" { found = true; Assert.stringContains(item.detail, "int") } }
-  Assert.isTrue(found)
+  substring := result.items.find(=> it.label == "substring") else { panic("missing completion \"substring\"") }
+  Assert.stringContains(substring.detail, "int")
 }

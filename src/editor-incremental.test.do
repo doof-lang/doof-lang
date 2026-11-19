@@ -68,7 +68,5 @@ export function testEditorIncrementalKeepsErrorsInUnchangedDependency(): none {
   second := analyzeEditor([SourceFile { path: "/main.do", source: prefix + " + 1" }, dependency], "/main.do", first)
   Assert.equal(second.reusedModules.length, 0)
   Assert.isTrue(second.diagnostics.length > 0)
-  let found = false
-  for diagnostic of second.diagnostics { if diagnostic.module == "/dep.do" && diagnostic.message.contains("missing") { found = true } }
-  Assert.isTrue(found)
+  Assert.isTrue(second.diagnostics.some(=> it.module == "/dep.do" && it.message.contains("missing")))
 }

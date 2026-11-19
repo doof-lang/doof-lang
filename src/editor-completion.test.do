@@ -49,9 +49,8 @@ export function testEditorCompletionUsesLivePrefixBeforeReanalysis(): none {
   index := createEditorIndex(analyzeEditor([SourceFile { path: "/main.do", source }], "/main.do"))
   let items: EditorItem[] = []
   Assert.isTrue(contextualCompletion(index, "/main.do", source.indexOf("}\n"), source.substring(0, source.indexOf("}\n")) + "  title.", items))
-  let found = false
-  for item of items { if item.label == "substring" { found = true; Assert.stringContains(item.detail, "int") } }
-  Assert.isTrue(found)
+  substring := items.find(=> it.label == "substring") else { panic("missing completion \"substring\"") }
+  Assert.stringContains(substring.detail, "int")
   Assert.equal(importSpecifier("/src/main.do", "/std/math/index.do"), "std/math")
   Assert.equal(importSpecifier("/src/main.do", "/lib/value.do"), "../lib/value")
 }

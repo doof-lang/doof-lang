@@ -92,10 +92,8 @@ export function testInterfaceBoundNamedDefaultCall(): none {
 
 export function testInterfaceBoundUnconstrainedForwarding(): none {
   result := checked("interface Reader<V> { read(): V }\nclass IntReader { read(): int => 7 }\nfunction keep<T: Reader<int>>(value: T): T => value\nfunction invalid<U>(value: U): U => keep(value)")
-  let found = false
-  for diagnostic of result.diagnostics { if diagnostic.message.contains("does not satisfy constraint") { found = true } }
   for diagnostic of result.diagnostics { println(diagnostic.message) }
-  Assert.isTrue(found)
+  Assert.isTrue(result.diagnostics.some(=> it.message.contains("does not satisfy constraint")))
 }
 
 

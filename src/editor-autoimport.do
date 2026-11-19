@@ -52,9 +52,7 @@ export function prepareAutoImports(index: EditorIndex): none {
 
 export function autoImportEdits(index: EditorIndex, module: string, target: string, name: string, source: string): EditorResponse {
   if module == target { return EditorResponse { error: "The declaration is already in this module." } }
-  let found = false
-  for candidate of index.exportCandidates { if candidate.module == target && candidate.label == name { found = true } }
-  if !found { return EditorResponse { error: "This export is no longer available." } }
+  if !index.exportCandidates.some(=> it.module == target && it.label == name) { return EditorResponse { error: "This export is no longer available." } }
   parser := Parser { source, editorMode: true }
   parsed := catchPanic(=> parser.parse())
   program := parsed else { return EditorResponse { error: "Cannot safely locate imports in this source." } }

@@ -331,18 +331,12 @@ function parameterBoundProvidesStatics(result: AnalysisResult, held: InterfaceTy
   case heldDeclaration! {
     heldInterface: InterfaceDeclaration -> {
       for required of interface_.staticFields {
-        let found = false
-        for candidate of heldInterface.staticFields {
-          if candidate.name == required.name && sameType(interfaceStaticFieldType(result, heldInterface, held, candidate), interfaceStaticFieldType(result, interface_, interfaceType_, required)) { found = true }
-        }
-        if !found { return false }
+        if !heldInterface.staticFields.some(=> it.name == required.name &&
+            sameType(interfaceStaticFieldType(result, heldInterface, held, it), interfaceStaticFieldType(result, interface_, interfaceType_, required))) { return false }
       }
       for requiredMethod of interface_.staticMethods {
-        let found = false
-        for candidate of heldInterface.staticMethods {
-          if candidate.name == requiredMethod.name && sameType(interfaceStaticMethodType(result, heldInterface, held, candidate), interfaceStaticMethodType(result, interface_, interfaceType_, requiredMethod)) { found = true }
-        }
-        if !found { return false }
+        if !heldInterface.staticMethods.some(=> it.name == requiredMethod.name &&
+            sameType(interfaceStaticMethodType(result, heldInterface, held, it), interfaceStaticMethodType(result, interface_, interfaceType_, requiredMethod))) { return false }
       }
       return true
     }
