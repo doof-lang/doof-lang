@@ -9,6 +9,7 @@ import { CheckerState } from "./checker-state"
 import { checkStatement } from "./checker-statements"
 import { checkCallerDefault } from "./checker-expressions"
 import { resolveType } from "./checker-annotations"
+import { includedFieldType } from "./checker-inclusions"
 import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-actor-lifecycle"
 import { discoverInterfaceImplementations, findModule } from "./checker-interfaces"
 import { declare, predeclareModuleBindings } from "./checker-symbols"
@@ -214,6 +215,14 @@ function prepareClassFieldTypes(state: CheckerState): none {
           for field of class_.fields {
             if field.resolvedType != none { continue }
             diagnosticCount := state.diagnostics.length
+            if origin := field.includedFrom {
+              includedType := includedFieldType(state, origin, module, classScope)
+              discardDiagnosticsSince(state, diagnosticCount)
+              if includedType.kind == "unknown" { continue }
+              field.resolvedType = includedType
+              changed = true
+              continue
+            }
             let fieldType = unknownType()
             if type_ := field.type_ {
               fieldType = resolveType(state, type_, module, classScope)

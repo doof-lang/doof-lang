@@ -497,6 +497,154 @@ describe(Square { side: 3 })   // ✅
 
 ---
 
+## Field Inclusion
+
+A class or struct body may include the instance fields of another class or
+struct with `...TypeName`. Inclusion copies field declarations only. It creates
+no base class, subobject, subtype relation, or shared methods: the includer is
+exactly as if its author had written the fields by hand.
+
+```doof check
+struct Pos { line, column: int }
+
+class NodeBase {
+    span: Pos
+    let resolvedType: string | none = none
+}
+
+class Token {
+    text: string
+    ...NodeBase
+    let trivia: string = ""
+}
+
+class Literal {
+    ...NodeBase
+    value: int
+}
+
+token := Token { text: "if", span: Pos(3, 7) }
+token.resolvedType = "keyword"
+literal := Literal(Pos(4, 1), none, 42)
+```
+
+### Admissible Sources
+
+The included name resolves like a type annotation, so imported names, type
+arguments, and the includer's own type parameters are all available:
+
+```doof check
+struct Timestamped<T> {
+    value: T
+    createdAt: long = 0
+}
+
+class AuditedSetting<T> {
+    ...Timestamped<T>
+    key: string
+}
+
+class Note {
+    ...Timestamped<string>
+}
+
+setting := AuditedSetting<int> { value: 3, key: "retries" }
+note := Note { value: "remember" }
+```
+
+The source must be a Doof class or struct, named directly. Interfaces, enums,
+type aliases, and extern (`import class`) classes are rejected, as is any
+inclusion cycle. A source that declares a `private` instance field is rejected
+too, because private fields are not part of a declaration's API:
+
+```doof reject
+interface Spanned { line: int }
+type Location = Spanned
+
+class Session {
+    id: int
+    private secret: string = ""
+}
+
+class A { ...Spanned }    // ❌ Error: only class and struct fields can be included
+class B { ...Location }   // ❌ Error: include the class or struct directly
+class C { ...Session }    // ❌ Error: it declares private field "secret"
+```
+
+Class and struct sources are interchangeable. The includer's own `class` or
+`struct` keyword decides whether it is a reference or value type, and a struct
+includer applies the usual struct rules to included fields: no `weak` fields
+and no containing itself by value.
+
+### What Is Copied
+
+Each instance field of the source is copied, in declaration order, with its
+name, type (after substituting the inclusion's type arguments), `let` or
+`readonly` modifier, `weak` modifier, default value, literal value, and
+description. Inclusions inside the source expand transitively.
+
+A default value keeps the meaning it has in the source declaration: it is
+checked in the source's scope and may call helpers the includer cannot see.
+
+Methods, static members, constructors, destructors, and `implements` clauses
+are not copied.
+
+### Field Order
+
+Included fields occupy the inclusion's position in the includer's field order.
+That order is observable through positional construction, JSON, and metadata,
+so reordering a source's fields reorders every includer.
+
+### Name Conflicts
+
+Every field name in the expanded declaration must be unique. There is no
+override or shadowing rule; even identical declarations conflict:
+
+```doof reject
+struct A { id: int }
+struct B { id: int }
+
+class C {
+    ...A
+    ...B      // ❌ Error: field "id" is already included from "A"
+}
+
+class D {
+    id: int
+    ...A      // ❌ Error: field "id" from "A" is already declared
+}
+```
+
+### Type Relations
+
+Inclusion establishes no assignability between includer and source. Code that
+treats includers uniformly uses a structural interface, and construction spread
+moves values between the shapes:
+
+```doof check
+class NodeBase {
+    line: int
+    let checked: bool = false
+}
+
+class Call {
+    ...NodeBase
+    callee: string
+}
+
+interface Located {
+    line: int
+}
+
+function lineOf(node: Located): int => node.line
+
+base := NodeBase { line: 7 }
+call := Call { ...base, callee: "println" }
+println(lineOf(call))
+```
+
+---
+
 ## Visibility / Access Control
 
 ### The `private` Keyword

@@ -141,3 +141,23 @@ export function testLiteralValuedFieldsAcceptNegativeNumbers(): none {
   Assert.isTrue(class_.fields[0].const_)
   Assert.equal(class_.fields[0].defaultValue!.kind, "unary-expression")
 }
+
+export function testParsesFieldInclusionsAtTheirFieldPosition(): none {
+  class_ := onlyClass("class Token {\ntext: string\n...Pos\n...Timestamped<string>;\nlet trivia: string = \"\"\n}")
+  Assert.equal(class_.fields.length, 2)
+  Assert.equal(class_.inclusions.length, 2)
+  Assert.equal(class_.inclusions[0].type_.name, "Pos")
+  Assert.equal(class_.inclusions[0].position, 1)
+  Assert.equal(class_.inclusions[1].type_.name, "Timestamped")
+  Assert.equal(class_.inclusions[1].type_.typeArgs.length, 1)
+  Assert.equal(class_.inclusions[1].position, 1)
+  Assert.equal(class_.inclusions[0].span.start.line, 3)
+
+  leading := onlyClass("struct Node { ...Base\nvalue: int }")
+  Assert.equal(leading.inclusions[0].position, 0)
+}
+
+export function testRejectsFieldInclusionWithoutATypeName(): none {
+  parser := parseFailure("class Broken { ... }")
+  Assert.equal(parser.errorMessage != "", true)
+}

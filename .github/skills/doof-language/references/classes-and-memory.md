@@ -67,6 +67,48 @@ Assigning a bare field after construction is an error. Bare collection fields
 still allow interior operations such as `.push(...)`; use `let` only when the
 field slot itself must be reassigned.
 
+### Field Inclusion
+
+`...Source` in a class or struct body copies the source's instance fields at
+that position. It shares storage declarations, not behavior: no subtype
+relation, methods, or statics come along. Use an interface for code that treats
+includers uniformly.
+
+```doof check
+struct Pos { line, column: int }
+
+class NodeBase {
+    span: Pos
+    let resolvedType: string | none = none
+}
+
+class Identifier {
+    ...NodeBase
+    name: string
+}
+
+class Timestamped<T> {
+    value: T
+    createdAt: long = 0
+}
+
+class Setting<T> {
+    ...Timestamped<T>
+    key: string
+}
+
+id := Identifier(Pos(1, 4), none, "count")
+setting := Setting<int> { value: 3, key: "retries" }
+```
+
+- Sources must be classes or structs named directly; interfaces, aliases,
+  enums, extern classes, and cycles are rejected.
+- A source with any `private` instance field cannot be included.
+- Duplicate field names (between inclusions or with hand-written fields) are
+  errors; there is no override.
+- Defaults keep their source-scope meaning. Field order, and so positional
+  construction and JSON order, follows the inclusion's position.
+
 ## Construction
 
 ```doof check

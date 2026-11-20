@@ -15,6 +15,8 @@ Named-union JSON dispatch, formerly the first proposal, is implemented; see
 [JSON serialization](../spec/12-json-serialization.md). Binding conditions for
 `if` and `while`, formerly the seventh proposal, are implemented; see
 [Binding Conditions](../spec/06-control-flow.md#binding-conditions).
+Declaration field inclusion is implemented; see
+[Field Inclusion](../spec/07-classes-and-interfaces.md#field-inclusion).
 
 The proposals build on Doof's existing closed-world compiler, explicit
 `Result` error handling, actor-owned mutable domains, structural interfaces,
@@ -1974,6 +1976,8 @@ during emitter work:
 7. Whether normal TaskGroup scope exit statically requires every task to be
    observed or permits an explicit group-level discard operation.
 8. How manifestless multi-entry builds establish implicit package identity.
+9. Whether field inclusion, which currently rejects sources that declare
+   private fields, should copy them once package visibility exists.
 
 These are language-contract decisions. Each should be answered in the
 specification before generated C++ shape or runtime convenience determines the

@@ -40,6 +40,7 @@ import { pathType } from "./checker-inference"
 import { CheckerState, LambdaReturnObservation } from "./checker-state"
 import { checkTry } from "./checker-try"
 import { validateStructLayout } from "./checker-struct-layout"
+import { includedFieldType, resolveFieldInclusions } from "./checker-inclusions"
 import { checkCallerDefault, checkExpression, addClassMethods } from "./checker-expressions"
 import { checkedCaseSubjectType, casePatternsExhaustive, checkCasePatterns } from "./checker-case"
 import { checkOmittedCollectionLiteral } from "./checker-literals"
@@ -425,7 +426,17 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
   let ownerTypeArgs: ResolvedType[] = []
   for typeParam of class_.typeParams { ownerTypeArgs.push(typeParameter(typeParam)) }
   owner := classType(class_.name, symbol!, ownerTypeArgs)
+  resolveFieldInclusions(state, class_, state.info!, classScope)
   for field of class_.fields {
+    if origin := field.includedFrom {
+      // The source declaration already checked the type, default, and name.
+      includedType := includedFieldType(state, origin, state.info!, classScope)
+      field.resolvedType = includedType
+      if class_.struct_ && containsWeakType(includedType) {
+        typeError(state, "Struct field \"${fieldDisplayName(field)}\" cannot be weak", field.span)
+      }
+      continue
+    }
     deprecatedConstField(state, field)
     for fieldName of field.names {
       if generatedMemberName(fieldName) { typeError(state, "Member name \"${fieldName}\" is reserved for compiler-generated reflection and JSON support", field.span) }

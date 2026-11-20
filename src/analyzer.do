@@ -5,6 +5,7 @@
 // responsibilities separate makes the later checker independent of parsing.
 
 import { PhaseTimings } from "./phase-timings"
+import { expandFieldInclusions } from "./analyzer-inclusions"
 import { Parser } from "./parser"
 import { ModuleResolver, SourceLoader, noSourceLoader } from "./resolver"
 import {
@@ -116,6 +117,9 @@ export class ModuleAnalyzer {
     for path of reusedPaths { resolvedPaths.push(path) }
     ignored := resolveModule(entryPath)
     if editorMode { for path of additionalEntries { ignoredAdditional := resolveModule(path) } }
+    // Inclusion sources may live in any resolved module, so expansion follows
+    // named-type decoration for the whole graph.
+    for diagnostic of expandFieldInclusions(modules) { diagnostics.push(diagnostic) }
     // Loader failures explain why later resolution and type checking cascaded.
     // Keep them ahead of derived "module not found" and binding diagnostics so
     // a bounded CLI diagnostic display still includes the actionable cause.
@@ -433,6 +437,7 @@ export class ModuleAnalyzer {
         visitTypeParameterConstraints(class_.typeParamConstraints, info, class_.typeParams)
         for annotation of class_.implements_ { visitType(annotation, info, class_.typeParams) }
         for field of class_.fields { if type_ := field.type_ { visitType(type_, info, class_.typeParams) } }
+        for inclusion of class_.inclusions { visitType(inclusion.type_, info, class_.typeParams) }
         for method of class_.methods { visitFunctionTypes(method, info, class_.typeParams) }
       }
       interface_: InterfaceDeclaration -> {

@@ -33,6 +33,7 @@ several layers, use the [horizontal architecture map](compiler-architecture.md).
 | `ast.do` | Syntax node shapes, source spans, semantic decoration slots including checked member selections | Resolved-type definitions or checking policy |
 | `resolver.do` | Logical module-path resolution, lazy source loading, source cache | Disk/package acquisition |
 | `analyzer.do` | Main-thread module discovery, parallel parse scheduling, deterministic graph ordering, declaration collection, imports/re-exports, module symbols, named-type decoration | Lexical scopes or expression typing |
+| `analyzer-inclusions.do` | Graph-wide `...Source` field inclusion expansion: admissible sources, private-field and cycle rejection, name conflicts, idempotent re-expansion of reused syntax | Field types or default checking |
 | `semantic.do` | Diagnostics, symbols, bindings, scopes, resolved-type records and non-semantic identity stamps | Pass orchestration |
 | `semantic-type-identities.do` | Serial semantic identity preparation and read-only renderer lookup | Semantic equivalence or type canonicalization |
 | `absence-types.do` | Absence layers of a value type (outer none, one Result, none success value), its present type, and the declaration-else error type | Checking policy or lowering |
@@ -60,6 +61,7 @@ modules own the following decisions:
 | `checker-statements.do` | Statements, declarations, scopes, returns, destructuring, enum backing-value resolution, and control-flow continuation |
 | `checker-try.do` | Result propagation boundaries, error compatibility, and success declaration and assignment (`try target = expr`) checking |
 | `checker-absence.do` | Types of postfix `?`, optional access, and the postfix `?`/`!` receiver nodes that lower Result receivers of `?.`, `?[]`, `!.`, and `??` |
+| `checker-inclusions.do` | Included field types: inclusion type-argument resolution and substitution of the source field's checked type |
 | `checker-struct-layout.do` | Struct value-layout validation, rejecting structs that contain themselves by value |
 | `checker-hash-keys.do` | Map key and Set element validation: scalars and enums, class/interface identity, and tuples, unions, and structs of those; never floating point |
 | `checker-numeric.do` | Numeric bound membership, operator capabilities, and correlated promotion |

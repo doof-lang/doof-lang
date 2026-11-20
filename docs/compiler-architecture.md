@@ -11,8 +11,8 @@ call, structural-interface, and generic-specialization paths, see
 The compiler processes a closed source graph in four front-end/back-end phases:
 
 1. The lexer and parser produce a source-spanned AST.
-2. The analyzer collects module symbols, resolves imports/re-exports, and
-   decorates named types.
+2. The analyzer collects module symbols, resolves imports/re-exports,
+   decorates named types, and expands `...Source` field inclusions graph-wide.
 3. The checker builds scopes, resolves bindings, infers expression types,
    validates control flow/isolation, and decorates the AST in place.
 4. The emitter consumes only the decorated graph and writes split C++17
@@ -84,6 +84,7 @@ the row from left to right.
 | JSON and reflection | annotations/declarations in AST; eligibility in `json-semantics.do` | checker advertises only supported synthetic members and records metadata demand | `emitter-json.do`, `emitter-metadata.do`, and `emitter-wasm.do` generate definitions/adapters |
 | Actors and isolation | actor/promise types and actor syntax | `checker-actor-boundary.do`, `checker-actor-lifecycle.do`, and `checker-isolation.do` own call boundaries, retirement diagnostics, and graph-wide effects | `emitter-expr-actor.do` and lambda/call emitters lower checked operations; the bounded runtime scheduler executes isolated function calls, async blocks, and serial actor messages |
 | Closures and mutable capture | lambda/binding AST and checker bindings | checker establishes callable types and retains lexical bindings on identifier and shorthand-property nodes, including Result payloads | `emitter-expr-lambda.do` finds escaping captures, including uses nested in shorthand construction, and boxes mutable storage; Result construction emits shorthand through a decorated identifier using the checked binding and type |
+| Field inclusion | `FieldInclusion` members and `IncludedField` origins in `ast.do` | `analyzer-inclusions.do` expands sources in place (admissibility, private fields, cycles, name conflicts); `checker-inclusions.do` substitutes the source field's checked type and never re-checks shared defaults | the emitter sees ordinary fields; generated C++ matches the hand-written declaration |
 | Construction | `CheckedConstruction` with specialized owner, signature, factory, and defaults | `checker-construction.do` specializes the factory/field plan; `checker-properties.do` shares value decoration after contextual shape selection | `emitter-construction.do` consumes the retained plan and shares argument/default lowering across syntax forms and actors |
 | Callable bodies | checked function/method/lambda signatures and bodies | `checker-statements.do` tracks returns and continuation; `checker-lambdas.do` joins lambda return paths, decorates return sites with their final types, and enforces lambda completion | `emitter-decl.do` and lambda/return emitters consume checked return boundaries, including `never` |
 | Module initialization | top-level checked declarations/statements and compiler entry mode | `checker-module-initialization.do` validates construction-only expressions and direct storage | `emitter-module.do`, `emitter-header.do`, and `emitter-decl.do` emit direct storage and graph-ordered execution |

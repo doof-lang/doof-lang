@@ -2181,3 +2181,13 @@ export function testEmitsTryDestructuringFromSuccessPayload(): none {
   Assert.stringContains(result.source, "std::get<0>(")
   Assert.stringContains(result.source, "std::get<1>(")
 }
+
+// Inclusion is expanded before checking, so the emitter sees ordinary fields.
+export function testFieldInclusionEmitsTheHandWrittenDeclaration(): none {
+  base := "function tag(): string => \"t\"\nstruct Pos<T> { line: T\nlet column: int = 0\nlabel: string = tag() }\nclass Token {\ntext: string\n"
+  usage := "\n}\nfunction main(): none { println(Token(\"if\", 3).label) }"
+  included := emit(base + "...Pos<long>" + usage)
+  written := emit(base + "line: long; let column: int = 0; label: string = tag()" + usage)
+  Assert.equal(included.header, written.header)
+  Assert.equal(included.source, written.source)
+}

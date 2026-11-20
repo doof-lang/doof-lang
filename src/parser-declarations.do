@@ -3,7 +3,7 @@
 import type { Parser } from "./parser"
 import { TokenType, isNumericLiteral } from "./lexer"
 import {
-  Block, NamedType, Parameter, ClassField,
+  Block, NamedType, Parameter, ClassField, FieldInclusion,
   InterfaceField, EnumVariant, ExportSpecifier, AstLocation,
   Identifier, ConstDeclaration, ReadonlyDeclaration, LetDeclaration,
   FunctionDeclaration, ImportDeclaration, NamedImport,
@@ -214,10 +214,13 @@ export function parseClass(parser: Parser, exported: bool, private_: bool): Stat
   parser.expect(TokenType.LeftBrace)
 
   let fields: ClassField[] = []
+  let inclusions: FieldInclusion[] = []
   let methods: FunctionDeclaration[] = []
   let destructor_: Block | none = none
   while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
-    if parser.check(TokenType.Function) {
+    if parser.check(TokenType.Ellipsis) {
+      inclusions.push(parseFieldInclusion(parser, fields.length))
+    } else if parser.check(TokenType.Function) {
       methods.push(parseFunction(parser, false, false, false, false, true))
     } else if parser.check(TokenType.Static) && parser.peek(1).kind == TokenType.Function {
       parser.advance()
@@ -258,7 +261,16 @@ export function parseClass(parser: Parser, exported: bool, private_: bool): Stat
     }
   }
   parser.expect(TokenType.RightBrace)
-  return ClassDeclaration { kind: "class-declaration", name, description, struct_, typeParams, typeParamConstraints: parsedTypeParams.constraints, implements_, fields, methods, destructor_, exported, private_, span: parser.span(start) }
+  return ClassDeclaration { kind: "class-declaration", name, description, struct_, typeParams, typeParamConstraints: parsedTypeParams.constraints, implements_, fields, inclusions, methods, destructor_, exported, private_, span: parser.span(start) }
+}
+
+// `...Source<Args>` copies the source declaration's instance fields here.
+function parseFieldInclusion(parser: Parser, position: int): FieldInclusion {
+  start := parser.location()
+  parser.expect(TokenType.Ellipsis)
+  type_ := parser.parseNamedType()
+  parser.consumeSemicolon()
+  return FieldInclusion { kind: "field-inclusion", type_, position, span: parser.span(start) }
 }
 
 function checkAheadMethod(parser: Parser, offset: int): bool {

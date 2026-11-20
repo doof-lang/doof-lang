@@ -753,7 +753,9 @@ export class ClassDeclaration {
   typeParams: string[]
   typeParamConstraints: TypeParameterConstraint[] = []
   implements_: NamedType[]
-  fields: ClassField[]
+  let fields: ClassField[]
+  // `...Source` members, expanded into `fields` by the analyzer.
+  inclusions: FieldInclusion[] = []
   methods: FunctionDeclaration[]
   destructor_: Block | none = none
   exported: bool
@@ -783,9 +785,30 @@ export class ClassField {
   readonly_: bool
   weak_: bool = false
   private_: bool
+  // Set on fields the analyzer copied from an inclusion source. Such fields
+  // share the source default expression, checked in the source scope.
+  let includedFrom: IncludedField | none = none
   let resolvedType: ResolvedType | none = none
   let moduleInitializerChecked: bool = false
   span: SourceSpan
+}
+
+// `...Source` or `...Source<Args>` in a class or struct body.
+export class FieldInclusion {
+  kind: string
+  type_: NamedType
+  // Number of hand-written fields declared before the inclusion.
+  position: int
+  let resolvedSource: ClassDeclaration | none = none
+  span: SourceSpan
+}
+
+// Origin of an included field: the inclusion that copied it and the source
+// field, whose checked type is substituted by the inclusion type arguments.
+export class IncludedField {
+  inclusion: FieldInclusion
+  source: ClassDeclaration
+  sourceField: ClassField
 }
 
 export class InterfaceDeclaration {
