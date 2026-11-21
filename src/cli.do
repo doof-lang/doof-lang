@@ -31,6 +31,7 @@ export class CliRequest {
   let macosSignIdentity: string = ""
   let macosSandbox: bool = false
   let macosEntitlements: string = ""
+  let macosNotaryProfile: string = ""
   let iosDestination: string = "simulator"
   let iosDevice: string = ""
   let iosSignIdentity: string = ""
@@ -72,6 +73,7 @@ export function cliUsage(): string {
     "  --macos-sign-identity <id>  Developer ID Application identity\n" +
     "  --macos-sandbox             enable App Sandbox entitlement\n" +
     "  --macos-entitlements <path> merge additional entitlements plist\n" +
+    "  --macos-notary-profile <name> notarytool keychain profile for notarization\n" +
     "  --ios-destination <kind>   iOS build destination: simulator or device\n" +
     "  --ios-device <id>          connected iOS device identifier or name\n" +
     "  --ios-sign-identity <id>   Apple signing identity for device/package builds\n" +
@@ -204,6 +206,12 @@ export function parseCli(args: string[]): CliParseResult {
     if argument == "--macos-entitlements" {
       if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for --macos-entitlements" } }
       request.macosEntitlements = args[index + 1]
+      index = index + 2
+      continue
+    }
+    if argument == "--macos-notary-profile" {
+      if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for --macos-notary-profile" } }
+      request.macosNotaryProfile = args[index + 1]
       index = index + 2
       continue
     }

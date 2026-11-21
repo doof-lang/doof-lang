@@ -207,7 +207,12 @@ A pattern matching nothing is an error. Duplicate destinations are rejected.
       "embeddedLibraries": [{ "library": "libpng16.16.dylib" }]
     },
     "package": {
-      "macos": { "signing": "developer-id", "sandbox": true, "entitlements": "notes.entitlements" }
+      "macos": {
+        "signing": "developer-id",
+        "sandbox": true,
+        "entitlements": "notes.entitlements",
+        "notaryProfile": "notes-notary"
+      }
     }
   }
 }
@@ -229,8 +234,15 @@ A pattern matching nothing is an error. Duplicate destinations are rejected.
   `.dylib`, `.so`, or `.framework`).
 - `doof package .` signs (default `developer-id`; `ad-hoc` for local use),
   verifies, and writes `dist/Notes-1.2.0-macos.zip`. CLI flags
-  `--macos-signing`, `--macos-sign-identity`, `--macos-sandbox`, and
-  `--macos-entitlements` override the manifest.
+  `--macos-signing`, `--macos-sign-identity`, `--macos-sandbox`,
+  `--macos-entitlements`, and `--macos-notary-profile` override the manifest.
+- With `developer-id` signing and a `notaryProfile`, the package is submitted
+  to Apple's notary service, must be `Accepted`, is stapled, passes a
+  Gatekeeper (`spctl`) assessment, and the zip is rebuilt with the ticket.
+  Create the profile once with `xcrun notarytool store-credentials
+  notes-notary`; `DOOF_MACOS_NOTARY_PROFILE` also sets it. Without a profile
+  the app is signed but unnotarized and `doof package` warns that Gatekeeper
+  will block downloaded copies. Ad-hoc bundles are never notarized.
 
 ## iOS application (`"target": "ios-app"`)
 

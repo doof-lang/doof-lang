@@ -580,12 +580,13 @@ function parseMacOSPackage(root: SerialObject, manifestPath: string, rootDirecto
   let identity = ""
   let sandbox = false
   let entitlementsPath = ""
+  let notaryProfile = ""
   if !manifestJsonHas(root, "build") {
-    return Success(MacOSPackageConfig { distDirectory, signing, identity, sandbox, entitlementsPath })
+    return Success(MacOSPackageConfig { distDirectory, signing, identity, sandbox, entitlementsPath, notaryProfile })
   }
   try build := manifestObject(manifestJsonField(root, "build"), manifestPath, "build")
   if !manifestJsonHas(build, "package") {
-    return Success(MacOSPackageConfig { distDirectory, signing, identity, sandbox, entitlementsPath })
+    return Success(MacOSPackageConfig { distDirectory, signing, identity, sandbox, entitlementsPath, notaryProfile })
   }
   try package := manifestObject(manifestJsonField(build, "package"), manifestPath, "build.package")
   if manifestJsonHas(package, "distDir") {
@@ -621,8 +622,15 @@ function parseMacOSPackage(root: SerialObject, manifestPath: string, rootDirecto
         return Failure("Invalid doof.json at ${manifestPath}: build.package.macos.entitlements must stay within the package root")
       }
     }
+    if manifestJsonHas(macos, "notaryProfile") {
+      try value := manifestString(manifestJsonField(macos, "notaryProfile"), manifestPath, "build.package.macos.notaryProfile")
+      if value == "" {
+        return Failure("Invalid doof.json at ${manifestPath}: build.package.macos.notaryProfile must name a notarytool keychain profile")
+      }
+      notaryProfile = value
+    }
   }
-  return Success(MacOSPackageConfig { distDirectory, signing, identity, sandbox, entitlementsPath })
+  return Success(MacOSPackageConfig { distDirectory, signing, identity, sandbox, entitlementsPath, notaryProfile })
 }
 
 function parseIOSPackage(root: SerialObject, manifestPath: string, rootDirectory: string): Result<IOSPackageConfig, string> {

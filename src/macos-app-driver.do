@@ -5,7 +5,12 @@
 // the deterministic metadata and command-argument model.
 
 import { collectNestedCode, copyBundleResource, copyPath, ensureDirectory, removeTree } from "./app-bundle-files"
-import { MacOSAppConfig, MacOSEmbeddedLibrary, MacOSPackageConfig, macOSCodesignArguments, renderMacOSInfoPlist } from "./macos-app"
+import {
+  MacOSAppConfig, MacOSEmbeddedLibrary, MacOSNotarization, MacOSPackageConfig, macOSCodesignArguments,
+  macOSGatekeeperArguments, macOSNotarizationMode, macOSNotaryLogArguments, macOSNotarySubmitArguments,
+  parseMacOSNotarySubmission,
+  renderMacOSInfoPlist,
+} from "./macos-app"
 import { BlobReader } from "std/blob"
 import { exists, isDirectory, remove, writeText } from "std/fs"
 import { ExecOptions, platform, run } from "std/os"
@@ -42,10 +47,7 @@ function runMacOSCommand(command: string, arguments: string[]): MacOSCommandResu
 
 function runRequiredCommand(command: string, arguments: string[], description: string): Result<none, string> {
   result := runMacOSCommand(command, arguments)
-  if result.exitCode != 0 {
-    output := if result.error != "" then result.error else BlobReader(result.output).readString(long(result.output.length))
-    return Failure("${description} failed: ${output}")
-  }
+  if result.exitCode != 0 { return Failure("${description} failed: ${commandOutputText(result)}") }
   return Success()
 }
 
@@ -341,13 +343,54 @@ function effectiveEntitlements(config: MacOSPackageConfig, buildDirectory: strin
   return Success(destinationPath)
 }
 
-/** Applies release signing, verifies the bundle, and creates the distributable zip. */
+function commandOutputText(result: MacOSCommandResult): string {
+  return if result.error != "" then result.error else BlobReader(result.output).readString(long(result.output.length))
+}
+
+function archiveMacOSApp(appPath: string, archivePath: string): Result<none, string> {
+  if exists(archivePath) { remove(archivePath)! }
+  return runRequiredCommand("ditto", ["-c", "-k", "--sequesterRsrc", "--keepParent", appPath, archivePath], "archiving macOS app")
+}
+
+/** Submits the archive to Apple's notary service and staples the accepted ticket. */
+function notarizeMacOSApp(appPath: string, archivePath: string, profile: string, buildDirectory: string): Result<none, string> {
+  submitted := runMacOSCommand("xcrun", macOSNotarySubmitArguments(archivePath, profile))
+  response := commandOutputText(submitted)
+  responsePath := outputPath(buildDirectory, ".doof-notarization.json")
+  writeText(responsePath, response)!
+  submission := parseMacOSNotarySubmission(response) else error {
+    return Failure("notarizing macOS app with keychain profile \"${profile}\" failed: ${error}\n" +
+      "Create the profile with: xcrun notarytool store-credentials ${profile}")
+  }
+  if submission.status != "Accepted" {
+    let detail = "Apple's notary service returned ${submission.status}"
+    if submission.message != "" { detail = "${detail}: ${submission.message}" }
+    if submission.id != "" {
+      logPath := outputPath(buildDirectory, ".doof-notarization-log.json")
+      logged := runMacOSCommand("xcrun", macOSNotaryLogArguments(submission.id, profile, logPath))
+      detail = if logged.exitCode == 0
+        then "${detail}\nnotary log: ${logPath}"
+        else "${detail}\nfetch the log with: xcrun notarytool log ${submission.id} --keychain-profile ${profile}"
+    }
+    return Failure("notarizing macOS app failed: ${detail}")
+  }
+  try runRequiredCommand("xcrun", ["stapler", "staple", appPath], "stapling the notarization ticket")
+  try runRequiredCommand("xcrun", ["stapler", "validate", appPath], "validating the stapled ticket")
+  try runRequiredCommand("spctl", macOSGatekeeperArguments(appPath), "Gatekeeper assessment of the notarized app")
+  return Success()
+}
+
+/**
+ * Applies release signing, verifies the bundle, notarizes Developer ID
+ * releases when a notary profile is configured, and creates the distributable
+ * zip. The returned mode tells the caller whether Gatekeeper will accept it.
+ */
 export function signAndArchiveMacOSApp(
   appPath: string,
   archivePath: string,
   config: MacOSPackageConfig,
   buildDirectory: string,
-): Result<none, string> {
+): Result<MacOSNotarization, string> {
   let identity = "-"
   if config.signing != "ad-hoc" {
     try resolvedIdentity := developerIdIdentity(config.identity)
@@ -362,7 +405,16 @@ export function signAndArchiveMacOSApp(
   try runRequiredCommand("codesign", macOSCodesignArguments(appPath, identity, config.signing, entitlementsPath), "signing macOS app")
   try runRequiredCommand("codesign", ["--verify", "--deep", "--strict", "--verbose=2", appPath], "verifying macOS app signature")
   ensureDirectory(parentPath(archivePath))
-  if exists(archivePath) { remove(archivePath)! }
-  try runRequiredCommand("ditto", ["-c", "-k", "--sequesterRsrc", "--keepParent", appPath, archivePath], "archiving macOS app")
-  return Success()
+  try archiveMacOSApp(appPath, archivePath)
+  mode := macOSNotarizationMode(config)
+  if mode == .Notarize {
+    _ := notarizeMacOSApp(appPath, archivePath, config.notaryProfile, buildDirectory) else error {
+      // Never leave an unnotarized archive where a release is expected.
+      if exists(archivePath) { remove(archivePath)! }
+      return Failure(error)
+    }
+    // Rebuild the archive so the distributed app carries the stapled ticket.
+    try archiveMacOSApp(appPath, archivePath)
+  }
+  return Success(mode)
 }

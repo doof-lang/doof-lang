@@ -206,7 +206,7 @@ export function testRejectsInvalidNativeStringArrays(): none {
 
 export function testParsesCompactMacOSAppAndReleaseSettings(): none {
   manifest := parsePackageManifest(
-    "{\"name\":\"demo-app\",\"version\":\"1.2\",\"target\":\"macos-app\",\"executable\":\"Demo\",\"id\":\"dev.example.demo\",\"title\":\"Demo App\",\"icon\":\"icon.png\",\"resources\":[\"assets\"],\"build\":{\"macosApp\":{\"category\":\"public.app-category.games\",\"embeddedLibraries\":[{\"library\":\"SDL3\"},{\"path\":\"vendor/Foo.framework\"}]},\"package\":{\"distDir\":\"artifacts\",\"macos\":{\"signing\":\"ad-hoc\",\"sandbox\":true,\"entitlements\":\"release.plist\"}}}}",
+    "{\"name\":\"demo-app\",\"version\":\"1.2\",\"target\":\"macos-app\",\"executable\":\"Demo\",\"id\":\"dev.example.demo\",\"title\":\"Demo App\",\"icon\":\"icon.png\",\"resources\":[\"assets\"],\"build\":{\"macosApp\":{\"category\":\"public.app-category.games\",\"embeddedLibraries\":[{\"library\":\"SDL3\"},{\"path\":\"vendor/Foo.framework\"}]},\"package\":{\"distDir\":\"artifacts\",\"macos\":{\"signing\":\"ad-hoc\",\"sandbox\":true,\"entitlements\":\"release.plist\",\"notaryProfile\":\"doof-notary\"}}}}",
     "/app/doof.json",
     "/app",
     "macos",
@@ -227,6 +227,23 @@ export function testParsesCompactMacOSAppAndReleaseSettings(): none {
   Assert.equal(manifest.packageConfig!.signing, "ad-hoc")
   Assert.equal(manifest.packageConfig!.sandbox, true)
   Assert.equal(manifest.packageConfig!.entitlementsPath, "/app/release.plist")
+  Assert.equal(manifest.packageConfig!.notaryProfile, "doof-notary")
+}
+
+export function testRejectsInvalidMacOSNotaryProfile(): none {
+  for profile of ["\"\"", "true"] {
+    result := parsePackageManifest(
+      "{\"name\":\"demo\",\"build\":{\"target\":\"macos-app\",\"package\":{\"macos\":{\"notaryProfile\":${profile}}}}}",
+      "/app/doof.json",
+      "/app",
+      "macos",
+    )
+    _ := result else error {
+      Assert.stringContains(error, "build.package.macos.notaryProfile")
+      continue
+    }
+    Assert.fail("expected notaryProfile ${profile} to be rejected")
+  }
 }
 
 export function testRejectsManagedMacOSInfoPlistOverrides(): none {

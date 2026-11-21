@@ -93,10 +93,26 @@ function packageMacOSApp(
   if request.macosSignIdentity != "" { packageConfig.identity = request.macosSignIdentity }
   if request.macosSandbox { packageConfig.sandbox = true }
   if request.macosEntitlements != "" { packageConfig.entitlementsPath = absolute(request.macosEntitlements)! }
+  environmentNotaryProfile := environmentValue("DOOF_MACOS_NOTARY_PROFILE")
+  if environmentNotaryProfile != "" { packageConfig.notaryProfile = environmentNotaryProfile }
+  if request.macosNotaryProfile != "" { packageConfig.notaryProfile = request.macosNotaryProfile }
+  if request.macosNotaryProfile != "" && packageConfig.signing == "ad-hoc" {
+    println("error: --macos-notary-profile requires developer-id signing; ad-hoc bundles cannot be notarized")
+    return 1
+  }
   archivePath := driverOutputPath(distDirectory, macOSPackageArchiveName(project.macosApp!.executableName, project.macosApp!.version))
-  _ := signAndArchiveMacOSApp(appPath, archivePath, packageConfig, outputDirectory) else error {
+  mode := signAndArchiveMacOSApp(appPath, archivePath, packageConfig, outputDirectory) else error {
     println("error: ${error}")
     return 1
+  }
+  case mode {
+    .Notarize -> println("Notarized and stapled with keychain profile \"${packageConfig.notaryProfile}\"; Gatekeeper accepts the app.")
+    .SkipAdHoc -> println("Ad-hoc signed for local use; Gatekeeper will block this app on other Macs.")
+    .Unnotarized -> println(
+      "warning: the app is signed but not notarized, so Gatekeeper will block it when downloaded. " +
+      "Set build.package.macos.notaryProfile, DOOF_MACOS_NOTARY_PROFILE, or --macos-notary-profile " +
+      "to a profile created with `xcrun notarytool store-credentials <name>`.",
+    )
   }
   println("Package: ${archivePath}")
   return 0

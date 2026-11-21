@@ -4,6 +4,8 @@
 // archive-name, and codesign argument generation here makes the package path
 // directly testable without requiring a signing identity or Apple tools.
 
+import { parseJsonValue } from "std/json"
+
 /** One resource mapping rooted below Contents/Resources. */
 export class MacOSAppResource {
   sourcePath: string
@@ -39,6 +41,58 @@ export class MacOSPackageConfig {
   let identity: string = ""
   let sandbox: bool = false
   let entitlementsPath: string = ""
+  // notarytool keychain profile; empty leaves Developer ID packages unnotarized.
+  let notaryProfile: string = ""
+}
+
+/** How a signed macOS package is prepared for Gatekeeper. */
+export enum MacOSNotarization {
+  // Submit to Apple's notary service, staple, and assess with Gatekeeper.
+  Notarize,
+  // Local ad-hoc bundles cannot be notarized.
+  SkipAdHoc,
+  // Developer ID signed, but no notary profile was configured.
+  Unnotarized,
+}
+
+export function macOSNotarizationMode(config: MacOSPackageConfig): MacOSNotarization {
+  if config.signing == "ad-hoc" { return .SkipAdHoc }
+  return if config.notaryProfile != "" then .Notarize else .Unnotarized
+}
+
+/** The fields of `notarytool submit --output-format json` the packager reads. */
+export class MacOSNotarySubmission {
+  id: string = ""
+  status: string = ""
+  message: string = ""
+}
+
+export function macOSNotarySubmitArguments(archivePath: string, profile: string): string[] {
+  return ["notarytool", "submit", archivePath, "--keychain-profile", profile, "--wait", "--output-format", "json"]
+}
+
+export function macOSNotaryLogArguments(submissionId: string, profile: string, logPath: string): string[] {
+  return ["notarytool", "log", submissionId, "--keychain-profile", profile, logPath]
+}
+
+/** Gatekeeper's own launch assessment of a notarized, stapled bundle. */
+export function macOSGatekeeperArguments(appPath: string): string[] {
+  return ["--assess", "--type", "execute", "--verbose=2", appPath]
+}
+
+/** Reads notarytool's JSON response, which it prints even when it exits non-zero. */
+export function parseMacOSNotarySubmission(response: string): Result<MacOSNotarySubmission, string> {
+  // notarytool may print progress lines before the JSON document.
+  start := response.indexOf("{")
+  if start < 0 { return Failure("notarytool returned no JSON response: ${response.trim()}") }
+  parsed := parseJsonValue(response.substring(start)) else error {
+    return Failure("notarytool returned unreadable JSON (${error}): ${response.trim()}")
+  }
+  submission := MacOSNotarySubmission.fromSerialValue(parsed) else error {
+    return Failure("notarytool returned unexpected JSON (${error}): ${response.trim()}")
+  }
+  if submission.status == "" { return Failure("notarytool response has no status: ${response.trim()}") }
+  return Success(submission)
 }
 
 export function macOSPackageArchiveName(executableName: string, version: string): string {

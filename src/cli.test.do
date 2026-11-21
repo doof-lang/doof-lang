@@ -154,7 +154,7 @@ export function testParsesMacOSPackageOptions(): none {
   result := parseCli([
     "package", "demo", "--distdir", "artifacts", "--macos-signing", "ad-hoc",
     "--macos-sign-identity", "Developer ID Application: Example", "--macos-sandbox",
-    "--macos-entitlements", "release.plist",
+    "--macos-entitlements", "release.plist", "--macos-notary-profile", "doof-notary",
   ])
   Assert.equal(result.error, "")
   Assert.equal(result.request!.distDirectory, "artifacts")
@@ -162,11 +162,17 @@ export function testParsesMacOSPackageOptions(): none {
   Assert.equal(result.request!.macosSignIdentity, "Developer ID Application: Example")
   Assert.equal(result.request!.macosSandbox, true)
   Assert.equal(result.request!.macosEntitlements, "release.plist")
+  Assert.equal(result.request!.macosNotaryProfile, "doof-notary")
 }
 
 export function testRejectsInvalidMacOSSigningOption(): none {
   result := parseCli(["package", "demo", "--macos-signing", "mystery"])
   Assert.equal(result.error, "invalid value for --macos-signing: mystery")
+}
+
+export function testRejectsMissingMacOSNotaryProfile(): none {
+  result := parseCli(["package", "demo", "--macos-notary-profile"])
+  Assert.equal(result.error, "missing value for --macos-notary-profile")
 }
 
 export function testParsesIOSBuildAndPackageOptions(): none {
