@@ -279,6 +279,14 @@ doof package . --ios-destination device
   `build.package.ios`, `DOOF_IOS_SIGN_IDENTITY` /
   `DOOF_IOS_PROVISIONING_PROFILE`, or `--ios-sign-identity` /
   `--ios-provisioning-profile` (CLI wins).
+- `doof package . --ios-destination device` produces an **Ad Hoc** build only:
+  `dist/<Executable>-<version>-ios.ipa`, installable on the devices registered
+  in the profile. It requires an Apple Distribution identity included in an
+  unexpired Ad Hoc profile whose App ID matches the bundle id; Development,
+  Enterprise, and App Store profiles (no registered devices) are rejected.
+- App Store and TestFlight distribution are not supported: Doof does not
+  produce App Store builds, bundle dSYMs, or upload to App Store Connect.
+  iOS apps are not notarized; Apple reviews them on App Store Connect upload.
 
 ## WebAssembly library (`"target": "wasm"`)
 
