@@ -43,7 +43,7 @@ export function resolveConstructor(state: CheckerState, owner: ClassType, useFac
       }
     }
   }
-  return CheckedConstruction { owner, declaration, factory: none, signature: FunctionType { params, returnType: owner }, defaults }
+  return CheckedConstruction { owner, declaration, factory: none, signature: FunctionType { params: params.drainToReadonly(), returnType: owner }, defaults }
 }
 
 /**
@@ -52,10 +52,10 @@ export function resolveConstructor(state: CheckerState, owner: ClassType, useFac
  * Speculative diagnostics are discarded when inference fails, so the caller
  * reports one actionable error.
  */
-export function inferConstructionTypeArguments(state: CheckerState, args: CallArgument[], owner: ClassType, declaration: ClassDeclaration, scope: Scope, expected: ResolvedType | none): ResolvedType[] | none {
+export function inferConstructionTypeArguments(state: CheckerState, args: CallArgument[], owner: ClassType, declaration: ClassDeclaration, scope: Scope, expected: ResolvedType | none): readonly ResolvedType[] | none {
   let parameters: ResolvedType[] = []
   for name of declaration.typeParams { parameters.push(typeParameter(name)) }
-  generic := classType(owner.name, owner.symbol, parameters)
+  generic := classType(owner.name, owner.symbol, parameters.drainToReadonly())
   plan := resolveConstructor(state, generic, !insideConstructorFactory(scope, generic))
   signature := FunctionType { params: plan.signature.params, returnType: plan.signature.returnType, typeParams: declaration.typeParams }
   diagnosticMark := state.diagnostics.length
@@ -134,7 +134,7 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
   if resolvedTypeArgs.length == 0 && expected != none {
     if expectedClass := expected! as ClassType {
       if expectedClass.symbol.module == symbol!.module && expectedClass.symbol.name == symbol!.name {
-        for argument of expectedClass.typeArgs { resolvedTypeArgs.push(argument) }
+        resolvedTypeArgs = expectedClass.typeArgs
       }
     }
   }
@@ -146,7 +146,7 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
       cannotInferConstruction(state, generic!, args, scope, expression.span)
       return finish(state, expression, unknownType())
     }
-    for argument of inferred! { resolvedTypeArgs.push(argument) }
+    resolvedTypeArgs = inferred!
   }
   if resolvedClass := expression.resolvedClass {
     validateTypeArgumentConstraints(state, resolvedClass.typeParams, resolvedClass.typeParamConstraints, resolvedTypeArgs, expression.span, classModuleFor(state.result, symbol!), scope)
@@ -165,7 +165,7 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
       if spreadType := constructionSpreadFieldType(state, expression, parameter.name) { spread.push(FunctionParamType { name: parameter.name, type_: spreadType, hasDefault: false }) }
     }
     checkArguments(state, propertyArguments(expression.args), plan.signature.params, scope, expression.span,
-      "Class \"${constructed.name}\"", "Argument", true, true, spread, expression.spread?.span, true)
+      "Class \"${constructed.name}\"", "Argument", true, true, spread.drainToReadonly(), expression.spread?.span, true)
     return finish(state, expression, plan.signature.returnType)
   }
   if resolvedClass := expression.resolvedClass { checkClassProperties(state, expression.args, scope, constructed, resolvedClass, expression.span, false, expression) }

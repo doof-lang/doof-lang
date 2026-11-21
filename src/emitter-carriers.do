@@ -70,7 +70,7 @@ export function naturalCarrierMember(type_: ResolvedType): ResolvedType | none {
   return none
 }
 
-export function flattenCarrierMembers(types: ResolvedType[]): ResolvedType[] {
+export function flattenCarrierMembers(types: readonly ResolvedType[]): ResolvedType[] {
   let result: ResolvedType[] = []
   for member of types {
     case member {
@@ -110,7 +110,7 @@ export function presentWeakTarget(target: ResolvedType): ResolvedType {
       let present: ResolvedType[] = []
       for member of union_.types { if member.kind != "none" { present.push(member) } }
       if present.length == 1 { return present[0] }
-      return UnionResolvedType { types: present }
+      return UnionResolvedType { types: present.drainToReadonly() }
     }
     _ -> { return target }
   }

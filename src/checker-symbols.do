@@ -9,6 +9,7 @@ import { classType, enumType, functionType, interfaceType, jsonValueType, param,
 
 import { symbolSpan, findModule } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
+import { ProvisionalSignatures } from "./checker-state"
 
 export function builtinSourceLocationType(): ClassType {
   return classType("SourceLocation", Symbol {
@@ -93,7 +94,7 @@ export function blockContainsLoopExit(block: Block): bool {
 }
 
 
-export function functionParameterIndex(parameters: FunctionParamType[], name: string): int {
+export function functionParameterIndex(parameters: readonly FunctionParamType[], name: string): int {
   for i of 0..<parameters.length { if parameters[i].name == name { return i } }
   return -1
 }
@@ -121,20 +122,20 @@ export function hasObjectProperty(properties: ObjectProperty[], name: string): b
   return false
 }
 
-export function predeclareModuleBindings(info: ModuleInfo, scope: Scope, result: AnalysisResult): none {
+export function predeclareModuleBindings(info: ModuleInfo, scope: Scope, result: AnalysisResult, signatures: ProvisionalSignatures = ProvisionalSignatures {}): none {
   for symbol of info.symbols {
     if symbol.kind == "function" || symbol.kind == "class" || symbol.kind == "struct" || symbol.kind == "interface" || symbol.kind == "enum" {
-      declare(scope, Binding { name: symbol.name, kind: symbol.kind, type_: symbolType(symbol, info, result), mutable: false, span: checkerSemanticSpan(symbolSpan(info, symbol.name)), module: info.path, symbol })
+      declare(scope, Binding { name: symbol.name, kind: symbol.kind, type_: symbolType(symbol, info, result, signatures), mutable: false, span: checkerSemanticSpan(symbolSpan(info, symbol.name)), module: info.path, symbol })
     }
   }
   for imported of info.imports {
     if !imported.typeOnly && imported.symbol != none && isValueSymbol(imported.symbol!) {
-      declare(scope, Binding { name: imported.localName, kind: "import", type_: symbolType(imported.symbol!, info, result), mutable: false, span: checkerSemanticSpan(symbolSpan(info, imported.localName)), module: info.path, symbol: imported.symbol })
+      declare(scope, Binding { name: imported.localName, kind: "import", type_: symbolType(imported.symbol!, info, result, signatures), mutable: false, span: checkerSemanticSpan(symbolSpan(info, imported.localName)), module: info.path, symbol: imported.symbol })
     }
   }
 }
 
-export function symbolType(symbol: Symbol, info: ModuleInfo, result: AnalysisResult): ResolvedType {
+export function symbolType(symbol: Symbol, info: ModuleInfo, result: AnalysisResult, signatures: ProvisionalSignatures = ProvisionalSignatures {}): ResolvedType {
   if symbol.kind == "class" || symbol.kind == "struct" { return classType(declaredSymbolName(symbol), symbol) }
   if symbol.kind == "interface" { return interfaceType(declaredSymbolName(symbol), symbol) }
   if symbol.kind == "enum" { return enumType(declaredSymbolName(symbol), symbol) }
@@ -145,7 +146,10 @@ export function symbolType(symbol: Symbol, info: ModuleInfo, result: AnalysisRes
       if resolvedType := fn.resolvedType {
         if resolved := resolvedType as FunctionType { return resolved }
       }
-      return methodSignature(fn, info, result)
+      if cached := signatures.lookup(fn, info.path) { return cached }
+      signature := methodSignature(fn, info, result)
+      signatures.store(fn, info.path, signature)
+      return signature
     }
     alias: TypeAliasDeclaration -> { return resolveAnnotation(alias.type_, info, result) }
     const_: ConstDeclaration -> { if resolvedType := const_.resolvedType { return resolvedType } }
@@ -159,23 +163,25 @@ export function symbolType(symbol: Symbol, info: ModuleInfo, result: AnalysisRes
 // Imported member lookup needs a declaration's signature without checking its
 // body in the caller's module scope. This also keeps cross-module context
 // objects usable when their implementation methods refer to local imports.
-export function methodSignature(method: FunctionDeclaration, info: ModuleInfo, result: AnalysisResult, ownerTypeParams: string[] = []): ResolvedType {
-  let typeParams: string[] = []
-  for name of ownerTypeParams { typeParams.push(name) }
-  for name of method.typeParams { typeParams.push(name) }
+export function methodSignature(method: FunctionDeclaration, info: ModuleInfo, result: AnalysisResult, ownerTypeParams: readonly string[] = []): ResolvedType {
+  let collected: string[] = []
+  for name of ownerTypeParams { collected.push(name) }
+  for name of method.typeParams { collected.push(name) }
+  typeParams := collected.drainToReadonly()
   return functionType(functionParametersFor(method, info, result, ownerTypeParams), if method.returnType == none then noneType() else resolveAnnotation(method.returnType!, info, result, typeParams), method.typeParams)
 }
 
-export function functionParametersFor(fn: FunctionDeclaration, info: ModuleInfo, result: AnalysisResult, ownerTypeParams: string[] = []): FunctionParamType[] {
-  let typeParams: string[] = []
-  for name of ownerTypeParams { typeParams.push(name) }
-  for name of fn.typeParams { typeParams.push(name) }
+export function functionParametersFor(fn: FunctionDeclaration, info: ModuleInfo, result: AnalysisResult, ownerTypeParams: readonly string[] = []): readonly FunctionParamType[] {
+  let collected: string[] = []
+  for name of ownerTypeParams { collected.push(name) }
+  for name of fn.typeParams { collected.push(name) }
+  typeParams := collected.drainToReadonly()
   let resultTypes: FunctionParamType[] = []
   for parameter of fn.params {
     parameterType := parameter.resolvedType ?? (if annotation := parameter.type_ then resolveAnnotation(annotation, info, result, typeParams) else unknownType())
     resultTypes.push(FunctionParamType { name: parameter.name, type_: parameterType, hasDefault: parameter.defaultValue != none })
   }
-  return resultTypes
+  return resultTypes.drainToReadonly()
 }
 
 export function declare(scope: Scope, binding: Binding): bool {
@@ -313,7 +319,7 @@ export function builtinCallable(name: string): ResolvedType {
     primitive("byte"), primitive("int"), primitive("long"), primitive("float"), primitive("double"),
   ]
   if name == "int" { castInputs.push(primitive("char")) }
-  return functionType([param("value", unionType(castInputs))], result)
+  return functionType([param("value", unionType(castInputs.drainToReadonly()))], result)
 }
 
 export function isBuiltinPrintlnCall(callee: Expression): bool {
@@ -407,6 +413,6 @@ export function symbolName(statement: Statement): string {
 // pattern against the concrete argument type. Conflicting candidates are
 // rejected by the caller before substitution.
 
-export function resolveAnnotation(annotation: TypeAnnotation, info: ModuleInfo, result: AnalysisResult, typeParams: string[] = []): ResolvedType {
+export function resolveAnnotation(annotation: TypeAnnotation, info: ModuleInfo, result: AnalysisResult, typeParams: readonly string[] = []): ResolvedType {
   return resolveProvisionalAnnotation(annotation, info, result, typeParams)
 }

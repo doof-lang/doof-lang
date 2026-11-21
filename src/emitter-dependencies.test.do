@@ -4,7 +4,7 @@ import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
 import { hasErrorDiagnostics } from "./diagnostics"
 import { SourceFile, Symbol, ClassType, InterfaceType } from "./semantic"
-import { DependencyBuilder, DependencySummary, SymbolDependency, InterfaceDependency, collectDependencySurface, collectDependencyType, summarizeDeclaration } from "./emitter-dependencies"
+import { DependencyBuilder, DependencySummary, SymbolDependency, InterfaceDependency, collectCompleteDependencyType, collectDependencySurface, collectDependencyType, summarizeDeclaration } from "./emitter-dependencies"
 import { compile } from "./compiler"
 
 export function testQuarkDestructorOnlyImportDependency(): none {
@@ -126,4 +126,25 @@ export function testPositionalLiteralOfUnimportedClassRecordsDependency(): none 
   }
   Assert.stringContains(mainModule, "Point>(1.0, 2.0)")
   Assert.stringContains(mainHeader, "Point")
+}
+
+export function testDependencyIdentityFastPathsKeepForwardAndDefinitionEvents(): none {
+  item := Symbol { kind: "class", name: "Item", module: "/item.do", exported: true }
+  forward := ClassType { name: "Item", symbol: item }
+  builder := DependencyBuilder {}
+  // A plain non-generic class reference records only a forward declaration.
+  collectDependencyType(forward, builder)
+  collectDependencyType(forward, builder)
+  // Requiring the complete type of the same object still records its definition.
+  collectCompleteDependencyType(forward, builder)
+  collectCompleteDependencyType(forward, builder)
+  // An equal but separately allocated symbol is deduplicated by key, not identity.
+  twin := Symbol { kind: "class", name: "Item", module: "/item.do", exported: true }
+  collectCompleteDependencyType(ClassType { name: "Item", symbol: twin }, builder)
+  summary := builder.finish()
+  Assert.equal(summary.events.length, 2)
+  first := summary.events[0] as SymbolDependency else { panic("expected symbol event") }
+  second := summary.events[1] as SymbolDependency else { panic("expected symbol event") }
+  Assert.isTrue(first.forwardOnly)
+  Assert.isFalse(second.forwardOnly)
 }

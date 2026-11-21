@@ -41,7 +41,7 @@ function checkModule(state: CheckerState, entry: string): CheckResult {
   if state.info == none { return CheckResult { diagnostics: state.diagnostics } }
   discoverInterfaceImplementations(state.result)
   state.moduleScope = Scope { parent: none }
-  predeclareModuleBindings(state.info!, state.moduleScope!, state.result)
+  predeclareModuleBindings(state.info!, state.moduleScope!, state.result, state.provisionalSignatures)
   let scriptEntry = false
   let rejectedWasmScript = false
   if state.info!.path == state.entry {
@@ -208,10 +208,10 @@ function prepareClassFieldTypes(state: CheckerState): none {
       if !hasUnpreparedClassFields(module.program.statements) { continue }
       state.info = module
       state.moduleScope = Scope { parent: none }
-      predeclareModuleBindings(module, state.moduleScope!, state.result)
+      predeclareModuleBindings(module, state.moduleScope!, state.result, state.provisionalSignatures)
       for statement of module.program.statements {
         if class_ := statement as ClassDeclaration {
-          classScope := Scope { parent: state.moduleScope, typeParams: class_.typeParams }
+          classScope := Scope { parent: state.moduleScope, typeParams: class_.typeParams.cloneMutable() }
           for field of class_.fields {
             if field.resolvedType != none { continue }
             diagnosticCount := state.diagnostics.length

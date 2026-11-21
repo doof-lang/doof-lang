@@ -26,8 +26,8 @@ export function testGenericNoneLiteralReadonlyUnionNormalization(): none {
   Assert.isTrue(sameType(substituteTypeParams(genericOptional, ["T"], [optional]), optional))
 }
 
-function symbol(name: string, module: string): Symbol {
-  return Symbol { kind: "class", name, module, exported: false }
+function symbol(name: string, module: string, typeParams: readonly string[] = []): Symbol {
+  return Symbol { kind: "class", name, module, exported: false, typeParams }
 }
 
 export function testComparesResolvedTypesStructurally(): none {
@@ -155,8 +155,7 @@ export function testRequiresRecordedStructuralStreamConformance(): none {
   plain := classType("Plain", plainSymbol)
   Assert.isFalse(isAssignable(plain, streamType(primitive("int"))))
 
-  streamSymbol := symbol("Values", "/main.do")
-  streamSymbol.typeParams.push("T")
+  streamSymbol := symbol("Values", "/main.do", ["T"])
   streamSymbol.streamElementTypes.push(typeParameter("T"))
   ints := classType("Values", streamSymbol, [primitive("int")])
   Assert.isTrue(isAssignable(ints, streamType(primitive("int"))))
@@ -203,8 +202,7 @@ export function testUnionMutabilityNominalGuardPreservesGenericConflicts(): none
   nominal := classType("Node", symbol("Node", "/nodes.do"))
   other := classType("Other", symbol("Other", "/nodes.do"))
   Assert.equal(unionMutabilityConflict(UnionResolvedType { types: [nominal, nominal, other] }), none)
-  generic := symbol("Box", "/nodes.do")
-  generic.typeParams.push("T")
+  generic := symbol("Box", "/nodes.do", ["T"])
   mutable := classType("Box", generic, [promiseType(arrayType(primitive("int")))])
   frozen := classType("Box", generic, [promiseType(arrayType(primitive("int"), true))])
   expected := unionMutabilityConflict(UnionResolvedType { types: [mutable, frozen] })
@@ -362,4 +360,26 @@ export function testMemberReceiverTypePrefersTheStaticReceiverInstantiation(): n
   Assert.isTrue(sameType(memberReceiverType(member)!, classType("Stack", symbol)))
   member.resolvedStaticReceiver = ClassType { name: "Stack", symbol, typeArgs: [primitive("int")] }
   Assert.isTrue(sameType(memberReceiverType(member)!, classType("Stack", symbol, [primitive("int")])))
+}
+
+export function testSubstituteTypeParamsReturnsConcreteTypesUnchanged(): none {
+  concrete := unionType([arrayType(primitive("int")), mapType(primitive("string"), primitive("bool")), noneType()])
+  Assert.isTrue(substituteTypeParams(concrete, ["T"], [primitive("long")]) == concrete)
+  // No names: even a generic type has nothing to substitute.
+  generic := arrayType(typeParameter("T"))
+  Assert.isTrue(substituteTypeParams(generic, [], []) == generic)
+  // A generic member still substitutes inside an otherwise concrete union.
+  mixed := unionType([primitive("string"), arrayType(typeParameter("T"))])
+  Assert.equal(typeName(substituteTypeParams(mixed, ["T"], [primitive("int")])), "string | int[]")
+}
+
+export function testUnionTypeLeavesItsReadonlyInputIntact(): none {
+  input: readonly ResolvedType[] := [primitive("int"), unionType([primitive("string"), primitive("int")]), noneType()]
+  union_ := unionType(input) as UnionResolvedType else { panic("expected union") }
+  // Nested arms flatten and duplicates collapse in the frozen result.
+  Assert.equal(union_.types.length, 3)
+  Assert.equal(typeName(union_), "int | string | none")
+  // The caller's list is neither drained nor reordered.
+  Assert.equal(input.length, 3)
+  Assert.equal(typeName(input[1]), "string | int")
 }

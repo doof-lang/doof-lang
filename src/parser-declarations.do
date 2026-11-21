@@ -14,7 +14,7 @@ import {
 import type { Statement, Expression, TypeAnnotation, SourceSpan } from "./ast"
 
 class ParsedTypeParameters {
-  names: string[]
+  names: readonly string[]
   constraints: TypeParameterConstraint[]
 }
 
@@ -169,7 +169,7 @@ function parseExpressionBody(parser: Parser): Expression {
 function parseTypeParameters(parser: Parser): ParsedTypeParameters {
   names: string[] := []
   constraints: TypeParameterConstraint[] := []
-  if !parser.match(TokenType.Less) { return ParsedTypeParameters { names, constraints } }
+  if !parser.match(TokenType.Less) { return ParsedTypeParameters { names: [], constraints } }
   while !parser.check(TokenType.Greater) && !parser.atEnd() {
     names.push(parser.text(parser.expect(TokenType.Identifier)))
     let constraint: TypeAnnotation | none = none
@@ -180,7 +180,7 @@ function parseTypeParameters(parser: Parser): ParsedTypeParameters {
     if !parser.match(TokenType.Comma) { break }
   }
   parser.expect(TokenType.Greater)
-  return ParsedTypeParameters { names, constraints }
+  return ParsedTypeParameters { names: names.drainToReadonly(), constraints }
 }
 
 function parseParameters(parser: Parser): Parameter[] {

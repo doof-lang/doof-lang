@@ -250,7 +250,7 @@ function weakAccessTarget(type_: ResolvedType): ResolvedType {
   if union_ := type_ as UnionResolvedType {
     let present: ResolvedType[] = []
     for member of union_.types { if member.kind != "none" { present.push(member) } }
-    if present.length > 0 { return unionType(present) }
+    if present.length > 0 { return unionType(present.drainToReadonly()) }
   }
   return type_
 }

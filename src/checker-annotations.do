@@ -25,7 +25,7 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
 
 // Predeclaration has no diagnostic or decoration ownership. It uses the same
 // resolution rules; declaration checking later validates dependent constraints.
-export function resolveProvisionalAnnotation(annotation: TypeAnnotation, info: ModuleInfo, result: AnalysisResult, typeParams: string[] = []): ResolvedType {
+export function resolveProvisionalAnnotation(annotation: TypeAnnotation, info: ModuleInfo, result: AnalysisResult, typeParams: readonly string[] = []): ResolvedType {
   state := CheckerState { result, info }
   scope := Scope { parent: none }
   for name of typeParams { scope.typeParams.push(name) }
@@ -141,7 +141,7 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
     union: UnionType -> {
       let members: ResolvedType[] = []
       for item of union.types { members.push(resolveAnnotationType(resolution, item, module, scope, validateConstraints)) }
-      resolved := unionType(members)
+      resolved := unionType(members.drainToReadonly())
       mixedWeak := mixedWeakUnionMessage(resolved)
       if resolution.commit && mixedWeak != none { typeError(state, mixedWeak!, union.span) }
       return finishAnnotation(resolution, annotation, resolved)
@@ -149,7 +149,7 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
     function_: AstFunctionType -> {
       let params: FunctionParamType[] = []
       for parameter of function_.params { params.push(FunctionParamType { name: parameter.name, type_: resolveAnnotationType(resolution, parameter.type_, module, scope, validateConstraints), hasDefault: false }) }
-      return finishAnnotation(resolution, annotation, functionType(params, resolveAnnotationType(resolution, function_.returnType, module, scope, validateConstraints)))
+      return finishAnnotation(resolution, annotation, functionType(params.drainToReadonly(), resolveAnnotationType(resolution, function_.returnType, module, scope, validateConstraints)))
     }
     weak_: WeakType -> {
       inner := resolveAnnotationType(resolution, weak_.type_, module, scope, validateConstraints)
@@ -176,7 +176,7 @@ function fixedBuiltinType(name: string): ResolvedType | none {
 }
 
 /** Builds a generic built-in type whose argument count was already validated. */
-function genericBuiltinType(state: CheckerState, named: NamedType, args: ResolvedType[]): ResolvedType {
+function genericBuiltinType(state: CheckerState, named: NamedType, args: readonly ResolvedType[]): ResolvedType {
   case named.name {
     "Tuple" -> { return tupleType(args) }
     "Map" | "ReadonlyMap" -> {
@@ -203,17 +203,17 @@ function genericBuiltinType(state: CheckerState, named: NamedType, args: Resolve
   return unknownType()
 }
 
-function resolveTypeArgumentAnnotations(resolution: AnnotationResolution, named: NamedType, module: ModuleInfo, scope: Scope, validateConstraints: bool): ResolvedType[] {
+function resolveTypeArgumentAnnotations(resolution: AnnotationResolution, named: NamedType, module: ModuleInfo, scope: Scope, validateConstraints: bool): readonly ResolvedType[] {
   let resolved: ResolvedType[] = []
   for argument of named.typeArgs { resolved.push(resolveAnnotationType(resolution, argument, module, scope, validateConstraints)) }
-  return resolved
+  return resolved.drainToReadonly()
 }
 
 /** Resolves explicit type arguments written in checked source, such as `f<int>(...)` or `Box<string>.make()`. */
-export function resolveTypeArguments(state: CheckerState, annotations: TypeAnnotation[], scope: Scope): ResolvedType[] {
+export function resolveTypeArguments(state: CheckerState, annotations: TypeAnnotation[], scope: Scope): readonly ResolvedType[] {
   let resolved: ResolvedType[] = []
   for annotation of annotations { resolved.push(resolveType(state, annotation, state.info!, scope)) }
-  return resolved
+  return resolved.drainToReadonly()
 }
 
 function rejectUnexpectedTypeArguments(resolution: AnnotationResolution, named: NamedType, module: ModuleInfo, scope: Scope, validateConstraints: bool): bool {
@@ -223,7 +223,7 @@ function rejectUnexpectedTypeArguments(resolution: AnnotationResolution, named: 
   return true
 }
 
-function validateNominalTypeArguments(state: CheckerState, name: string, typeParams: string[], constraints: TypeParameterConstraint[], typeArgs: ResolvedType[], span: SourceSpan, module: ModuleInfo, scope: Scope, validateConstraints: bool): bool {
+function validateNominalTypeArguments(state: CheckerState, name: string, typeParams: readonly string[], constraints: TypeParameterConstraint[], typeArgs: readonly ResolvedType[], span: SourceSpan, module: ModuleInfo, scope: Scope, validateConstraints: bool): bool {
   if typeParams.length != typeArgs.length {
     typeError(state, typeArgumentArityMessage(name, typeParams.length, typeArgs.length), span)
     return false
@@ -233,7 +233,7 @@ function validateNominalTypeArguments(state: CheckerState, name: string, typePar
 }
 
 /** Validates concrete arguments against substituted declaration constraints. */
-export function validateTypeArgumentConstraints(state: CheckerState, names: string[], constraints: TypeParameterConstraint[], arguments: ResolvedType[], span: SourceSpan, module: ModuleInfo, outer: Scope, ownerNames: string[] = [], ownerArguments: ResolvedType[] = []): none {
+export function validateTypeArgumentConstraints(state: CheckerState, names: readonly string[], constraints: TypeParameterConstraint[], arguments: readonly ResolvedType[], span: SourceSpan, module: ModuleInfo, outer: Scope, ownerNames: readonly string[] = [], ownerArguments: readonly ResolvedType[] = []): none {
   if names.length != arguments.length { return }
   constraintScope := Scope { parent: outer }
   for name of ownerNames { constraintScope.typeParams.push(name); constraintScope.typeParamConstraintNames.push(""); constraintScope.typeParamConstraints.push(ResolvedTypeConstraint {}) }

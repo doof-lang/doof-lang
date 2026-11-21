@@ -7,7 +7,7 @@ import { CppTypeRegistry, renderCppType } from "./cpp-type"
 import { lowerCppType } from "./emitter-types"
 import { Assert } from "std/assert"
 import { EmitContext } from "./emitter-context"
-import { emitContextType, emitType, usesVariantRepresentation } from "./emitter-types"
+import { emitContextType, emitType, identicalEmitTypes, usesVariantRepresentation } from "./emitter-types"
 import { ClassType, FailureResolvedType, InterfaceType, NoneType, PrimitiveType, ResultResolvedType, SuccessResolvedType, Symbol, UnionResolvedType, WeakResolvedType } from "./semantic"
 
 export function testCarrierModelSeparatesResultStorageFromUnionDispatch(): none {
@@ -188,4 +188,22 @@ export function testWeakInterfaceTargetsSpliceWeakImplementorArms(): none {
   Assert.equal(emitType(WeakResolvedType { inner: shape }, "/main.do"), "doof::union_t<doof::weak_arms<Shape>>")
   Assert.equal(emitType(WeakResolvedType { inner: UnionResolvedType { types: [shape, NoneType {}] } }, "/main.do"), "std::optional<doof::union_t<doof::weak_arms<Shape>>>")
   Assert.equal(emitType(WeakResolvedType { inner: UnionResolvedType { types: [shape, label, NoneType {}] } }, "/main.do"), "std::optional<doof::union_t<doof::weak_arms<Shape>, std::weak_ptr<Label>>>")
+}
+
+export function testIdenticalEmitTypesRequiresOrderedStructure(): none {
+  integer := PrimitiveType { name: "int" }
+  text := PrimitiveType { name: "string" }
+  box := Symbol { kind: "class", name: "Box", module: "/box.do", exported: true }
+  otherBox := Symbol { kind: "class", name: "Box", module: "/other.do", exported: true }
+  intOrText := UnionResolvedType { types: [integer, text, NoneType {}] }
+  Assert.isTrue(identicalEmitTypes(intOrText, UnionResolvedType { types: [PrimitiveType { name: "int" }, PrimitiveType { name: "string" }, NoneType {}] }))
+  // Same members in another order spell a different std::variant.
+  Assert.isFalse(identicalEmitTypes(intOrText, UnionResolvedType { types: [text, integer, NoneType {}] }))
+  Assert.isTrue(identicalEmitTypes(ClassType { name: "Box", symbol: box, typeArgs: [integer] }, ClassType { name: "Box", symbol: box, typeArgs: [integer] }))
+  Assert.isFalse(identicalEmitTypes(ClassType { name: "Box", symbol: box }, ClassType { name: "Box", symbol: otherBox }))
+  Assert.isFalse(identicalEmitTypes(ClassType { name: "Box", symbol: box, typeArgs: [integer] }, ClassType { name: "Box", symbol: box, typeArgs: [text] }))
+  Assert.isFalse(identicalEmitTypes(ArrayResolvedType { elementType: integer, readonly_: true }, ArrayResolvedType { elementType: integer, readonly_: false }))
+  Assert.isTrue(identicalEmitTypes(WeakResolvedType { inner: ClassType { name: "Box", symbol: box } }, WeakResolvedType { inner: ClassType { name: "Box", symbol: box } }))
+  // Unlisted kinds are never claimed identical; callers compare spellings.
+  Assert.isFalse(identicalEmitTypes(TypeParameterType { name: "T" }, TypeParameterType { name: "T" }))
 }

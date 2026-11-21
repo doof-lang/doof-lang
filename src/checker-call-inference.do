@@ -29,13 +29,13 @@ import { inferTypeArgument } from "./checker-generics"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
 
 class TypeArgumentEvidence {
-  typeParams: string[]
+  typeParams: readonly string[]
   let found: (ResolvedType | none)[] = []
   let consistent: bool = true
 }
 
 /** Returns the inferred type arguments, or none when any stays open or conflicts. */
-export function inferCallTypeArguments(state: CheckerState, args: CallArgument[], signature: FunctionType, scope: Scope, expected: ResolvedType | none): ResolvedType[] | none {
+export function inferCallTypeArguments(state: CheckerState, args: CallArgument[], signature: FunctionType, scope: Scope, expected: ResolvedType | none): readonly ResolvedType[] | none {
   diagnosticMark := state.diagnostics.length
   evidence := TypeArgumentEvidence { typeParams: signature.typeParams }
   for _ of signature.typeParams { evidence.found.push(none) }
@@ -91,7 +91,7 @@ export function inferCallTypeArguments(state: CheckerState, args: CallArgument[]
       }
     }
   }
-  return inferred
+  return inferred.drainToReadonly()
 }
 
 function namesCallable(expression: Expression): bool {
@@ -113,10 +113,10 @@ function callbackResultIsGeneric(signature: FunctionType, args: CallArgument[], 
  * substitution; a direct dot-shorthand can therefore learn that type from a
  * sibling argument without producing an early no-context diagnostic.
  */
-export function genericInferenceExpected(pattern: ResolvedType, typeParams: string[]): ResolvedType | none {
+export function genericInferenceExpected(pattern: ResolvedType, typeParams: readonly string[]): ResolvedType | none {
   let unknownArguments: ResolvedType[] = []
   for _ of typeParams { unknownArguments.push(unknownType()) }
-  substituted := substituteTypeParams(pattern, typeParams, unknownArguments)
+  substituted := substituteTypeParams(pattern, typeParams, unknownArguments.drainToReadonly())
   if sameType(pattern, substituted) { return pattern }
   return none
 }
@@ -126,7 +126,7 @@ export function genericInferenceExpected(pattern: ResolvedType, typeParams: stri
 function lambdaInferenceExpected(parameterType: ResolvedType, evidence: TypeArgumentEvidence): ResolvedType {
   let known: ResolvedType[] = []
   for i of 0..<evidence.typeParams.length { known.push(evidence.found[i] ?? typeParameter(evidence.typeParams[i])) }
-  partial := substituteTypeParams(parameterType, evidence.typeParams, known)
+  partial := substituteTypeParams(parameterType, evidence.typeParams, known.drainToReadonly())
   if callback := partial as FunctionType {
     if genericInferenceExpected(callback.returnType, openTypeParams(evidence)) == none {
       return functionType(callback.params, unknownType())
@@ -135,10 +135,10 @@ function lambdaInferenceExpected(parameterType: ResolvedType, evidence: TypeArgu
   return partial
 }
 
-function openTypeParams(evidence: TypeArgumentEvidence): string[] {
+function openTypeParams(evidence: TypeArgumentEvidence): readonly string[] {
   let result: string[] = []
   for i of 0..<evidence.typeParams.length { if evidence.found[i] == none { result.push(evidence.typeParams[i]) } }
-  return result
+  return result.drainToReadonly()
 }
 
 // Contextual evidence only fills open parameters; argument evidence merges

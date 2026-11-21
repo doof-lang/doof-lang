@@ -250,7 +250,7 @@ export function nonNoneType(state: CheckerState, value: ResolvedType): ResolvedT
       let members: ResolvedType[] = []
       for member of union_.types { if member.kind != "none" { members.push(member) } }
       if members.length == 1 { return members[0] }
-      if members.length > 1 { return unionType(members) }
+      if members.length > 1 { return unionType(members.drainToReadonly()) }
       return unknownType()
     }
     _: NoneType -> { return unknownType() }

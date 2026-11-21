@@ -48,3 +48,14 @@ export function testWeakReferencesWidenThroughTheirWeakCarriers(): none {
   Assert.equal(emitCarrierConversion("held", optionalShape, wider, context), "doof::weak_promote<std::optional<doof::union_t<doof::weak_arms<Shape>, std::weak_ptr<Label>>>>(held)")
   Assert.equal(emitCarrierConversion("held", WeakResolvedType { inner: circle }, WeakResolvedType { inner: shape }, context), "doof::variant_promote<doof::union_t<doof::weak_arms<Shape>>>(held)")
 }
+
+export function testIdenticalVariantConversionsPassThroughAndReorderedOnesPromote(): none {
+  context := EmitContext { modulePath: "/main.do" }
+  integer := PrimitiveType { name: "int" }
+  text := PrimitiveType { name: "string" }
+  source := UnionResolvedType { types: [integer, text] }
+  // A separately built but identical union needs no conversion.
+  Assert.equal(emitCarrierConversion("value", source, UnionResolvedType { types: [integer, text] }, context), "value")
+  // The same arms in another order are a different variant and still promote.
+  Assert.stringContains(emitCarrierConversion("value", source, UnionResolvedType { types: [text, integer] }, context), "doof::variant_promote<")
+}

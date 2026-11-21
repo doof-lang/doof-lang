@@ -33,7 +33,7 @@ export class Symbol {
   nativeCppName: string = ""
   implementations: Symbol[] = []
   implementedInterfaceTypes: string[] = []
-  typeParams: string[] = []
+  typeParams: readonly string[] = []
   streamElementTypes: ResolvedType[] = []
 }
 
@@ -72,7 +72,7 @@ export class ClassType {
   kind: string = "class"
   name: string
   symbol: Symbol
-  typeArgs: ResolvedType[] = []
+  typeArgs: readonly ResolvedType[] = []
 }
 
 export class EnumType {
@@ -87,15 +87,15 @@ export class InterfaceType {
   kind: string = "interface"
   name: string
   symbol: Symbol
-  typeArgs: ResolvedType[] = []
+  typeArgs: readonly ResolvedType[] = []
 }
 
 export class FunctionType {
   let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "function"
-  params: FunctionParamType[]
+  params: readonly FunctionParamType[]
   returnType: ResolvedType
-  typeParams: string[] = []
+  typeParams: readonly string[] = []
 }
 
 export class FunctionParamType {
@@ -182,13 +182,13 @@ export class FailureResolvedType {
 export class TupleResolvedType {
   let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "tuple"
-  elements: ResolvedType[]
+  elements: readonly ResolvedType[]
 }
 
 export class UnionResolvedType {
   let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "union"
-  types: ResolvedType[]
+  types: readonly ResolvedType[]
 }
 
 export class WeakResolvedType {
@@ -244,8 +244,8 @@ export type ResolvedType = PrimitiveType | ClassType | EnumType | InterfaceType 
   NoneType | NeverType | UnknownType | TypeParameterType | ClassMetadataResolvedType | MethodReflectionResolvedType
 
 export class TypeSubstitution {
-  names: string[] = []
-  arguments: ResolvedType[] = []
+  names: readonly string[] = []
+  arguments: readonly ResolvedType[] = []
 }
 
 export class Binding {

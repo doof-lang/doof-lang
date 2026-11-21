@@ -41,6 +41,23 @@ export class ModuleInfo {
 export class AnalysisResult {
   modules: ModuleInfo[] = []
   diagnostics: Diagnostic[] = []
+  // Path lookup runs for nearly every symbol the checker resolves. The module
+  // list is fixed once analysis returns, so index it lazily on first use and
+  // rebuild only if the list length changes (as hand-built test graphs may).
+  private let moduleIndex: Map<string, ModuleInfo> = {}
+  private let indexedModuleCount: int = -1
+
+  moduleAt(path: string): ModuleInfo | none {
+    if this.indexedModuleCount != this.modules.length {
+      let index: Map<string, ModuleInfo> = {}
+      // First match wins, as a linear scan would.
+      for module of this.modules { if !index.has(module.path) { index.set(module.path, module) } }
+      this.moduleIndex = index
+      this.indexedModuleCount = this.modules.length
+    }
+    module := this.moduleIndex.get(path) else { return none }
+    return module
+  }
 }
 
 class ModuleParseResult {
@@ -456,20 +473,21 @@ export class ModuleAnalyzer {
     }
   }
 
-  private visitFunctionTypes(fn: FunctionDeclaration, info: ModuleInfo, ownerTypeParams: string[] = []): none {
-    let typeParams: string[] = []
-    for parameter of ownerTypeParams { typeParams.push(parameter) }
-    for parameter of fn.typeParams { typeParams.push(parameter) }
+  private visitFunctionTypes(fn: FunctionDeclaration, info: ModuleInfo, ownerTypeParams: readonly string[] = []): none {
+    let collected: string[] = []
+    for parameter of ownerTypeParams { collected.push(parameter) }
+    for parameter of fn.typeParams { collected.push(parameter) }
+    typeParams := collected.drainToReadonly()
     visitTypeParameterConstraints(fn.typeParamConstraints, info, typeParams)
     for parameter of fn.params { if type_ := parameter.type_ { visitType(type_, info, typeParams) } }
     if returnType := fn.returnType { visitType(returnType, info, typeParams) }
   }
 
-  private visitTypeParameterConstraints(constraints: TypeParameterConstraint[], info: ModuleInfo, typeParams: string[]): none {
+  private visitTypeParameterConstraints(constraints: TypeParameterConstraint[], info: ModuleInfo, typeParams: readonly string[]): none {
     for constraint of constraints { if type_ := constraint.type_ { visitType(type_, info, typeParams) } }
   }
 
-  private visitType(annotation: TypeAnnotation, info: ModuleInfo, typeParams: string[] = []): none {
+  private visitType(annotation: TypeAnnotation, info: ModuleInfo, typeParams: readonly string[] = []): none {
     case annotation {
       named: NamedType -> {
         if !isBuiltin(named.name) && !containsTypeParam(typeParams, named.name) {
@@ -500,7 +518,7 @@ export class ModuleAnalyzer {
     }
   }
 
-  private containsTypeParam(typeParams: string[], name: string): bool {
+  private containsTypeParam(typeParams: readonly string[], name: string): bool {
     for typeParam of typeParams { if typeParam == name { return true } }
     return false
   }

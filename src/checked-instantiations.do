@@ -126,23 +126,23 @@ export function discoverInstantiations(result: AnalysisResult): CheckedInstantia
   return plan
 }
 
-export function functionInstantiationKey(modulePath: string, name: string, typeArgs: ResolvedType[]): string {
+export function functionInstantiationKey(modulePath: string, name: string, typeArgs: readonly ResolvedType[]): string {
   return "${modulePath}::function::${name}::${concreteTypeListKey(typeArgs)}"
 }
 
-export function classInstantiationKey(modulePath: string, name: string, typeArgs: ResolvedType[]): string {
+export function classInstantiationKey(modulePath: string, name: string, typeArgs: readonly ResolvedType[]): string {
   return "${modulePath}::class::${name}::${concreteTypeListKey(typeArgs)}"
 }
 
-export function interfaceInstantiationKey(modulePath: string, name: string, typeArgs: ResolvedType[]): string {
+export function interfaceInstantiationKey(modulePath: string, name: string, typeArgs: readonly ResolvedType[]): string {
   return "${modulePath}::interface::${name}::${concreteTypeListKey(typeArgs)}"
 }
 
-export function methodInstantiationKey(ownerKey: string, name: string, typeArgs: ResolvedType[]): string {
+export function methodInstantiationKey(ownerKey: string, name: string, typeArgs: readonly ResolvedType[]): string {
   return "${ownerKey}::method::${name}::${concreteTypeListKey(typeArgs)}"
 }
 
-function collectFunctionBody(fn: FunctionDeclaration, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
+function collectFunctionBody(fn: FunctionDeclaration, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: readonly string[], arguments: readonly ResolvedType[]): none {
   for parameter of fn.params {
     if resolvedType := parameter.resolvedType { collectType(specialize(resolvedType, names, arguments), analysis, plan); validateSpecializedHashKeys(resolvedType, names, arguments, parameter.span, modulePath, analysis, plan) }
     if defaultValue := parameter.defaultValue { collectExpression(defaultValue, modulePath, analysis, plan, names, arguments) }
@@ -154,7 +154,7 @@ function collectFunctionBody(fn: FunctionDeclaration, modulePath: string, analys
   }
 }
 
-function collectClassBody(class_: ClassDeclaration, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
+function collectClassBody(class_: ClassDeclaration, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: readonly string[], arguments: readonly ResolvedType[]): none {
   for field of class_.fields {
     if resolvedType := field.resolvedType { collectType(specialize(resolvedType, names, arguments), analysis, plan); validateSpecializedHashKeys(resolvedType, names, arguments, field.span, modulePath, analysis, plan) }
     if defaultValue := field.defaultValue { collectExpression(defaultValue, modulePath, analysis, plan, names, arguments) }
@@ -167,7 +167,7 @@ function collectClassBody(class_: ClassDeclaration, modulePath: string, analysis
   if destructor_ := class_.destructor_ { collectBlock(destructor_, modulePath, analysis, plan, names, arguments) }
 }
 
-function collectStatement(statement: Statement, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
+function collectStatement(statement: Statement, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: readonly string[], arguments: readonly ResolvedType[]): none {
   case statement {
     const_: ConstDeclaration -> { collectOptionalType(const_.resolvedType, names, arguments, analysis, plan); collectExpression(const_.value, modulePath, analysis, plan, names, arguments) }
     readonly_: ReadonlyDeclaration -> { collectOptionalType(readonly_.resolvedType, names, arguments, analysis, plan); collectExpression(readonly_.value, modulePath, analysis, plan, names, arguments) }
@@ -217,11 +217,11 @@ function collectStatement(statement: Statement, modulePath: string, analysis: An
   }
 }
 
-function collectBlock(block: Block, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
+function collectBlock(block: Block, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: readonly string[], arguments: readonly ResolvedType[]): none {
   for statement of block.statements { collectStatement(statement, modulePath, analysis, plan, names, arguments) }
 }
 
-function collectExpression(expression: Expression, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
+function collectExpression(expression: Expression, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: readonly string[], arguments: readonly ResolvedType[]): none {
   if resolvedType := expression.resolvedType { collectType(specialize(resolvedType, names, arguments), analysis, plan) }
   case expression {
     string_: StringLiteral -> { for interpolation of string_.interpolations { collectExpression(interpolation, modulePath, analysis, plan, names, arguments) } }
@@ -300,10 +300,11 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
 
 // Records the concrete instantiation a generic callee or generic value reference
 // needs: a method on its (specialized) owner, or otherwise a function.
-function collectGenericTarget(callee: Expression, function_: FunctionDeclaration, functionModule: string, typeArgs: ResolvedType[], analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
+function collectGenericTarget(callee: Expression, function_: FunctionDeclaration, functionModule: string, typeArgs: readonly ResolvedType[], analysis: AnalysisResult, plan: CheckedInstantiations, names: readonly string[], arguments: readonly ResolvedType[]): none {
   if function_.typeParams.length == 0 { return }
-  let concreteArgs: ResolvedType[] = []
-  for argument of typeArgs { concreteArgs.push(specialize(argument, names, arguments)) }
+  let collectedArgs: ResolvedType[] = []
+  for argument of typeArgs { collectedArgs.push(specialize(argument, names, arguments)) }
+  concreteArgs := collectedArgs.drainToReadonly()
   if !containsTypeParameters(concreteArgs) {
     let recordedMethod = false
     case callee {
@@ -315,7 +316,7 @@ function collectGenericTarget(callee: Expression, function_: FunctionDeclaration
             for typeParam of owner.typeParams {
               ownerArgs.push(specialize(TypeParameterType { name: typeParam }, names, arguments))
             }
-            addMethod(plan, ClassType { name: symbol.name, symbol, typeArgs: ownerArgs }, owner, function_, concreteArgs)
+            addMethod(plan, ClassType { name: symbol.name, symbol, typeArgs: ownerArgs.drainToReadonly() }, owner, function_, concreteArgs)
             recordedMethod = true
           }
         }
@@ -341,7 +342,7 @@ function collectGenericTarget(callee: Expression, function_: FunctionDeclaration
   }
 }
 
-function collectPattern(pattern: CasePattern, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
+function collectPattern(pattern: CasePattern, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: readonly string[], arguments: readonly ResolvedType[]): none {
   case pattern {
     type_: TypePattern -> { collectOptionalType(type_.resolvedType, names, arguments, analysis, plan) }
     value: ValuePattern -> { collectExpression(value.value, modulePath, analysis, plan, names, arguments) }
@@ -353,7 +354,7 @@ function collectPattern(pattern: CasePattern, modulePath: string, analysis: Anal
   }
 }
 
-function collectJsonMemberDemand(member: MemberExpression, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
+function collectJsonMemberDemand(member: MemberExpression, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations, names: readonly string[], arguments: readonly ResolvedType[]): none {
   if member.object.resolvedType == none { return }
   receiver := specialize(member.object.resolvedType!, names, arguments)
   if member.property == "toSerialObject" || member.property == "fromSerialValue" { validateImpliedJsonMember(member, receiver, modulePath, analysis, plan) }
@@ -445,7 +446,7 @@ function reportInstantiationError(plan: CheckedInstantiations, modulePath: strin
 }
 
 // Map and Set literals are where generic bodies construct hash collections.
-function validateSpecializedLiteral(literal: Expression, names: string[], arguments: ResolvedType[], modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations): none {
+function validateSpecializedLiteral(literal: Expression, names: readonly string[], arguments: readonly ResolvedType[], modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations): none {
   if literal.resolvedType == none { return }
   case literal.resolvedType! {
     map: MapResolvedType -> { validateSpecializedHashKey(HashKeyCandidate { key: map.keyType, role: "Map key" }, names, arguments, literal.span, modulePath, analysis, plan) }
@@ -456,11 +457,11 @@ function validateSpecializedLiteral(literal: Expression, names: string[], argume
 
 // Generic bodies accept type-parameter keys; each concrete instantiation
 // validates the Map keys and Set elements its substitution produces.
-function validateSpecializedHashKeys(type_: ResolvedType, names: string[], arguments: ResolvedType[], span: SourceSpan, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations): none {
+function validateSpecializedHashKeys(type_: ResolvedType, names: readonly string[], arguments: readonly ResolvedType[], span: SourceSpan, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations): none {
   for part of specializedHashKeyCandidates(type_) { validateSpecializedHashKey(part, names, arguments, span, modulePath, analysis, plan) }
 }
 
-function validateSpecializedHashKey(part: HashKeyCandidate, names: string[], arguments: ResolvedType[], span: SourceSpan, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations): none {
+function validateSpecializedHashKey(part: HashKeyCandidate, names: readonly string[], arguments: readonly ResolvedType[], span: SourceSpan, modulePath: string, analysis: AnalysisResult, plan: CheckedInstantiations): none {
   if names.length == 0 || !containsTypeParameters([part.key]) { return }
   let bindings = ""
   for index of 0..<names.length {
@@ -545,7 +546,7 @@ export function collectJsonDemand(keys: string[], type_: ResolvedType, analysis:
   }
 }
 
-function collectOptionalType(type_: ResolvedType | none, names: string[], arguments: ResolvedType[], analysis: AnalysisResult, plan: CheckedInstantiations): none {
+function collectOptionalType(type_: ResolvedType | none, names: readonly string[], arguments: readonly ResolvedType[], analysis: AnalysisResult, plan: CheckedInstantiations): none {
   if resolvedType := type_ { collectType(specialize(resolvedType, names, arguments), analysis, plan) }
 }
 
@@ -581,7 +582,7 @@ function collectType(type_: ResolvedType, analysis: AnalysisResult, plan: Checke
   }
 }
 
-function addFunction(plan: CheckedInstantiations, modulePath: string, declaration: FunctionDeclaration, typeArgs: ResolvedType[]): none {
+function addFunction(plan: CheckedInstantiations, modulePath: string, declaration: FunctionDeclaration, typeArgs: readonly ResolvedType[]): none {
   key := functionInstantiationKey(modulePath, declaration.name, typeArgs)
   for existing of plan.functions { if existing.key == key { return } }
   item := DiscoveredFunction { key, modulePath, declaration, substitution: TypeSubstitution { names: declaration.typeParams, arguments: typeArgs }, trace: extendedTrace(plan.currentTrace, key) }
@@ -589,7 +590,7 @@ function addFunction(plan: CheckedInstantiations, modulePath: string, declaratio
   plan.entries.push(item)
 }
 
-function addClass(plan: CheckedInstantiations, modulePath: string, declaration: ClassDeclaration, typeArgs: ResolvedType[]): none {
+function addClass(plan: CheckedInstantiations, modulePath: string, declaration: ClassDeclaration, typeArgs: readonly ResolvedType[]): none {
   key := classInstantiationKey(modulePath, declaration.name, typeArgs)
   for existing of plan.classes { if existing.key == key { return } }
   item := DiscoveredClass { key, modulePath, declaration, substitution: TypeSubstitution { names: declaration.typeParams, arguments: typeArgs }, trace: extendedTrace(plan.currentTrace, key) }
@@ -597,7 +598,7 @@ function addClass(plan: CheckedInstantiations, modulePath: string, declaration: 
   plan.entries.push(item)
 }
 
-function addInterface(plan: CheckedInstantiations, modulePath: string, name: string, typeArgs: ResolvedType[]): none {
+function addInterface(plan: CheckedInstantiations, modulePath: string, name: string, typeArgs: readonly ResolvedType[]): none {
   if containsTypeParameters(typeArgs) { return }
   key := interfaceInstantiationKey(modulePath, name, typeArgs)
   for existing of plan.interfaces { if existing.key == key { return } }
@@ -606,7 +607,7 @@ function addInterface(plan: CheckedInstantiations, modulePath: string, name: str
   plan.entries.push(item)
 }
 
-function addMethod(plan: CheckedInstantiations, ownerType: ClassType, owner: ClassDeclaration, declaration: FunctionDeclaration, methodArgs: ResolvedType[]): none {
+function addMethod(plan: CheckedInstantiations, ownerType: ClassType, owner: ClassDeclaration, declaration: FunctionDeclaration, methodArgs: readonly ResolvedType[]): none {
   ownerKey := if owner.typeParams.length == 0
     then classInstantiationKey(ownerType.symbol.module, owner.name, [])
     else classInstantiationKey(ownerType.symbol.module, owner.name, ownerType.typeArgs)
@@ -620,7 +621,7 @@ function addMethod(plan: CheckedInstantiations, ownerType: ClassType, owner: Cla
   for argument of methodArgs { arguments.push(argument) }
   item := DiscoveredMethod {
     key, modulePath: ownerType.symbol.module, ownerKey, owner, declaration,
-    substitution: TypeSubstitution { names, arguments },
+    substitution: TypeSubstitution { names: names.drainToReadonly(), arguments: arguments.drainToReadonly() },
     trace: extendedTrace(plan.currentTrace, key),
   }
   plan.methods.push(item)
@@ -661,7 +662,7 @@ function addImplementation(interface_: DiscoveredInterface, modulePath: string, 
   interface_.implementations.push(DiscoveredImplementation { modulePath, typeName: typeName_, specializationKey })
 }
 
-function classImplementsConcreteInterface(class_: ClassDeclaration, classArgs: ResolvedType[], interface_: DiscoveredInterface, analysis: AnalysisResult): bool {
+function classImplementsConcreteInterface(class_: ClassDeclaration, classArgs: readonly ResolvedType[], interface_: DiscoveredInterface, analysis: AnalysisResult): bool {
   if interface_.name == "Stream" {
     for implementation of class_.implements_ {
       if implementation.resolvedType == none { continue }
@@ -703,12 +704,12 @@ function classMethod(class_: ClassDeclaration, name: string): FunctionDeclaratio
   return none
 }
 
-function specialize(type_: ResolvedType, names: string[], arguments: ResolvedType[]): ResolvedType {
+function specialize(type_: ResolvedType, names: readonly string[], arguments: readonly ResolvedType[]): ResolvedType {
   if names.length == 0 { return type_ }
   return substituteTypeParams(type_, names, arguments)
 }
 
-function concreteTypeListKey(types: ResolvedType[]): string {
+function concreteTypeListKey(types: readonly ResolvedType[]): string {
   let result = ""
   for type_ of types { result = result + "[" + canonicalTypeKey(type_) + "]" }
   return result
@@ -734,7 +735,7 @@ function canonicalTypeKey(type_: ResolvedType): string {
     function_: FunctionType -> {
       let parameters: ResolvedType[] = []
       for parameter of function_.params { parameters.push(parameter.type_) }
-      return "function:${concreteTypeListKey(parameters)}->${canonicalTypeKey(function_.returnType)}"
+      return "function:${concreteTypeListKey(parameters.drainToReadonly())}->${canonicalTypeKey(function_.returnType)}"
     }
     _ -> { return typeName(type_) }
   }

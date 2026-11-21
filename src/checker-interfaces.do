@@ -43,8 +43,7 @@ export function symbolSpan(info: ModuleInfo, name: string): SourceSpan {
 }
 
 export function findModule(result: AnalysisResult, path: string): ModuleInfo | none {
-  for module of result.modules { if module.path == path { return module } }
-  return none
+  return result.moduleAt(path)
 }
 
 // Interface lowering is closed-world: every class in the analyzed graph is a
@@ -380,7 +379,7 @@ function compatibleConcreteMethodType(result: AnalysisResult, actual: ResolvedTy
   return false
 }
 
-function resolvedClassFieldType(result: AnalysisResult, field: ClassField, symbol: Symbol, typeParams: string[]): ResolvedType | none {
+function resolvedClassFieldType(result: AnalysisResult, field: ClassField, symbol: Symbol, typeParams: readonly string[]): ResolvedType | none {
   if field.resolvedType != none { return field.resolvedType }
   if field.type_ == none { return none }
   return resolveAnnotation(field.type_!, classModuleFor(result, symbol), result, typeParams)

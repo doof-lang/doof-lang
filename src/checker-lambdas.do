@@ -101,7 +101,7 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
     }
   }
   if !parametersBound { return finish(state, expression, functionType(expectedFunction!.params, returnType)) }
-  return finish(state, expression, functionType(params, returnType))
+  return finish(state, expression, functionType(params.drainToReadonly(), returnType))
 }
 
 // Explicit parameter lists bind to the contextual signature in one of two

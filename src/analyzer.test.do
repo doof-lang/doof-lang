@@ -14,6 +14,28 @@ function hasDiagnostic(result: AnalysisResult, message: string): bool {
   return false
 }
 
+export function testModuleAtIndexesByPathAndTracksGrowth(): none {
+  result := createAnalyzer([
+    SourceFile { path: "/main.do", source: "import { leaf } from \"./leaf\"\nfunction main(): int => leaf()" },
+    SourceFile { path: "/leaf.do", source: "export function leaf(): int => 1" },
+  ]).analyze("/main.do")
+  Assert.equal(result.moduleAt("/leaf.do")!.path, "/leaf.do")
+  Assert.equal(result.moduleAt("/main.do")!.path, "/main.do")
+  Assert.isTrue(result.moduleAt("/missing.do") == none)
+  // A hand-built graph may grow after its first lookup; the index follows it.
+  extra := ModuleInfo { path: "/extra.do", program: result.modules[0].program }
+  result.modules.push(extra)
+  Assert.isTrue(result.moduleAt("/extra.do") == extra)
+}
+
+export function testModuleAtKeepsFirstDuplicatePath(): none {
+  base := createAnalyzer([SourceFile { path: "/main.do", source: "function main(): none {}" }]).analyze("/main.do")
+  first := ModuleInfo { path: "/dup.do", program: base.modules[0].program }
+  second := ModuleInfo { path: "/dup.do", program: base.modules[0].program }
+  graph := AnalysisResult { modules: [first, second] }
+  Assert.isTrue(graph.moduleAt("/dup.do") == first)
+}
+
 export function testKeepsDepthFirstModuleOrderAcrossParallelParsing(): none {
   slowSource := ("// keep the first dependency busy\n").repeat(20000) +
     "import { leaf } from \"./leaf\"\nexport function slow(): int => leaf()"

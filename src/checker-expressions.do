@@ -124,7 +124,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         if itemType.kind == "never" { diverges = true }
       }
       if diverges { return finish(state, expression, neverType()) }
-      return finish(state, expression, tupleType(elements))
+      return finish(state, expression, tupleType(elements.drainToReadonly()))
     }
     object: ObjectLiteral -> {
       return checkObject(state, object, scope, expected)

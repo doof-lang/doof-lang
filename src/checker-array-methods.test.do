@@ -11,10 +11,10 @@ function messages(body: string): string[] {
   return found
 }
 
-function signature(callbackParams: string[], typeParams: string[] = []): FunctionType {
+function signature(callbackParams: string[], typeParams: readonly string[] = []): FunctionType {
   let params: FunctionParamType[] = []
   for name of callbackParams { params.push(FunctionParamType { name, type_: primitive("int"), hasDefault: false }) }
-  callback := functionType(params, primitive("bool"))
+  callback := functionType(params.drainToReadonly(), primitive("bool"))
   case functionType([FunctionParamType { name: "predicate", type_: callback, hasDefault: false }], primitive("bool"), typeParams) {
     function_: FunctionType -> { return function_ }
     _ -> { panic("expected function") }

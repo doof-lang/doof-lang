@@ -184,7 +184,7 @@ export class AssignmentExpression {
 export class GenericReference {
   function_: FunctionDeclaration
   modulePath: string
-  typeArgs: ResolvedType[]
+  typeArgs: readonly ResolvedType[]
 }
 
 export class CheckedMember {
@@ -276,7 +276,7 @@ export class CallExpression {
   callee: Expression
   args: CallArgument[]
   typeArgs: TypeAnnotation[] = []
-  let resolvedGenericTypeArgs: ResolvedType[] = []
+  let resolvedGenericTypeArgs: readonly ResolvedType[] = []
   let resolvedFunction: FunctionDeclaration | none = none
   // Defining Doof module for resolvedFunction. Generic discovery and call
   // lowering consume this decoration instead of reconstructing ownership from
@@ -535,7 +535,7 @@ export class FunctionDeclaration {
   kind: string
   name: string
   description: string = ""
-  typeParams: string[]
+  typeParams: readonly string[]
   typeParamConstraints: TypeParameterConstraint[] = []
   params: Parameter[]
   returnType: TypeAnnotation | none
@@ -750,7 +750,7 @@ export class ClassDeclaration {
   name: string
   description: string = ""
   struct_: bool = false
-  typeParams: string[]
+  typeParams: readonly string[]
   typeParamConstraints: TypeParameterConstraint[] = []
   implements_: NamedType[]
   let fields: ClassField[]
@@ -815,7 +815,7 @@ export class InterfaceDeclaration {
   kind: string
   name: string
   description: string = ""
-  typeParams: string[]
+  typeParams: readonly string[]
   typeParamConstraints: TypeParameterConstraint[] = []
   fields: InterfaceField[]
   methods: FunctionDeclaration[]
@@ -864,7 +864,7 @@ export class TypeAliasDeclaration {
   kind: string
   name: string
   description: string = ""
-  typeParams: string[]
+  typeParams: readonly string[]
   typeParamConstraints: TypeParameterConstraint[] = []
   type_: TypeAnnotation
   exported: bool

@@ -366,14 +366,15 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
   scope.returnType = returnType
   // Resolve through the scope chain so owner type parameters (such as an
   // interface's `V`) are visible to the cached signature, not only the body.
-  let parameterTypes: FunctionParamType[] = []
+  let collectedParameterTypes: FunctionParamType[] = []
   for parameter of fn.params {
-    parameterTypes.push(FunctionParamType {
+    collectedParameterTypes.push(FunctionParamType {
       name: parameter.name,
       type_: if parameter.type_ == none then unknownType() else resolveType(state, parameter.type_!, state.info!, scope),
       hasDefault: parameter.defaultValue != none,
     })
   }
+  parameterTypes := collectedParameterTypes.drainToReadonly()
   functionValue := functionType(parameterTypes, returnType, fn.typeParams)
   fn.resolvedType = functionValue
   for index of 0..<fn.params.length {
@@ -425,7 +426,7 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
   populateTypeParameters(state, classScope, class_.typeParams, class_.typeParamConstraints)
   let ownerTypeArgs: ResolvedType[] = []
   for typeParam of class_.typeParams { ownerTypeArgs.push(typeParameter(typeParam)) }
-  owner := classType(class_.name, symbol!, ownerTypeArgs)
+  owner := classType(class_.name, symbol!, ownerTypeArgs.drainToReadonly())
   resolveFieldInclusions(state, class_, state.info!, classScope)
   for field of class_.fields {
     if origin := field.includedFrom {
@@ -607,7 +608,7 @@ function validateUniqueInterfaceMembers(state: CheckerState, interface_: Interfa
 // Constraint annotations live in the declaration scope so ordinary constraints
 // participate in body checking while the two constraint-only intrinsics retain
 // their dedicated member semantics.
-function populateTypeParameters(state: CheckerState, scope: Scope, names: string[], constraints: TypeParameterConstraint[]): none {
+function populateTypeParameters(state: CheckerState, scope: Scope, names: readonly string[], constraints: TypeParameterConstraint[]): none {
   offset := scope.typeParams.length
   for name of names {
     scope.typeParams.push(name)
@@ -625,7 +626,7 @@ function populateTypeParameters(state: CheckerState, scope: Scope, names: string
   }
 }
 
-function populateConstraint(state: CheckerState, scope: Scope, names: string[], constraints: TypeParameterConstraint[], offset: int, index: int, active: string[], completed: string[]): none {
+function populateConstraint(state: CheckerState, scope: Scope, names: readonly string[], constraints: TypeParameterConstraint[], offset: int, index: int, active: string[], completed: string[]): none {
   if completed.contains(names[index]) { return }
   if index >= constraints.length || constraints[index].type_ == none { completed.push(names[index]); return }
   annotation := constraints[index].type_!
@@ -657,7 +658,7 @@ function populateConstraint(state: CheckerState, scope: Scope, names: string[], 
   }
 }
 
-function validateUniqueTypeParameters(state: CheckerState, names: string[], span: SourceSpan): none {
+function validateUniqueTypeParameters(state: CheckerState, names: readonly string[], span: SourceSpan): none {
   for index of 0..<names.length {
     for previous of 0..<index {
       if names[previous] == names[index] {
@@ -668,7 +669,7 @@ function validateUniqueTypeParameters(state: CheckerState, names: string[], span
   }
 }
 
-function validateTypeParameterShadowing(state: CheckerState, names: string[], outer: Scope, span: SourceSpan): none {
+function validateTypeParameterShadowing(state: CheckerState, names: readonly string[], outer: Scope, span: SourceSpan): none {
   let current: Scope | none = outer
   while current != none {
     for name of names {

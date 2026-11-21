@@ -35,7 +35,7 @@ function presentType(type_: ResolvedType): ResolvedType {
     union_: UnionResolvedType -> {
       let members: ResolvedType[] = []
       for member of union_.types { if member.kind != "none" { members.push(member) } }
-      return unionType(members)
+      return unionType(members.drainToReadonly())
     }
     _ -> { return type_ }
   }

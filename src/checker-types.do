@@ -108,11 +108,11 @@ export function promiseType(valueType: ResolvedType): ResolvedType { return Prom
 
 export function weakType(inner: ResolvedType): ResolvedType { return WeakResolvedType { inner } }
 
-export function tupleType(elements: ResolvedType[]): ResolvedType {
+export function tupleType(elements: readonly ResolvedType[]): ResolvedType {
   return TupleResolvedType { elements }
 }
 
-export function unionType(types: ResolvedType[]): ResolvedType {
+export function unionType(types: readonly ResolvedType[]): ResolvedType {
   let members: ResolvedType[] = []
   for memberType of types {
     case memberType {
@@ -128,16 +128,16 @@ export function unionType(types: ResolvedType[]): ResolvedType {
       _ -> { pushUniqueType(members, memberType) }
     }
   }
-  members = canonicalResultArms(members)
-  if optionalWeak := optionalWeakReference(members) { return optionalWeak }
-  if members.length == 0 { return neverType() }
-  if members.length == 1 { return members[0] }
-  return UnionResolvedType { types: members }
+  canonical := canonicalResultArms(members).drainToReadonly()
+  if optionalWeak := optionalWeakReference(canonical) { return optionalWeak }
+  if canonical.length == 0 { return neverType() }
+  if canonical.length == 1 { return canonical[0] }
+  return UnionResolvedType { types: canonical }
 }
 
 // `(weak T) | none` is exactly `weak (T | none)`: both are absent, live, or
 // expired. Absence always lives inside the weak reference.
-function optionalWeakReference(members: ResolvedType[]): ResolvedType | none {
+function optionalWeakReference(members: readonly ResolvedType[]): ResolvedType | none {
   let weakMember: WeakResolvedType | none = none
   let hasNone = false
   for member of members {
@@ -167,7 +167,7 @@ export function mixedWeakUnionMessage(type_: ResolvedType): string | none {
         }
       }
       if !mixed { return none }
-      return "Union \"${typeName(type_)}\" mixes weak and strong references; 'weak' qualifies the whole union, as in \"${typeName(weakType(unionType(inner)))}\""
+      return "Union \"${typeName(type_)}\" mixes weak and strong references; 'weak' qualifies the whole union, as in \"${typeName(weakType(unionType(inner.drainToReadonly())))}\""
     }
     _ -> { return none }
   }
@@ -201,7 +201,7 @@ function pushUniqueType(types: ResolvedType[], candidate: ResolvedType): none {
   types.push(candidate)
 }
 
-export function functionType(params: FunctionParamType[], returnType: ResolvedType, typeParams: string[] = []): ResolvedType {
+export function functionType(params: readonly FunctionParamType[], returnType: ResolvedType, typeParams: readonly string[] = []): ResolvedType {
   return FunctionType { params, returnType, typeParams }
 }
 
@@ -223,7 +223,7 @@ export function applyDeepReadonly(type_: ResolvedType): ResolvedType {
     actor: ActorType -> {
       let typeArgs: ResolvedType[] = []
       for argument of actor.innerClass.typeArgs { typeArgs.push(applyDeepReadonly(argument)) }
-      return actorType(classType(actor.innerClass.name, actor.innerClass.symbol, typeArgs))
+      return actorType(classType(actor.innerClass.name, actor.innerClass.symbol, typeArgs.drainToReadonly()))
     }
     promise: PromiseType -> { return promiseType(applyDeepReadonly(promise.valueType)) }
     metadata: ClassMetadataResolvedType -> { return classMetadataType(applyDeepReadonly(metadata.classType)) }
@@ -231,23 +231,23 @@ export function applyDeepReadonly(type_: ResolvedType): ResolvedType {
     tuple: TupleResolvedType -> {
       let elements: ResolvedType[] = []
       for element of tuple.elements { elements.push(applyDeepReadonly(element)) }
-      return tupleType(elements)
+      return tupleType(elements.drainToReadonly())
     }
     union_: UnionResolvedType -> {
       let members: ResolvedType[] = []
       for member of union_.types { members.push(applyDeepReadonly(member)) }
       // Readonly can make previously distinct mutable/readonly arms identical.
-      return unionType(members)
+      return unionType(members.drainToReadonly())
     }
     class_: ClassType -> {
       let typeArgs: ResolvedType[] = []
       for argument of class_.typeArgs { typeArgs.push(applyDeepReadonly(argument)) }
-      return classType(class_.name, class_.symbol, typeArgs)
+      return classType(class_.name, class_.symbol, typeArgs.drainToReadonly())
     }
     interface_: InterfaceType -> {
       let typeArgs: ResolvedType[] = []
       for argument of interface_.typeArgs { typeArgs.push(applyDeepReadonly(argument)) }
-      return interfaceType(interface_.name, interface_.symbol, typeArgs)
+      return interfaceType(interface_.name, interface_.symbol, typeArgs.drainToReadonly())
     }
     _ -> { return type_ }
   }
@@ -255,7 +255,10 @@ export function applyDeepReadonly(type_: ResolvedType): ResolvedType {
 }
 
 /** Substitutes explicit generic call arguments through a resolved signature. */
-export function substituteTypeParams(type_: ResolvedType, names: string[], arguments: ResolvedType[]): ResolvedType {
+export function substituteTypeParams(type_: ResolvedType, names: readonly string[], arguments: readonly ResolvedType[]): ResolvedType {
+  // A concrete type is its own substitution. Rebuilding it would only allocate
+  // an equal copy and re-canonicalize every union member pairwise.
+  if names.length == 0 || !containsTypeParameter(type_) { return type_ }
   case type_ {
     parameter: TypeParameterType -> {
       for i of 0..<names.length {
@@ -274,7 +277,7 @@ export function substituteTypeParams(type_: ResolvedType, names: string[], argum
     actor: ActorType -> {
       let typeArgs: ResolvedType[] = []
       for argument of actor.innerClass.typeArgs { typeArgs.push(substituteTypeParams(argument, names, arguments)) }
-      return actorType(classType(actor.innerClass.name, actor.innerClass.symbol, typeArgs))
+      return actorType(classType(actor.innerClass.name, actor.innerClass.symbol, typeArgs.drainToReadonly()))
     }
     promise: PromiseType -> { return promiseType(substituteTypeParams(promise.valueType, names, arguments)) }
     metadata: ClassMetadataResolvedType -> { return classMetadataType(substituteTypeParams(metadata.classType, names, arguments)) }
@@ -282,29 +285,29 @@ export function substituteTypeParams(type_: ResolvedType, names: string[], argum
     tuple: TupleResolvedType -> {
       let elements: ResolvedType[] = []
       for element of tuple.elements { elements.push(substituteTypeParams(element, names, arguments)) }
-      return tupleType(elements)
+      return tupleType(elements.drainToReadonly())
     }
     union_: UnionResolvedType -> {
       let members: ResolvedType[] = []
       for member of union_.types { members.push(substituteTypeParams(member, names, arguments)) }
-      return unionType(members)
+      return unionType(members.drainToReadonly())
     }
     class_: ClassType -> {
       let typeArgs: ResolvedType[] = []
       for argument of class_.typeArgs { typeArgs.push(substituteTypeParams(argument, names, arguments)) }
-      return classType(class_.name, class_.symbol, typeArgs)
+      return classType(class_.name, class_.symbol, typeArgs.drainToReadonly())
     }
     interface_: InterfaceType -> {
       let typeArgs: ResolvedType[] = []
       for argument of interface_.typeArgs { typeArgs.push(substituteTypeParams(argument, names, arguments)) }
-      return interfaceType(interface_.name, interface_.symbol, typeArgs)
+      return interfaceType(interface_.name, interface_.symbol, typeArgs.drainToReadonly())
     }
     function_: FunctionType -> {
       let params: FunctionParamType[] = []
       for parameter of function_.params {
         params.push(FunctionParamType { name: parameter.name, type_: substituteTypeParams(parameter.type_, names, arguments), hasDefault: parameter.hasDefault })
       }
-      return functionType(params, substituteTypeParams(function_.returnType, names, arguments), function_.typeParams)
+      return functionType(params.drainToReadonly(), substituteTypeParams(function_.returnType, names, arguments), function_.typeParams)
     }
     _ -> { return type_ }
   }
@@ -341,7 +344,7 @@ export function containsTypeParameter(type_: ResolvedType): bool {
   return false
 }
 
-export function containsTypeParameters(types: ResolvedType[]): bool {
+export function containsTypeParameters(types: readonly ResolvedType[]): bool {
   for type_ of types { if containsTypeParameter(type_) { return true } }
   return false
 }
@@ -370,7 +373,7 @@ export function typeParameter(name: string, constraintName: string = "", constra
   return TypeParameterType { name, constraintName, constraint }
 }
 
-export function classType(name: string, symbol: Symbol, typeArgs: ResolvedType[] = []): ClassType {
+export function classType(name: string, symbol: Symbol, typeArgs: readonly ResolvedType[] = []): ClassType {
   return ClassType { name, symbol, typeArgs }
 }
 
@@ -390,7 +393,7 @@ export function enumType(name: string, symbol: Symbol): EnumType {
   return EnumType { name, symbol }
 }
 
-export function interfaceType(name: string, symbol: Symbol, typeArgs: ResolvedType[] = []): InterfaceType {
+export function interfaceType(name: string, symbol: Symbol, typeArgs: readonly ResolvedType[] = []): InterfaceType {
   return InterfaceType { name, symbol, typeArgs }
 }
 
@@ -833,9 +836,9 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
 // new referent that nothing keeps alive.
 export function weakTargetWidens(value: ResolvedType, target: ResolvedType): bool {
   if sameType(value, target) { return true }
-  let targetMembers: ResolvedType[] = [target]
+  let targetMembers: readonly ResolvedType[] = [target]
   if union_ := target as UnionResolvedType { targetMembers = union_.types }
-  let valueMembers: ResolvedType[] = [value]
+  let valueMembers: readonly ResolvedType[] = [value]
   if union_ := value as UnionResolvedType { valueMembers = union_.types }
   for member of valueMembers {
     let widens = false
@@ -881,7 +884,7 @@ export function isWeakReferenceTarget(type_: ResolvedType): bool {
   return false
 }
 
-function sameTypeArguments(left: ResolvedType[], right: ResolvedType[], ignoreMutability: bool = false): bool {
+function sameTypeArguments(left: readonly ResolvedType[], right: readonly ResolvedType[], ignoreMutability: bool = false): bool {
   for i of 0..<left.length {
     if !compareTypes(left[i], right[i], ignoreMutability) { return false }
   }
@@ -965,7 +968,7 @@ export function typeFromAnnotation(annotation: TypeAnnotation): ResolvedType {
     union: AstUnionType -> {
       let members: ResolvedType[] = []
       for item of union.types { members.push(typeFromAnnotation(item)) }
-      return unionType(members)
+      return unionType(members.drainToReadonly())
     }
     _: AstNamedType -> { return unknownType() }
     _: AstFunctionType -> { return unknownType() }

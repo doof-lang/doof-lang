@@ -65,7 +65,7 @@ function checkedSignature(member: MemberExpression, expression: CallExpression, 
     if expression.resolvedGenericTypeArgs.length == 0 { return signature }
     let concrete: ResolvedType[] = []
     for argument of expression.resolvedGenericTypeArgs { concrete.push(specializeEmitType(argument, context)) }
-    case substituteTypeParams(signature, signature.typeParams, concrete) {
+    case substituteTypeParams(signature, signature.typeParams, concrete.drainToReadonly()) {
       specialized: FunctionType -> { return specialized }
       _ -> { }
     }

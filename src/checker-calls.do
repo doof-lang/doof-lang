@@ -103,7 +103,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         // `Stack.empty<int>()` fixes the method's own parameters; the class's
         // are still inferred from the arguments.
         let signature = resolvedFunction
-        let methodArgs: ResolvedType[] = []
+        let methodArgs: readonly ResolvedType[] = []
         if expression.typeArgs.length > 0 {
           explicit := explicitCallTypeArguments(state, expression, resolvedFunction, scope)
           if explicit == none { genericInferenceFailed = true } else {
@@ -124,7 +124,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           if methodArgs.length > 0 { applyCallTypeArguments(state, expression, methodArgs, scope) }
         }
       } else if expression.typeArgs.length > 0 || resolvedFunction.typeParams.length > 0 {
-        let typeArgs: ResolvedType[] | none = none
+        let typeArgs: readonly ResolvedType[] | none = none
         if expression.typeArgs.length == 0 {
           typeArgs = inferCallTypeArguments(state, expression.args, resolvedFunction, scope, expected)
           if typeArgs == none {
@@ -150,7 +150,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
       let effectiveClass = class_
       declaration := declarationFor(state.result, class_.symbol)
       if expression.typeArgs.length > 0 {
-        let declaredTypeParams: string[] = []
+        let declaredTypeParams: readonly string[] = []
         let constraints: TypeParameterConstraint[] = expression.resolvedClass?.typeParamConstraints ?? []
         if targetDeclaration := declaration { case targetDeclaration { classDeclaration: ClassDeclaration -> { declaredTypeParams = classDeclaration.typeParams; constraints = classDeclaration.typeParamConstraints } _ -> { } } }
         if expression.typeArgs.length != declaredTypeParams.length {
@@ -284,7 +284,7 @@ function checkedMemberCallReturnType(expression: CallExpression, returnType: Res
 }
 
 // Explicit `f<A, B>(...)` arguments, or none after reporting an arity mismatch.
-function explicitCallTypeArguments(state: CheckerState, expression: CallExpression, signature: FunctionType, scope: Scope): ResolvedType[] | none {
+function explicitCallTypeArguments(state: CheckerState, expression: CallExpression, signature: FunctionType, scope: Scope): readonly ResolvedType[] | none {
   if expression.typeArgs.length != signature.typeParams.length {
     typeError(state, typeArgumentArityMessage("Generic call", signature.typeParams.length, expression.typeArgs.length), expression.span)
     return none
@@ -292,12 +292,12 @@ function explicitCallTypeArguments(state: CheckerState, expression: CallExpressi
   return resolveTypeArguments(state, expression.typeArgs, scope)
 }
 
-function applyCallTypeArguments(state: CheckerState, expression: CallExpression, typeArgs: ResolvedType[], scope: Scope): none {
+function applyCallTypeArguments(state: CheckerState, expression: CallExpression, typeArgs: readonly ResolvedType[], scope: Scope): none {
   expression.resolvedGenericTypeArgs = typeArgs
   applyTypeArgumentConstraints(state, expression.resolvedFunction, typeArgs, expression.span, scope, expression.resolvedFunctionModule, expression.callee)
 }
 
-function substituteSignature(signature: FunctionType, names: string[], typeArgs: ResolvedType[]): FunctionType {
+function substituteSignature(signature: FunctionType, names: readonly string[], typeArgs: readonly ResolvedType[]): FunctionType {
   case substituteTypeParams(signature, names, typeArgs) {
     function_: FunctionType -> { return function_ }
     _ -> { }
@@ -313,9 +313,10 @@ function substituteSignature(signature: FunctionType, names: string[], typeArgs:
  */
 function instantiateGenericStaticCall(state: CheckerState, expression: CallExpression, owner: ClassDeclaration, signature: FunctionType, scope: Scope, expected: ResolvedType | none): FunctionType | none {
   member := staticReceiver(expression.callee)!
-  let combinedParams: string[] = []
-  for name of owner.typeParams { combinedParams.push(name) }
-  for name of signature.typeParams { combinedParams.push(name) }
+  let collectedParams: string[] = []
+  for name of owner.typeParams { collectedParams.push(name) }
+  for name of signature.typeParams { collectedParams.push(name) }
+  combinedParams := collectedParams.drainToReadonly()
   combined := FunctionType { params: signature.params, returnType: signature.returnType, typeParams: combinedParams }
   inferred := inferCallTypeArguments(state, expression.args, combined, scope, expected)
   if inferred == none {
@@ -357,11 +358,11 @@ function callArgumentsDiverge(expression: CallExpression): bool {
   return false
 }
 
-export function applyTypeArgumentConstraints(state: CheckerState, declaration: FunctionDeclaration | none, arguments: ResolvedType[], span: SourceSpan, scope: Scope, modulePath: string, callee: Expression): none {
+export function applyTypeArgumentConstraints(state: CheckerState, declaration: FunctionDeclaration | none, arguments: readonly ResolvedType[], span: SourceSpan, scope: Scope, modulePath: string, callee: Expression): none {
   if declaration == none { return }
   module := findModule(state.result, modulePath) ?? state.info!
-  let ownerNames: string[] = []
-  let ownerArguments: ResolvedType[] = []
+  let ownerNames: readonly string[] = []
+  let ownerArguments: readonly ResolvedType[] = []
   let receiver: ResolvedType | none = none
   case callee {
     member: MemberExpression -> { receiver = memberReceiverType(member) }

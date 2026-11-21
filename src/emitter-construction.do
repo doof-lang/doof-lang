@@ -37,7 +37,7 @@ function emitConstructionValues(plan: CheckedConstruction, inputs: ConstructionI
   return values
 }
 
-function emitConstructionValue(inputs: ConstructionInputs, name: string, index: int, expected: ResolvedType, defaultValue: Expression | none, owner: ClassType, ownerTypeParams: string[], missingMessage: string, context: EmitContext): string {
+function emitConstructionValue(inputs: ConstructionInputs, name: string, index: int, expected: ResolvedType, defaultValue: Expression | none, owner: ClassType, ownerTypeParams: readonly string[], missingMessage: string, context: EmitContext): string {
   if property := findProperty(inputs.properties, name) {
     if inputs.aliasThis && property.value != none {
       if _ := property.value! as ThisExpression {
@@ -149,10 +149,10 @@ function emitOwnerDefaultExpression(
   expected: ResolvedType,
   callSiteSpan: SourceSpan,
   owner: ClassType,
-  ownerTypeParams: string[] = [],
+  ownerTypeParams: readonly string[] = [],
 ): string {
   specializedOwner := specializeEmitType(owner, context)
-  let ownerArguments: ResolvedType[] = []
+  let ownerArguments: readonly ResolvedType[] = []
   case specializedOwner {
     class_: ClassType -> { ownerArguments = class_.typeArgs }
     _ -> { panic("Constructor owner did not remain a class after specialization") }
@@ -184,7 +184,7 @@ function concreteClassName(class_: ClassType, context: EmitContext): string {
   let typeArgs: ResolvedType[] = []
   for argument of class_.typeArgs { typeArgs.push(specializeEmitType(argument, context)) }
   if typeArgs.length == 0 { return "" }
-  key := classInstantiationKey(class_.symbol.module, class_.name, typeArgs)
+  key := classInstantiationKey(class_.symbol.module, class_.name, typeArgs.drainToReadonly())
   for i of 0..<context.concreteClassKeys.length {
     if context.concreteClassKeys[i] == key {
       name := context.concreteClassNames[i]

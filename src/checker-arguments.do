@@ -37,9 +37,9 @@ export function positionalArguments(values: Expression[]): SuppliedArgument[] {
 }
 
 export function checkArguments(
-  state: CheckerState, args: SuppliedArgument[], params: FunctionParamType[], scope: Scope, span: SourceSpan,
+  state: CheckerState, args: SuppliedArgument[], params: readonly FunctionParamType[], scope: Scope, span: SourceSpan,
   countSubject: string = "", argumentPrefix: string = "Argument", contextual: bool = true, validateTypes: bool = true,
-  spread: FunctionParamType[] = [], spreadSpan: SourceSpan | none = none, namedSyntax: bool = false,
+  spread: readonly FunctionParamType[] = [], spreadSpan: SourceSpan | none = none, namedSyntax: bool = false,
 ): none {
   let named = namedSyntax
   for argument of args { if argument.name != none { named = true } }

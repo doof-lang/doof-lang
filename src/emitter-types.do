@@ -49,6 +49,91 @@ function lowerContextPosition(resolvedType: ResolvedType, context: EmitContext, 
   return result
 }
 
+/**
+ * Whether two specialized types certainly spell the same C++ type in one
+ * context, decided structurally without lowering either. Unlike checker
+ * `sameType`, union arms and every other ordered list must match in order,
+ * because `std::variant` spelling follows arm order. Kinds not listed answer
+ * false, so callers fall back to comparing rendered spellings.
+ */
+export function identicalEmitTypes(left: ResolvedType, right: ResolvedType): bool {
+  if left.kind != right.kind { return false }
+  case left {
+    primitive_: PrimitiveType -> {
+      other := right as PrimitiveType else { return false }
+      return primitive_.name == other.name
+    }
+    _: NoneType -> { return true }
+    class_: ClassType -> {
+      other := right as ClassType else { return false }
+      return sameNominal(class_.symbol, other.symbol) && identicalEmitTypeLists(class_.typeArgs, other.typeArgs)
+    }
+    interface_: InterfaceType -> {
+      other := right as InterfaceType else { return false }
+      return sameNominal(interface_.symbol, other.symbol) && identicalEmitTypeLists(interface_.typeArgs, other.typeArgs)
+    }
+    enum_: EnumType -> {
+      other := right as EnumType else { return false }
+      return sameNominal(enum_.symbol, other.symbol)
+    }
+    array: ArrayResolvedType -> {
+      other := right as ArrayResolvedType else { return false }
+      return array.readonly_ == other.readonly_ && identicalEmitTypes(array.elementType, other.elementType)
+    }
+    map: MapResolvedType -> {
+      other := right as MapResolvedType else { return false }
+      return map.readonly_ == other.readonly_ && identicalEmitTypes(map.keyType, other.keyType) && identicalEmitTypes(map.valueType, other.valueType)
+    }
+    set_: SetResolvedType -> {
+      other := right as SetResolvedType else { return false }
+      return set_.readonly_ == other.readonly_ && identicalEmitTypes(set_.elementType, other.elementType)
+    }
+    result: ResultResolvedType -> {
+      other := right as ResultResolvedType else { return false }
+      return identicalEmitTypes(result.valueType, other.valueType) && identicalEmitTypes(result.errorType, other.errorType)
+    }
+    promise: PromiseType -> {
+      other := right as PromiseType else { return false }
+      return identicalEmitTypes(promise.valueType, other.valueType)
+    }
+    weak_: WeakResolvedType -> {
+      other := right as WeakResolvedType else { return false }
+      return identicalEmitTypes(weak_.inner, other.inner)
+    }
+    tuple: TupleResolvedType -> {
+      other := right as TupleResolvedType else { return false }
+      return identicalEmitTypeLists(tuple.elements, other.elements)
+    }
+    union_: UnionResolvedType -> {
+      other := right as UnionResolvedType else { return false }
+      return identicalEmitTypeLists(union_.types, other.types)
+    }
+    function_: FunctionType -> {
+      other := right as FunctionType else { return false }
+      if function_.params.length != other.params.length { return false }
+      for index of 0..<function_.params.length {
+        if function_.params[index].name != other.params[index].name { return false }
+        if !identicalEmitTypes(function_.params[index].type_, other.params[index].type_) { return false }
+      }
+      return identicalEmitTypes(function_.returnType, other.returnType)
+    }
+    _ -> { return false }
+  }
+  return false
+}
+
+function identicalEmitTypeLists(left: readonly ResolvedType[], right: readonly ResolvedType[]): bool {
+  if left.length != right.length { return false }
+  for index of 0..<left.length {
+    if !identicalEmitTypes(left[index], right[index]) { return false }
+  }
+  return true
+}
+
+function sameNominal(left: Symbol, right: Symbol): bool {
+  return left.module == right.module && left.name == right.name
+}
+
 export function emitContextType(resolvedType: ResolvedType, context: EmitContext): string {
   return context.cppTypes.render(lowerContextCppType(resolvedType, context), typeNamespace(context.modulePath, context.names))
 }
@@ -108,7 +193,7 @@ function lowerRegisteredTypeUncached(type_: ResolvedType, context: EmitContext):
       }
       let arguments: ResolvedType[] = []
       for argument of class_.typeArgs { arguments.push(lowerRegisteredTypes(argument, context)) }
-      return ClassType { name: class_.name, symbol: class_.symbol, typeArgs: arguments }
+      return ClassType { name: class_.name, symbol: class_.symbol, typeArgs: arguments.drainToReadonly() }
     }
     interface_: InterfaceType -> {
       if interface_.typeArgs.length > 0 {
@@ -148,19 +233,19 @@ function lowerRegisteredTypeUncached(type_: ResolvedType, context: EmitContext):
     tuple: TupleResolvedType -> {
       let elements: ResolvedType[] = []
       for element of tuple.elements { elements.push(lowerRegisteredTypes(element, context)) }
-      return TupleResolvedType { elements }
+      return TupleResolvedType { elements: elements.drainToReadonly() }
     }
     union_: UnionResolvedType -> {
       let members: ResolvedType[] = []
       for member of union_.types { members.push(lowerRegisteredTypes(member, context)) }
-      return UnionResolvedType { types: members }
+      return UnionResolvedType { types: members.drainToReadonly() }
     }
     function_: FunctionType -> {
       let parameters: FunctionParamType[] = []
       for parameter of function_.params {
         parameters.push(FunctionParamType { name: parameter.name, type_: lowerRegisteredTypes(parameter.type_, context), hasDefault: parameter.hasDefault })
       }
-      return FunctionType { params: parameters, returnType: lowerRegisteredTypes(function_.returnType, context), typeParams: function_.typeParams }
+      return FunctionType { params: parameters.drainToReadonly(), returnType: lowerRegisteredTypes(function_.returnType, context), typeParams: function_.typeParams }
     }
     _ -> { return type_ }
   }

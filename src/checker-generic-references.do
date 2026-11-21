@@ -30,15 +30,16 @@ export function instantiateGenericReference(state: CheckerState, expression: Exp
     // The uninstantiated signature still reports the reference's arity.
     return referenceType
   }
-  let typeArgs: ResolvedType[] = []
+  let collectedTypeArgs: ResolvedType[] = []
   for typeParam of generic!.typeParams {
     inferred := inferFromSignature(generic!, contextual!, typeParam)
     if inferred == none {
       typeError(state, "Cannot infer type argument '${typeParam}' of generic function '${name}' from expected type ${displayTypeName(contextual!)}", expression.span)
       return unknownType()
     }
-    typeArgs.push(inferred!)
+    collectedTypeArgs.push(inferred!)
   }
+  typeArgs := collectedTypeArgs.drainToReadonly()
   applyTypeArgumentConstraints(state, target.function_, typeArgs, expression.span, scope, target.modulePath, expression)
   let instantiated: ResolvedType = unknownType()
   case substituteTypeParams(generic!, generic!.typeParams, typeArgs) {

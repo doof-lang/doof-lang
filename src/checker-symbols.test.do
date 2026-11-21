@@ -1,9 +1,10 @@
 import { Assert } from "std/assert"
 import { AnalysisResult, createAnalyzer } from "./analyzer"
-import { ClassDeclaration, ClassField } from "./ast"
+import { ClassDeclaration, ClassField, FunctionDeclaration } from "./ast"
 import { SourceFile, FunctionType } from "./semantic"
-import { builtinCallable, classFieldBinding, classFieldMode, fieldDisplayName, findClassDeclaration, findInterfaceDeclaration, isBuiltinCallable, methodSignature } from "./checker-symbols"
-import { primitive, typeName } from "./checker-types"
+import { builtinCallable, classFieldBinding, classFieldMode, fieldDisplayName, findClassDeclaration, findInterfaceDeclaration, isBuiltinCallable, methodSignature, symbolType } from "./checker-symbols"
+import { ProvisionalSignatures } from "./checker-state"
+import { functionType, primitive, typeName } from "./checker-types"
 
 // Fails on parse or analysis diagnostics so a malformed fixture cannot pass
 // unnoticed through a test that only inspects checker output.
@@ -100,4 +101,44 @@ export function testDeclarationLookupsMatchModuleNameAndKind(): none {
   Assert.equal(findInterfaceDeclaration(analysis, "/main.do", "Box"), none)
   Assert.equal(findClassDeclaration(analysis, "/main.do", "Box2"), none)
   Assert.equal(findClassDeclaration(analysis, "/other.do", "Box"), none)
+}
+
+export function testSymbolTypeReusesProvisionalSignaturePerModule(): none {
+  analysis := analyzed("function add(left: int, right: int): int => left + right")
+  module := analysis.modules[0]
+  symbol := module.symbols.find(=> it.name == "add")!
+  signatures := ProvisionalSignatures {}
+  first := symbolType(symbol, module, analysis, signatures)
+  Assert.equal(typeName(first), "function")
+  fnType := first as FunctionType else { panic("expected function type") }
+  Assert.equal(fnType.params.length, 2)
+  Assert.equal(typeName(fnType.returnType), "int")
+  // The second request is answered from the memo, not re-resolved.
+  case module.program.statements[0] {
+    fn: FunctionDeclaration -> {
+      Assert.isTrue(signatures.lookup(fn, module.path) != none)
+      Assert.isTrue(signatures.lookup(fn, "/other.do") == none)
+    }
+    _ -> { panic("expected function") }
+  }
+  second := symbolType(symbol, module, analysis, signatures) as FunctionType else { panic("expected function type") }
+  Assert.equal(second.params.length, 2)
+}
+
+export function testSymbolTypePrefersCheckedSignatureOverMemo(): none {
+  analysis := analyzed("function add(left: int, right: int): int => left + right")
+  module := analysis.modules[0]
+  symbol := module.symbols.find(=> it.name == "add")!
+  signatures := ProvisionalSignatures {}
+  let ignored = symbolType(symbol, module, analysis, signatures)
+  case module.program.statements[0] {
+    fn: FunctionDeclaration -> {
+      checked := functionType([], primitive("string"))
+      fn.resolvedType = checked
+      resolved := symbolType(symbol, module, analysis, signatures) as FunctionType else { panic("expected function type") }
+      Assert.equal(resolved.params.length, 0)
+      Assert.equal(typeName(resolved.returnType), "string")
+    }
+    _ -> { panic("expected function") }
+  }
 }

@@ -235,8 +235,9 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   if resolvedType := expression.callee.resolvedType {
     if resolved := resolvedType as FunctionType { functionType = resolved }
   }
-  let concreteGenericArgs: ResolvedType[] = []
-  for argument of expression.resolvedGenericTypeArgs { concreteGenericArgs.push(specializeEmitType(argument, context)) }
+  let collectedConcreteGenericArgs: ResolvedType[] = []
+  for argument of expression.resolvedGenericTypeArgs { collectedConcreteGenericArgs.push(specializeEmitType(argument, context)) }
+  concreteGenericArgs := collectedConcreteGenericArgs.drainToReadonly()
   if genericType := functionType && concreteGenericArgs.length > 0 {
     substituted := substituteTypeParams(genericType, genericType.typeParams, concreteGenericArgs)
     if specialized := substituted as FunctionType { functionType = specialized }
@@ -379,7 +380,7 @@ export class ConcreteGenericTarget {
 }
 
 /** Selects the concrete instantiation a generic callee or value reference names. */
-export function concreteGenericTarget(reference: Expression, declaration: FunctionDeclaration, declarationModule: string, concreteArgs: ResolvedType[], context: EmitContext): ConcreteGenericTarget | none {
+export function concreteGenericTarget(reference: Expression, declaration: FunctionDeclaration, declarationModule: string, concreteArgs: readonly ResolvedType[], context: EmitContext): ConcreteGenericTarget | none {
   let targetModule = declarationModule
   let concreteMethodName = ""
   case reference {
@@ -391,7 +392,7 @@ export function concreteGenericTarget(reference: Expression, declaration: Functi
           for typeParam of symbol.typeParams {
             ownerArgs.push(specializeEmitType(TypeParameterType { name: typeParam }, context))
           }
-          ownerKey := classInstantiationKey(symbol.module, symbol.name, ownerArgs)
+          ownerKey := classInstantiationKey(symbol.module, symbol.name, ownerArgs.drainToReadonly())
           methodKey := methodInstantiationKey(ownerKey, declaration.name, concreteArgs)
           concreteMethodName = concreteMethodNameFor(context, methodKey)
         } else if symbol := resolvedBinding.symbol { targetModule = symbol.module }

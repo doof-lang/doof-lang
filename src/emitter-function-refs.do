@@ -145,7 +145,7 @@ function referenceSignature(type_: ResolvedType | none, expected: ResolvedType |
 function concreteReferenceName(reference: Expression, generic: GenericReference, context: EmitContext): string {
   let concreteArgs: ResolvedType[] = []
   for argument of generic.typeArgs { concreteArgs.push(specializeEmitType(argument, context)) }
-  target := concreteGenericTarget(reference, generic.function_, generic.modulePath, concreteArgs, context)
+  target := concreteGenericTarget(reference, generic.function_, generic.modulePath, concreteArgs.drainToReadonly(), context)
   if target == none {
     panic("Missing concrete generic instantiation for reference to " + generic.modulePath + "::" + generic.function_.name +
       " at line " + string(reference.span.start.line) + ":" + string(reference.span.start.column))

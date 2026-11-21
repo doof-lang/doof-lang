@@ -78,8 +78,8 @@ function emitCallDefault(call: CallExpression, value: Expression, expected: Reso
   if member := call.callee as MemberExpression {
     if resolvedMember := member.resolvedMember && resolvedMember.owner != none {
       owner := specializeEmitType(resolvedMember.owner!, context)
-      let ownerNames: string[] = []
-      let ownerArguments: ResolvedType[] = []
+      let ownerNames: readonly string[] = []
+      let ownerArguments: readonly ResolvedType[] = []
       case owner {
         class_: ClassType -> { ownerNames = class_.symbol.typeParams; ownerArguments = class_.typeArgs }
         interface_: InterfaceType -> { ownerNames = interface_.symbol.typeParams; ownerArguments = interface_.typeArgs }
@@ -97,7 +97,7 @@ function emitCallDefault(call: CallExpression, value: Expression, expected: Reso
       }
     }
   }
-  if names.length > 0 { context.substitution = TypeSubstitution { names, arguments } }
+  if names.length > 0 { context.substitution = TypeSubstitution { names: names.drainToReadonly(), arguments: arguments.drainToReadonly() } }
   result := emitDefaultExpression(value, context, expected, call.span)
   context.substitution = previous
   return result

@@ -216,7 +216,7 @@ export function implementationType(result: AnalysisResult, interface_: Interface
       }
     }
   }
-  return classType(implementation.name, implementation, typeArgs)
+  return classType(implementation.name, implementation, typeArgs.drainToReadonly())
 }
 
 function annotationType(annotation: TypeAnnotation): ResolvedType | none {

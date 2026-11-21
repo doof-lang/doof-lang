@@ -69,14 +69,15 @@ export function withCallbackArity(signature: FunctionType, parameterIndex: int, 
   if callback := signature.params[parameterIndex].type_ as FunctionType {
     count := callback.params.length
     if count == 0 || callback.params[count - 1].name != "index" || arity != count - 1 { return none }
-    let narrowedParams: FunctionParamType[] = []
-    for i of 0..<arity { narrowedParams.push(callback.params[i]) }
+    let collectedParams: FunctionParamType[] = []
+    for i of 0..<arity { collectedParams.push(callback.params[i]) }
+    narrowedParams := collectedParams.drainToReadonly()
     let params: FunctionParamType[] = []
     for i of 0..<signature.params.length {
       current := signature.params[i]
       params.push(if i == parameterIndex then param(current.name, functionType(narrowedParams, callback.returnType)) else current)
     }
-    case functionType(params, signature.returnType, signature.typeParams) {
+    case functionType(params.drainToReadonly(), signature.returnType, signature.typeParams) {
       narrowed: FunctionType -> { return narrowed }
       _ -> { }
     }

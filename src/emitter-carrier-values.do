@@ -4,7 +4,7 @@
 import { FailureResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, WeakResolvedType } from "./semantic"
 import { CarrierPosition, carrierOf, weakTargetUsesVariant } from "./emitter-carriers"
 import { EmitContext } from "./emitter-context"
-import { emitContextReturnType, emitContextType, specializeEmitType } from "./emitter-types"
+import { emitContextReturnType, emitContextType, identicalEmitTypes, specializeEmitType } from "./emitter-types"
 
 export function emitCarrierAbsence(type_: ResolvedType, context: EmitContext): string {
   concreteType := specializeEmitType(type_, context)
@@ -49,11 +49,14 @@ export function emitCarrierConversion(value: string, source: ResolvedType, targe
   // strong variant or absent pointer has no implicit conversion into it.
   if weak_ := toType as WeakResolvedType {
     if targetCarrier.kind == .Optional && weakTargetUsesVariant(weak_.inner) {
+      if identicalEmitTypes(fromType, toType) { return value }
       toCpp := emitContextType(toType, context)
       return if emitContextType(fromType, context) == toCpp then value else "doof::weak_promote<" + toCpp + ">(" + value + ")"
     }
   }
   if targetCarrier.kind == .Variant && !targetCarrier.naturalNullable {
+    // Most conversions are between identical types; skip rendering both.
+    if identicalEmitTypes(fromType, toType) { return value }
     fromCpp := emitContextType(fromType, context)
     toCpp := emitContextType(toType, context)
     if fromCpp == toCpp { return value }

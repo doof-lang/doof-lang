@@ -39,6 +39,14 @@ export class DependencyBuilder {
   events: DependencyEvent[] = []
   symbols: Set<string> = []
   interfaces: Set<string> = []
+  // Identity fast paths in front of the key sets above. Checked expressions
+  // share symbol and type objects heavily, and a repeat visit of the same
+  // object can only produce events already recorded, so skip it before
+  // building keys or re-walking type structure.
+  definitionSymbolObjects: Set<Symbol> = []
+  forwardSymbolObjects: Set<Symbol> = []
+  visitedTypes: Set<ResolvedType> = []
+  visitedCompleteTypes: Set<ResolvedType> = []
 
   finish(): DependencySummary {
     return DependencySummary { events: events.drainToReadonly() }
@@ -58,6 +66,9 @@ export function dependencyForSymbol(symbol: Symbol, forwardOnly: bool = false): 
 
 function recordSymbol(symbol: Symbol, index: DependencyBuilder, forwardOnly: bool = false): none {
   if symbol.module == "" { return }
+  seen := if forwardOnly then index.forwardSymbolObjects else index.definitionSymbolObjects
+  if seen.has(symbol) { return }
+  seen.add(symbol)
   dependency := dependencyForSymbol(symbol, forwardOnly)
   eventKey := dependency.key + (if forwardOnly then "::forward" else "::definition")
   if index.symbols.has(eventKey) { return }
@@ -136,6 +147,8 @@ export function collectDependencyType(
   type_: ResolvedType,
   index: DependencyBuilder,
 ): none {
+  if index.visitedTypes.has(type_) { return }
+  index.visitedTypes.add(type_)
   index.identities?.prepare(type_)
   case type_ {
     class_: ClassType -> {
@@ -186,6 +199,8 @@ export function collectDependencyType(
 // Operations that inspect or construct a type need complete definitions for
 // every nominal alternative the generated C++ operation can visit.
 export function collectCompleteDependencyType(type_: ResolvedType, index: DependencyBuilder): none {
+  if index.visitedCompleteTypes.has(type_) { return }
+  index.visitedCompleteTypes.add(type_)
   index.identities?.prepare(type_)
   case type_ {
     class_: ClassType -> {

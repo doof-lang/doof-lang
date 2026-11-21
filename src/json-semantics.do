@@ -740,7 +740,7 @@ function jsonUnionAnnotationType(union_: UnionType, programs: Program[]): Resolv
     else if symbol.kind == "enum" { members.push(EnumType { name: symbol.name, symbol }) }
     else { return none }
   }
-  resolved := UnionResolvedType { types: members }
+  resolved := UnionResolvedType { types: members.drainToReadonly() }
   return if jsonUnionLayout(resolved, programs) == none then none else resolved
 }
 

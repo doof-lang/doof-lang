@@ -98,7 +98,7 @@ export function nameInstantiations(checked: CheckedInstantiations, moduleNames: 
         }
         arguments: ResolvedType[] := []
         for i of item.owner.typeParams.length..<item.substitution.arguments.length { arguments.push(item.substitution.arguments[i]) }
-        emittedName := allocateConcreteName(plan, "owner:" + item.ownerKey, concreteName(item.declaration.name, arguments, moduleNames))
+        emittedName := allocateConcreteName(plan, "owner:" + item.ownerKey, concreteName(item.declaration.name, arguments.drainToReadonly(), moduleNames))
         plan.methods.push(MethodInstantiation { key: item.key, modulePath: item.modulePath, ownerKey: item.ownerKey, owner: item.owner, declaration: item.declaration, substitution: item.substitution, ownerEmittedName, emittedName, trace: item.trace })
       }
     }
@@ -112,7 +112,7 @@ export function nameInstantiations(checked: CheckedInstantiations, moduleNames: 
   return plan
 }
 
-export function concreteName(name: string, typeArgs: ResolvedType[], moduleNames: ModuleNames = ModuleNames {}): string {
+export function concreteName(name: string, typeArgs: readonly ResolvedType[], moduleNames: ModuleNames = ModuleNames {}): string {
   let result = name
   for argument of typeArgs { result = result + "__" + mangleType(argument, moduleNames) }
   return result
@@ -156,14 +156,14 @@ function mangleType(type_: ResolvedType, moduleNames: ModuleNames): string {
     function_: FunctionType -> {
       let parameters: ResolvedType[] = []
       for parameter of function_.params { parameters.push(parameter.type_) }
-      return "function_" + string(parameters.length) + "_" + concreteTypeListMangle(parameters, moduleNames) + "_returns_" + mangleType(function_.returnType, moduleNames)
+      return "function_" + string(parameters.length) + "_" + concreteTypeListMangle(parameters.drainToReadonly(), moduleNames) + "_returns_" + mangleType(function_.returnType, moduleNames)
     }
     _ -> { return sanitize(typeName(type_)) }
   }
   return "type"
 }
 
-function concreteTypeListMangle(types: ResolvedType[], moduleNames: ModuleNames): string {
+function concreteTypeListMangle(types: readonly ResolvedType[], moduleNames: ModuleNames): string {
   let result = ""
   for type_ of types {
     if result != "" { result = result + "_" }

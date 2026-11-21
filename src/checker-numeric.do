@@ -90,5 +90,5 @@ export function numericOperationType(left: ResolvedType, right: ResolvedType, op
   if results.length == 0 { return unknownType() }
   if preservesLeft { return left }
   if preservesRight { return right }
-  return unionType(results)
+  return unionType(results.drainToReadonly())
 }

@@ -12,6 +12,11 @@ several layers, use the [horizontal architecture map](compiler-architecture.md).
   parts. Do not grow the façade into a parallel implementation.
 - Syntax nodes in `ast.do` are decorated in place. `semantic.do` defines the
   resolved types and bindings stored on them.
+- Resolved-type records are immutable once built: their member lists (union
+  arms, type arguments, tuple elements, function parameters and type-parameter
+  names, substitutions) are `readonly`, as are declaration type-parameter
+  names. Build a list in a local, then `drainToReadonly()` it into the record;
+  readonly lists are iterated in place rather than snapshotted per loop.
 - The checker decides meaning. The emitter consumes those decisions and must
   not recover them from names or syntax.
 - Planning modules return deterministic values. Filesystem, network, and
@@ -32,7 +37,7 @@ several layers, use the [horizontal architecture map](compiler-architecture.md).
 | `parser-types.do` | Type annotation grammar | Type resolution |
 | `ast.do` | Syntax node shapes, source spans, semantic decoration slots including checked member selections | Resolved-type definitions or checking policy |
 | `resolver.do` | Logical module-path resolution, lazy source loading, source cache | Disk/package acquisition |
-| `analyzer.do` | Main-thread module discovery, parallel parse scheduling, deterministic graph ordering, declaration collection, imports/re-exports, module symbols, named-type decoration | Lexical scopes or expression typing |
+| `analyzer.do` | Main-thread module discovery, parallel parse scheduling, deterministic graph ordering, declaration collection, imports/re-exports, module symbols, named-type decoration, the lazy path index behind `AnalysisResult.moduleAt` | Lexical scopes or expression typing |
 | `analyzer-inclusions.do` | Graph-wide `...Source` field inclusion expansion: admissible sources, private-field and cycle rejection, name conflicts, idempotent re-expansion of reused syntax | Field types or default checking |
 | `semantic.do` | Diagnostics, symbols, bindings, scopes, resolved-type records and non-semantic identity stamps | Pass orchestration |
 | `semantic-type-identities.do` | Serial semantic identity preparation and read-only renderer lookup | Semantic equivalence or type canonicalization |
@@ -51,7 +56,7 @@ modules own the following decisions:
 
 | File | Responsibility |
 | --- | --- |
-| `checker-state.do` | Mutable per-run and per-module checker state, including scoped lambda-return observations |
+| `checker-state.do` | Mutable per-run and per-module checker state, including scoped lambda-return observations and the provisional signature memo for not-yet-checked functions |
 | `checker-symbols.do` | Scope/binding operations, builtins, shared declaration signatures, symbol/declaration lookup |
 | `checker-types.do` | Resolved-type construction, comparison, union mutability conflict detection, assignability, substitution, interface-bound receiver views, and display |
 | `checker-annotations.do` | One annotation resolver (`resolveType`) for provisional signatures, checked types, and explicit type arguments; builtin arity, alias expansion, constraints, and annotation decoration |
@@ -147,7 +152,7 @@ emitter or individual expression branch.
 | `emitter-reserved-globals.do` | C and POSIX global names that a package's top-level namespace must not reuse |
 | `checked-instantiations.do` | Semantic specialization fixed point and shared JSON demand traversal, plus per-instantiation validation the checker defers for type parameters (hash-collection keys, implied JSON members) |
 | `emitter-monomorphize.do` | C++ naming adapter over semantic specialization discovery |
-| `emitter-dependencies.do` | Immutable ordered direct-dependency extraction from checked surfaces, root bodies and concrete argument types |
+| `emitter-dependencies.do` | Immutable ordered direct-dependency extraction from checked surfaces, root bodies and concrete argument types; identity fast paths skip repeated symbol and type objects before key construction |
 | `emitter-worldview.do` | Symbol and dependency-summary indexing over the shared declaration index, recursive dependency-summary replay, native closure and consumer-local declaration selection/order |
 | `emitter-module.do` | Module graph orchestration, transitive emission fingerprints, header/source pairing, and per-defining-module header type sessions |
 | `emitter-header-cache.do` | Compilation-local reuse of immutable plans for exact projected declaration selections |
@@ -181,7 +186,7 @@ emitter or individual expression branch.
 | `emitter-case-pattern.do` | Per-pattern condition and binding lowering (type, value, range, wildcard) shared by statement and expression cases; type-pattern lowering from checked pattern types (a Result subject is the variant of its arms) and checker-decorated weak subject materialization shared by statement and expression cases; natural nullable absence patterns test for null, and absence bindings use the unit carrier |
 | `emitter-conditions.do` | Binding-condition lowering: one temporary per subject, layered presence tests, bindings from the unwrapped value, nested guards with one copy of each branch body, in-loop `while` heads, and lambda-lowered `if ... then` expressions |
 | `emitter-carriers.do` | Pure specialized-type classification for value, return, payload, nullable storage, and explicit absence, including weak variant targets (interfaces) and the present type a locked weak reference holds |
-| `emitter-carrier-values.do` | Shared absence construction and native carrier conversion, with exactly-once evaluation |
+| `emitter-carrier-values.do` | Shared absence construction and native carrier conversion, with exactly-once evaluation; structurally identical types (`identicalEmitTypes` in `emitter-types.do`) pass through without rendering either spelling |
 | `emitter-carrier-native.test.do` | Compiles current-source emitter output and executes the durable native carrier matrix in the normal suite |
 | `emitter-types.do` | C++ type spelling and generic specialization using the shared carrier classification; unions splice interface members into one flat `doof::union_t` variant |
 | `emitter-json.do` | Demand-gated generated JSON reads, writes, enum backing values, paths, and interface and union dispatch (JSON kind, then discriminator for classes); unit decoding validates null, nested containers validate shape, and nested primitives validate before conversion |

@@ -27,7 +27,7 @@ export function absenceLayers(type_: ResolvedType): AbsenceLayer[] {
         let present: ResolvedType[] = []
         for member of union_.types { if member.kind != "none" { present.push(member) } }
         if present.length < union_.types.length && present.length > 0 {
-          next := unionType(present)
+          next := unionType(present.drainToReadonly())
           layers.push(AbsenceLayer { failure: false, source: current, present: next })
           current = next
           more = true
